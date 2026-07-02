@@ -1625,6 +1625,31 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                         >
                           <Edit3 size={12} />
                         </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            if (!confirm(`¿Eliminar el Set ${obj.numero_set} ("${obj.descripcion}")? Esto también borrará las sesiones registradas para este set. Esta acción no se puede deshacer.`)) return
+                            const res = await fetch('/api/programas-aba', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'eliminar_set', objetivo_id: obj.id }),
+                            })
+                            const json = await res.json()
+                            if (json.error) { toast.error(json.error); return }
+                            toast.success('Set eliminado')
+                            setSetExpandidoId(prev => prev === obj.id ? null : prev)
+                            setDetalle((prev: any) => prev ? {
+                              ...prev,
+                              objetivos_cp: prev.objetivos_cp.filter((o: any) => o.id !== obj.id),
+                              sesiones_datos_aba: (prev.sesiones_datos_aba || []).filter((s: any) => s.objetivo_cp_id !== obj.id),
+                            } : prev)
+                            fetchDetalle()
+                          }}
+                          className="p-1 text-slate-300 hover:text-red-400 transition-all shrink-0"
+                          title="Eliminar set"
+                        >
+                          <Trash2 size={12} />
+                        </button>
                         <select
                           value={obj.estado || 'pendiente'}
                           onChange={async (e) => {

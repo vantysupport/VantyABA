@@ -235,6 +235,61 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ data })
     }
 
+    if (action === 'eliminar_set') {
+      const { objetivo_id } = body
+      if (!objetivo_id) return NextResponse.json({ error: 'objetivo_id requerido' }, { status: 400 })
+
+      // Obtener el set para saber a qué programa pertenece
+      const { data: setRow, error: setErr } = await supabaseAdmin
+        .from('objetivos_cp')
+        .select('programa_id')
+        .eq('id', objetivo_id)
+        .maybeSingle()
+      if (setErr) throw setErr
+      const programa_id = (setRow as any)?.programa_id
+
+      // Eliminar sesiones registradas para este set (evita registros huérfanos)
+      await supabaseAdmin.from('sesiones_datos_aba').delete().eq('objetivo_cp_id', objetivo_id)
+
+      const { error } = await supabaseAdmin.from('objetivos_cp').delete().eq('id', objetivo_id)
+      if (error) throw error
+
+      // FIX clínico: recalcular estado del programa tras borrar un set,
+      // usando la misma regla que actualizar_objetivo (todos dominados → dominado).
+      if (programa_id) {
+        try {
+          const { data: allSets } = await supabaseAdmin
+            .from('objetivos_cp')
+            .select('estado')
+            .eq('programa_id', programa_id)
+          const sets = (allSets || []) as any[]
+          const totalSets = sets.length
+          const setsDominados = sets.filter(s => s.estado === 'dominado').length
+
+          if (totalSets > 0 && totalSets === setsDominados) {
+            await supabaseAdmin
+              .from('programas_aba')
+              .update({ estado: 'dominado', fase_actual: 'dominado', fecha_dominio: new Date().toISOString().split('T')[0] })
+              .eq('id', programa_id)
+          } else {
+            const { data: prog } = await supabaseAdmin
+              .from('programas_aba')
+              .select('estado')
+              .eq('id', programa_id)
+              .maybeSingle()
+            if (prog && (prog as any).estado === 'dominado') {
+              await supabaseAdmin
+                .from('programas_aba')
+                .update({ estado: 'intervencion', fase_actual: 'intervencion' })
+                .eq('id', programa_id)
+            }
+          }
+        } catch { /* no bloquear el delete del set */ }
+      }
+
+      return NextResponse.json({ ok: true })
+    }
+
     if (action === 'editar_sesion') {
       const { sesion_id, updates } = body
       if (!sesion_id) return NextResponse.json({ error: 'sesion_id requerido' }, { status: 400 })
