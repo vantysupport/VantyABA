@@ -251,6 +251,10 @@ export async function POST(req: NextRequest) {
       // Eliminar sesiones registradas para este set (evita registros huérfanos)
       await supabaseAdmin.from('sesiones_datos_aba').delete().eq('objetivo_cp_id', objetivo_id)
 
+      // Eliminar registros de práctica en casa vinculados a este set
+      // (si no se borran, la FK de programa_practica_casa bloquea el delete con un 500)
+      await supabaseAdmin.from('programa_practica_casa').delete().eq('objetivo_id', objetivo_id)
+
       const { error } = await supabaseAdmin.from('objetivos_cp').delete().eq('id', objetivo_id)
       if (error) throw error
 
