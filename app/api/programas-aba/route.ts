@@ -363,6 +363,8 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from('sesiones_datos_aba').delete().eq('programa_id', programa_id)
       await supabaseAdmin.from('objetivos_cp').delete().eq('programa_id', programa_id)
       await supabaseAdmin.from('cambios_fase_aba').delete().eq('programa_id', programa_id)
+      await supabaseAdmin.from('programa_practica_casa').delete().eq('programa_id', programa_id)
+      await supabaseAdmin.from('agente_alertas').delete().eq('programa_id', programa_id)
       const { error } = await supabaseAdmin.from('programas_aba').delete().eq('id', programa_id)
       if (error) throw error
       return NextResponse.json({ ok: true })
