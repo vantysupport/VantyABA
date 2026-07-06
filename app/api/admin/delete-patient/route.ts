@@ -54,6 +54,7 @@ const TABLAS_HIJAS_DIRECTAS = [
   'engagement_planes',
   'agente_conversaciones',
   'agente_acciones',
+  'objetivos_adaptativos',
   // Bienestar y reportes
   'parent_wellbeing_checkins',
   'reportes_generados',
