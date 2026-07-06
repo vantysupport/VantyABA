@@ -62,6 +62,8 @@ const TABLAS_HIJAS_DIRECTAS = [
   'parent_accounts',
   // Práctica casa (puede no existir aún en algunos ambientes)
   'practica_casa_registros',
+  // Documentos y fichas del paciente
+  'patient_documents',
 ]
 
 export async function POST(req: NextRequest) {
