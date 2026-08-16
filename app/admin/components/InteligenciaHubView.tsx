@@ -1741,7 +1741,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
       a.href = url
       a.click()
       URL.revokeObjectURL(url)
-      setSuccess(`✅ Reporte Word descargado: ${a.download}`)
+      setSuccess(`✅ ${t('docs.reporteDescargado')}: ${a.download}`)
       // Refrescar el historial de documentos emitidos
       setTimeout(() => cargarDocs(), 600)
     } catch (e: any) { setError(e.message) }
@@ -1749,10 +1749,10 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
   }
 
   const tipoInfo = {
-    padres:      { label: 'Para padres',          desc: 'Lenguaje emocional y accesible',                  emoji: '👨‍👩‍👧' },
-    seguro:      { label: 'Informe Clínico', desc: 'Formato oficial del centro (Área/Subárea/Sets)', emoji: '📋' },
-    comparativo: { label: 'Comparativo + pred.',  desc: '"En 3 meses logrará X"',                          emoji: '📊' },
-    general:     { label: 'Reporte General',       desc: 'Todo: programas, evaluaciones (con resúmenes) e informes', emoji: '🗂️' },
+    padres:      { label: t('docs.tPadresLabel'),      desc: t('docs.tPadresDesc'),      emoji: '👨‍👩‍👧' },
+    seguro:      { label: t('docs.tClinicoLabel'),     desc: t('docs.tClinicoDesc'),     emoji: '📋' },
+    comparativo: { label: t('docs.tComparativoLabel'), desc: t('docs.tComparativoDesc'), emoji: '📊' },
+    general:     { label: t('docs.tGeneralLabel'),     desc: t('docs.tGeneralDesc'),     emoji: '🗂️' },
   }
 
   return (
@@ -1760,15 +1760,15 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
       <div className="bg-teal-50 border border-teal-100 rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-1">
           <BookOpen size={16} className="text-teal-600" />
-          <span className="font-bold text-teal-800 text-sm">Reportes Profesionales Word — CAPA 2</span>
+          <span className="font-bold text-teal-800 text-sm">{t('docs.capa2Titulo')}</span>
         </div>
-        <p className="text-xs text-teal-600">Genera documentos .docx profesionales listos para imprimir o enviar: para padres, aseguradoras o análisis comparativo.</p>
+        <p className="text-xs text-teal-600">{t('docs.capa2Desc')}</p>
       </div>
       <div className=" rounded-2xl border border-slate-100 p-4 space-y-3" style={{ background: "var(--card)" }}>
-        <label className="text-xs font-bold text-slate-500">{'Paciente'}</label>
+        <label className="text-xs font-bold text-slate-500">{t('docs.paciente')}</label>
         <select className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
           value={selected?.id || ''} onChange={e => setSelected(pacientes.find(p => p.id === e.target.value) || null)}>
-          <option value="">— Seleccionar —</option>
+          <option value="">{t('docs.seleccionar')}</option>
           {pacientes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
 
@@ -1787,8 +1787,8 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
         <button onClick={generar} disabled={!selected || loading}
           className="w-full py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition">
           {loading
-            ? <><RefreshCw size={14} className="animate-spin" /> Generando documento Word...</>
-            : <><BookOpen size={14} /> Generar y Descargar .docx</>}
+            ? <><RefreshCw size={14} className="animate-spin" /> {t('docs.generandoWord')}</>
+            : <><BookOpen size={14} /> {t('docs.generarDescargar')}</>}
         </button>
 
         {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3"><p className="text-red-600 text-xs">{error}</p></div>}
@@ -1804,20 +1804,20 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
               </svg>
-              <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Historial de documentos emitidos</h3>
+              <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t('docs.historialTitulo')}</h3>
             </div>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              Cada documento generado queda registrado y es verificable vía QR
+              {t('docs.historialDesc')}
             </p>
           </div>
           {stats && (
             <div className="flex gap-2 text-xs">
               <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                ✓ {stats.total_validos} válidos
+                ✓ {stats.total_validos} {t('docs.validos')}
               </span>
               {stats.total_invalidos > 0 && (
                 <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 font-bold border border-amber-200">
-                  ⚠ {stats.total_invalidos} invalidados
+                  ⚠ {stats.total_invalidos} {t('docs.invalidados')}
                 </span>
               )}
             </div>
@@ -1828,7 +1828,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
           <input
             type="text"
-            placeholder="🔍 Buscar por código o paciente…"
+            placeholder={t('docs.buscarCodigoPac')}
             value={filterQ}
             onChange={e => setFilterQ(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') cargarDocs() }}
@@ -1841,15 +1841,15 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
             className="border rounded-lg px-3 py-2 text-xs"
             style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
           >
-            <option value="">Todos los tipos</option>
-            <option value="informe_clinico">Informe Clínico</option>
-            <option value="reporte_padres">Reporte Padres</option>
-            <option value="reporte_comparativo">Comparativo</option>
-            <option value="reporte_seguro">Seguros</option>
-            <option value="anamnesis_inicial">Anamnesis Inicial</option>
-            <option value="anamnesis_legacy">Anamnesis</option>
-            <option value="sesion_aba">Sesión ABA</option>
-            <option value="ficha_clinica">Ficha Clínica</option>
+            <option value="">{t('docs.todosTipos')}</option>
+            <option value="informe_clinico">{t('docs.tClinicoLabel')}</option>
+            <option value="reporte_padres">{t('docs.tPadresLabel')}</option>
+            <option value="reporte_comparativo">{t('docs.tComparativoLabel')}</option>
+            <option value="reporte_seguro">{t('reportes.paraSeguro')}</option>
+            <option value="anamnesis_inicial">{t('evaluaciones.historiaClinica')}</option>
+            <option value="anamnesis_legacy">{t('evaluaciones.historiaClinica')}</option>
+            <option value="sesion_aba">{t('evaluaciones.sesionAba')}</option>
+            <option value="ficha_clinica">{t('evaluaciones.formularioClinico')}</option>
           </select>
           <select
             value={filterValido}
@@ -1857,30 +1857,30 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
             className="border rounded-lg px-3 py-2 text-xs"
             style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
           >
-            <option value="">Todos los estados</option>
-            <option value="1">Solo válidos</option>
-            <option value="0">Solo invalidados</option>
+            <option value="">{t('docs.todosEstados')}</option>
+            <option value="1">{t('docs.soloValidos')}</option>
+            <option value="0">{t('docs.soloInvalidados')}</option>
           </select>
         </div>
 
         {/* Lista */}
         {loadingDocs ? (
-          <div className="py-8 text-center text-xs" style={{ color: 'var(--text-muted)' }}>Cargando…</div>
+          <div className="py-8 text-center text-xs" style={{ color: 'var(--text-muted)' }}>{t('docs.cargando')}</div>
         ) : docs.length === 0 ? (
           <div className="py-8 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-            No hay documentos emitidos con esos filtros.
+            {t('docs.sinDocs')}
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--card-border)' }}>
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[10px] font-bold" style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)' }}>
-                  <th className="px-3 py-2 text-left">Código</th>
-                  <th className="px-3 py-2 text-left">Tipo</th>
-                  <th className="px-3 py-2 text-left">Paciente</th>
-                  <th className="px-3 py-2 text-left">Fecha</th>
-                  <th className="px-3 py-2 text-center">Estado</th>
-                  <th className="px-3 py-2 text-center">Acción</th>
+                  <th className="px-3 py-2 text-left">{t('docs.colCodigo')}</th>
+                  <th className="px-3 py-2 text-left">{t('docs.colTipo')}</th>
+                  <th className="px-3 py-2 text-left">{t('docs.colPaciente')}</th>
+                  <th className="px-3 py-2 text-left">{t('docs.colFecha')}</th>
+                  <th className="px-3 py-2 text-center">{t('docs.colEstado')}</th>
+                  <th className="px-3 py-2 text-center">{t('docs.colAccion')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1908,11 +1908,11 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
                       <td className="px-3 py-2 text-center">
                         {d.valido ? (
                           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                            ✓ Válido
+                            ✓ {t('docs.valido')}
                           </span>
                         ) : (
                           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700" title={d.notas || ''}>
-                            ⚠ Invalidado
+                            ⚠ {t('docs.invalidado')}
                           </span>
                         )}
                       </td>
@@ -1922,26 +1922,26 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
                             href={verifUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Abrir página de verificación pública"
+                            title={t('docs.verTitle')}
                             className="px-2 py-1 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 text-[10px] font-bold"
                           >
-                            🔗 Ver
+                            🔗 {t('docs.ver')}
                           </a>
                           {d.valido && (
                             <button
                               onClick={() => invalidar(d.codigo_doc)}
-                              title="Marcar como obsoleto (queda en historial)"
+                              title={t('docs.invalidarTitle')}
                               className="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 text-[10px] font-bold"
                             >
-                              ⚠ Invalidar
+                              ⚠ {t('docs.invalidar')}
                             </button>
                           )}
                           <button
                             onClick={() => eliminar(d.codigo_doc)}
-                            title="Eliminar permanentemente del historial"
+                            title={t('docs.eliminarTitle')}
                             className="px-2 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-[10px] font-bold"
                           >
-                            🗑 Eliminar
+                            🗑 {t('docs.eliminar')}
                           </button>
                         </div>
                       </td>
@@ -1955,7 +1955,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
 
         {docs.length > 0 && (
           <p className="text-[10px] text-center" style={{ color: 'var(--text-muted)' }}>
-            Mostrando {docs.length} documento{docs.length === 1 ? '' : 's'}. Cada uno tiene QR escaneable que apunta a su URL de verificación pública.
+            {t('docs.mostrando', { n: String(docs.length) })}
           </p>
         )}
       </div>
