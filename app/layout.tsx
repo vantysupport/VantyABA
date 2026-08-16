@@ -34,9 +34,9 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: " Terapias SANTI | Terapia ABA y Neurodivergencia en Pisco, Ica",
-  description: "Centro especializado en terapia ABA y desarrollo infantil en Pisco, Ica. Atendemos niños con autismo, TEA, TDAH y neurodivergencia con metodología basada en evidencia e IA. +50 familias.",
-  keywords: "terapeuta ABA Pisco, terapia autismo Ica, centro neurodivergencia Pisco, TEA Pisco, TDAH Pisco, desarrollo infantil Ica, terapia conductual niños Pisco",
+  title: " Terapias SANTI | Terapia ABA y Neurodivergencia",
+  description: "Centro especializado en terapia ABA y desarrollo infantil. Atendemos niños con autismo, TEA, TDAH y neurodivergencia con metodología basada en evidencia e IA. +50 familias.",
+  keywords: "terapeuta ABA, terapia autismo, centro neurodivergencia, TEA, TDAH, desarrollo infantil, terapia conductual niños",
   authors: [{ name: "SANTI" }],
   manifest: "/manifest.json",
   appleWebApp: {
@@ -47,18 +47,19 @@ export const metadata: Metadata = {
   },
   formatDetection: { telephone: false },
   openGraph: {
-    title: " Terapias SANTI | Terapia ABA en Pisco, Ica",
-    description: "Centro especializado en neurodivergencia. Terapia ABA con IA para niños en Pisco, Ica, Perú.",
+    title: " Terapias SANTI | Terapia ABA y Neurodivergencia",
+    description: "Centro especializado en neurodivergencia. Terapia ABA con IA para niños.",
     type: "website",
     locale: "es_PE",
     url: "https://centro-santi.vercel.app",
     siteName: "SANTI",
-    images: [{ url: "/images/hero-image.jpg", width: 1200, height: 630, alt: " Terapias SANTI - Terapia ABA Pisco" }],
+    images: [{ url: "/images/og-image.jpg", width: 1200, height: 630, alt: " Terapias SANTI - Terapia ABA" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: " Terapias SANTI | Terapia ABA en Pisco, Ica",
+    title: " Terapias SANTI | Terapia ABA y Neurodivergencia",
     description: "Centro especializado en neurodivergencia. Terapia ABA + IA para niños.",
+    images: ["/images/og-image.jpg"],
   },
   robots: { index: true, follow: true },
   alternates: { canonical: "https://centro-santi.vercel.app" },

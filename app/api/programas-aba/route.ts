@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
         .select(`
           *,
           objetivos_cp(*),
-          sesiones_datos_aba(id, fecha, porcentaje_exito, frecuencia_valor, duracion_segundos, fase)
+          sesiones_datos_aba(id, fecha, porcentaje_exito, frecuencia_valor, duracion_segundos, fase, set, objetivo_cp_id)
         `)
         .eq('child_id', childId)
         .order('created_at', { ascending: false })
