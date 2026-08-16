@@ -23,6 +23,8 @@ const TABLAS_HIJAS_DIRECTAS = [
   'appointments',
   'agenda_sesiones',
   // Programas ABA — primero las dependientes por programa_id
+  'programa_practica_casa',      // FK fk_ppc_child + FKs a programas_aba/objetivos_cp → borrar ANTES que ellos
+  'cambios_fase_aba',            // FKs a programas_aba/objetivos_cp → borrar ANTES que ellos
   'sesiones_datos_aba',         // por seguridad, antes que programas_aba
   'objetivos_cp',                // idem
   'programas_aba',
@@ -146,11 +148,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Finalmente borrar el child
-    const { error: deleteErr } = await supabaseAdmin
-      .from('children')
-      .delete()
-      .eq('id', child_id)
+    // 4. Finalmente borrar el child — AUTO-REPARABLE.
+    // Si una FK desconocida (una tabla nueva que referencia children.id y no
+    // está en la lista de arriba) bloquea el borrado, Postgres nos dice EXACTO
+    // cuál es en el mensaje: ... on table "nombre_tabla". Extraemos ese nombre,
+    // limpiamos esa tabla por child_id y reintentamos. Así el borrado nunca
+    // vuelve a fallar por una tabla olvidada — se limpia TODO lo de ese niño.
+    let deleteErr: any = null
+    const MAX_INTENTOS = 15
+    for (let intento = 0; intento < MAX_INTENTOS; intento++) {
+      const { error } = await supabaseAdmin.from('children').delete().eq('id', child_id)
+      if (!error) { deleteErr = null; break }
+      deleteErr = error
+
+      // Extraer la tabla ofensora del mensaje de la FK
+      const m = /on table "([^"]+)"/.exec(error.message || '')
+      const tablaOfensora = m?.[1]
+      if (!tablaOfensora || tablaOfensora === 'children') break // no es una FK resoluble
+
+      // Limpiar esa tabla por child_id (la convención del proyecto). Si no
+      // tuviera columna child_id, se registra y se corta para no ciclar.
+      const { error: cleanErr, count } = await supabaseAdmin
+        .from(tablaOfensora)
+        .delete({ count: 'exact' })
+        .eq('child_id', child_id)
+      if (cleanErr) {
+        resultado[tablaOfensora] = `error auto-limpieza: ${cleanErr.message}`
+        break
+      }
+      resultado[tablaOfensora] = `${count ?? 0} (auto-limpieza)`
+    }
 
     if (deleteErr) {
       return NextResponse.json({
