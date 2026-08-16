@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'actualizar_objetivo') {
-      const { objetivo_id, estado, descripcion, materiales, sd_estimulo, unidad_positiva, unidad_negativa, reforzadores, correction_errores, generalizacion } = body
+      const { objetivo_id, estado, descripcion, materiales, sd_estimulo, unidad_positiva, unidad_negativa, reforzadores, correction_errores, generalizacion, notas } = body
       const updates: any = {}
       if (estado !== undefined) {
         const ESTADOS_VALIDOS = ['pendiente', 'en_progreso', 'dominado']
@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
       if (reforzadores !== undefined) updates.reforzadores = reforzadores
       if (correction_errores !== undefined) updates.correction_errores = correction_errores
       if (generalizacion !== undefined) updates.generalizacion = generalizacion
+      if (notas !== undefined) updates.notas = notas
       if (!objetivo_id || Object.keys(updates).length === 0) {
         return NextResponse.json({ error: 'objetivo_id y al menos un campo requeridos' }, { status: 400 })
       }
@@ -187,7 +188,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'agregar_set') {
-      const { programa_id, descripcion, materiales, sd_estimulo, unidad_positiva, unidad_negativa, reforzadores, correction_errores, generalizacion } = body
+      const { programa_id, descripcion, materiales, sd_estimulo, unidad_positiva, unidad_negativa, reforzadores, correction_errores, generalizacion, notas } = body
       if (!programa_id || !descripcion?.trim()) {
         return NextResponse.json({ error: 'programa_id y descripcion requeridos' }, { status: 400 })
       }
@@ -207,6 +208,7 @@ export async function POST(req: NextRequest) {
       if (reforzadores) setData.reforzadores = reforzadores
       if (correction_errores) setData.correction_errores = correction_errores
       if (generalizacion) setData.generalizacion = generalizacion
+      if (notas) setData.notas = notas
       const { data, error } = await supabaseAdmin
         .from('objetivos_cp')
         .insert(setData)

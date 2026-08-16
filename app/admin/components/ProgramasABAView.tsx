@@ -856,7 +856,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
   const [editingFase, setEditingFase] = useState(false)
   const [localFase, setLocalFase] = useState(programa.fase_actual || 'intervencion')
   const [showAgregarSet, setShowAgregarSet] = useState(false)
-  const [nuevoSet, setNuevoSet] = useState({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.' })
+  const [nuevoSet, setNuevoSet] = useState({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' })
   const [savingSet, setSavingSet] = useState(false)
   const [setExpandidoId, setSetExpandidoId] = useState<string | null>(null)
   const [editandoSetId, setEditandoSetId] = useState<string | null>(null)
@@ -1703,7 +1703,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                     : <><BookOpen size={10} /> Guía para casa</>}
                                 </button>
                                 <button
-                                  onClick={() => { setEditandoSetId(obj.id); setEditSetForm({ descripcion: obj.descripcion || '', materiales: obj.materiales || '', sd_estimulo: obj.sd_estimulo || '', unidad_positiva: obj.unidad_positiva || '', unidad_negativa: obj.unidad_negativa || '', reforzadores: obj.reforzadores || obj.ayudas || '', correction_errores: obj.correction_errores || '', generalizacion: obj.generalizacion || '' }) }}
+                                  onClick={() => { setEditandoSetId(obj.id); setEditSetForm({ descripcion: obj.descripcion || '', materiales: obj.materiales || '', sd_estimulo: obj.sd_estimulo || '', unidad_positiva: obj.unidad_positiva || '', unidad_negativa: obj.unidad_negativa || '', reforzadores: obj.reforzadores || obj.ayudas || '', correction_errores: obj.correction_errores || '', generalizacion: obj.generalizacion || '', notas: obj.notas || '' }) }}
                                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-sky-500 hover:bg-sky-100 transition-colors">
                                   <Edit3 size={10} /> Editar
                                 </button>
@@ -1721,6 +1721,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                 { key: 'reforzadores',      label: '🤝🏼 Ayudas',            placeholder: 'Ej: Gesto + verbal' },
                                 { key: 'correction_errores',label: '📍 Corrección',         placeholder: 'Cómo se corrige el error' },
                                 { key: 'generalizacion',    label: '➡️ Generalización',    placeholder: 'Promover con la familia...' },
+                                { key: 'notas',             label: '📝 Notas',              placeholder: 'Observaciones de este set' },
                               ].map(({ key, label, placeholder }) => (
                                 <div key={key}>
                                   <label className="block text-[11px] font-bold text-sky-400 mb-1">{label}</label>
@@ -1769,7 +1770,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                             </div>
                           ) : (
                             <>
-                              {!obj.materiales && !obj.sd_estimulo && !obj.unidad_positiva && !obj.unidad_negativa && !obj.reforzadores && !obj.ayudas && !obj.correction_errores && !obj.generalizacion && (
+                              {!obj.materiales && !obj.sd_estimulo && !obj.unidad_positiva && !obj.unidad_negativa && !obj.reforzadores && !obj.ayudas && !obj.correction_errores && !obj.generalizacion && !obj.notas && (
                                 <p className="text-slate-400 italic">Sin procedimiento registrado. Haz clic en Editar para agregar.</p>
                               )}
                               {obj.materiales && <p><span className="font-bold">📚 Materiales:</span> {obj.materiales}</p>}
@@ -1779,6 +1780,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               {(obj.reforzadores || obj.ayudas) && <p><span className="font-bold">🤝🏼 Ayudas:</span> {obj.reforzadores || obj.ayudas}</p>}
                               {obj.correction_errores && <p><span className="font-bold">📍 Corrección:</span> {obj.correction_errores}</p>}
                               {obj.generalizacion && <p><span className="font-bold">➡️ Generalización:</span> {obj.generalizacion}</p>}
+                              {obj.notas && <p className="whitespace-pre-line"><span className="font-bold">📝 Notas:</span> {obj.notas}</p>}
                             </>
                           )}
                         </div>
@@ -1819,6 +1821,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               { key: 'reforzadores',     label: '🤝🏼 Ayudas',                      placeholder: 'Las indicadas en el set. Ej: Gesto + verbal' },
                               { key: 'correction_errores', label: '📍 Corrección del error',         placeholder: 'Cómo se corrige si la respuesta es incorrecta' },
                               { key: 'generalizacion',   label: '➡️ Generalización',              placeholder: 'Promover con la familia que realicen este ejercicio en casa.' },
+                              { key: 'notas',            label: '📝 Notas',                        placeholder: 'Observaciones de este set' },
                             ].map(({ key, label, placeholder }) => (
                               <div key={key}>
                                 <label className="text-xs font-bold text-slate-500 block mb-1.5">{label}</label>
@@ -1843,13 +1846,13 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                   const res = await fetch('/api/programas-aba', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ action: 'agregar_set', programa_id: programa.id, descripcion: nuevoSet.descripcion.trim(), materiales: nuevoSet.materiales, sd_estimulo: nuevoSet.sd_estimulo, unidad_positiva: nuevoSet.unidad_positiva, unidad_negativa: nuevoSet.unidad_negativa, reforzadores: nuevoSet.reforzadores, correction_errores: nuevoSet.correction_errores, generalizacion: nuevoSet.generalizacion }),
+                                    body: JSON.stringify({ action: 'agregar_set', programa_id: programa.id, descripcion: nuevoSet.descripcion.trim(), materiales: nuevoSet.materiales, sd_estimulo: nuevoSet.sd_estimulo, unidad_positiva: nuevoSet.unidad_positiva, unidad_negativa: nuevoSet.unidad_negativa, reforzadores: nuevoSet.reforzadores, correction_errores: nuevoSet.correction_errores, generalizacion: nuevoSet.generalizacion, notas: nuevoSet.notas }),
                                   })
                                   const json = await res.json()
                                   if (json.error) { toast.error(json.error); return }
                                   toast.success('Set agregado')
                                   setShowAgregarSet(false)
-                                  setNuevoSet({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.' })
+                                  setNuevoSet({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' })
                                   fetchDetalle()
                                 } finally { setSavingSet(false) }
                               }}
@@ -2567,7 +2570,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
     tipo_medicion: 'porcentaje', criterio_dominio_pct: 90, criterio_sesiones_consecutivas: 2,
     fase_actual: 'intervencion',
   })
-  const [objetivos, setObjetivos] = useState([{ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.' }])
+  const [objetivos, setObjetivos] = useState([{ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' }])
   const [setExpandido, setSetExpandido] = useState<number | null>(0)
 
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
@@ -2692,6 +2695,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                         { key: 'reforzadores',     label: '🤝🏼 Ayudas',                      placeholder: 'Ej: Gesto + verbal' },
                         { key: 'correction_errores', label: '📍 Corrección del error',         placeholder: 'Cómo se corrige si la respuesta es incorrecta' },
                         { key: 'generalizacion',   label: '➡️ Generalización',              placeholder: 'Promover con la familia...' },
+                        { key: 'notas',            label: '📝 Notas',                        placeholder: 'Observaciones de este set' },
                       ] as {key: string, label: string, placeholder: string}[]).map(({ key, label, placeholder }) => (
                         <div key={key} className="pt-2">
                           <label className="text-xs font-bold text-slate-500 block mb-1.5">{label}</label>
@@ -2711,7 +2715,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                   )}
                 </div>
               ))}
-              <button onClick={() => { setObjetivos([...objetivos, { descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.' }]); setSetExpandido(objetivos.length) }}
+              <button onClick={() => { setObjetivos([...objetivos, { descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' }]); setSetExpandido(objetivos.length) }}
                 className="w-full py-2.5 border-2 border-dashed border-[var(--card-border)] rounded-xl text-sm font-bold text-slate-400 hover:border-sky-300 hover:text-sky-500">
                 + Agregar set
               </button>
