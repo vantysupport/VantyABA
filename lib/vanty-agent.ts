@@ -3,7 +3,7 @@
 // FIX: mayor límite de contexto para childCtx (4000 → 8000) y triggers de herramientas mejorados
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { buildKnowledgeContext, searchKnowledge } from '@/lib/knowledge-base'
+import { buildKnowledgeContext, searchKnowledge, buscarItemsPorCodigo } from '@/lib/knowledge-base'
 import { getChildHistory } from '@/lib/child-history'
 import { callGroq, callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 
@@ -288,6 +288,17 @@ Al citar diagnósticos, SIEMPRE incluye el código CIE-11 y DSM-5 cuando corresp
 - ⚠️ ALERTA si hay saltos bruscos (ej: 0% → 90% en 1 sesión) = posible error de registro
 - Analiza siempre por PROGRAMA/OBJETIVO/SET específico, nunca en general
 
+📋 PROTOCOLOS Y CÓDIGOS DE EVALUACIÓN (ABLLS-R, VB-MAPP, AFLS) — REGLA CRÍTICA ANTI-INVENCIÓN:
+- Los ítems con código (ej: F24, D1, B12) NO los sabes de memoria de forma fiable — es muy fácil confundir el área. NUNCA respondas de memoria.
+- SOLO puedes describir un código si su contenido aparece en el bloque "CONOCIMIENTO CLÍNICO — CEREBRO IA" de este contexto. Copiá el nombre, objetivo y criterios TAL CUAL aparecen ahí (verbatim), sin parafrasear ni resumir.
+- 🚫 PROHIBIDO inventar qué significa un código, adivinar su área, o afirmar "el código X se refiere a…" sin tenerlo en el contexto. Si el código NO está cargado en el Cerebro IA, respondé exactamente: "No tengo el ítem [código] cargado en el Cerebro IA todavía. Pídele al equipo importar el protocolo ABLLS-R (Cerebro IA → Biblioteca) o pásame el texto del ítem." — y NO agregues una definición inventada.
+- Cuando el ítem SÍ está en el contexto, usá este formato:
+  📋 [Protocolo] · [Código] — [Área]
+  • 🎯 Nombre de la tarea: [nombre verbatim]
+  • 📝 Objetivo de la tarea: [objetivo verbatim]
+  • 📊 Criterios de logro: [criterios verbatim]
+  (Incluí pregunta/ejemplo solo si aparecen en el contexto; si no están, no los inventes.)
+
 ✍️ FORMATO DE RESPUESTA (SIEMPRE):
 - Usa emojis como separadores de sección: 📊 datos · 🎯 objetivos · ⚠️ alertas · 💡 sugerencias · ✅ logros · 🔄 en proceso
 - Omite frases de cortesía innecesarias como "Excelente pregunta" o "Claro, con gusto"
@@ -352,11 +363,12 @@ export class VantyAgent {
       const preguntaSobrePacientes = /paciente|peor|mejor|progreso|todos|lista|quien|quién|comparar|estado|sesion|sesión|avance|regresion|regresión|alert/i.test(userMessage)
 
       // FIX: cada query es defensiva — si una falla, el chat sigue con las otras
-      const [knowledgeCtx, childCtx, globalCtx] = await Promise.all([
+      const [knowledgeCtx, codigoCtx, childCtx, globalCtx] = await Promise.all([
         buildKnowledgeContext(userMessage).catch((e) => {
           console.warn('[vanty-agent] buildKnowledgeContext falló:', e?.message)
           return ''
         }),
+        buscarItemsPorCodigo(userMessage).catch(() => ''),
         options.childId
           ? AGENT_TOOLS.obtenerHistorialNino(options.childId).catch((e) => {
               console.warn('[vanty-agent] obtenerHistorialNino falló:', e?.message)
@@ -387,7 +399,10 @@ export class VantyAgent {
       const childCtxTrimmed = childCtx ? childCtx.slice(0, 4500) : ''      // 8000 → 4500
       const globalCtxTrimmed = globalCtx ? globalCtx.slice(0, 1500) : ''   // 3000 → 1500
 
-      let systemContext = SYSTEM_PROMPT_BASE + localeInstruction + '\n\n' + knowledgeCtxTrimmed
+      // El ítem exacto por código va con PRIORIDAD y sin recortar, para que la
+      // IA cite el ítem correcto (ej: F24) tal cual y no lo confunda.
+      const codigoCtxSeg = codigoCtx ? codigoCtx.slice(0, 3000) + '\n' : ''
+      let systemContext = SYSTEM_PROMPT_BASE + localeInstruction + '\n\n' + codigoCtxSeg + knowledgeCtxTrimmed
       if (childCtxTrimmed) systemContext += '\nPACIENTE ACTIVO:\n' + childCtxTrimmed
       if (globalCtxTrimmed) systemContext += '\n\n' + globalCtxTrimmed
 

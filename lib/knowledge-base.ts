@@ -485,6 +485,34 @@ export async function searchKnowledge(
   }
 }
 
+// ── Búsqueda DIRECTA por código de protocolo (F24, D1, B12…) ──────────────────
+// La búsqueda semántica/keyword no recupera bien códigos exactos ("f24" es muy
+// corto). Esta función detecta códigos en el texto y trae el chunk EXACTO por
+// metadata.codigo, para que la IA cite el ítem correcto tal cual (sin inventar).
+export async function buscarItemsPorCodigo(texto: string): Promise<string> {
+  if (!texto) return ''
+  const codigos = Array.from(new Set(
+    (texto.toUpperCase().match(/\b[A-Z]\s?-?\s?\d{1,2}\b/g) || [])
+      .map(c => c.replace(/[\s-]/g, ''))
+      .filter(c => /^[A-Z]\d{1,2}$/.test(c))
+  )).slice(0, 8)
+  if (codigos.length === 0) return ''
+
+  try {
+    const { data } = await supabaseAdmin
+      .from('knowledge_chunks')
+      .select('contenido, metadata')
+      .in('metadata->>codigo', codigos)
+      .limit(16)
+
+    if (!data || data.length === 0) return ''
+    const bloques = (data as any[]).map(r => r.contenido).join('\n\n')
+    return `\n━━━ ÍTEM(S) DE PROTOCOLO SOLICITADO(S) — CITA TEXTUAL, NO INVENTAR ━━━\n${bloques}\n━━━ FIN ÍTEM(S) DE PROTOCOLO ━━━\n`
+  } catch {
+    return ''
+  }
+}
+
 // ── Obtener instrucciones del centro ─────────────────────────────────────────
 export async function getCentroInstrucciones(): Promise<string> {
   try {

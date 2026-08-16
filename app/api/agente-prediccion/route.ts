@@ -365,7 +365,10 @@ Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionale
     try {
       resumen_general = await callGroqSimple(
         'Eres neuropsicóloga clínica BCBA-D con especialización en ABA. Redactas informes clínicos de supervisión de alto nivel. Lenguaje técnico, preciso, fundamentado en evidencia científica. Nunca usas frases motivacionales vagas. Siempre específico y accionable.',
-        prompt + (cerebroCtx ? '\n\n━━━ CONTEXTO CLÍNICO ADICIONAL ━━━\n' + cerebroCtx : ''),
+        prompt + (cerebroCtx
+          ? '\n\n━━━ CONTENIDO DE PROTOCOLOS (Cerebro IA — FUENTE DE VERDAD) ━━━\n' + cerebroCtx +
+            '\n\nREGLA: si citás un código de protocolo (ABLLS-R, VB-MAPP, AFLS), usá SOLO códigos que aparezcan textualmente aquí arriba y copiá su objetivo/criterios TAL CUAL. Está PROHIBIDO inventar códigos o inventar qué significa un código; si no está aquí, no lo cites.'
+          : '\n\nNOTA: no hay contenido de protocolos cargado en el Cerebro IA. NO cites códigos de protocolo (ABLLS-R/VB-MAPP/AFLS) ni afirmes qué significa un código; describí los objetivos sin códigos.'),
         { model: GROQ_MODELS.SMART, temperature: 0.25, maxTokens: 1000 }
       )
     } catch (err) {

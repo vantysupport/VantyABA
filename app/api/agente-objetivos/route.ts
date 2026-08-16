@@ -118,12 +118,14 @@ export async function POST(req: NextRequest) {
 
     const protocolosGuia = `PROTOCOLOS ABA DE REFERENCIA:
 - VB-MAPP (0-48m): 16 áreas verbales (Mand, Tact, Echoic, Listener, etc.).
-- ABLLS-R (2-12 años): 25 áreas A-Z con códigos (B=Mand, F=Receptivo, H=Tact, K=Conversación, L=Social, etc.).
+- ABLLS-R (2-12 años): 25 áreas A-Z (A=Cooperación, B=Desempeño visual, C=Lenguaje receptivo, D=Imitación motriz, E=Imitación vocal, F=Peticiones/mandos, G=Etiquetar/tactos, H=Intraverbales, K=Juego, L=Social, Q=Lectura, R=Matemáticas, etc.).
 - AFLS (adolescentes/funcional): 6 módulos (Basic, Home, Community, School, Vocational, Independent).
 
 PROTOCOLO SUGERIDO PARA ESTE CASO: ${protocoloSugerido}
 
-🚫 NUNCA objetivos genéricos. ✅ SIEMPRE: protocolo + código + SD/R/consecuencia + criterio numérico + técnica ABA.`
+⚠️ FUENTE DE VERDAD DE CÓDIGOS Y CRITERIOS: el bloque "CONTENIDO DE LOS PROTOCOLOS (Cerebro IA)" que se te entrega más abajo. El objetivo y los criterios de un código deben copiarse TAL CUAL aparecen ahí (verbatim). PROHIBIDO inventar códigos o inventar el significado/criterios de un código. Si el código exacto no está en ese contenido, NO lo cites: describí el objetivo sin código.
+
+🚫 NUNCA objetivos genéricos. ✅ SIEMPRE: SD/R/consecuencia + criterio numérico + técnica ABA (el código del protocolo solo si está en el Cerebro IA).`
 
     if (accion === 'evaluar_dominio') {
       promptBase = `${protocolosGuia}
@@ -189,7 +191,7 @@ ${patrones.slice(0, 3).map((p: any) => `- [${p.tipo}] ${p.area}: ${p.descripcion
 Para CADA objetivo nuevo devolvé:
 - titulo: conducta operacionalizada (ej: "Petición de 5 ítems preferidos usando 2 palabras")
 - protocolo_referencia: "ABLLS-R" / "VB-MAPP" / "AFLS"
-- codigo_item: código exacto del protocolo (ej: "B12", "Mand Nivel 2", "Basic Living 3.4") — NUNCA dejes vacío este campo
+- codigo_item: SOLO el código que aparezca TEXTUALMENTE en el CONTENIDO DE LOS PROTOCOLOS del Cerebro IA (ej: "B12"). Si el código exacto no está en ese contenido, dejalo vacío ("") — NUNCA lo inventes ni uses uno "plausible".
 - area: dominio funcional (Conducta Verbal / Habilidades académicas / Autonomía / Habilidades sociales / etc.)
 - descripcion: SD + R + consecuencia operacionalizadas
 - criterio_dominio: numérico observable (ej: "80% en 3 sesiones consecutivas con 2 terapeutas distintos en 2 entornos diferentes")
@@ -227,11 +229,11 @@ TU CONOCIMIENTO BASE:
 - AFLS (Partington & Mueller, 2012): 6 módulos de habilidades funcionales para la vida.
 
 REGLAS NO NEGOCIABLES:
-1. NUNCA generes objetivos genéricos. Siempre cita protocolo + código del ítem.
-2. Si no estás seguro del código exacto, usá uno PLAUSIBLE del protocolo correcto y marcalo claramente.
-3. Operacionalizá cada conducta con SD (antecedente), R (respuesta esperada), criterio numérico.
-4. Métodos de enseñanza deben ser técnicas ABA reconocidas (DTT, NET, ITT, errorless, prompt fading, etc.).
-5. Si el Cerebro IA tiene contenido de los protocolos, USALO como fuente prioritaria para los códigos.
+1. NUNCA generes objetivos genéricos. Operacionalizá siempre la conducta.
+2. FUENTE DE VERDAD: solo podés citar un código de protocolo (ej: "H7", "B12") si aparece TEXTUALMENTE en el bloque "CONTENIDO DE LOS PROTOCOLOS (Cerebro IA)". Cuando cites un código, copiá su objetivo y sus criterios TAL CUAL están ahí (verbatim), sin parafrasear, resumir ni inventar. Está PROHIBIDO inventar un código o inventar qué significa un código.
+3. Si el código o el criterio exacto NO está en ese contenido, dejá codigo_item vacío ("") y NO afirmes "el código X se refiere a…". Describí el objetivo sin código.
+4. Operacionalizá cada conducta con SD (antecedente), R (respuesta esperada), criterio numérico.
+5. Métodos de enseñanza deben ser técnicas ABA reconocidas (DTT, NET, ITT, errorless, prompt fading, etc.).
 6. Respondés SIEMPRE con JSON válido sin texto adicional.`
 
     const respuestaRaw = await callGroqSimple(sistemaPrompt,
