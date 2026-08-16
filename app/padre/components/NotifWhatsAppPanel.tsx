@@ -72,7 +72,7 @@ export default function NotifWhatsAppPanel({ profile, onUpdated }: Props) {
           📱
         </div>
         <div>
-          <p className="font-bold text-slate-800 text-sm">Notificaciones WhatsApp</p>
+          <p className="font-bold text-slate-800 text-sm">{t("perfil.notifWhatsApp")}</p>
           <p className="text-xs text-slate-400">
             {step === 'confirm'
               ? <span className="text-green-600 font-semibold">✅ Activo — {profile?.phone}</span>

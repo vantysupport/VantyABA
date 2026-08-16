@@ -510,7 +510,8 @@
     "pushMsg": "We will notify you when the therapist sends you something important.",
     "activadas": "Notifications enabled! 🎉",
     "teAvisaremos": "We will notify you when the therapist sends a message.",
-    "activamos": "Enable notifications?"
+    "activamos": "Enable notifications?",
+    "cargandoNotif": "Loading notifications..."
   },
   "whatsapp": {
     "citaConfirmada": "✅ Appointment confirmed at SANTI\n📅 {fecha} at {hora}\n👤 Patient: {paciente}\n📍 {tipo}\n\nNeuropsychology and Therapies SANTI 💜",
@@ -1162,7 +1163,27 @@
     "estamosPorTi": "We are here for you",
     "comoVerCitas": "How do I view my appointments?",
     "comoUsarIA": "How do I use the AI Assistant?",
-    "dondeRecursos": "Where do I find resources?"
+    "dondeRecursos": "Where do I find resources?",
+    "granLogro": "Great achievement!",
+    "chequeoMensual": "Monthly wellbeing check",
+    "acompanarA": "Supporting ",
+    "phCompartir": "Anything you want to share with your therapist — they will see it privately.",
+    "terapeutaTomaraCuenta": "Your therapist will take this into account.",
+    "recibeCitasGoogle": "Get your appointments in Google Calendar",
+    "conectaCuenta": "Connect your account and appointments will appear automatically.",
+    "conectar": "Connect",
+    "pacienteActivo": "Active patient",
+    "dominioObjetivos": "Goal mastery",
+    "resumenARIA": "ARIA Summary",
+    "constanciaClave": "Consistency is key. Contact the center to schedule the next appointment.",
+    "verMisCitas": "View my appointments",
+    "verTodosMensajes": "View all messages",
+    "enQueTrabaja": "What are they working on?",
+    "verDetallesPrograma": "View program details",
+    "progresoGeneral": "Overall progress",
+    "verLogro": "View achievement 🎉",
+    "progresoAparecera": "Progress will appear here",
+    "despuesPrimerasSesiones": "After the first sessions you will see progress and achieved goals."
   },
   "ui": {
     "ai_assistant": "AI Assistant",

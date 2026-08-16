@@ -63,13 +63,14 @@ function CountUp({ target, duration = 1200 }: { target: number; duration?: numbe
 }
 
 function GoalCelebration({ childName, goalsAchieved, onClose }: { childName: string; goalsAchieved: number; onClose: () => void }) {
+  const { t } = useI18n()
   useEffect(() => { const t = setTimeout(onClose, 6000); return () => clearTimeout(t) }, [onClose])
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.65)', backdropFilter: 'blur(10px)' }}>
       <div style={{ background: 'linear-gradient(135deg,#0284c7,#0369a1,#0ea5e9)', borderRadius: 32, padding: '48px 40px', textAlign: 'center', maxWidth: 400, width: '90%', boxShadow: '0 0 80px rgba(79,70,229,.6)', position: 'relative', overflow: 'hidden', animation: 'celebIn .5s cubic-bezier(.175,.885,.32,1.275)' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 10, padding: '6px 10px', cursor: 'pointer', color: 'var(--c-card)', fontSize: 18 }}>×</button>
         <div style={{ width: 84, height: 84, margin: '0 auto 16px', borderRadius: 26, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Trophy size={44} /></div>
-        <h2 style={{ fontWeight: 900, fontSize: 30, color: 'var(--c-card)', marginBottom: 8 }}>¡Gran logro!</h2>
+        <h2 style={{ fontWeight: 900, fontSize: 30, color: 'var(--c-card)', marginBottom: 8 }}>{t("familias.granLogro")}</h2>
         <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 16, lineHeight: 1.6, marginBottom: 24 }}>
           <strong style={{ color: '#fbbf24' }}>{childName}</strong> alcanzó <strong style={{ color: '#fbbf24' }}>{goalsAchieved} objetivo{goalsAchieved !== 1 ? 's' : ''}</strong> con dominio ≥80%.
         </p>
@@ -105,6 +106,7 @@ function GoalCelebration({ childName, goalsAchieved, onClose }: { childName: str
 }
 
 function WellbeingSurvey({ childName, childId, parentId, onClose }: { childName: string; childId: string; parentId: string; onClose: () => void }) {
+  const { t } = useI18n()
   const [answered, setAnswered] = useState(false)
   const [selectedMood, setSelectedMood] = useState<'bien' | 'regular' | 'dificil' | null>(null)
   const [nota, setNota] = useState('')
@@ -154,13 +156,13 @@ function WellbeingSurvey({ childName, childId, parentId, onClose }: { childName:
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 42, height: 42, background: 'linear-gradient(135deg,#fce7f3,#ede9fe)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Heart size={18} color="#be185d" /></div>
                 <div>
-                  <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--c-text-primary)', margin: 0 }}>¿Cómo estás tú?</p>
-                  <p style={{ fontSize: 11, color: 'var(--c-text-placeholder)', margin: 0 }}>Chequeo de bienestar mensual</p>
+                  <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--c-text-primary)', margin: 0 }}>{t("familias.comoEstasTu")}</p>
+                  <p style={{ fontSize: 11, color: 'var(--c-text-placeholder)', margin: 0 }}>{t("familias.chequeoMensual")}</p>
                 </div>
               </div>
               <button onClick={onClose} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer', color: '#6b7280' }}><X size={16} /></button>
             </div>
-            <p style={{ fontSize: 14, color: 'var(--c-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>Acompañar a <strong>{childName || 'tu hijo/a'}</strong> es un trabajo importante. ¿Cómo te has sentido esta semana?</p>
+            <p style={{ fontSize: 14, color: 'var(--c-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>{t("familias.acompanarA")}<strong>{childName || 'tu hijo/a'}</strong> es un trabajo importante. ¿Cómo te has sentido esta semana?</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {options.map(opt => {
                 const isSelected = selectedMood === opt.mood
@@ -194,7 +196,7 @@ function WellbeingSurvey({ childName, childId, parentId, onClose }: { childName:
                   onChange={e => setNota(e.target.value)}
                   rows={3}
                   maxLength={500}
-                  placeholder="Cualquier cosa que quieras compartir con tu terapeuta — lo verá en privado."
+                  placeholder={t("familias.phCompartir")}
                   style={{
                     width: '100%', padding: '10px 12px', borderRadius: 12,
                     border: '1.5px solid #e5e7eb', fontSize: 13, fontFamily: 'inherit',
@@ -220,8 +222,8 @@ function WellbeingSurvey({ childName, childId, parentId, onClose }: { childName:
         ) : (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ width: 56, height: 56, margin: '0 auto 12px', borderRadius: 18, background: 'rgba(2,132,199,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284c7' }}><Heart size={28} /></div>
-            <h3 style={{ fontWeight: 800, fontSize: 18, color: 'var(--c-text-primary)', marginBottom: 8 }}>¡Gracias por compartir!</h3>
-            <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>Tu terapeuta tomará esto en cuenta.</p>
+            <h3 style={{ fontWeight: 800, fontSize: 18, color: 'var(--c-text-primary)', marginBottom: 8 }}>{t("familias.graciasRegistro")}</h3>
+            <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6 }}>{t("familias.terapeutaTomaraCuenta")}</p>
           </div>
         )}
       </div>
@@ -460,11 +462,11 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
         <div className="hv-card" style={{ background:'linear-gradient(135deg,#0284c7,#0369a1)', borderRadius:18, padding:'14px 18px', display:'flex', alignItems:'center', gap:12, boxShadow:'0 4px 16px rgba(2,132,199,.25)' }}>
           <span style={{ fontSize:24, flexShrink:0 }}>📅</span>
           <div style={{ flex:1 }}>
-            <p style={{ color:'#ffffff', fontWeight:700, fontSize:13, margin:0 }}>Recibe tus citas en Google Calendar</p>
-            <p style={{ color:'rgba(255,255,255,.75)', fontSize:11, margin:'2px 0 0' }}>Conecta tu cuenta y las citas aparecerán automáticamente.</p>
+            <p style={{ color:'#ffffff', fontWeight:700, fontSize:13, margin:0 }}>{t("familias.recibeCitasGoogle")}</p>
+            <p style={{ color:'rgba(255,255,255,.75)', fontSize:11, margin:'2px 0 0' }}>{t("familias.conectaCuenta")}</p>
           </div>
           <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-            <button onClick={()=>onChangeView('profile')} className="hv-btn" style={{ background:'var(--c-card)', color:'#0284c7', border:'none', borderRadius:10, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>Conectar</button>
+            <button onClick={()=>onChangeView('profile')} className="hv-btn" style={{ background:'var(--c-card)', color:'#0284c7', border:'none', borderRadius:10, padding:'7px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>{t("familias.conectar")}</button>
             <button onClick={()=>{sessionStorage.setItem('gcal_banner_dismissed','1');setGcalBannerDismissed(true)}} style={{ background:'rgba(255,255,255,.2)', color:'#ffffff', border:'none', borderRadius:10, padding:'7px 10px', fontSize:13, cursor:'pointer', lineHeight:1 }}>✕</button>
           </div>
         </div>
@@ -479,7 +481,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
         <div style={{ position:'relative', zIndex:1, padding:'22px 22px 18px' }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:16 }}>
             <div style={{ flex:1 }}>
-              <p style={{ color:'rgba(255,255,255,.65)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:1.5, margin:'0 0 4px' }}>Paciente activo</p>
+              <p style={{ color:'rgba(255,255,255,.65)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:1.5, margin:'0 0 4px' }}>{t("familias.pacienteActivo")}</p>
               <h1 style={{ fontSize:24, fontWeight:900, color:'#ffffff', margin:'0 0 10px', letterSpacing:'-0.5px', lineHeight:1.15 }}>{child?.name || 'Sin seleccionar'}</h1>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 <span style={{ background:'rgba(255,255,255,.15)', backdropFilter:'blur(8px)', color:'#ffffff', fontSize:11, fontWeight:600, padding:'4px 12px', borderRadius:20, border:'1px solid rgba(255,255,255,.2)' }}>{age} años</span>
@@ -512,7 +514,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
           {stats.sessions > 0 && (
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
-                <span style={{ color:'rgba(255,255,255,.65)', fontSize:11, fontWeight:600 }}>Dominio de objetivos</span>
+                <span style={{ color:'rgba(255,255,255,.65)', fontSize:11, fontWeight:600 }}>{t("familias.dominioObjetivos")}</span>
                 <span style={{ color:'#ffffff', fontSize:11, fontWeight:800 }}>{stats.masteryRate}%</span>
               </div>
               <div style={{ height:6, background:'rgba(255,255,255,.2)', borderRadius:10, overflow:'hidden' }}>
@@ -580,7 +582,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
                     <Sparkles size={18} color="var(--c-card)"/>
                   </div>
                   <div>
-                    <p style={{ color:'#0369a1', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:1, margin:0 }}>Resumen de ARIA</p>
+                    <p style={{ color:'#0369a1', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:1, margin:0 }}>{t("familias.resumenARIA")}</p>
                     <p style={{ color:'var(--c-text-primary)', fontSize:13, fontWeight:700, margin:0 }}>¿Cómo va {firstName}?</p>
                   </div>
                   {prediccion?.confianza > 0 && <span style={{ marginLeft:'auto', background:'var(--c-stat-blue)', color:'#0284c7', fontSize:10, fontWeight:700, padding:'3px 9px', borderRadius:20, border:'1px solid var(--c-border)', flexShrink:0 }}>{prediccion.confianza}% confianza</span>}
@@ -603,7 +605,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
           <div className="hv-card" style={{ background:'var(--c-card)', borderRadius:22, border:'1.5px solid var(--c-border-light)', overflow:'hidden', boxShadow:'0 2px 16px rgba(0,0,0,.04)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, padding:'14px 18px 12px', borderBottom:'1px solid var(--c-border-light)' }}>
               <CalendarDays size={15} color="#0284c7"/>
-              <h2 style={{ fontWeight:800, fontSize:12, color:'var(--c-text-muted)', textTransform:'uppercase', letterSpacing:0.8, margin:0 }}>Próxima sesión</h2>
+              <h2 style={{ fontWeight:800, fontSize:12, color:'var(--c-text-muted)', textTransform:'uppercase', letterSpacing:0.8, margin:0 }}>{t("familias.proxSesion")}</h2>
             </div>
             {loading ? (
               <div style={{ padding:'16px 18px' }}>
@@ -628,18 +630,18 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
                     </div>
                   </div>
                   <div style={{ display:'flex', gap:8, marginTop:14, paddingTop:14, borderTop:'1px solid var(--c-border-light)' }}>
-                    <button onClick={()=>onCancelAppointment(nextAppt.id,true)} className="hv-btn" style={{ flex:1, padding:'8px 10px', background:'var(--c-stat-purple)', color:'#0284c7', border:'1.5px solid var(--c-border)', borderRadius:12, fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}><RefreshCw size={12}/>Reprogramar</button>
-                    <button onClick={()=>onCancelAppointment(nextAppt.id,false)} className="hv-btn" style={{ flex:1, padding:'8px 10px', background:'#fef2f2', color:'#dc2626', border:'1.5px solid #fecaca', borderRadius:12, fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}><XCircle size={12}/>Cancelar</button>
-                    <button onClick={()=>onChangeView('miscitas')} className="hv-btn" style={{ padding:'8px 12px', background:'var(--c-text-primary)', color:'#ffffff', border:'none', borderRadius:12, fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>Ver todas<ChevronRight size={12}/></button>
+                    <button onClick={()=>onCancelAppointment(nextAppt.id,true)} className="hv-btn" style={{ flex:1, padding:'8px 10px', background:'var(--c-stat-purple)', color:'#0284c7', border:'1.5px solid var(--c-border)', borderRadius:12, fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}><RefreshCw size={12}/>{t("agenda.reprogramar")}</button>
+                    <button onClick={()=>onCancelAppointment(nextAppt.id,false)} className="hv-btn" style={{ flex:1, padding:'8px 10px', background:'#fef2f2', color:'#dc2626', border:'1.5px solid #fecaca', borderRadius:12, fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}><XCircle size={12}/>{t("common.cancelar")}</button>
+                    <button onClick={()=>onChangeView('miscitas')} className="hv-btn" style={{ padding:'8px 12px', background:'var(--c-text-primary)', color:'#ffffff', border:'none', borderRadius:12, fontSize:11, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>{t("common.verTodos")}<ChevronRight size={12}/></button>
                   </div>
                 </div>
               )
             })() : (
               <div style={{ padding:'24px 18px', textAlign:'center' }}>
                 <div style={{ width:56, height:56, background:'var(--c-stat-purple)', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }}><CalendarDays size={24} color="#0ea5e9"/></div>
-                <p style={{ fontWeight:800, fontSize:14, color:'var(--c-text-primary)', margin:'0 0 6px' }}>Sin citas programadas</p>
-                <p style={{ fontSize:12, color:'var(--c-text-placeholder)', lineHeight:1.6, margin:'0 auto 14px', maxWidth:260 }}>La constancia es clave. Contacta al centro para agendar la próxima cita.</p>
-                <button onClick={()=>onChangeView('miscitas')} className="hv-btn" style={{ display:'inline-flex', alignItems:'center', gap:6, background:'linear-gradient(135deg,#0284c7,#0369a1)', color:'#ffffff', border:'none', padding:'9px 18px', borderRadius:12, fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 14px rgba(2,132,199,.3)' }}><CalendarDays size={14}/>Ver mis citas</button>
+                <p style={{ fontWeight:800, fontSize:14, color:'var(--c-text-primary)', margin:'0 0 6px' }}>{t("familias.sinCitas")}</p>
+                <p style={{ fontSize:12, color:'var(--c-text-placeholder)', lineHeight:1.6, margin:'0 auto 14px', maxWidth:260 }}>{t("familias.constanciaClave")}</p>
+                <button onClick={()=>onChangeView('miscitas')} className="hv-btn" style={{ display:'inline-flex', alignItems:'center', gap:6, background:'linear-gradient(135deg,#0284c7,#0369a1)', color:'#ffffff', border:'none', padding:'9px 18px', borderRadius:12, fontSize:12, fontWeight:700, cursor:'pointer', boxShadow:'0 4px 14px rgba(2,132,199,.3)' }}><CalendarDays size={14}/>{t("familias.verMisCitas")}</button>
               </div>
             )}
           </div>
@@ -648,7 +650,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
           {parentMessages.length > 0 && (
             <div className="hv-card" style={{ background:'var(--c-card)', borderRadius:22, border:'1.5px solid #ede9fe', overflow:'hidden', boxShadow:'0 2px 16px rgba(2,132,199,.06)' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px 12px', borderBottom:'1px solid var(--c-border-light)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}><MessageCircle size={15} color="#0284c7"/><h2 style={{ fontWeight:800, fontSize:12, color:'var(--c-text-muted)', textTransform:'uppercase', letterSpacing:0.8, margin:0 }}>Mensajes del terapeuta</h2></div>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}><MessageCircle size={15} color="#0284c7"/><h2 style={{ fontWeight:800, fontSize:12, color:'var(--c-text-muted)', textTransform:'uppercase', letterSpacing:0.8, margin:0 }}>{t("familias.mensajesTerapeuta")}</h2></div>
                 <span style={{ background:'var(--c-stat-purple)', color:'#0284c7', fontSize:10, fontWeight:700, padding:'3px 9px', borderRadius:20, border:'1px solid var(--c-border)' }}>{parentMessages.length} nuevo{parentMessages.length!==1?'s':''}</span>
               </div>
               {parentMessages.map((msg:any, idx:number) => (
@@ -659,7 +661,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
                 </div>
               ))}
               <div style={{ padding:'10px 14px' }}>
-                <button onClick={()=>onChangeView('mensajes')} className="hv-btn" style={{ width:'100%', padding:'9px', background:'var(--c-stat-purple)', color:'#0284c7', border:'1.5px solid var(--c-border)', borderRadius:12, fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}><MessageCircle size={13}/>Ver todos los mensajes</button>
+                <button onClick={()=>onChangeView('mensajes')} className="hv-btn" style={{ width:'100%', padding:'9px', background:'var(--c-stat-purple)', color:'#0284c7', border:'1.5px solid var(--c-border)', borderRadius:12, fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}><MessageCircle size={13}/>{t("familias.verTodosMensajes")}</button>
               </div>
             </div>
           )}
@@ -675,7 +677,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px 12px', borderBottom:'1px solid var(--c-border-light)' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                   <Target size={15} color="#0284c7"/>
-                  <h2 style={{ fontWeight:700, fontSize:13, color:'var(--c-text-primary)', margin:0 }}>¿En qué está trabajando?</h2>
+                  <h2 style={{ fontWeight:700, fontSize:13, color:'var(--c-text-primary)', margin:0 }}>{t("familias.enQueTrabaja")}</h2>
                 </div>
                 <span style={{ background:'var(--c-stat-blue)', color:'#0284c7', fontSize:10, fontWeight:700, padding:'3px 9px', borderRadius:20, border:'1px solid var(--c-border)' }}>{programas.length} activos</span>
               </div>
@@ -687,7 +689,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
                     <button
                       key={prog.id||i}
                       onClick={() => onChangeView('programas')}
-                      title="Ver detalles del programa"
+                      title={t("familias.verDetallesPrograma")}
                       style={{
                         display:'flex', alignItems:'center', gap:12,
                         padding:'10px 12px',
@@ -730,15 +732,15 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
           {/* PROGRESO GENERAL */}
           <div className="hv-card" style={{ background:'var(--c-card)', borderRadius:22, border:'1.5px solid var(--c-border-light)', padding:'16px 18px', boxShadow:'0 2px 16px rgba(0,0,0,.04)' }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}><TrendingUp size={15} color="#0284c7"/><h3 style={{ fontWeight:800, fontSize:12, color:'var(--c-text-muted)', textTransform:'uppercase', letterSpacing:0.8, margin:0 }}>Progreso general</h3></div>
-              {stats.goalsAchieved > 0 && <button onClick={()=>setShowCelebration(true)} className="hv-btn" style={{ display:'flex', alignItems:'center', gap:5, background:'var(--c-stat-amber)', color:'#d97706', border:'1.5px solid var(--c-border)', borderRadius:20, fontSize:10, fontWeight:700, padding:'4px 10px', cursor:'pointer' }}><Trophy size={11}/>Ver logro 🎉</button>}
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}><TrendingUp size={15} color="#0284c7"/><h3 style={{ fontWeight:800, fontSize:12, color:'var(--c-text-muted)', textTransform:'uppercase', letterSpacing:0.8, margin:0 }}>{t("familias.progresoGeneral")}</h3></div>
+              {stats.goalsAchieved > 0 && <button onClick={()=>setShowCelebration(true)} className="hv-btn" style={{ display:'flex', alignItems:'center', gap:5, background:'var(--c-stat-amber)', color:'#d97706', border:'1.5px solid var(--c-border)', borderRadius:20, fontSize:10, fontWeight:700, padding:'4px 10px', cursor:'pointer' }}><Trophy size={11}/>{t("familias.verLogro")}</button>}
             </div>
 
             {stats.sessions === 0 ? (
               <div style={{ textAlign:'center', padding:'16px 0' }}>
                 <div style={{ width:52, height:52, background:'linear-gradient(135deg,#f8fafc,#f5f3ff)', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }}><BarChart3 size={24} color="#7dd3fc"/></div>
-                <p style={{ fontWeight:700, fontSize:13, color:'var(--c-text-muted)', margin:'0 0 4px' }}>El progreso aparecerá aquí</p>
-                <p style={{ fontSize:11, color:'var(--c-text-placeholder)', lineHeight:1.6, maxWidth:240, margin:'0 auto' }}>Después de las primeras sesiones verás los avances y objetivos logrados.</p>
+                <p style={{ fontWeight:700, fontSize:13, color:'var(--c-text-muted)', margin:'0 0 4px' }}>{t("familias.progresoAparecera")}</p>
+                <p style={{ fontSize:11, color:'var(--c-text-placeholder)', lineHeight:1.6, maxWidth:240, margin:'0 auto' }}>{t("familias.despuesPrimerasSesiones")}</p>
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
@@ -762,7 +764,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
                   <div style={{ background:'linear-gradient(135deg,#f0fdf4,#dcfce7)', border:'1.5px solid var(--c-border)', borderRadius:16, padding:'12px 14px', display:'flex', alignItems:'flex-start', gap:10, marginTop:2 }}>
                     <PartyPopper size={18} color="#16a34a" style={{ flexShrink:0, marginTop:1 }}/>
                     <div>
-                      <p style={{ fontWeight:800, fontSize:12, color:'#15803d', margin:'0 0 2px' }}>¡Rendimiento excepcional! 🎉</p>
+                      <p style={{ fontWeight:800, fontSize:12, color:'#15803d', margin:'0 0 2px' }}>{t("familias.rendimientoExcep")}</p>
                       <p style={{ fontSize:11, color:'#16a34a', lineHeight:1.5, margin:0 }}>{firstName} domina sus objetivos con {stats.masteryRate}% de éxito.</p>
                     </div>
                   </div>

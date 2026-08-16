@@ -178,7 +178,7 @@ function NotifCard({ noti, expanded, onToggle, locale }: { noti: Notification; e
 
 // ── Main ────────────────────────────────────────────────────────────────────
 export default function MensajesView({ profile }: { profile: any }) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading]             = useState(true)
   const [expanded, setExpanded]           = useState<string | null>(null)
@@ -239,14 +239,14 @@ export default function MensajesView({ profile }: { profile: any }) {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2.5px solid #e2e8f0', borderTop: '2.5px solid #0284c7', animation: 'nspin 1s linear infinite' }}/>
-          <p className="text-sm" style={{ color: "var(--c-text-muted)" }}>Cargando notificaciones...</p>
+          <p className="text-sm" style={{ color: "var(--c-text-muted)" }}>{t("notificaciones.cargandoNotif")}</p>
         </div>
       ) : notifications.length === 0 ? (
         <div className="rounded-2xl p-12 text-center flex flex-col items-center gap-3" style={{ background: "var(--c-card)", border: "1px solid var(--c-border)" }}>
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "var(--c-stat-purple)", border: "1px solid var(--c-border)" }}>
             <Bell size={24} className="text-sky-400"/>
           </div>
-          <p className="font-bold text-slate-600 dark:text-slate-300">Sin notificaciones</p>
+          <p className="font-bold text-slate-600 dark:text-slate-300">{t("notificaciones.sinNotificaciones")}</p>
           <p className="text-sm text-slate-400 dark:text-slate-500 max-w-xs leading-relaxed">
             Aquí aparecerán los reportes de sesión, análisis y comunicados del equipo del centro.
           </p>

@@ -873,7 +873,27 @@
   "estamosPorTi": "Estamos aquí para ti",
   "comoVerCitas": "¿Cómo ver mis citas?",
   "comoUsarIA": "¿Cómo usar el Asistente IA?",
-  "dondeRecursos": "¿Dónde encuentro recursos?"
+  "dondeRecursos": "¿Dónde encuentro recursos?",
+  "granLogro": "¡Gran logro!",
+  "chequeoMensual": "Chequeo de bienestar mensual",
+  "acompanarA": "Acompañar a ",
+  "phCompartir": "Cualquier cosa que quieras compartir con tu terapeuta — lo verá en privado.",
+  "terapeutaTomaraCuenta": "Tu terapeuta tomará esto en cuenta.",
+  "recibeCitasGoogle": "Recibe tus citas en Google Calendar",
+  "conectaCuenta": "Conecta tu cuenta y las citas aparecerán automáticamente.",
+  "conectar": "Conectar",
+  "pacienteActivo": "Paciente activo",
+  "dominioObjetivos": "Dominio de objetivos",
+  "resumenARIA": "Resumen de ARIA",
+  "constanciaClave": "La constancia es clave. Contacta al centro para agendar la próxima cita.",
+  "verMisCitas": "Ver mis citas",
+  "verTodosMensajes": "Ver todos los mensajes",
+  "enQueTrabaja": "¿En qué está trabajando?",
+  "verDetallesPrograma": "Ver detalles del programa",
+  "progresoGeneral": "Progreso general",
+  "verLogro": "Ver logro 🎉",
+  "progresoAparecera": "El progreso aparecerá aquí",
+  "despuesPrimerasSesiones": "Después de las primeras sesiones verás los avances y objetivos logrados."
  },
  "usuarios": {
   "titulo": "Gestión de Usuarios",
@@ -1009,7 +1029,8 @@
   "pushMsg": "Te avisaremos cuando el terapeuta te envíe algo importante.",
   "activadas": "¡Notificaciones activadas! 🎉",
   "teAvisaremos": "Te avisaremos cuando el terapeuta te envíe un mensaje.",
-  "activamos": "¿Activamos las notificaciones?"
+  "activamos": "¿Activamos las notificaciones?",
+  "cargandoNotif": "Cargando notificaciones..."
  },
  "whatsapp": {
   "citaConfirmada": "✅ Cita confirmada en SANTI\n📅 {fecha} a las {hora}\n👤 Paciente: {paciente}\n📍 {tipo}\n\nNeuropsicología y Terapias SANTI 💜",
