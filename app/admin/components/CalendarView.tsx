@@ -650,7 +650,7 @@ function MonthlyCalendarView() {
                 <option value="cancelled">{t('ui.cancelled_pl')}</option>
               </select>
               <select value={filterEspecialista} onChange={e=>setFilterEspecialista(e.target.value)} className="w-full p-3 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }}>
-                <option value="todos">Todos los especialistas</option>
+                <option value="todos">{t("agenda.todosEspecialistas")}</option>
                 {especialistas.map(e=><option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
               </select>
               {(filterDate||filterStatus!=='todos'||filterEspecialista!=='todos') && <button onClick={()=>{setFilterDate('');setFilterStatus('todos');setFilterEspecialista('todos')}} className="text-xs text-sky-600 font-bold hover:underline">{t('ui.clear_filters')}</button>}
@@ -683,7 +683,7 @@ function MonthlyCalendarView() {
                               ? <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-200 uppercase flex items-center gap-0.5"><Video size={9}/> {t('agenda.virtual')}</span>
                               : <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 border border-slate-200 uppercase flex items-center gap-0.5"><MapPin size={9}/> {t('agenda.presencial')}</span>
                             }
-                            {a.is_group && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100 uppercase">Grupal</span>}
+                            {a.is_group && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100 uppercase">{t("ui.grupal")}</span>}
                           </div>
                           <p className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>{a.children?.name||'Paciente'}</p>
                           <p className="text-xs font-medium mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{a.service_type}</p>
@@ -748,8 +748,8 @@ function MonthlyCalendarView() {
                               style={{background:'linear-gradient(135deg,#0284c7,#0ea5e9)',boxShadow:'0 3px 12px rgba(99,102,241,0.35)'}}
                             >
                               {startingCall===a.id
-                                ? <><Loader2 size={12} className="animate-spin"/> Iniciando...</>
-                                : <><Video size={12}/> Iniciar videollamada</>
+                                ? <><Loader2 size={12} className="animate-spin"/> {t("agenda.iniciando")}</>
+                                : <><Video size={12}/> {t("agenda.iniciarVideollamada")}</>
                               }
                             </button>
                           )}
@@ -761,7 +761,7 @@ function MonthlyCalendarView() {
                                 onClick={e => guardarEdicion(a.id, e)}
                                 disabled={savingEdit}
                                 className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all disabled:opacity-50"
-                                title="Guardar"
+                                title={t("common.guardar")}
                               >
                                 {savingEdit ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
                               </button>
@@ -769,7 +769,7 @@ function MonthlyCalendarView() {
                                 onClick={cancelarEdicion}
                                 disabled={savingEdit}
                                 className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-all"
-                                title="Cancelar"
+                                title={t("common.cancelar")}
                               >
                                 <X size={14}/>
                               </button>
@@ -779,14 +779,14 @@ function MonthlyCalendarView() {
                               <button
                                 onClick={e => iniciarEdicion(a, e)}
                                 className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 bg-slate-100 text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-all"
-                                title="Editar horario"
+                                title={t("agenda.editarHorario")}
                               >
                                 <Pencil size={14}/>
                               </button>
                               <button
                                 onClick={e=>eliminarCita(a.id,e)}
                                 className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 bg-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                                title="Eliminar"
+                                title={t("common.eliminar")}
                               >
                                 <Trash2 size={14}/>
                               </button>
@@ -819,7 +819,7 @@ function MonthlyCalendarView() {
                     {(['individual','grupal'] as const).map(tipo => (
                       <button key={tipo} onClick={()=>{setTipoSesion(tipo);setSelectedParticipants([]);setNewApt(p=>({...p,child_id:''}))}}
                         className={`p-4 rounded-2xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${tipoSesion===tipo?(tipo==='individual'?'bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-200':'bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-200'):'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-                        {tipo==='individual'?<><User size={16}/> Individual</>:<><Users size={16}/> Grupal</>}
+                        {tipo==='individual'?<><User size={16}/> {t("ui.individual")}</>:<><Users size={16}/> {t("ui.grupal")}</>}
                       </button>
                     ))}
                   </div>
@@ -842,7 +842,7 @@ function MonthlyCalendarView() {
                   {modalidadCita==='virtual' && (
                     <div className="mt-2 flex items-start gap-2 px-3 py-2.5 bg-sky-50 rounded-xl border border-sky-100">
                       <Video size={13} className="text-sky-500 shrink-0 mt-0.5"/>
-                      <p className="text-xs text-sky-600 font-semibold leading-relaxed">Al iniciar la sesión se genera el link automáticamente y el padre recibe una notificación para unirse.</p>
+                      <p className="text-xs text-sky-600 font-semibold leading-relaxed">{t("agenda.alIniciarLink")}</p>
                     </div>
                   )}
                 </div>
@@ -861,7 +861,7 @@ function MonthlyCalendarView() {
                   <>
                     <div>
                       <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('agenda.nombreGrupo')}</label>
-                      <input type="text" placeholder="Ej: Grupo Habilidades Sociales A" className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.group_name} onChange={e=>setNewApt(p=>({...p,group_name:e.target.value}))}/>
+                      <input type="text" placeholder={t("agenda.phGrupo")} className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.group_name} onChange={e=>setNewApt(p=>({...p,group_name:e.target.value}))}/>
                     </div>
                     <div>
                       <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>Participantes ({selectedParticipants.length})</label>
@@ -880,11 +880,11 @@ function MonthlyCalendarView() {
 
                 {/* Servicio, fecha, hora, estado */}
                 <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>Servicio</label>
-                  <input type="text" className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.service} onChange={e=>setNewApt(p=>({...p,service:e.target.value}))} placeholder="Ej: Terapia ABA, Evaluación..." />
+                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t("agenda.servicio")}</label>
+                  <input type="text" className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.service} onChange={e=>setNewApt(p=>({...p,service:e.target.value}))} placeholder={t("agenda.phServicio")} />
                 </div>
                 <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>Especialista asignado <span style={{color:'var(--text-muted)',fontWeight:400,fontSize:10}}>(puedes elegir varios)</span></label>
+                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t("agenda.especialistaAsignado")} <span style={{color:'var(--text-muted)',fontWeight:400,fontSize:10}}>(puedes elegir varios)</span></label>
                   <div className="flex flex-wrap gap-2 p-3 rounded-xl min-h-[52px]" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)" }}>
                     {newApt.specialist_id && newApt.specialist_id.split(',').filter(Boolean).map(sid => {
                       const esp = especialistas.find(e => e.id === sid)
@@ -927,8 +927,8 @@ function MonthlyCalendarView() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>Notas (opcional)</label>
-                  <textarea rows={2} placeholder="Observaciones..." className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all resize-none" value={newApt.notes} onChange={e=>setNewApt(p=>({...p,notes:e.target.value}))}/>
+                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t("agenda.notasOpcional")}</label>
+                  <textarea rows={2} placeholder={t("agenda.phObservaciones")} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all resize-none" value={newApt.notes} onChange={e=>setNewApt(p=>({...p,notes:e.target.value}))}/>
                 </div>
 
                 {/* Recurrencia */}

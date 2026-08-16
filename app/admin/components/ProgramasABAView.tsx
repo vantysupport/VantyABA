@@ -301,12 +301,12 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
         <div className="flex items-center gap-2 flex-wrap">
           {/* Descargar reporte de programas en Word (para enviar a la familia) */}
           <button onClick={descargarProgramasWord} disabled={descargandoWord || programas.length === 0}
-            title="Descargar un documento Word explicativo con todos los programas, para compartir con la familia"
+            title={t("programas.descargarWordTitle")}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
             style={{ background: 'var(--muted-bg)', color: 'var(--text-primary)', border: '1px solid var(--card-border)' }}>
             {descargandoWord
-              ? <><Loader2 size={15} className="animate-spin" /> Generando…</>
-              : <><BookOpen size={15} /> Descargar Word</>}
+              ? <><Loader2 size={15} className="animate-spin" /> {t("common.generando")}</>
+              : <><BookOpen size={15} /> {t("programas.descargarWord")}</>}
           </button>
 
           <button onClick={() => setShowCrear(true)}
@@ -425,7 +425,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
                 {getAreaLabel(area)}
               </span>
               <button
-                title="Renombrar etiqueta"
+                title={t("programas.renombrarEtiqueta")}
                 onMouseDown={e => { e.stopPropagation(); startEditArea(area, e) }}
                 className="pr-2 py-1.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity text-[10px]"
                 style={{ color: isActive ? 'var(--card)' : 'var(--text-muted)' }}>
@@ -433,7 +433,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
               </button>
               {customAreaLabels[area] && (
                 <button
-                  title="Restablecer nombre original"
+                  title={t("programas.restablecerNombre")}
                   onMouseDown={e => resetAreaLabel(area, e)}
                   className="pr-1.5 py-1.5 opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity text-[10px]"
                   style={{ color: isActive ? 'var(--card)' : 'var(--text-muted)' }}>
@@ -451,7 +451,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
         <input
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
-          placeholder="Buscar programa por nombre..."
+          placeholder={t("programas.buscarPrograma")}
           className="flex-1 text-sm bg-transparent outline-none"
           style={{ color: 'var(--text-primary)' }}
         />
@@ -591,6 +591,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
 
 // ── Tarjeta de alerta IA ─────────────────────────────────────────────────────
 function AlertaCard({ alerta, onDescartar }: { alerta: any; key?: any; onDescartar?: () => void }) {
+  const { t } = useI18n()
   const cfg: Record<string, { border: string; icon: string; label: string }> = {
     alta:  { border: '#ef4444', icon: '⚠', label: '#ef4444' },
     media: { border: '#f59e0b', icon: '!', label: '#f59e0b' },
@@ -609,7 +610,7 @@ function AlertaCard({ alerta, onDescartar }: { alerta: any; key?: any; onDescart
           <button onClick={onDescartar}
             className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center hover:opacity-70 transition-opacity"
             style={{ color: 'var(--text-muted)', background: 'transparent' }}
-            title="Descartar alerta">
+            title={t("dashboard.descartarAlerta")}>
             <X size={12} />
           </button>
         )}
@@ -1078,7 +1079,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                 >
                   {localTitulo}
                   <button
-                    title="Editar título"
+                    title={t("programas.editarTitulo")}
                     onClick={e => { e.stopPropagation(); setTempTitulo(localTitulo); setEditingTitulo(true) }}
                     className="flex items-center justify-center w-5 h-5 rounded-md opacity-40 hover:opacity-100 hover:bg-sky-100 transition-all shrink-0"
                     style={{ color: 'var(--text-muted)' }}
@@ -1091,7 +1092,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
               <div className="relative">
                 <button
                   onClick={e => { e.stopPropagation(); setEditingArea(v => !v); setEditingFase(false) }}
-                  title="Cambiar área"
+                  title={t("programas.cambiarArea")}
                   className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all hover:opacity-80 ${AREA_CONFIG[localArea]?.bg || ''} ${AREA_CONFIG[localArea]?.color || ''}`}>
                   {AREA_CONFIG[localArea]?.Icon && (() => { const AI = AREA_CONFIG[localArea].Icon; return <AI size={11} /> })()}
                   {AREA_CONFIG[localArea]?.label || localArea}
@@ -1122,7 +1123,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
               <div className="relative">
                 <button
                   onClick={e => { e.stopPropagation(); setEditingFase(v => !v); setEditingArea(false) }}
-                  title="Cambiar fase"
+                  title={t("programas.cambiarFase")}
                   className="hover:opacity-80 transition-all">
                   <FaseTag fase={localFase} />
                 </button>
@@ -1174,17 +1175,17 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                 }}
                 onClick={e => e.stopPropagation()}
                 rows={3}
-                placeholder="Objetivo a largo plazo…"
+                placeholder={t("programas.objetivoLargoPlazo")}
                 className="w-full text-xs rounded-lg px-2 py-1 mt-1 outline-none border-2 border-sky-400 resize-y"
                 style={{ color: 'var(--text-primary)', background: 'var(--input-bg)', minHeight: '52px' }}
               />
             ) : (
               <p className="text-xs text-slate-400 mt-1 flex items-start gap-1.5">
                 <span className="line-clamp-2">
-                  {localObjetivo || <span className="italic opacity-70">Sin objetivo a largo plazo. Haz clic en el lápiz para agregarlo.</span>}
+                  {localObjetivo || <span className="italic opacity-70">{t("programas.sinObjetivoLP")}</span>}
                 </span>
                 <button
-                  title="Editar objetivo a largo plazo"
+                  title={t("programas.editarObjetivoLP")}
                   onClick={e => { e.stopPropagation(); setTempObjetivo(localObjetivo); setEditingObjetivo(true) }}
                   className="flex items-center justify-center w-5 h-5 rounded-md opacity-40 hover:opacity-100 hover:bg-sky-100 transition-all shrink-0"
                   style={{ color: 'var(--text-muted)' }}
@@ -1241,7 +1242,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                 window.location.reload()
               }}
               className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-all"
-              title="Eliminar programa"
+              title={t("programas.eliminarPrograma")}
             >
               <Trash2 size={14} />
             </button>
@@ -1630,7 +1631,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                             objetivos_cp: prev.objetivos_cp.map((o: any) => o.id === obj.id ? { ...o, _editando: !o._editando } : o)
                           } : prev)}
                           className="p-1 text-slate-300 hover:text-sky-400 transition-all shrink-0"
-                          title="Editar descripción"
+                          title={t("programas.editarDescripcion")}
                         >
                           <Edit3 size={12} />
                         </button>
@@ -1655,7 +1656,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                             fetchDetalle()
                           }}
                           className="p-1 text-slate-300 hover:text-red-400 transition-all shrink-0"
-                          title="Eliminar set"
+                          title={t("programas.eliminarSet")}
                         >
                           <Trash2 size={12} />
                         </button>
@@ -1696,11 +1697,11 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                 <button
                                   onClick={() => descargarGuiaSet(obj.id)}
                                   disabled={descargandoSetId === obj.id}
-                                  title="Descargar este ejercicio como guía Word para que la familia lo practique en casa"
+                                  title={t("programas.guiaCasaTitle")}
                                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-emerald-600 hover:bg-emerald-100 transition-colors disabled:opacity-50">
                                   {descargandoSetId === obj.id
-                                    ? <><Loader2 size={10} className="animate-spin" /> Generando…</>
-                                    : <><BookOpen size={10} /> Guía para casa</>}
+                                    ? <><Loader2 size={10} className="animate-spin" /> {t("common.generando")}</>
+                                    : <><BookOpen size={10} /> {t("programas.guiaCasa")}</>}
                                 </button>
                                 <button
                                   onClick={() => { setEditandoSetId(obj.id); setEditSetForm({ descripcion: obj.descripcion || '', materiales: obj.materiales || '', sd_estimulo: obj.sd_estimulo || '', unidad_positiva: obj.unidad_positiva || '', unidad_negativa: obj.unidad_negativa || '', reforzadores: obj.reforzadores || obj.ayudas || '', correction_errores: obj.correction_errores || '', generalizacion: obj.generalizacion || '', notas: obj.notas || '' }) }}
@@ -1771,7 +1772,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                           ) : (
                             <>
                               {!obj.materiales && !obj.sd_estimulo && !obj.unidad_positiva && !obj.unidad_negativa && !obj.reforzadores && !obj.ayudas && !obj.correction_errores && !obj.generalizacion && !obj.notas && (
-                                <p className="text-slate-400 italic">Sin procedimiento registrado. Haz clic en Editar para agregar.</p>
+                                <p className="text-slate-400 italic">{t("programas.sinProcedimiento")}</p>
                               )}
                               {obj.materiales && <p><span className="font-bold">📚 Materiales:</span> {obj.materiales}</p>}
                               {obj.sd_estimulo && <p><span className="font-bold">📍 Sd:</span> {obj.sd_estimulo}</p>}
@@ -1810,7 +1811,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                             <div>
                               <label className="text-xs font-bold text-slate-500 block mb-1">📝 Descripción del set *</label>
                               <input value={nuevoSet.descripcion} onChange={e => setNuevoSet(s => ({...s, descripcion: e.target.value}))}
-                                placeholder="Ej: Set 1 - VANCE, Set 2 - EOS..."
+                                placeholder={t("programas.phSetDesc")}
                                 className="w-full rounded-xl text-sm font-bold outline-none" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
                             </div>
                             {[
@@ -2012,8 +2013,8 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                     {detalle.unidad_negativa && <p><span className="font-bold">❎ Unidad -:</span> {detalle.unidad_negativa}</p>}
                     {(detalle.reforzadores || detalle.ayudas) && <p><span className="font-bold">🤝🏼 Ayudas:</span> {detalle.reforzadores || detalle.ayudas}</p>}
                     {detalle.correction_errores && <p><span className="font-bold">{t('programas.correccion')}</span> {detalle.correction_errores}</p>}
-                    {detalle.reforzadores && <p><span className="font-bold">Reforzadores:</span> {detalle.reforzadores}</p>}
-                    {detalle.materiales && <p><span className="font-bold">Materiales:</span> {detalle.materiales}</p>}
+                    {detalle.reforzadores && <p><span className="font-bold">{t("programas.reforzadoresColon")}</span> {detalle.reforzadores}</p>}
+                    {detalle.materiales && <p><span className="font-bold">{t("programas.materialesColon")}</span> {detalle.materiales}</p>}
                   </div>
                 </div>
               )}
@@ -2039,6 +2040,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
 
 // ── Panel de práctica en casa registrada por el padre ──────────────────────────
 function PracticaCasaPanel({ programaId, programaNombre, objetivos = [] }: { programaId: string; programaNombre: string; objetivos?: any[] }) {
+  const { t } = useI18n()
   const [registros, setRegistros] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -2113,7 +2115,7 @@ function PracticaCasaPanel({ programaId, programaNombre, objetivos = [] }: { pro
       {loading ? (
         <div className="flex items-center gap-2 py-3">
           <Loader2 size={14} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Cargando registros...</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t("programas.cargandoRegistros")}</span>
         </div>
       ) : error ? (
         <div className="rounded-2xl p-4 text-center" style={{ background: 'var(--card)', border: '1px solid #fca5a5' }}>
@@ -2170,6 +2172,7 @@ function PracticaCasaPanel({ programaId, programaNombre, objetivos = [] }: { pro
 function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChange, onFaseChange }: {
   s: any; programa: any; onDelete: () => void; onDateChange: (fecha: string) => void; onPctChange: (pct: number, correctas: number, totales: number) => void; onSetChange: (nuevoSet: string) => void; onFaseChange?: (nuevaFase: string) => void
 }) {
+  const { t } = useI18n()
   const [editingDate, setEditingDate] = useState(false)
   const [tempDate, setTempDate] = useState(s.fecha)
   const [editingPct, setEditingPct] = useState(false)
@@ -2220,7 +2223,7 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
         <button
           onClick={() => { setTempDate(s.fecha); setEditingDate(true) }}
           className="w-20 shrink-0 text-left text-slate-400 hover:text-sky-500 hover:underline transition-colors"
-          title="Haz clic para editar la fecha"
+          title={t("programas.editarFecha")}
         >
           {s.fecha}
         </button>
@@ -2269,7 +2272,7 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
       ) : (
         <button
           onClick={() => setEditingSet(true)}
-          title="Clic para cambiar de set"
+          title={t("programas.cambiarSet")}
           className="text-sky-500 font-semibold text-[10px] bg-sky-50 px-1.5 py-0.5 rounded-md hover:bg-sky-100 transition-colors"
         >
           {s.set || <span className="text-slate-400">set?</span>}
@@ -2291,7 +2294,7 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
               onKeyDown={e => { if (e.key === 'Enter') commitPct(); if (e.key === 'Escape') setEditingPct(false) }}
               className="w-10 rounded-md px-1 py-0.5 text-xs font-bold outline-none border-2 border-sky-400 text-center"
               style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}
-              title="Respuestas correctas"
+              title={t("programas.respuestasCorrectas")}
             />
             <span className="text-slate-400">/</span>
             <input
@@ -2301,13 +2304,13 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
               onKeyDown={e => { if (e.key === 'Enter') commitPct(); if (e.key === 'Escape') setEditingPct(false) }}
               className="w-10 rounded-md px-1 py-0.5 text-xs font-bold outline-none border-2 border-sky-400 text-center"
               style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}
-              title="Oportunidades totales"
+              title={t("programas.oportunidadesTotales")}
             />
           </span>
         ) : (
           <button
             onClick={() => { setTempCorrectas(String(s.respuestas_correctas ?? '')); setTempTotales(String(s.oportunidades_totales ?? '')); setEditingPct(true) }}
-            title="Clic para editar"
+            title={t("programas.clicEditar")}
             className={`font-bold hover:underline transition-colors ${
               s.porcentaje_exito >= programa.criterio_dominio_pct ? 'text-emerald-600' :
               s.porcentaje_exito >= 70 ? 'text-amber-600' : 'text-red-500'
@@ -2322,7 +2325,7 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
       <button
         onClick={onDelete}
         className="ml-auto p-1 text-slate-300 hover:text-red-400 shrink-0"
-        title="Eliminar sesión"
+        title={t("programas.eliminarSesion")}
       >
         <X size={13} />
       </button>
@@ -2449,7 +2452,7 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
                 <label className="text-xs font-bold text-slate-400 block mb-1.5">{t('ui.phase')}</label>
                 <select value={form.fase} onChange={e => setForm(f => ({ ...f, fase: e.target.value }))}
                   className="w-full p-3 bg-[var(--input-bg)] border-2 border-[var(--input-border)] rounded-xl text-sm font-bold outline-none focus:border-sky-400">
-                  <option value="linea_base">Baseline</option>
+                  <option value="linea_base">{t("programas.lineaBase")}</option>
                   <option value="intervencion">{t('ui.intervention')}</option>
                   <option value="mantenimiento">{t('programas.mantenimiento')}</option>
                 </select>
@@ -2526,7 +2529,7 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
                 <input
                   value={form.set_activo}
                   onChange={e => setForm(f => ({ ...f, set_activo: e.target.value.trim() }))}
-                  placeholder="Ej: Set 2, Nivel 3 (opcional)"
+                  placeholder={t("programas.phSetNivel")}
                   className="w-full p-3 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
               </div>
             )}
@@ -2535,7 +2538,7 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
             <div>
               <label className="text-xs font-bold text-slate-400 block mb-1.5">📝 Notas</label>
               <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
-                rows={2} placeholder="Observaciones de la sesión..."
+                rows={2} placeholder={t("ui.session_observations")}
                 className="w-full p-3 rounded-xl text-sm resize-none outline-none transition-all" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
             </div>
           </div>
@@ -2632,7 +2635,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                 <label className="text-xs font-bold text-slate-500 block mb-1.5">{t('programas.area')} *</label>
                 <input value={form.area}
                   onChange={e => set('area', e.target.value)}
-                  placeholder="Ej: Comunicación, Conducta..."
+                  placeholder={t("programas.phArea")}
                   className="w-full rounded-xl text-sm font-bold outline-none transition-all" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
               </div>
               <div>
@@ -2644,16 +2647,16 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
               <div>
                 <label className="text-xs font-bold text-slate-500 block mb-1.5">🎯 Objetivo a largo plazo *</label>
                 <textarea value={form.objetivo_lp} onChange={e => set('objetivo_lp', e.target.value)}
-                  rows={5} placeholder="Con un criterio de éxito de 90% en 2 sesiones consecutivas, el estudiante..."
+                  rows={5} placeholder={t("ui.mastery_criterion")}
                   className="w-full p-3 rounded-xl text-sm resize-y outline-none transition-all" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px', minHeight: '120px' }} />
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500 block mb-1.5">Fase inicial</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1.5">{t("programas.faseInicial")}</label>
                 <select value={form.fase_actual} onChange={e => set('fase_actual', e.target.value)}
                   className="w-full rounded-xl text-sm font-bold outline-none transition-all" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }}>
-                  <option value="intervencion">Intervención</option>
-                  <option value="linea_base">Baseline</option>
-                  <option value="mantenimiento">Mantenimiento</option>
+                  <option value="intervencion">{t("programas.intervencion")}</option>
+                  <option value="linea_base">{t("programas.lineaBase")}</option>
+                  <option value="mantenimiento">{t("programas.mantenimiento")}</option>
                 </select>
               </div>
             </div>
@@ -2661,7 +2664,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
 
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-xs font-bold text-slate-400">Paso 2 · Sets / Objetivos CP</p>
+              <p className="text-xs font-bold text-slate-400">{t("programas.paso2Sets")}</p>
               <p className="text-xs" style={{color:"var(--text-muted)"}}>{t('programas.definePasos')}</p>
               {objetivos.map((obj, i) => (
                 <div key={i} className="rounded-2xl border border-[var(--card-border)] overflow-hidden">
@@ -2727,7 +2730,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                     className="w-full p-3 bg-[var(--input-bg)] border-2 border-[var(--input-border)] rounded-xl text-sm font-bold outline-none focus:border-sky-400 text-center" />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 block mb-1.5">Sesiones consecutivas</label>
+                  <label className="text-xs font-bold text-slate-500 block mb-1.5">{t("programas.criterioSesiones")}</label>
                   <input type="number" min="1" value={form.criterio_sesiones_consecutivas}
                     onChange={e => set('criterio_sesiones_consecutivas', Number(e.target.value))}
                     className="w-full p-3 bg-[var(--input-bg)] border-2 border-[var(--input-border)] rounded-xl text-sm font-bold outline-none focus:border-sky-400 text-center" />
@@ -2738,7 +2741,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
 
           {step === 3 && (
             <div className="space-y-3">
-              <p className="text-xs font-bold text-slate-400">Paso 3 · Procedimiento</p>
+              <p className="text-xs font-bold text-slate-400">{t("programas.paso3Proc")}</p>
               {[
                 { key: 'generalizacion',   label: '➡️ Generalización',               placeholder: 'Promover con la familia que realicen este ejercicio en casa.' },
                 { key: 'notas_programa',   label: '🙈 Notas',                         placeholder: 'Observaciones generales del programa...' },
