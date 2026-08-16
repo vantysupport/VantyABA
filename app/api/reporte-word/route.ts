@@ -3316,6 +3316,182 @@ async function generarGuiaSetFamilia(
 // i18n: responder en el idioma del usuario
 // getLangInstruction moved to lib/lang.ts
 
+// ─────────────────────────────────────────────────────────────────────────────
+// REPORTE GENERAL — consolida TODO lo trabajado con el niño/a:
+// datos, programas ABA, evaluaciones (con breves resúmenes), informes emitidos
+// y una síntesis clínica generada por IA.
+// ─────────────────────────────────────────────────────────────────────────────
+async function generarReporteGeneral(childId: string, userLocale = 'es'): Promise<{ doc: Document; fileName: string }> {
+  // ── 1. Paciente ──
+  const { data: child } = await supabaseAdmin
+    .from('children')
+    .select('name, age, birth_date, diagnosis, created_at, sessions_before_platform')
+    .eq('id', childId).single()
+
+  const nombre = (child as any)?.name || 'Paciente'
+  const nombreCap = nombre.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+  const diagnosis = (child as any)?.diagnosis || 'No especificado'
+  let edadTexto = (child as any)?.age ? `${(child as any).age} años` : 'no registrada'
+  if ((child as any)?.birth_date) {
+    const nac = new Date((child as any).birth_date); const ahora = new Date()
+    let años = ahora.getFullYear() - nac.getFullYear()
+    if (ahora.getMonth() < nac.getMonth() || (ahora.getMonth() === nac.getMonth() && ahora.getDate() < nac.getDate())) años--
+    edadTexto = `${años} años`
+  }
+  const enTerapiaDesde = (child as any)?.created_at
+    ? new Date((child as any).created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '—'
+  const totalSesionesRealizadas = await contarSesionesRealizadas(childId, (child as any)?.sessions_before_platform)
+
+  // ── 2. Cargar datos en paralelo (defensivo) ──
+  const [
+    { data: programas },
+    { data: sesionesProg },
+    evalIniRes, docsRes, formRes, fichasRes, emitidosRes,
+  ] = await Promise.all([
+    supabaseAdmin.from('programas_aba').select('id, titulo, area, fase_actual, estado, criterio_dominio_pct, criterio_sesiones_consecutivas, objetivo_lp').eq('child_id', childId).limit(40),
+    supabaseAdmin.from('sesiones_datos_aba').select('programa_id, fecha, porcentaje_exito, set').eq('child_id', childId).order('fecha', { ascending: true }).limit(500),
+    (async () => { try { return await supabaseAdmin.from('evaluaciones_iniciales').select('estado, recomendacion_resumen, recomendacion, created_at').eq('child_id', childId).order('created_at', { ascending: false }).limit(1).maybeSingle() } catch { return { data: null } } })(),
+    (async () => { try { return await supabaseAdmin.from('patient_documents').select('file_name, category, extracted_text, created_at').eq('child_id', childId).eq('extraction_status', 'done').not('extracted_text', 'is', null).order('created_at', { ascending: false }).limit(8) } catch { return { data: [] as any[] } } })(),
+    (async () => { try { return await supabaseAdmin.from('form_responses').select('form_type, form_title, ai_analysis, created_at').eq('child_id', childId).order('created_at', { ascending: false }).limit(6) } catch { return { data: [] as any[] } } })(),
+    (async () => { try { return await supabaseAdmin.from('clinical_template_responses').select('created_at, filler_name, clinical_templates(name)').eq('child_id', childId).order('created_at', { ascending: false }).limit(6) } catch { return { data: [] as any[] } } })(),
+    (async () => { try { return await supabaseAdmin.from('documentos_emitidos').select('codigo_doc, tipo_label, fecha_emision, valido, file_name').eq('child_id', childId).order('fecha_emision', { ascending: false }).limit(20) } catch { return { data: [] as any[] } } })(),
+  ])
+
+  const progArr = (programas || []) as any[]
+  const sesArr = (sesionesProg || []) as any[]
+  const evalIni = (evalIniRes as any)?.data || null
+  const docsArr = ((docsRes as any)?.data || []) as any[]
+  const formArr = ((formRes as any)?.data || []) as any[]
+  const fichasArr = ((fichasRes as any)?.data || []) as any[]
+  const emitidosArr = ((emitidosRes as any)?.data || []) as any[]
+
+  // objetivos_cp (sets)
+  let objetivosArr: any[] = []
+  if (progArr.length > 0) {
+    try {
+      const { data } = await supabaseAdmin.from('objetivos_cp')
+        .select('programa_id, numero_set, descripcion, estado')
+        .in('programa_id', progArr.map(p => p.id))
+      objetivosArr = data || []
+    } catch { /* noop */ }
+  }
+
+  // ── 3. Resumen por programa ──
+  const avg = (a: number[]) => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : 0
+  const progResumen = progArr.map((p: any) => {
+    const ses = sesArr.filter((s: any) => s.programa_id === p.id)
+    const pcts = ses.map((s: any) => parseNivelLogro(s.porcentaje_exito)).filter((v: number | null): v is number => v !== null)
+    const sets = objetivosArr.filter((o: any) => o.programa_id === p.id)
+    const setsDominados = sets.filter((o: any) => String(o.estado).toLowerCase() === 'dominado').length
+    const dominado = String(p.estado || '').toLowerCase() === 'dominado' || (sets.length > 0 && setsDominados === sets.length)
+    return {
+      titulo: p.titulo || 'Programa', area: p.area || '—',
+      objetivo: p.objetivo_lp || '', dominado,
+      ultimo: pcts.length ? pcts[pcts.length - 1] : null,
+      promedio: pcts.length ? avg(pcts) : null,
+      n: ses.length, sets: sets.length, setsDominados,
+    }
+  })
+  const nLogrados = progResumen.filter(p => p.dominado).length
+  const nEnProgreso = progResumen.length - nLogrados
+
+  // ── 4. Breves resúmenes de evaluaciones (IA, con fallback) ──
+  const materialEval: string[] = []
+  if (evalIni?.recomendacion_resumen) materialEval.push(`Evaluación inicial: ${String(evalIni.recomendacion_resumen).slice(0, 600)}`)
+  formArr.forEach((f: any) => { if (f.ai_analysis) materialEval.push(`${f.form_title || f.form_type || 'Formulario'}: ${String(f.ai_analysis).slice(0, 500)}`) })
+  docsArr.forEach((d: any) => { if (d.extracted_text) materialEval.push(`Documento "${d.file_name}"${d.category ? ` (${d.category})` : ''}: ${String(d.extracted_text).slice(0, 900)}`) })
+
+  let resumenesEval: string[] = []
+  if (materialEval.length > 0) {
+    try {
+      const raw = await callGroqSimple(
+        'Eres neuropsicóloga clínica. Resumís evaluaciones de forma breve, objetiva y técnica. NO inventes datos que no estén en el texto.',
+        `Para cada evaluación/documento siguiente, escribe UNA línea de resumen (máx 2 oraciones), comenzando con el nombre entre corchetes. No agregues nada más.\n\n${materialEval.join('\n\n---\n\n')}`,
+        { model: GROQ_MODELS.SMART, temperature: 0.3, maxTokens: 700 }
+      )
+      resumenesEval = (raw || '').split('\n').map(l => l.trim()).filter(l => l.length > 3)
+    } catch { /* fallback abajo */ }
+  }
+
+  // ── 5. Síntesis clínica general (IA, con fallback) ──
+  let sintesis = ''
+  try {
+    sintesis = await callGroqSimple(
+      'Eres neuropsicóloga clínica ABA. Redactás una síntesis integral breve del proceso del paciente, en tono técnico y objetivo. Sin inventar datos.',
+      `Redacta una síntesis clínica integral (4-6 oraciones) de ${nombreCap} (${edadTexto}, ${diagnosis}) considerando:\n` +
+      `- ${progResumen.length} programas ABA (${nLogrados} con criterio alcanzado, ${nEnProgreso} en intervención), ${totalSesionesRealizadas} sesiones totales.\n` +
+      `- Programas: ${progResumen.map(p => `${p.titulo} (${p.dominado ? 'logrado' : (p.ultimo != null ? p.ultimo + '%' : 'sin datos')})`).join('; ') || 'ninguno'}.\n` +
+      `- Evaluaciones/documentos disponibles: ${materialEval.length}.\n` +
+      `No uses frases motivacionales vagas; sé específica y clínica.`,
+      { model: GROQ_MODELS.SMART, temperature: 0.35, maxTokens: 450 }
+    ) || ''
+  } catch { /* opcional */ }
+
+  // ── 6. Construir el documento ──
+  const sections: any[] = []
+  sections.push(title('REPORTE GENERAL DEL PACIENTE'))
+  sections.push(kv('Paciente', nombreCap))
+  sections.push(kv('Edad', edadTexto))
+  sections.push(kv('Diagnóstico', diagnosis))
+  sections.push(kv('En seguimiento desde', enTerapiaDesde))
+  sections.push(kv('Sesiones totales', String(totalSesionesRealizadas)))
+
+  sections.push(h2('RESUMEN GENERAL'))
+  sections.push(infoBox(
+    `Programas ABA: ${progResumen.length} (${nLogrados} con criterio alcanzado · ${nEnProgreso} en intervención). ` +
+    `Evaluaciones/documentos: ${materialEval.length}. Fichas clínicas: ${fichasArr.length}. ` +
+    `Informes emitidos: ${emitidosArr.length}. Sesiones registradas: ${totalSesionesRealizadas}.`
+  ))
+  if (sintesis) { sections.push(h2('SÍNTESIS CLÍNICA')); sections.push(pp(sintesis)) }
+
+  // Programas
+  sections.push(h2('PROGRAMAS ABA'))
+  if (progResumen.length === 0) sections.push(pp('No hay programas ABA registrados para este paciente.'))
+  else progResumen.forEach(p => {
+    const estado = p.dominado ? '✓ Criterio alcanzado' : (p.ultimo != null ? `en intervención — último ${p.ultimo}%${p.promedio != null ? `, promedio ${p.promedio}%` : ''}` : 'sin sesiones aún')
+    const setsTxt = p.sets > 0 ? ` · Sets: ${p.setsDominados}/${p.sets} dominados` : ''
+    sections.push(bullet(`${p.titulo} (${p.area}) — ${estado} · ${p.n} sesión(es)${setsTxt}`))
+  })
+
+  // Evaluaciones e informes
+  sections.push(h2('EVALUACIONES E INFORMES'))
+  if (resumenesEval.length > 0) {
+    resumenesEval.forEach(r => sections.push(bullet(r)))
+  } else if (materialEval.length > 0) {
+    // Fallback sin IA: mostrar excerpts recortados
+    if (evalIni?.recomendacion_resumen) sections.push(bullet(`Evaluación inicial: ${String(evalIni.recomendacion_resumen).slice(0, 300)}`))
+    formArr.forEach((f: any) => f.ai_analysis && sections.push(bullet(`${f.form_title || f.form_type}: ${String(f.ai_analysis).slice(0, 250)}`)))
+    docsArr.forEach((d: any) => sections.push(bullet(`Documento "${d.file_name}": ${String(d.extracted_text || '').slice(0, 250)}…`)))
+  } else {
+    sections.push(pp('No hay evaluaciones ni documentos con contenido registrado para este paciente.'))
+  }
+  if (fichasArr.length > 0) {
+    sections.push(pp('Fichas clínicas registradas:', '64748B'))
+    fichasArr.forEach((f: any) => sections.push(bullet(`${(f.clinical_templates as any)?.name || 'Ficha'} — ${f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES') : ''}${f.filler_name ? ` (por ${f.filler_name})` : ''}`)))
+  }
+
+  // Documentos emitidos
+  if (emitidosArr.length > 0) {
+    sections.push(h2('DOCUMENTOS EMITIDOS'))
+    emitidosArr.forEach((d: any) => sections.push(bullet(
+      `${d.tipo_label || d.codigo_doc} — ${d.fecha_emision ? new Date(d.fecha_emision).toLocaleDateString('es-ES') : ''} · Código ${d.codigo_doc}${d.valido === false ? ' (anulado)' : ''}`
+    )))
+  }
+
+  // ── 7. Registrar + generar ──
+  const codigoDoc = generarCodigoDocumento(childId, 'general')
+  await registrarDocumentoEmitido({
+    codigoDoc, childId, tipo: 'reporte_general', pacienteNombre: nombreCap,
+    fileName: `Reporte_General_${nombreCap.replace(/\s+/g, '_')}.docx`,
+  }).catch(() => {})
+
+  const doc = await makeDoc(sections, `Reporte_General_${nombreCap.replace(/\s+/g, '_')}.docx`, {
+    tipoInforme: 'Reporte General', childName: nombreCap, childAge: edadTexto, diagnosis, codigoDoc,
+  })
+  return { doc, fileName: `Reporte_General_${nombreCap.replace(/\s+/g, '_')}.docx` }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -3342,7 +3518,8 @@ export async function POST(req: NextRequest) {
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
 
     // 'seguro' (botón "Informe Clínico" en el UI) → nuevo informe SANTI profesional
-    if (tipo === 'seguro' || tipo === 'clinico' || tipo === 'tratamiento') result = await generarInformeClinicoSanti(childId, userLocale)
+    if (tipo === 'general') result = await generarReporteGeneral(childId, userLocale)
+    else if (tipo === 'seguro' || tipo === 'clinico' || tipo === 'tratamiento') result = await generarInformeClinicoSanti(childId, userLocale)
     else if (tipo === 'seguro_legacy') result = await generarReporteSeguro(childId, userLocale)
     // Versiones PRO (nivel profesional con portada + QR + IA + trazabilidad)
     else if (tipo === 'comparativo') result = await generarReporteComparativoPro(childId, userLocale)

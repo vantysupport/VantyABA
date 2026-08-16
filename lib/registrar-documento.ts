@@ -17,6 +17,7 @@ export type TipoDocumento =
   | 'reporte_comparativo'
   | 'reporte_seguro'
   | 'evaluacion_profesional'
+  | 'reporte_general'
   | 'otro'
 
 const TIPO_LABEL: Record<TipoDocumento, string> = {
@@ -29,6 +30,7 @@ const TIPO_LABEL: Record<TipoDocumento, string> = {
   reporte_comparativo:     'Análisis Comparativo de Períodos',
   reporte_seguro:          'Reporte Neuropsicológico y Clínico',
   evaluacion_profesional:  'Informe de Evaluación Profesional',
+  reporte_general:         'Reporte General del Paciente',
   otro:                    'Documento Clínico',
 }
 

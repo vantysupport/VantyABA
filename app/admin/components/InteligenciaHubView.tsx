@@ -1643,7 +1643,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
   const { t } = useI18n()
 
   const [selected, setSelected] = useState<Paciente | null>(null)
-  const [tipo, setTipo] = useState<'padres' | 'seguro' | 'comparativo'>('padres')
+  const [tipo, setTipo] = useState<'padres' | 'seguro' | 'comparativo' | 'general'>('padres')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -1752,6 +1752,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
     padres:      { label: 'Para padres',          desc: 'Lenguaje emocional y accesible',                  emoji: '👨‍👩‍👧' },
     seguro:      { label: 'Informe Clínico', desc: 'Formato oficial del centro (Área/Subárea/Sets)', emoji: '📋' },
     comparativo: { label: 'Comparativo + pred.',  desc: '"En 3 meses logrará X"',                          emoji: '📊' },
+    general:     { label: 'Reporte General',       desc: 'Todo: programas, evaluaciones (con resúmenes) e informes', emoji: '🗂️' },
   }
 
   return (
@@ -1772,7 +1773,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
         </select>
 
         <label className="text-xs font-bold text-slate-500">{t('hub.tipoReporte')}</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {(Object.entries(tipoInfo) as [typeof tipo, typeof tipoInfo['padres']][]).map(([k, v]) => (
             <button key={k} onClick={() => setTipo(k)}
               className={`p-3 rounded-xl border text-left transition ${tipo === k ? 'border-teal-400 bg-teal-50 shadow-sm' : 'border-slate-100 bg-slate-50 hover:border-teal-200'}`}>
