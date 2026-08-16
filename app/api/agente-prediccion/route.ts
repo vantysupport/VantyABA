@@ -269,10 +269,18 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Contexto para análisis IA
+    // Contexto para análisis IA — la query incluye los NOMBRES/objetivos de los
+    // programas del niño para traer del Cerebro IA los ítems del protocolo
+    // (ABLLS-R, etc.) directamente relacionados con lo que se está trabajando.
     let cerebroCtx = ''
     try {
-      const kb = await buildAIContext(undefined, undefined, undefined, 'análisis ABA progreso criterio logro sets')
+      const progNames = analisis_por_programa
+        .map(p => `${p.nombre}${p.objetivo ? ' — ' + p.objetivo : ''}`)
+        .filter(Boolean)
+        .slice(0, 8)
+        .join('; ')
+      const kbQuery = `protocolo ABLLS-R ABA criterios de logro y objetivos relacionados con: ${progNames || 'progreso, criterio de dominio, sets'}`
+      const kb = await buildAIContext(undefined, undefined, undefined, kbQuery)
       cerebroCtx = kb.knowledgeContext
     } catch { /* fallback */ }
 

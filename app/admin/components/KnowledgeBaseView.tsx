@@ -65,6 +65,74 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
   const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([])
   const [libroSeleccionado, setLibroSeleccionado] = useState<any>(null)
 
+  // ── Importar protocolo ABLLS-R completo (25 secciones) al Cerebro IA ──
+  const [seedingAblls, setSeedingAblls] = useState(false)
+  const [seedProgress, setSeedProgress] = useState('')
+
+  const handleSeedAblls = async () => {
+    if (seedingAblls) return
+    if (!confirm('Esto cargará el protocolo ABLLS-R completo (25 secciones, 545 ítems) al Cerebro IA. Reemplaza cualquier versión previa. ¿Continuar?')) return
+    setSeedingAblls(true)
+    setSeedProgress('Obteniendo lista de secciones…')
+    try {
+      const listRes = await fetch('/api/knowledge/seed-protocolos')
+      const listJson = await listRes.json()
+      const presets: any[] = listJson.presets || []
+      if (presets.length === 0) { toast.error('No se encontraron secciones ABLLS-R'); return }
+      let okChunks = 0, hechas = 0
+      for (const p of presets) {
+        setSeedProgress(`Sección ${p.letra} · ${p.area} (${hechas + 1}/${presets.length})…`)
+        try {
+          const res = await fetch('/api/knowledge/seed-protocolos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preset: p.preset, force: true }),
+          })
+          const json = await res.json()
+          if (json.ok) okChunks += json.chunks_indexados || 0
+        } catch { /* seguir con la siguiente sección */ }
+        hechas++
+      }
+      toast.success(`ABLLS-R cargado: ${okChunks} ítems indexados en el Cerebro IA`)
+      setSeedProgress('')
+      await loadDocs()
+    } catch (e: any) {
+      toast.error(e?.message || 'Error importando ABLLS-R')
+    } finally {
+      setSeedingAblls(false)
+    }
+  }
+
+  // ── Cargar conocimiento desde la carpeta del código (/knowledge-seed) ──
+  const [seedingArchivos, setSeedingArchivos] = useState(false)
+
+  const handleSeedArchivos = async () => {
+    if (seedingArchivos) return
+    setSeedingArchivos(true)
+    try {
+      const listRes = await fetch('/api/knowledge/seed-archivos')
+      const listJson = await listRes.json()
+      const archivos: any[] = listJson.archivos || []
+      if (archivos.length === 0) {
+        toast.error('No hay archivos .md/.txt en la carpeta knowledge-seed del código')
+        return
+      }
+      const res = await fetch('/api/knowledge/seed-archivos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      })
+      const json = await res.json()
+      if (json.error) { toast.error(json.error); return }
+      toast.success(`Conocimiento del código cargado: ${json.archivos_procesados} archivo(s), ${json.total_chunks} fragmentos`)
+      await loadDocs()
+    } catch (e: any) {
+      toast.error(e?.message || 'Error cargando conocimiento del código')
+    } finally {
+      setSeedingArchivos(false)
+    }
+  }
+
   const loadDocs = async () => {
     setLoading(true)
     try {
@@ -978,6 +1046,39 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
       {/* ══ TAB: BIBLIOTECA ══ */}
       {activeTab === 'biblioteca' && (
         <div className="space-y-4">
+          {/* Importar protocolo ABLLS-R completo al Cerebro IA */}
+          <div className={`rounded-2xl border p-4 ${isDark ? 'bg-indigo-950/30 border-indigo-800/50' : 'bg-indigo-50 border-indigo-200'}`}>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
+                <p className={`font-bold text-sm ${isDark ? 'text-indigo-200' : 'text-indigo-800'}`}>🧩 Protocolo ABLLS-R</p>
+                <p className={`text-xs mt-0.5 ${isDark ? 'text-indigo-300/80' : 'text-indigo-600'}`}>
+                  Carga las 25 secciones (A–Z · 545 ítems con objetivo y criterios) al Cerebro IA. Lo usarán el chat ARIA y el análisis predictivo.
+                </p>
+                {seedProgress && <p className={`text-[11px] mt-1.5 font-medium ${isDark ? 'text-indigo-300' : 'text-indigo-700'}`}>{seedProgress}</p>}
+              </div>
+              <button onClick={handleSeedAblls} disabled={seedingAblls}
+                className="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-xl font-bold text-xs whitespace-nowrap transition">
+                {seedingAblls ? 'Importando…' : 'Importar ABLLS-R completo'}
+              </button>
+            </div>
+          </div>
+
+          {/* Cargar conocimiento desde la carpeta del código (/knowledge-seed) */}
+          <div className={`rounded-2xl border p-4 ${isDark ? 'bg-emerald-950/30 border-emerald-800/50' : 'bg-emerald-50 border-emerald-200'}`}>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
+                <p className={`font-bold text-sm ${isDark ? 'text-emerald-200' : 'text-emerald-800'}`}>📁 Conocimiento del código</p>
+                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-300/80' : 'text-emerald-600'}`}>
+                  Indexa los archivos de texto (.md/.txt) que están en la carpeta <code>knowledge-seed/</code> del repositorio. 100% confiable, sin extracción de PDF ni símbolos basura.
+                </p>
+              </div>
+              <button onClick={handleSeedArchivos} disabled={seedingArchivos}
+                className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-bold text-xs whitespace-nowrap transition">
+                {seedingArchivos ? 'Cargando…' : 'Cargar conocimiento del código'}
+              </button>
+            </div>
+          </div>
+
           <button onClick={() => setShowForm(v => !v)}
             className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 text-sm transition">
             {showForm ? <><X size={16} /> {t('common.cancelar')}</> : <><Plus size={16} /> Agregar documento manualmente</>}

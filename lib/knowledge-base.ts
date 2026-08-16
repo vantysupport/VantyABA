@@ -83,32 +83,64 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 // No funciona con PDFs escaneados (solo imágenes) → fallback a Gemini Vision
 async function extractTextWithPdfParse(buffer: ArrayBuffer): Promise<string> {
   try {
-    const pdfModule = await import('pdf-parse') as any
-    const pdfParse = pdfModule.default ?? pdfModule
-    const data = await pdfParse(Buffer.from(buffer))
-    const text = data.text?.trim() || ''
-    console.log(`[pdf-parse] Extraído: ${text.length} chars, ${data.numpages} páginas`)
-    return text
+    // pdf-parse v2 exporta la CLASE `PDFParse` (no una función como v1).
+    // API: new PDFParse({ data }).getText() → { pages, text, total }
+    const mod = await import('pdf-parse') as any
+    const PDFParse = mod.PDFParse ?? mod.default?.PDFParse ?? mod.default
+    if (typeof PDFParse !== 'function') {
+      console.warn('[pdf-parse] Clase PDFParse no encontrada en el módulo')
+      return ''
+    }
+    const parser = new PDFParse({ data: new Uint8Array(buffer) })
+    try {
+      const result = await parser.getText()
+      const text = (result?.text || '').trim()
+      console.log(`[pdf-parse] Extraído: ${text.length} chars, ${result?.total} páginas`)
+      return text
+    } finally {
+      try { await parser.destroy?.() } catch { /* noop */ }
+    }
   } catch (e: any) {
     console.warn('[pdf-parse] Error:', e?.message)
     return ''
   }
 }
 
-// ── extractTextFromPdfWithGemini: ahora es pdf-parse primero → Gemini fallback ─
+// ── Heurística anti-basura ────────────────────────────────────────────────────
+// El extractor manual de respaldo (extractPdfTextFallback) puede devolver "puro
+// símbolo" cuando un PDF viene comprimido/escaneado. Antes eso se indexaba tal
+// cual y ensuciaba el Cerebro IA. Esta función decide si un texto es realmente
+// legible antes de aceptarlo.
+export function esTextoLegible(text: string): boolean {
+  if (!text || text.length < 50) return false
+  const legibles = (text.match(/[a-zA-ZáéíóúñüÁÉÍÓÚÑÜ0-9\s.,;:!?()"'%\-–—/]/g) || []).length
+  const ratio = legibles / text.length
+  const palabras = (text.match(/[a-zA-ZáéíóúñüÁÉÍÓÚÑ]{3,}/g) || []).length
+  return ratio > 0.7 && palabras > 20
+}
+
+// ── extractTextFromPdf: pdf-parse primero → Gemini fallback → guarda anti-basura
 // pdf-parse: gratis, sin API, sin límites, instantáneo
 // Gemini Vision: solo para PDFs escaneados o cuando pdf-parse falla
 export async function extractTextFromPdf(buffer: ArrayBuffer): Promise<string> {
   // 1. Intentar con pdf-parse (gratis, sin IA)
   const textoPdfParse = await extractTextWithPdfParse(buffer)
-  if (textoPdfParse.length > 200) {
+  if (textoPdfParse.length > 200 && esTextoLegible(textoPdfParse)) {
     console.log('[pdf] ✅ Texto extraído con pdf-parse (sin IA)')
     return textoPdfParse
   }
 
   // 2. Fallback: Gemini Vision (para PDFs escaneados)
   console.log('[pdf] pdf-parse insuficiente, usando Gemini Vision...')
-  return extractTextFromPdfWithGemini(buffer)
+  const textoGemini = await extractTextFromPdfWithGemini(buffer)
+
+  // 3. Guarda final: NUNCA indexar símbolos basura. Si nada es legible, devolver
+  //    vacío para que el documento se marque como "no procesado" (mejor que
+  //    llenar el cerebro de símbolos que la IA no puede usar).
+  if (esTextoLegible(textoGemini)) return textoGemini
+  if (esTextoLegible(textoPdfParse)) return textoPdfParse
+  console.warn('[pdf] ⚠️ No se obtuvo texto legible (PDF escaneado sin OCR/Gemini). No se indexará basura.')
+  return ''
 }
 
 // ── Extraer texto de PDF con Gemini Vision ────────────────────────────────────
