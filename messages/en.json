@@ -348,7 +348,17 @@
     "sesionesPorDia": "Sessions per day",
     "proximasSesiones": "Upcoming sessions",
     "alertasRecientes": "Recent clinical alerts",
-    "verTodas": "View all"
+    "verTodas": "View all",
+    "sesionesUlt7": "Sessions · last 7 days",
+    "retencionActiva": "Active retention",
+    "pacientesSesionReciente": "patients with a recent session",
+    "programasActivos": "Active ABA Programs",
+    "descartarAlerta": "Dismiss alert",
+    "refrescarDatos": "Refresh data",
+    "lblCriterioAlcanzado": "criterion met",
+    "lblFalta1Sesion": "1 session left",
+    "lblProgresoConsistente": "consistent progress",
+    "lblCriterioDominado": "criterion mastered"
   },
   "pacientes": {
     "titulo": "Patients",
@@ -408,7 +418,24 @@
     "seleccionaDesc": "Choose a patient from the list to see their full clinical chart",
     "crear": "Create patient",
     "creado": "Patient created successfully",
-    "nombreRequerido": "Name is required"
+    "nombreRequerido": "Name is required",
+    "sinCuentaVinculada": "No linked account",
+    "sinApodo": "No nickname",
+    "sinEspecialista": "No specialist assigned",
+    "sinNotas": "No additional notes",
+    "phNombre": "E.g.: Maria Garcia",
+    "apodo": "Nickname / Short name",
+    "phApodo": "E.g.: Mia, Titi, Fer...",
+    "phDiagnostico": "E.g.: ASD Level 2, ADHD...",
+    "phEdad": "E.g.: 8",
+    "especialistaAsignado": "Assigned specialist",
+    "notasPaciente": "Patient notes",
+    "phNotas": "General observations, notes of interest, routines, preferences, allergies, emergency contact...",
+    "apodoLabel": "Nickname",
+    "nombreInformal": "Informal name or how they prefer to be called",
+    "edadAutoCalc": "Calculated automatically if there is a date of birth",
+    "sinAsignarOpc": "— Unassigned —",
+    "edadAnios": "Age (years)"
   },
   "perfil": {
     "titulo": "My Profile",
@@ -839,7 +866,11 @@
     "areasTrabajar2": "🎯 Work Areas",
     "recomendaciones": "💡 Therapeutic Recommendations",
     "proxEvals2": "📋 Recommended Next Evaluations",
-    "enviarForm": "Send Form"
+    "enviarForm": "Send Form",
+    "autoCalculado": "Auto-calculated",
+    "noFormularios": "No forms found",
+    "respuestas": "Responses",
+    "sinFormsGuardados": "No saved forms"
   },
   "especialista": {
     "titulo": "Specialist Panel",

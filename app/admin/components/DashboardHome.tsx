@@ -73,6 +73,7 @@ function KPI({ label, value, sub, icon: Icon, bar, urgent, onClick }: any) {
 
 // ─── Alerta row ───────────────────────────────────────────────────────────────
 function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: any) {
+  const { t } = useI18n()
   // Detecta alertas positivas (logros) por prefijo del tipo
   const tipoStr = String(tipo || '')
   const esLogro = tipoStr.startsWith('logro_') || tipoStr === 'criterio_alcanzado'
@@ -94,11 +95,11 @@ function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: a
 
   // Etiqueta legible del tipo
   const tipoLabel = (() => {
-    if (tipoStr.startsWith('logro_dominio')) return 'criterio alcanzado'
-    if (tipoStr.startsWith('logro_cerca_dominio')) return 'falta 1 sesión'
-    if (tipoStr.startsWith('logro_progreso')) return 'progreso consistente'
-    if (tipoStr.startsWith('logro_criterio')) return 'criterio dominado'
-    if (tipoStr === 'criterio_alcanzado') return 'criterio dominado'
+    if (tipoStr.startsWith('logro_dominio')) return t('dashboard.lblCriterioAlcanzado')
+    if (tipoStr.startsWith('logro_cerca_dominio')) return t('dashboard.lblFalta1Sesion')
+    if (tipoStr.startsWith('logro_progreso')) return t('dashboard.lblProgresoConsistente')
+    if (tipoStr.startsWith('logro_criterio')) return t('dashboard.lblCriterioDominado')
+    if (tipoStr === 'criterio_alcanzado') return t('dashboard.lblCriterioDominado')
     return tipoStr.replace(/_[0-9a-f-]{8,}$/i, '').replace(/_/g, ' ')
   })()
 
@@ -133,7 +134,7 @@ function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: a
         <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} onClick={onClick} className="cursor-pointer hover:opacity-70 transition-opacity" />
         <button
           onClick={(e) => { e.stopPropagation(); onDismiss?.() }}
-          title="Descartar alerta"
+          title={t('dashboard.descartarAlerta')}
           className="flex items-center justify-center w-5 h-5 rounded-full hover:opacity-80 transition-opacity"
           style={{ background: 'rgba(0,0,0,0.08)' }}>
           <X size={10} style={{ color: 'var(--text-muted)' }} />
@@ -145,10 +146,11 @@ function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: a
 
 // ─── Cita row ─────────────────────────────────────────────────────────────────
 function CitaRow({ cita }: any) {
+  const { t, locale } = useI18n()
   const fecha = new Date((cita.fecha || cita.appointment_date) + 'T00:00:00')
   const hoy = new Date().toISOString().split('T')[0]
   const esHoy = (cita.fecha || cita.appointment_date) === hoy
-  const mes = fecha.toLocaleString('es', { month: 'short' }).toUpperCase()
+  const mes = fecha.toLocaleString(locale === 'en' ? 'en' : 'es', { month: 'short' }).toUpperCase()
   const dia = fecha.getDate()
   const nombre = cita.children?.name || cita.paciente || 'Paciente'
   const hora = cita.hora_inicio || cita.appointment_time
@@ -166,7 +168,7 @@ function CitaRow({ cita }: any) {
         <p className="text-[11px] flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
           {hora && <><Clock size={9} /> {hora.slice(0, 5)}</>}
           {servicio && <span className="truncate"> · {servicio}</span>}
-          {esHoy && <span className="font-bold flex-shrink-0" style={{ color: '#0284c7' }}> · Hoy</span>}
+          {esHoy && <span className="font-bold flex-shrink-0" style={{ color: '#0284c7' }}> · {t('common.hoy')}</span>}
         </p>
       </div>
     </div>
@@ -550,19 +552,19 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
         {/* Sesiones 7 días + Retención — combinados en fila */}
         <div className="rounded-2xl p-5 flex flex-col justify-between" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
           <div className="flex items-center justify-between mb-1">
-            <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Sesiones · últimos 7 días</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.sesionesUlt7')}</p>
             <span className="text-xl font-extrabold tabular-nums" style={{ color: '#0284c7' }}>{totalSes7d}</span>
           </div>
           <BarChart values={sesSemanales} labels={diasLabels} color="#0284c7" />
           <div className="mt-4 pt-4 border-t flex items-center gap-4" style={{ borderColor: 'var(--card-border)' }}>
             <Donut value={totalPacientes - sinSesion.length} total={totalPacientes} color="#10b981" size={56} />
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Retención activa</p>
+              <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>{t('dashboard.retencionActiva')}</p>
               <p className="text-base font-bold leading-none" style={{ color: 'var(--text-primary)' }}>
                 {totalPacientes - sinSesion.length}
                 <span className="text-sm font-medium ml-1" style={{ color: 'var(--text-muted)' }}>/ {totalPacientes}</span>
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>pacientes con sesión reciente</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('dashboard.pacientesSesionReciente')}</p>
             </div>
           </div>
         </div>
@@ -570,8 +572,8 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
         {/* Programas ABA activos */}
         <div className="rounded-2xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Programas ABA Activos</p>
-            <button onClick={() => navigateTo('ninos')} className="text-[11px] font-semibold" style={{ color: '#0284c7' }}>Ver todos →</button>
+            <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.programasActivos')}</p>
+            <button onClick={() => navigateTo('ninos')} className="text-[11px] font-semibold" style={{ color: '#0284c7' }}>{t('common.verTodos')} →</button>
           </div>
           {programasActivos.length > 0 ? (
             <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight: '260px', scrollbarWidth: 'thin' }}>
@@ -630,7 +632,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
               <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.14)' }}>
                 <Bell size={14} style={{ color: '#f59e0b' }} />
               </div>
-              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Alertas Clínicas</p>
+              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.alertasClinicas')}</p>
             </div>
             {alertasClinicas.length > 0 && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -655,7 +657,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
               : (
                 <div className="flex flex-col items-center py-10">
                   <CheckCircle2 size={24} style={{ color: '#10b981', opacity: 0.5 }} />
-                  <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Sin alertas activas</p>
+                  <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t('dashboard.sinAlertas')}</p>
                 </div>
               )
             }
@@ -669,13 +671,13 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
               <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(2,132,199,0.14)' }}>
                 <Calendar size={14} style={{ color: '#0284c7' }} />
               </div>
-              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Próximas Citas</p>
+              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.proximasCitas')}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => cargar()}
                 disabled={loading}
-                title="Refrescar datos"
+                title={t('dashboard.refrescarDatos')}
                 className="p-1 rounded-md hover:bg-[var(--muted-bg)] transition-colors disabled:opacity-40"
               >
                 <RefreshCw size={11} style={{ color: 'var(--text-muted)' }} className={loading ? 'animate-spin' : ''} />
@@ -683,7 +685,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
               <button onClick={() => navigateTo('agenda')}
                 className="text-[10px] font-semibold flex items-center gap-1"
                 style={{ color: '#0284c7' }}>
-                Ver agenda <ArrowUpRight size={10} />
+                {t('agenda.verCalendario')} <ArrowUpRight size={10} />
               </button>
             </div>
           </div>
@@ -693,9 +695,9 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
               : (
                 <div className="flex flex-col items-center py-12">
                   <Calendar size={24} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                  <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Sin citas agendadas</p>
+                  <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t('agenda.sinCitas')}</p>
                   <button onClick={() => navigateTo('agenda')} className="mt-3 text-xs font-bold" style={{ color: '#0284c7' }}>
-                    Agendar ahora →
+                    {t('agenda.agendarAhora')} →
                   </button>
                 </div>
               )

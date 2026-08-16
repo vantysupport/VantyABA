@@ -294,7 +294,7 @@ function QuestionRenderer({ question, value, onChange }: any) {
       <div>
         <label className="text-sm font-bold text-slate-700 block mb-2 flex items-center gap-1.5">
           <Sparkles size={13} className="text-sky-500" /> {question.label}
-          <span className="text-[10px] font-bold text-sky-400 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200 ml-1">Generado por IA</span>
+          <span className="text-[10px] font-bold text-sky-400 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200 ml-1">{t("evaluaciones.generadoIA")}</span>
         </label>
         {hasValue ? (
           <input type="text" value={value} onChange={e => onChange(e.target.value)}
@@ -316,7 +316,7 @@ function QuestionRenderer({ question, value, onChange }: any) {
       <div>
         <label className="text-sm font-bold text-slate-700 block mb-2 flex items-center gap-1.5">
           <Lock size={13} className="text-slate-400" /> {question.label}
-          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 ml-1">Auto-calculado</span>
+          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 ml-1">{t("evaluaciones.autoCalculado")}</span>
         </label>
         {hasValue ? (
           <div className="w-full p-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl text-sm font-bold text-emerald-800">
@@ -1054,9 +1054,9 @@ function FormFillView({ form, children, onBack, toast, initialChildId, initialCh
             className="flex-1 flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white rounded-2xl font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed active:scale-95"
           >
             {isGeneratingReport ? (
-              <><Loader2 size={18} className="animate-spin" /> Generando reporte...</>
+              <><Loader2 size={18} className="animate-spin" /> {t("common.generandoReporte")}</>
             ) : (
-              <><Download size={18} /> Generar y Descargar Reporte Word</>
+              <><Download size={18} /> {t("evaluaciones.genDescarga")}</>
             )}
           </button>
           <button
@@ -1282,7 +1282,7 @@ function FormCard({ form, onStart, onSend, catInfo }: any) {
             <button onClick={() => onSend(form)}
               className="px-3 py-2.5 rounded-lg transition-all"
               style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
-              title="Enviar a padres">
+              title={t("evaluaciones.enviarPadres")}>
               <Send size={12} />
             </button>
           )}
@@ -1493,7 +1493,7 @@ export default function EvaluacionesUnificadas({ initialChildId, initialChildNam
               <div className="p-5 bg-slate-100 rounded-3xl mb-4">
                 <Search size={40} className="text-slate-300" />
               </div>
-              <p className="font-bold text-slate-400">No se encontraron formularios</p>
+              <p className="font-bold text-slate-400">{t("evaluaciones.noFormularios")}</p>
               <p className="text-xs text-slate-300 mt-1">{t('evaluaciones.otroBusqueda')}</p>
             </div>
           )}
@@ -1528,7 +1528,7 @@ export default function EvaluacionesUnificadas({ initialChildId, initialChildNam
               </div>
               {expandedResponse === sf.id && sf.status === 'completed' && sf.responses && (
                 <div className="border-t border-slate-100 bg-slate-50/50 p-5">
-                  <h4 className="text-xs font-bold text-slate-400 mb-3">Respuestas</h4>
+                  <h4 className="text-xs font-bold text-slate-400 mb-3">{t("evaluaciones.respuestas")}</h4>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {Object.entries(sf.responses).map(([k, v]) => (
                       <div key={k} className=" rounded-xl p-3 border border-slate-100" style={{ background: "var(--card)" }}>
@@ -1550,7 +1550,7 @@ export default function EvaluacionesUnificadas({ initialChildId, initialChildNam
           {savedForms.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center  rounded-3xl border border-slate-100" style={{ background: "var(--card)" }}>
               <div className="p-5 bg-slate-100 rounded-3xl mb-4"><ClipboardList size={40} className="text-slate-300" /></div>
-              <p className="font-bold text-slate-400">Sin formularios guardados</p>
+              <p className="font-bold text-slate-400">{t("evaluaciones.sinFormsGuardados")}</p>
             </div>
           ) : savedForms.map(sf => (
             <HistorialFormCard

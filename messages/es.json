@@ -247,7 +247,17 @@
   "sesionesPorDia": "Sesiones por día",
   "proximasSesiones": "Próximas sesiones",
   "alertasRecientes": "Alertas clínicas recientes",
-  "verTodas": "Ver todas"
+  "verTodas": "Ver todas",
+  "sesionesUlt7": "Sesiones · últimos 7 días",
+  "retencionActiva": "Retención activa",
+  "pacientesSesionReciente": "pacientes con sesión reciente",
+  "programasActivos": "Programas ABA Activos",
+  "descartarAlerta": "Descartar alerta",
+  "refrescarDatos": "Refrescar datos",
+  "lblCriterioAlcanzado": "criterio alcanzado",
+  "lblFalta1Sesion": "falta 1 sesión",
+  "lblProgresoConsistente": "progreso consistente",
+  "lblCriterioDominado": "criterio dominado"
  },
  "pacientes": {
   "titulo": "Pacientes",
@@ -307,7 +317,24 @@
   "seleccionaDesc": "Elige un paciente de la lista para ver su ficha clínica completa",
   "crear": "Crear paciente",
   "creado": "Paciente creado correctamente",
-  "nombreRequerido": "El nombre es requerido"
+  "nombreRequerido": "El nombre es requerido",
+  "sinCuentaVinculada": "Sin cuenta vinculada",
+  "sinApodo": "Sin apodo",
+  "sinEspecialista": "Sin especialista asignado",
+  "sinNotas": "Sin notas adicionales",
+  "phNombre": "Ej: María García",
+  "apodo": "Apodo / Nombre corto",
+  "phApodo": "Ej: Mía, Titi, Fer...",
+  "phDiagnostico": "Ej: TEA Nivel 2, TDAH...",
+  "phEdad": "Ej: 8",
+  "especialistaAsignado": "Especialista asignado",
+  "notasPaciente": "Notas del paciente",
+  "phNotas": "Observaciones generales, datos de interés, rutinas, preferencias, alergias, contacto de emergencia...",
+  "apodoLabel": "Apodo",
+  "nombreInformal": "Nombre informal o como prefiere que lo llamen",
+  "edadAutoCalc": "Se calcula automáticamente si hay fecha de nacimiento",
+  "sinAsignarOpc": "— Sin asignar —",
+  "edadAnios": "Edad (años)"
  },
  "agenda": {
   "titulo": "Agenda y Citas",
@@ -553,7 +580,11 @@
   "areasTrabajar2": "🎯 Áreas de Trabajo",
   "recomendaciones": "💡 Recomendaciones Terapéuticas",
   "proxEvals2": "📋 Próximas Evaluaciones Recomendadas",
-  "enviarForm": "Enviar Formulario"
+  "enviarForm": "Enviar Formulario",
+  "autoCalculado": "Auto-calculado",
+  "noFormularios": "No se encontraron formularios",
+  "respuestas": "Respuestas",
+  "sinFormsGuardados": "Sin formularios guardados"
  },
  "aria": {
   "titulo": "Asistente ARIA",

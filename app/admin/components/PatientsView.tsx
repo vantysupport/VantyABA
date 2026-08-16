@@ -88,6 +88,7 @@ function InfoPill({ label, value, icon }: { label: string; value: string; icon: 
 
 // ── Sección vinculación de cuenta ─────────────────────────────────────────
 function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => void }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [linkedUser, setLinkedUser] = useState<any>(null)
   const [loadingUser, setLoadingUser] = useState(false)
@@ -212,7 +213,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
                   <Link size={16} style={{ color: 'var(--text-muted)' }}/>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Sin cuenta vinculada</p>
+                  <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{t('pacientes.sinCuentaVinculada')}</p>
                   <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     Vincula una cuenta para que el padre/tutor acceda al portal
                   </p>
@@ -435,6 +436,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
 
 // ── Card: Contador de sesiones (auto desde agenda + ajuste manual histórico) ──
 function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [sessionsBefore, setSessionsBefore] = useState<number>(nino.sessions_before_platform || 0)
   const [autoCount, setAutoCount] = useState<number>(0)
@@ -547,14 +549,14 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
                 onClick={handleSave}
                 disabled={saving}
                 className="p-1 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
-                title="Guardar"
+                title={t('common.guardar')}
               >
                 {saving ? <Loader2 size={12} className="animate-spin"/> : <Check size={12}/>}
               </button>
               <button
                 onClick={() => { setEditing(false); setTempInput(String(sessionsBefore)) }}
                 className="p-1 rounded-md bg-slate-100 text-slate-500 hover:text-slate-700"
-                title="Cancelar"
+                title={t('common.cancelar')}
               >
                 <X size={12}/>
               </button>
@@ -765,16 +767,16 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
                 {nino.diagnosis || '—'}
               </p>
             </InfoCard>
-            <InfoCard icon={User} label="Apodo" color="#0369a1">
+            <InfoCard icon={User} label={t('pacientes.apodoLabel')} color="#0369a1">
               {nino.apodo
                 ? <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{nino.apodo}</p>
-                : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>Sin apodo</p>
+                : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.sinApodo')}</p>
               }
             </InfoCard>
           </div>
 
           {/* Fila 3: Especialista asignado */}
-          <InfoCard icon={Stethoscope} label="Especialista asignado" color="#0284c7">
+          <InfoCard icon={Stethoscope} label={t('pacientes.especialistaAsignado')} color="#0284c7">
             {specialistName
               ? <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-lg bg-sky-500 flex items-center justify-center flex-shrink-0">
@@ -787,17 +789,17 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
                     )}
                   </div>
                 </div>
-              : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>Sin especialista asignado</p>
+              : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.sinEspecialista')}</p>
             }
           </InfoCard>
 
           {/* Fila 4: Notas */}
-          <InfoCard icon={ClipboardList} label="Notas del paciente" color="#0284c7">
+          <InfoCard icon={ClipboardList} label={t('pacientes.notasPaciente')} color="#0284c7">
             {nino.notas
               ? <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
                   {nino.notas}
                 </p>
-              : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>Sin notas adicionales</p>
+              : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.sinNotas')}</p>
             }
           </InfoCard>
 
@@ -837,19 +839,19 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
           {/* Nombre */}
           <div>
             <label className={labelCls} style={{ color: 'var(--text-muted)' }}>{t('common.nombre')}</label>
-            <input type="text" value={form.name} placeholder="Ej: María García"
+            <input type="text" value={form.name} placeholder={t('pacientes.phNombre')}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               className={fieldCls} style={fieldStyle} />
           </div>
 
           {/* Apodo */}
           <div>
-            <label className={labelCls} style={{ color: 'var(--text-muted)' }}>Apodo / Nombre corto</label>
-            <input type="text" value={form.apodo} placeholder="Ej: Mía, Titi, Fer..."
+            <label className={labelCls} style={{ color: 'var(--text-muted)' }}>{t('pacientes.apodo')}</label>
+            <input type="text" value={form.apodo} placeholder={t('pacientes.phApodo')}
               onChange={e => setForm(f => ({ ...f, apodo: e.target.value }))}
               className={fieldCls} style={fieldStyle} />
             <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
-              Nombre informal o como prefiere que lo llamen
+              {t('pacientes.nombreInformal')}
             </p>
           </div>
 
@@ -864,29 +866,29 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
           {/* Diagnóstico */}
           <div>
             <label className={labelCls} style={{ color: 'var(--text-muted)' }}>{t('pacientes.diagnostico')}</label>
-            <input type="text" value={form.diagnosis} placeholder="Ej: TEA Nivel 2, TDAH..."
+            <input type="text" value={form.diagnosis} placeholder={t('pacientes.phDiagnostico')}
               onChange={e => setForm(f => ({ ...f, diagnosis: e.target.value }))}
               className={fieldCls} style={fieldStyle} />
           </div>
 
           {/* Edad manual */}
           <div>
-            <label className={labelCls} style={{ color: 'var(--text-muted)' }}>{t('ui.age')} (años)</label>
-            <input type="number" min="0" max="99" value={form.age} placeholder="Ej: 8"
+            <label className={labelCls} style={{ color: 'var(--text-muted)' }}>{t('pacientes.edadAnios')}</label>
+            <input type="number" min="0" max="99" value={form.age} placeholder={t('pacientes.phEdad')}
               onChange={e => setForm(f => ({ ...f, age: e.target.value.replace(/[^0-9]/g, '') }))}
               className={fieldCls} style={fieldStyle} />
             <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
-              Se calcula automáticamente si hay fecha de nacimiento
+              {t('pacientes.edadAutoCalc')}
             </p>
           </div>
 
           {/* Especialista asignado */}
           <div>
-            <label className={labelCls} style={{ color: 'var(--text-muted)' }}>Especialista asignado</label>
+            <label className={labelCls} style={{ color: 'var(--text-muted)' }}>{t('pacientes.especialistaAsignado')}</label>
             <select value={form.specialist_id}
               onChange={e => setForm(f => ({ ...f, specialist_id: e.target.value }))}
               className={fieldCls} style={fieldStyle}>
-              <option value="">— Sin asignar —</option>
+              <option value="">{t('pacientes.sinAsignarOpc')}</option>
               {specialists.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.full_name || s.email}{s.specialty ? ` — ${s.specialty}` : ` (${s.role})`}
@@ -897,9 +899,9 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
 
           {/* Notas */}
           <div>
-            <label className={labelCls} style={{ color: 'var(--text-muted)' }}>Notas del paciente</label>
+            <label className={labelCls} style={{ color: 'var(--text-muted)' }}>{t('pacientes.notasPaciente')}</label>
             <textarea value={form.notas} rows={4}
-              placeholder="Observaciones generales, datos de interés, rutinas, preferencias, alergias, contacto de emergencia..."
+              placeholder={t('pacientes.phNotas')}
               onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
               className={`${fieldCls} resize-none`} style={fieldStyle} />
           </div>
