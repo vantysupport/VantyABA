@@ -84,10 +84,10 @@ export default function AgendaView({ selectedChild, onChangeView }: { selectedCh
         <div style={{ position:'relative',zIndex:1 }}>
           <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:4 }}>
             <CalendarDays size={15} style={{ opacity:.8 }}/>
-            <span style={{ fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.2,color:'rgba(255,255,255,.7)' }}>Mis citas</span>
+            <span style={{ fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.2,color:'rgba(255,255,255,.7)' }}>{t("agenda.misCitas")}</span>
           </div>
           <h2 style={{ fontSize:22,fontWeight:900,margin:'0 0 4px' }}>{selectedChild?.name||'Citas'}</h2>
-          <p style={{ fontSize:12,color:'rgba(255,255,255,.65)',margin:'0 0 16px' }}>Programadas por el equipo del centro terapéutico</p>
+          <p style={{ fontSize:12,color:'rgba(255,255,255,.65)',margin:'0 0 16px' }}>{t("agenda.programadasEquipoTer")}</p>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10 }}>
             {[['Próximas',proximas.length],['Realizadas',pasadas.filter(c=>c.status==='completed').length],['Total',citas.length]].map(([l,v])=>(
               <div key={l as string} style={{ background:'rgba(255,255,255,.15)',backdropFilter:'blur(8px)',borderRadius:14,padding:'10px 8px',textAlign:'center' }}>
@@ -101,18 +101,18 @@ export default function AgendaView({ selectedChild, onChangeView }: { selectedCh
 
       {/* Info contacto */}
       <div className="av-card" style={{ background:'linear-gradient(135deg,#f0f9ff,#e0f2fe)',border:'1.5px solid #bae6fd',borderRadius:20,padding:'16px 18px' }}>
-        <p style={{ fontSize:13,fontWeight:800,color:'#075985',margin:'0 0 6px',display:'flex',alignItems:'center',gap:6 }}><Info size={14} color="#0284c7"/>Las citas son asignadas por el equipo del centro</p>
-        <p style={{ fontSize:12,color:'#0284c7',margin:'0 0 12px',lineHeight:1.5 }}>Para solicitar, cambiar o cancelar, contactá directamente con recepción.</p>
+        <p style={{ fontSize:13,fontWeight:800,color:'#075985',margin:'0 0 6px',display:'flex',alignItems:'center',gap:6 }}><Info size={14} color="#0284c7"/>{t("agenda.citasAsignadasEquipo")}</p>
+        <p style={{ fontSize:12,color:'#0284c7',margin:'0 0 12px',lineHeight:1.5 }}>{t("agenda.solicitarContacta")}</p>
         <div style={{ display:'flex',flexWrap:'wrap',gap:10 }}>
           <a href="tel:+51991070734" style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'var(--c-card)',border:'1.5px solid #bae6fd',borderRadius:12,fontSize:12,fontWeight:700,color:'#0369a1',textDecoration:'none' }}><Phone size={12}/>+51 991 070 734</a>
-          <a href="mailto:contacto@santi.com" style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'var(--c-card)',border:'1.5px solid #bae6fd',borderRadius:12,fontSize:12,fontWeight:700,color:'#0369a1',textDecoration:'none' }}><Mail size={12}/>Escribir email</a>
+          <a href="mailto:contacto@santi.com" style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'var(--c-card)',border:'1.5px solid #bae6fd',borderRadius:12,fontSize:12,fontWeight:700,color:'#0369a1',textDecoration:'none' }}><Mail size={12}/>{t("agenda.escribirEmail")}</a>
         </div>
       </div>
 
       {!selectedChild ? (
         <div className="av-card" style={{ background:'var(--c-card)',borderRadius:24,border:'1.5px solid var(--c-border-light)',padding:'48px 24px',textAlign:'center' }}>
           <div style={{ width:64,height:64,background:'linear-gradient(135deg,#f5f3ff,#ede9fe)',borderRadius:18,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px' }}><CalendarDays size={28} color="#a78bfa"/></div>
-          <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-placeholder)',margin:0 }}>Seleccioná un niño/a para ver sus citas</p>
+          <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-placeholder)',margin:0 }}>{t("agenda.selecNinoCitas")}</p>
         </div>
       ) : loading ? (
         <div style={{ display:'flex',justifyContent:'center',padding:'40px 0' }}><div style={{ width:32,height:32,borderRadius:'50%',border:'3px solid #e2e8f0',borderTop:'3px solid #0284c7',animation:'spin 1s linear infinite' }}/></div>
@@ -124,8 +124,8 @@ export default function AgendaView({ selectedChild, onChangeView }: { selectedCh
             {proximas.length===0 ? (
               <div style={{ background:'var(--c-surface)',border:'2px dashed var(--c-border)',borderRadius:18,padding:'32px 20px',textAlign:'center' }}>
                 <CalendarDays size={28} color="var(--c-text-placeholder)" style={{ margin:'0 auto 10px',display:'block' }}/>
-                <p style={{ fontWeight:700,fontSize:13,color:'var(--c-text-placeholder)',margin:'0 0 4px' }}>Sin citas próximas</p>
-                <p style={{ fontSize:12,color:'var(--c-text-placeholder)',margin:0 }}>El centro te notificará cuando se asigne una nueva cita.</p>
+                <p style={{ fontWeight:700,fontSize:13,color:'var(--c-text-placeholder)',margin:'0 0 4px' }}>{t("agenda.sinCitasProximas")}</p>
+                <p style={{ fontSize:12,color:'var(--c-text-placeholder)',margin:0 }}>{t("agenda.centroNotificaraCita")}</p>
               </div>
             ) : (
               <div className='av-citas-grid' style={{ display:'flex',flexDirection:'column',gap:10 }}>

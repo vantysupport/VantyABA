@@ -418,7 +418,21 @@
   "phServicio": "Ej: Terapia ABA, Evaluación...",
   "especialistaAsignado": "Especialista asignado",
   "notasOpcional": "Notas (opcional)",
-  "phObservaciones": "Observaciones..."
+  "phObservaciones": "Observaciones...",
+  "misCitas": "Mis citas",
+  "programadasEquipoTer": "Programadas por el equipo del centro terapéutico",
+  "citasAsignadasEquipo": "Las citas son asignadas por el equipo del centro",
+  "solicitarContacta": "Para solicitar, cambiar o cancelar, contactá directamente con recepción.",
+  "escribirEmail": "Escribir email",
+  "selecNinoCitas": "Seleccioná un niño/a para ver sus citas",
+  "sinCitasProximas": "Sin citas próximas",
+  "centroNotificaraCita": "El centro te notificará cuando se asigne una nueva cita.",
+  "sinSesionesDia": "Sin sesiones este día",
+  "selecDiaCitas": "Selecciona un día con citas",
+  "sinSesionesProximas": "Sin sesiones próximas",
+  "citasProgramaCentro": "Las citas las programa el centro",
+  "gestionarSesiones": "Gestionar sesiones",
+  "cambiosCancelaciones": "Cambios · Cancelaciones · Nuevas citas"
  },
  "programas": {
   "titulo": "Programas ABA",
@@ -1005,7 +1019,15 @@
   "idioma": "Idioma preferido",
   "tema": "Tema de la interfaz",
   "seguridad": "Seguridad",
-  "cambiarPassword": "Cambiar contraseña"
+  "cambiarPassword": "Cambiar contraseña",
+  "conectado": "Conectado · ",
+  "quitar": "Quitar",
+  "sincronizaCitas": "Sincronizá tus citas automáticamente",
+  "cambiar": "Cambiar",
+  "listoNotifActivadas": "¡Listo! Notificaciones activadas",
+  "paisesNota": "Perú: +51 · Colombia: +57 · México: +52 · España: +34 · Tu número no se comparte con terceros.",
+  "miCuenta": "Mi cuenta",
+  "calendariosVinculados": "Calendarios vinculados"
  },
  "notificaciones": {
   "titulo": "Notificaciones",
@@ -1125,7 +1147,9 @@
   "comoPaga": "💳 ¿Cómo se paga?",
   "comoFuncTienda": "¿Cómo funciona la tienda?",
   "exploraCompra": "Explora la tienda y haz tu primera compra",
-  "articuloDigital": "📄 Artículo digital"
+  "articuloDigital": "📄 Artículo digital",
+  "totalPagado": "Total pagado",
+  "alConfirmarPedido": "Al confirmar tu pedido y pagar, recibirás el archivo por WhatsApp en menos de 24 horas."
  },
  "ui": {
   "ai_assistant": "Asistente IA",

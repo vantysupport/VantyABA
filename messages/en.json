@@ -452,7 +452,15 @@
     "idioma": "Preferred language",
     "tema": "Interface theme",
     "seguridad": "Security",
-    "cambiarPassword": "Change password"
+    "cambiarPassword": "Change password",
+    "conectado": "Connected · ",
+    "quitar": "Remove",
+    "sincronizaCitas": "Sync your appointments automatically",
+    "cambiar": "Change",
+    "listoNotifActivadas": "Done! Notifications enabled",
+    "paisesNota": "Peru: +51 · Colombia: +57 · Mexico: +52 · Spain: +34 · Your number is not shared with third parties.",
+    "miCuenta": "My account",
+    "calendariosVinculados": "Linked calendars"
   },
   "usuarios": {
     "titulo": "User Management",
@@ -669,7 +677,21 @@
     "phServicio": "E.g.: ABA Therapy, Evaluation...",
     "especialistaAsignado": "Assigned specialist",
     "notasOpcional": "Notes (optional)",
-    "phObservaciones": "Observations..."
+    "phObservaciones": "Observations...",
+    "misCitas": "My appointments",
+    "programadasEquipoTer": "Scheduled by the therapy center team",
+    "citasAsignadasEquipo": "Appointments are assigned by the center team",
+    "solicitarContacta": "To request, change or cancel, contact reception directly.",
+    "escribirEmail": "Write email",
+    "selecNinoCitas": "Select a child to see their appointments",
+    "sinCitasProximas": "No upcoming appointments",
+    "centroNotificaraCita": "The center will notify you when a new appointment is assigned.",
+    "sinSesionesDia": "No sessions this day",
+    "selecDiaCitas": "Select a day with appointments",
+    "sinSesionesProximas": "No upcoming sessions",
+    "citasProgramaCentro": "Appointments are scheduled by the center",
+    "gestionarSesiones": "Manage sessions",
+    "cambiosCancelaciones": "Changes · Cancellations · New appointments"
   },
   "aria": {
     "titulo": "ARIA Assistant",
@@ -994,7 +1016,9 @@
     "comoPaga": "💳 How is it paid?",
     "comoFuncTienda": "How does the store work?",
     "exploraCompra": "Explore the store and make your first purchase",
-    "articuloDigital": "📄 Digital item"
+    "articuloDigital": "📄 Digital item",
+    "totalPagado": "Total paid",
+    "alConfirmarPedido": "When you confirm your order and pay, you will receive the file via WhatsApp within 24 hours."
   },
   "landing": {
     "gallery": "Gallery",

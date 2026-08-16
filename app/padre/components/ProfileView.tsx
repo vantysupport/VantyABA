@@ -12,6 +12,7 @@ import {
 import { InfoRow, HelpItem } from './shared'
 
 function CalBtn({ label, icon, grad, profile, apiBase, paramKey, role='padre' }: any) {
+  const { t } = useI18n()
   const toast = useToast()
   const [status, setStatus] = useState<'loading'|'connected'|'disconnected'>('loading')
   const [email, setEmail] = useState<string|null>(null)
@@ -52,9 +53,9 @@ function CalBtn({ label, icon, grad, profile, apiBase, paramKey, role='padre' }:
       <div style={{ width:42,height:42,background:grad,borderRadius:13,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:18,boxShadow:'0 4px 12px rgba(0,0,0,.15)',flexShrink:0 }}>{icon}</div>
       <div style={{ flex:1,minWidth:0 }}>
         <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-primary)',margin:0 }}>{label}</p>
-        <p style={{ fontSize:12,color:'#10b981',display:'flex',alignItems:'center',gap:4,margin:'2px 0 0' }}><Check size={11}/>Conectado · <span style={{ color:'var(--c-text-muted)' }}>{email}</span></p>
+        <p style={{ fontSize:12,color:'#10b981',display:'flex',alignItems:'center',gap:4,margin:'2px 0 0' }}><Check size={11}/>{t("perfil.conectado")}<span style={{ color:'var(--c-text-muted)' }}>{email}</span></p>
       </div>
-      <button onClick={disconnect} style={{ fontSize:12,fontWeight:700,color:'#ef4444',background:'rgba(239,68,68,0.10)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:10,padding:'6px 12px',cursor:'pointer',flexShrink:0 }}>Quitar</button>
+      <button onClick={disconnect} style={{ fontSize:12,fontWeight:700,color:'#ef4444',background:'rgba(239,68,68,0.10)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:10,padding:'6px 12px',cursor:'pointer',flexShrink:0 }}>{t("perfil.quitar")}</button>
     </div>
   ) : (
     <button onClick={connect} disabled={connecting} style={{ width:'100%',display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:'1px solid var(--c-border)',background:'none',border:'none',cursor:'pointer',transition:'background .15s',fontFamily:'inherit' }}
@@ -65,7 +66,7 @@ function CalBtn({ label, icon, grad, profile, apiBase, paramKey, role='padre' }:
       </div>
       <div style={{ textAlign:'left',flex:1,minWidth:0 }}>
         <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-primary)',margin:0 }}>{connecting?'Conectando...':label}</p>
-        <p style={{ fontSize:12,color:'var(--c-text-muted)',margin:'2px 0 0' }}>Sincronizá tus citas automáticamente</p>
+        <p style={{ fontSize:12,color:'var(--c-text-muted)',margin:'2px 0 0' }}>{t("perfil.sincronizaCitas")}</p>
       </div>
       {!connecting&&<ChevronRight size={18} color="var(--c-text-muted)" style={{ flexShrink:0 }}/>}
     </button>
@@ -91,6 +92,7 @@ function MenuItem({ icon, label, sub, onClick, danger=false, badge='' }: any) {
 }
 
 function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: string) => void }) {
+  const { t } = useI18n()
   const [phone, setPhone] = useState(profile?.phone || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -130,7 +132,7 @@ function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: 
   return (
     <div style={{ background:'var(--c-card)', borderRadius:22, border:'1px solid var(--c-border)', overflow:'hidden', boxShadow:'0 4px 20px rgba(0,0,0,.04)' }}>
       <div style={{ padding:'14px 20px 10px' }}>
-        <p style={{ fontSize:10,fontWeight:800,color:'var(--c-text-muted)',textTransform:'uppercase',letterSpacing:1,margin:0 }}>Notificaciones WhatsApp</p>
+        <p style={{ fontSize:10,fontWeight:800,color:'var(--c-text-muted)',textTransform:'uppercase',letterSpacing:1,margin:0 }}>{t("perfil.notifWhatsApp")}</p>
       </div>
 
       {hasPhone ? (
@@ -145,8 +147,8 @@ function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: 
               <p style={{ fontSize:12,color:'#16a34a',margin:'2px 0 0',fontWeight:600 }}>{profile?.phone}</p>
             </div>
             <div style={{ display:'flex',gap:6 }}>
-              <button onClick={() => setEditing(true)} style={{ fontSize:11,fontWeight:700,color:'#0369a1',background:'var(--c-stat-purple)',border:'1px solid var(--c-border)',borderRadius:10,padding:'6px 10px',cursor:'pointer' }}>Cambiar</button>
-              <button onClick={handleRemove} disabled={saving} style={{ fontSize:11,fontWeight:700,color:'#dc2626',background:'rgba(239,68,68,0.10)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:10,padding:'6px 10px',cursor:'pointer' }}>Quitar</button>
+              <button onClick={() => setEditing(true)} style={{ fontSize:11,fontWeight:700,color:'#0369a1',background:'var(--c-stat-purple)',border:'1px solid var(--c-border)',borderRadius:10,padding:'6px 10px',cursor:'pointer' }}>{t("perfil.cambiar")}</button>
+              <button onClick={handleRemove} disabled={saving} style={{ fontSize:11,fontWeight:700,color:'#dc2626',background:'rgba(239,68,68,0.10)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:10,padding:'6px 10px',cursor:'pointer' }}>{t("perfil.quitar")}</button>
             </div>
           </div>
           {/* Qué recibirá */}
@@ -178,8 +180,8 @@ function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: 
             </button>
           </div>
           {error && <p style={{ fontSize:11,color:'#dc2626',margin:'4px 0 0',fontWeight:600 }}>{error}</p>}
-          {saved && <p style={{ fontSize:11,color:'#16a34a',margin:'6px 0 0',fontWeight:700,display:'flex',alignItems:'center',gap:5 }}><CheckCircle size={11}/>¡Listo! Notificaciones activadas</p>}
-          <p style={{ fontSize:10,color:'var(--c-text-muted)',margin:'8px 0 0' }}>Perú: +51 · Colombia: +57 · México: +52 · España: +34 · Tu número no se comparte con terceros.</p>
+          {saved && <p style={{ fontSize:11,color:'#16a34a',margin:'6px 0 0',fontWeight:700,display:'flex',alignItems:'center',gap:5 }}><CheckCircle size={11}/>{t("perfil.listoNotifActivadas")}</p>}
+          <p style={{ fontSize:10,color:'var(--c-text-muted)',margin:'8px 0 0' }}>{t("perfil.paisesNota")}</p>
         </div>
       )}
     </div>
@@ -254,7 +256,7 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
                   ? <Loader2 size={20} className="text-white animate-spin"/>
                   : <div className="flex flex-col items-center gap-1">
                       <Camera size={18} className="text-white"/>
-                      <span className="text-white text-[9px] font-bold">Cambiar</span>
+                      <span className="text-white text-[9px] font-bold">{t("perfil.cambiar")}</span>
                     </div>
                 }
               </div>
@@ -298,7 +300,7 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
       <div className="pv-card bg-white dark:bg-[#0d1117] rounded-2xl border border-slate-100 dark:border-[#21262d] shadow-sm overflow-hidden">
         <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--c-border)" }}>
           <div className="w-1 h-4 bg-sky-500 rounded-full"/>
-          <p className="text-[10px] font-bold" style={{ color: "var(--c-text-muted)" }}>Mi cuenta</p>
+          <p className="text-[10px] font-bold" style={{ color: "var(--c-text-muted)" }}>{t("perfil.miCuenta")}</p>
         </div>
         <MenuItem icon={<User size={17} color="#0284c7"/>} label="Editar perfil" sub="Nombre y teléfono" onClick={onEditProfile}/>
         <MenuItem icon={<Lock size={17} color="#0284c7"/>} label="Cambiar contraseña" sub="Actualizar acceso" onClick={onChangePass}/>
@@ -310,7 +312,7 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
       <div className="pv-card bg-white dark:bg-[#0d1117] rounded-2xl border border-slate-100 dark:border-[#21262d] shadow-sm overflow-hidden">
         <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--c-border)" }}>
           <div className="w-1 h-4 bg-sky-500 rounded-full"/>
-          <p className="text-[10px] font-bold" style={{ color: "var(--c-text-muted)" }}>Calendarios vinculados</p>
+          <p className="text-[10px] font-bold" style={{ color: "var(--c-text-muted)" }}>{t("perfil.calendariosVinculados")}</p>
         </div>
         <CalBtn label="Google Calendar" icon="📅" grad="linear-gradient(135deg,#4285f4,#1a73e8)" profile={profile} apiBase="google-calendar" paramKey="gcal"/>
         <CalBtn label="Outlook Calendar" icon={<svg width="16" height="16" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>} grad="linear-gradient(135deg,#0078d4,#106ebe)" profile={profile} apiBase="microsoft-calendar" paramKey="mscal"/>

@@ -460,7 +460,7 @@ export default function StoreView({ profile }: { profile: any }) {
                     </div>
                   ))}
                   <div className="pt-3 border-t border-slate-100 dark:border-[#21262d] flex items-center justify-between">
-                    <span className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500 font-medium">Total pagado</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500 font-medium">{t("tienda.totalPagado")}</span>
                     <span className="text-xl font-bold text-sky-600 dark:text-sky-400">S/ {Number(order.total_soles).toFixed(2)}</span>
                   </div>
                   {order.notas && (
@@ -506,7 +506,7 @@ function ProductCard({ product: p, onAdd, onDetail, justAdded, inCart, featured 
         </div>
         {sinStock && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full">Sin stock</span>
+            <span className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full">{t("tienda.agotado")}</span>
           </div>
         )}
         {p.tipo === 'fisico' && p.stock > 0 && p.stock <= 3 && (
@@ -565,7 +565,7 @@ function ProductDetail({ product: p, onClose, onAdd, inCart, justAdded }: any) {
             {p.tipo === 'fisico' && <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background: p.stock > 3 ? 'rgba(16,185,129,0.12)' : p.stock > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)', color: p.stock > 3 ? '#10b981' : p.stock > 0 ? '#f59e0b' : '#ef4444' }}>
               {p.stock === 0 ? 'Sin stock' : `${p.stock} disponibles`}
             </span>}
-            {p.tipo === 'digital' && <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background:'var(--c-stat-purple)', color:'#0ea5e9' }}>Descarga inmediata</span>}
+            {p.tipo === 'digital' && <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background:'var(--c-stat-purple)', color:'#0ea5e9' }}>{t("ui.descargaInmediata")}</span>}
           </div>
 
           <p style={{ fontSize:13, color:'var(--c-text-secondary)', lineHeight:1.6, marginBottom:14 }}>{p.descripcion || 'Sin descripción disponible.'}</p>
@@ -573,7 +573,7 @@ function ProductDetail({ product: p, onClose, onAdd, inCart, justAdded }: any) {
           {p.tipo === 'digital' && (
             <div style={{ background:'var(--c-stat-purple)', border:'1px solid var(--c-border)', borderRadius:12, padding:'10px 14px', marginBottom:14 }}>
               <p style={{ fontSize:11, fontWeight:800, color:'#0ea5e9', margin:'0 0 4px' }}>📄 {t('tienda.articuloDigital')}</p>
-              <p style={{ fontSize:11, color:'var(--c-text-muted)', margin:0, lineHeight:1.5 }}>Al confirmar tu pedido y pagar, recibirás el archivo por WhatsApp en menos de 24 horas.</p>
+              <p style={{ fontSize:11, color:'var(--c-text-muted)', margin:0, lineHeight:1.5 }}>{t("tienda.alConfirmarPedido")}</p>
             </div>
           )}
 

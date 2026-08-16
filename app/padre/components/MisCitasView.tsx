@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { JSX } from 'react'
 import { supabase as supabaseClient } from '@/lib/supabase'
+import { useI18n } from '@/lib/i18n-context'
 import {
   Calendar, Clock, CheckCircle, XCircle, AlertCircle,
   Phone, CalendarDays, Baby, Video, Loader2,
@@ -47,6 +48,7 @@ function isUpcoming(d: string) {
 }
 
 export default function MisCitasView({ profile, selectedChild, onCancelAppointment, onChangeView }: Props) {
+  const { t } = useI18n()
   const supabase = supabaseClient
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading]           = useState(true)
@@ -277,8 +279,8 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3" style={{ background: V.muted }}>
                   <CalendarDays size={22} style={{ color: V.tm }}/>
                 </div>
-                <p className="text-sm font-bold" style={{ color: V.tm }}>Sin sesiones este día</p>
-                <p className="text-xs mt-1" style={{ color: V.tm, opacity: 0.6 }}>Selecciona un día con citas</p>
+                <p className="text-sm font-bold" style={{ color: V.tm }}>{t("agenda.sinSesionesDia")}</p>
+                <p className="text-xs mt-1" style={{ color: V.tm, opacity: 0.6 }}>{t("agenda.selecDiaCitas")}</p>
               </div>
             ) : (
               <div className="max-h-56 overflow-y-auto">
@@ -322,7 +324,7 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
                 style={{ background: 'rgba(16,185,129,0.12)' }}>
                 <Clock size={15} className="text-emerald-500"/>
               </div>
-              <h3 className="font-bold text-sm flex-1" style={{ color: V.tp }}>Próximas sesiones</h3>
+              <h3 className="font-bold text-sm flex-1" style={{ color: V.tp }}>{t("dashboard.proximasSesiones")}</h3>
               <span className="text-xs font-bold px-2 py-0.5 rounded-full"
                 style={{ background: V.muted, color: V.tm, border: `1px solid ${V.border}` }}>
                 {proximasCitas.length}
@@ -335,8 +337,8 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3" style={{ background: V.muted }}>
                   <Users size={22} style={{ color: V.tm }}/>
                 </div>
-                <p className="text-sm font-bold" style={{ color: V.tm }}>Sin sesiones próximas</p>
-                <p className="text-xs mt-1" style={{ color: V.tm, opacity: 0.6 }}>Las citas las programa el centro</p>
+                <p className="text-sm font-bold" style={{ color: V.tm }}>{t("agenda.sinSesionesProximas")}</p>
+                <p className="text-xs mt-1" style={{ color: V.tm, opacity: 0.6 }}>{t("agenda.citasProgramaCentro")}</p>
               </div>
             ) : (
               <div className="max-h-72 overflow-y-auto">
@@ -358,7 +360,7 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
                         <p className="text-sm font-bold truncate" style={{ color: V.tp }}>{c.service_type || c.type || 'Terapia ABA'}</p>
                         <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: V.tm }}>
                           <Clock size={9}/> {fmt(c.appointment_time)}
-                          {esHoyC && <span className="font-bold text-sky-500">· Hoy</span>}
+                          {esHoyC && <span className="font-bold text-sky-500">· {t("common.hoy")}</span>}
                         </p>
                       </div>
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`}/>
@@ -378,8 +380,8 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
                 <MessageSquare size={16} className="text-white"/>
               </div>
               <div>
-                <p className="font-bold text-sm">Gestionar sesiones</p>
-                <p className="text-[11px] text-white/60">Cambios · Cancelaciones · Nuevas citas</p>
+                <p className="font-bold text-sm">{t("agenda.gestionarSesiones")}</p>
+                <p className="text-[11px] text-white/60">{t("agenda.cambiosCancelaciones")}</p>
               </div>
             </div>
             <p className="text-xs text-white/60 mb-4 leading-relaxed">
