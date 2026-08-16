@@ -114,7 +114,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
   // análisis de progreso. Tendencia detectada por regresión lineal (slope).
   const { data: programasABA } = await supabaseAdmin
     .from('programas_aba')
-    .select('id, titulo, criterio_dominio_pct, criterio_sesiones_consecutivas, sesiones_datos_aba(fecha, porcentaje_exito, fase, set)')
+    .select('id, titulo, estado, criterio_dominio_pct, criterio_sesiones_consecutivas, objetivos_cp(estado, numero_set, descripcion), sesiones_datos_aba(fecha, porcentaje_exito, fase, set)')
     .eq('child_id', childId)
 
   // Helper local — pendiente por regresión lineal
@@ -138,6 +138,25 @@ async function analizarPaciente(childId: string): Promise<any[]> {
     // Excluir línea base
     const sesionesIntervencion = sesionesProg.filter((s: any) => s.fase !== 'linea_base')
     if (sesionesIntervencion.length < 2) continue
+
+    // FIX: no generar alertas para programas YA LOGRADOS (misma lógica que la UI).
+    // Un programa dominado no debe seguir soltando alertas de logro/inactividad.
+    const critDom = (prog as any).criterio_dominio_pct || 90
+    const nConsec = Number((prog as any).criterio_sesiones_consecutivas) || 2
+    const estadoManualA = ['dominado', 'logrado', 'criterio_alcanzado'].includes(String((prog as any).estado || '').toLowerCase())
+    const setsDefA: any[] = Array.isArray((prog as any).objetivos_cp) ? (prog as any).objetivos_cp : []
+    const setAlcanzadoA = (o: any) => {
+      if (String(o.estado || '').toLowerCase() === 'dominado') return true
+      const label = o.numero_set != null ? `Set ${o.numero_set}` : (o.descripcion || '')
+      const ses = sesionesIntervencion.filter((s: any) => String(s.set ?? '') === label)
+      if (ses.length < nConsec) return false
+      return ses.slice(-nConsec).every((s: any) => (s.porcentaje_exito ?? 0) >= critDom)
+    }
+    const dominado = estadoManualA || (setsDefA.length > 0
+      ? setsDefA.every(setAlcanzadoA)
+      : (sesionesIntervencion.length >= nConsec &&
+         sesionesIntervencion.slice(-nConsec).every((s: any) => (s.porcentaje_exito ?? 0) >= critDom)))
+    if (dominado) continue
 
     // FIX clínico CRÍTICO: análisis dentro del SET activo, no cruzando sets.
     // Pasar de Set 2 (90%) a Set 3 (20%) es transición esperada, no regresión.

@@ -473,7 +473,7 @@ export class VantyAgent {
       // FIX: sin filtro de estado
       const { data: programas } = await supabaseAdmin
         .from('programas_aba')
-        .select('id, titulo, area, fase_actual, criterio_dominio_pct, criterio_sesiones_consecutivas')
+        .select('id, titulo, area, fase_actual, estado, criterio_dominio_pct, criterio_sesiones_consecutivas, objetivos_cp(estado, numero_set, descripcion)')
         .eq('child_id', childId)
 
       if (!programas || programas.length === 0) {
@@ -498,6 +498,7 @@ export class VantyAgent {
 
       const alertas: Alerta[] = []
       const sugerencias: string[] = []
+      const dominadoIds: string[] = []  // programas ya logrados → limpiar sus alertas viejas
 
       for (const prog of programas as any[]) {
         const sesionesAll = sesionesPorPrograma[prog.id] || []
@@ -514,6 +515,28 @@ export class VantyAgent {
         // un nivel más difícil. Mezclar sets entre sí produce alertas falsas.
         const criterio = prog.criterio_dominio_pct || 90
         const nConsecutivas = Number((prog as any).criterio_sesiones_consecutivas) || 2
+
+        // ── FIX: no generar alertas para programas YA LOGRADOS ──
+        // Un programa dominado (en la sección "logrados") no debe seguir
+        // soltando alertas de inactividad, "falta 1 sesión", etc. Se considera
+        // dominado si: (1) su estado es manualmente 'dominado/logrado', o
+        // (2) tiene sets y TODOS están alcanzados, o (3) sin sets, las últimas
+        // N sesiones ≥ criterio. Misma lógica que la tarjeta de la UI.
+        const estadoManual = ['dominado', 'logrado', 'criterio_alcanzado'].includes(String((prog as any).estado || '').toLowerCase())
+        const setsDefinidos: any[] = Array.isArray((prog as any).objetivos_cp) ? (prog as any).objetivos_cp : []
+        const setAlcanzado = (o: any) => {
+          if (String(o.estado || '').toLowerCase() === 'dominado') return true
+          const label = o.numero_set != null ? `Set ${o.numero_set}` : (o.descripcion || '')
+          const ses = sesionesIntervencion.filter((s: any) => String(s.set ?? '') === label)
+          if (ses.length < nConsecutivas) return false
+          return ses.slice(-nConsecutivas).every((s: any) => (s.porcentaje_exito ?? 0) >= criterio)
+        }
+        const programaDominado = estadoManual || (setsDefinidos.length > 0
+          ? setsDefinidos.every(setAlcanzado)
+          : (sesionesIntervencion.length >= nConsecutivas &&
+             sesionesIntervencion.slice(-nConsecutivas).every((s: any) => (s.porcentaje_exito ?? 0) >= criterio)))
+        if (programaDominado) { dominadoIds.push(prog.id); continue }
+
         const setsConSesiones = Array.from(new Set(sesionesIntervencion.map((s: any) => s.set ?? '__none__')))
         const setActivo = setsConSesiones[setsConSesiones.length - 1] ?? '__none__'
         const sesionesSetActivo = sesionesIntervencion.filter((s: any) => (s.set ?? '__none__') === setActivo)
@@ -627,6 +650,18 @@ export class VantyAgent {
             })
           }
         }
+      }
+
+      // Limpiar alertas viejas de programas YA LOGRADOS (inactividad, "falta 1
+      // sesión", logros repetidos, etc.) para que no sigan apareciendo ni
+      // inflando el conteo una vez que el programa pasó a "logrados".
+      if (dominadoIds.length > 0) {
+        await supabaseAdmin
+          .from('agente_alertas')
+          .update({ resuelta: true })
+          .eq('child_id', childId)
+          .eq('resuelta', false)
+          .in('programa_id', dominadoIds)
       }
 
       if (alertas.length > 0) {

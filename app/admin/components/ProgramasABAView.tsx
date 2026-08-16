@@ -830,6 +830,15 @@ function setNumOrder(k: string | null | undefined): number {
   return s === '__none__' ? 9999 : 9998
 }
 
+// Auto-crecer los <textarea> del procedimiento del set para que el contenido
+// no quede cortado ni apretado. Sirve tanto al montar (valores ya cargados,
+// vía ref) como al escribir (onInput). Se limita para no crecer sin fin.
+function autoGrowTextarea(el: HTMLTextAreaElement | null) {
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 260) + 'px'
+}
+
 function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, tipoGrafico = 'lineas', onChangeTipoGrafico, loadingModal }: any) {
   const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
@@ -1714,14 +1723,16 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                 { key: 'generalizacion',    label: '➡️ Generalización',    placeholder: 'Promover con la familia...' },
                               ].map(({ key, label, placeholder }) => (
                                 <div key={key}>
-                                  <label className="block text-[10px] font-bold text-sky-400 mb-0.5">{label}</label>
+                                  <label className="block text-[11px] font-bold text-sky-400 mb-1">{label}</label>
                                   <textarea
                                     value={editSetForm[key] || ''}
+                                    ref={autoGrowTextarea}
                                     onChange={e => setEditSetForm((f: any) => ({ ...f, [key]: e.target.value }))}
-                                    rows={key === 'generalizacion' ? 2 : 1}
+                                    onInput={e => autoGrowTextarea(e.currentTarget)}
+                                    rows={2}
                                     placeholder={placeholder}
-                                    className="w-full rounded-lg text-xs resize-none outline-none p-2"
-                                    style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)' }}
+                                    className="w-full rounded-lg text-sm leading-relaxed resize-none outline-none transition-all focus:border-sky-400"
+                                    style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 12px', minHeight: '52px' }}
                                   />
                                 </div>
                               ))}
@@ -1810,10 +1821,13 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               { key: 'generalizacion',   label: '➡️ Generalización',              placeholder: 'Promover con la familia que realicen este ejercicio en casa.' },
                             ].map(({ key, label, placeholder }) => (
                               <div key={key}>
-                                <label className="text-xs font-bold text-slate-500 block mb-1">{label}</label>
-                                <textarea value={(nuevoSet as any)[key]} onChange={e => setNuevoSet(s => ({...s, [key]: e.target.value}))}
-                                  rows={key === 'generalizacion' ? 2 : 1} placeholder={placeholder}
-                                  className="w-full rounded-xl text-sm resize-none outline-none" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
+                                <label className="text-xs font-bold text-slate-500 block mb-1.5">{label}</label>
+                                <textarea value={(nuevoSet as any)[key]}
+                                  ref={autoGrowTextarea}
+                                  onChange={e => setNuevoSet(s => ({...s, [key]: e.target.value}))}
+                                  onInput={e => autoGrowTextarea(e.currentTarget)}
+                                  rows={2} placeholder={placeholder}
+                                  className="w-full rounded-xl text-sm leading-relaxed resize-none outline-none transition-all focus:border-sky-400" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px', minHeight: '52px' }} />
                               </div>
                             ))}
                           </div>
@@ -1997,6 +2011,15 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                     {detalle.correction_errores && <p><span className="font-bold">{t('programas.correccion')}</span> {detalle.correction_errores}</p>}
                     {detalle.reforzadores && <p><span className="font-bold">Reforzadores:</span> {detalle.reforzadores}</p>}
                     {detalle.materiales && <p><span className="font-bold">Materiales:</span> {detalle.materiales}</p>}
+                  </div>
+                </div>
+              )}
+              {/* Notas del programa — se capturan al crear el programa (paso 3) */}
+              {detalle.notas_programa && (
+                <div>
+                  <p className="text-xs font-bold text-slate-400 mb-2">🙈 Notas</p>
+                  <div className="rounded-xl p-4 border border-[var(--card-border)] bg-[var(--card)] text-xs text-slate-600 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                    {detalle.notas_programa}
                   </div>
                 </div>
               )}
@@ -2251,12 +2274,17 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
       )}
       {s.porcentaje_exito !== null && (
         editingPct ? (
-          <span className="flex items-center gap-1">
+          // El commit sucede al salir del GRUPO completo (no al pasar de un
+          // cuadro al otro). Si el foco sigue dentro del <span>, no cerramos;
+          // así se puede editar el segundo cuadro sin que el primero lo cierre.
+          <span
+            className="flex items-center gap-1"
+            onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) commitPct() }}
+          >
             <input
               type="number" min={0} max={s.oportunidades_totales || 999} autoFocus
               value={tempCorrectas}
               onChange={e => setTempCorrectas(e.target.value)}
-              onBlur={commitPct}
               onKeyDown={e => { if (e.key === 'Enter') commitPct(); if (e.key === 'Escape') setEditingPct(false) }}
               className="w-10 rounded-md px-1 py-0.5 text-xs font-bold outline-none border-2 border-sky-400 text-center"
               style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}
@@ -2267,7 +2295,6 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
               type="number" min={1}
               value={tempTotales}
               onChange={e => setTempTotales(e.target.value)}
-              onBlur={commitPct}
               onKeyDown={e => { if (e.key === 'Enter') commitPct(); if (e.key === 'Escape') setEditingPct(false) }}
               className="w-10 rounded-md px-1 py-0.5 text-xs font-bold outline-none border-2 border-sky-400 text-center"
               style={{ background: 'var(--input-bg)', color: 'var(--text-primary)' }}
@@ -2667,14 +2694,17 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                         { key: 'generalizacion',   label: '➡️ Generalización',              placeholder: 'Promover con la familia...' },
                       ] as {key: string, label: string, placeholder: string}[]).map(({ key, label, placeholder }) => (
                         <div key={key} className="pt-2">
-                          <label className="text-[10px] font-bold text-slate-500 block mb-1">{label}</label>
-                          <textarea value={(obj as any)[key] ?? ''} onChange={e => {
-                            const updated = [...objetivos]
-                            updated[i] = { ...updated[i], [key]: e.target.value }
-                            setObjetivos(updated)
-                          }}
-                            rows={1} placeholder={placeholder}
-                            className="w-full rounded-xl text-xs resize-none outline-none" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '8px 12px' }} />
+                          <label className="text-xs font-bold text-slate-500 block mb-1.5">{label}</label>
+                          <textarea value={(obj as any)[key] ?? ''}
+                            ref={autoGrowTextarea}
+                            onChange={e => {
+                              const updated = [...objetivos]
+                              updated[i] = { ...updated[i], [key]: e.target.value }
+                              setObjetivos(updated)
+                            }}
+                            onInput={e => autoGrowTextarea(e.currentTarget)}
+                            rows={2} placeholder={placeholder}
+                            className="w-full rounded-xl text-sm leading-relaxed resize-none outline-none transition-all focus:border-sky-400" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px', minHeight: '52px' }} />
                         </div>
                       ))}
                     </div>
