@@ -1,6 +1,7 @@
 'use client'
 
 import { useI18n } from '@/lib/i18n-context'
+import { useTranslatedForm } from '@/lib/form-translate'
 import { toBCP47 } from '@/lib/i18n'
 
 import { useState, useEffect } from 'react'
@@ -20,7 +21,9 @@ function ParentFormRenderer({ form, onSubmit, onClose }: { form: any; onSubmit: 
   const [responses, setResponses] = useState<Record<string, any>>({})
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
-  const [formDef, setFormDef] = useState<any>(null)
+  const [formDefRaw, setFormDef] = useState<any>(null)
+  // Definición del formulario traducida en vivo cuando el idioma es inglés (con caché).
+  const formDef = useTranslatedForm(formDefRaw) || formDefRaw
   const [formError, setFormError] = useState(false)
 
   // Mapeo de IDs de newFormConstants a sus secciones + metadata visual

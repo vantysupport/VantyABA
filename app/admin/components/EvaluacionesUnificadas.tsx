@@ -1,6 +1,7 @@
 'use client'
 
 import { useI18n } from '@/lib/i18n-context'
+import { useTranslatedForm } from '@/lib/form-translate'
 import { toBCP47 } from '@/lib/i18n'
 
 /**
@@ -744,8 +745,10 @@ function SendFormModal({ form, children, onSend, onClose }: any) {
 }
 
 // ─── FORM FILL VIEW ─────────────────────────────────────────────────────────
-function FormFillView({ form, children, onBack, toast, initialChildId, initialChildName }: any) {
+function FormFillView({ form: formProp, children, onBack, toast, initialChildId, initialChildName }: any) {
   const { t } = useI18n()
+  // Formulario traducido en vivo cuando el idioma es inglés (con caché).
+  const form = useTranslatedForm(formProp) || formProp
 
   const [currentStep, setCurrentStep] = useState(0)
   const [responses, setResponses] = useState<Record<string, any>>({})

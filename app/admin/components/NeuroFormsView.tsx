@@ -1,6 +1,7 @@
 'use client'
 
 import { useI18n } from '@/lib/i18n-context'
+import { useTranslatedForm } from '@/lib/form-translate'
 import { toBCP47 } from '@/lib/i18n'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -318,7 +319,9 @@ export default function NeuroFormsView() {
   const [activeTab, setActiveTab] = useState<'biblioteca' | 'respuestas'>('biblioteca')
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedForm, setSelectedForm] = useState<FormDefinition | null>(null)
+  const [selectedFormRaw, setSelectedForm] = useState<FormDefinition | null>(null)
+  // Formulario traducido en vivo cuando el idioma es inglés (con caché).
+  const selectedForm = useTranslatedForm(selectedFormRaw) || selectedFormRaw
   const [currentStep, setCurrentStep] = useState(0)
   const [responses, setResponses] = useState<Record<string, any>>({})
   const [selectedChild, setSelectedChild] = useState('')
