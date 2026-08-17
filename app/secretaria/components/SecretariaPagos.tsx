@@ -21,17 +21,19 @@ const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> =
   refunded:  { label: 'Devuelto',  color: '#0ea5e9', bg: '#ede9fe' },
 }
 const METHODS      = ['efectivo','yape','plin','transferencia','tarjeta','otro']
-const MESES        = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-const MESES_LARGO  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const COLORS       = ['#0284c7','#10b981','#f59e0b','#ef4444','#0ea5e9','#ec4899','#06b6d4','#84cc16']
 
-const DAYS_ES   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
-const DAYS_FULL = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+// Etiquetas de fecha localizadas según el idioma activo (Intl)
+const _bcp = (loc: string) => loc === 'en' ? 'en-US' : 'es-PE'
+const _cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1)
+const mesCorto = (m: number, loc: string) => _cap(new Date(2020, m, 1).toLocaleDateString(_bcp(loc), { month: 'short' }).replace('.', ''))
+const mesLargo = (m: number, loc: string) => _cap(new Date(2020, m, 1).toLocaleDateString(_bcp(loc), { month: 'long' }))
+const diaCorto = (dow: number, loc: string) => _cap(new Date(2021, 7, 1 + dow).toLocaleDateString(_bcp(loc), { weekday: 'short' }).replace('.', ''))
 
 // ─── Group payments by patient + month ───────────────────────────────────────
 // Packages (concept with "(N/M)" pattern) are grouped by their base concept.
 // Individual payments keep separate entries so they don't mix with packages.
-function groupByPatientMonth(pays: any[]) {
+function groupByPatientMonth(pays: any[], loc: string) {
   const g: Record<string, any> = {}
   pays.forEach(p => {
     const d = new Date(p.paid_at || p.created_at)
@@ -56,7 +58,7 @@ function groupByPatientMonth(pays: any[]) {
       key: k,
       child: p.children?.name || p.paciente_externo || '—',
       month: `${year}-${String(month).padStart(2,'0')}`,
-      monthLabel: `${MESES_LARGO[month]} ${year}`,
+      monthLabel: `${mesLargo(month, loc)} ${year}`,
       pays: [],
       total: 0,
       isPackage: !!isPackage,
@@ -101,7 +103,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function SecretariaPagos({ profile, enabledTabs }: { profile: any; enabledTabs?: Record<string, boolean> }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const toast    = useToast()
   const rtRef    = useRef<any>(null)
   const listRef  = useRef<HTMLDivElement>(null)
@@ -109,9 +111,9 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   const [tab, setTab] = useState<'dashboard'|'registros'|'agrupado'|'tarifas'>('dashboard')
   const pagosTabs = ([ 
     { id: 'dashboard', label: 'Dashboard',    Icon: BarChart3 },
-    { id: 'registros', label: 'Registros',    Icon: CreditCard },
-    { id: 'agrupado',  label: 'Por paciente', Icon: Calendar },
-    { id: 'tarifas',   label: 'Tarifas',      Icon: Package },
+    { id: 'registros', label: t('pagos.tabRegistros'), Icon: CreditCard },
+    { id: 'agrupado',  label: t('pagos.tabPorPaciente'), Icon: Calendar },
+    { id: 'tarifas',   label: t('pagos.tabTarifas'), Icon: Package },
   ] as const).filter(t => !enabledTabs || enabledTabs[`pagos_${t.id}`] !== false)
   type PagosTab = 'dashboard'|'registros'|'agrupado'|'tarifas'
   const activeTab: PagosTab = pagosTabs.find(t => t.id === tab) ? tab : (pagosTabs[0]?.id ?? 'dashboard')
@@ -142,11 +144,11 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       const d = new Date(); d.setMonth(d.getMonth() - (5 - i))
       const m = d.getMonth(); const y = d.getFullYear()
       const mp = paid.filter(p => { const pd = new Date(p.paid_at || p.created_at); return pd.getMonth() === m && pd.getFullYear() === y })
-      return { mes: MESES[m], total: sum(mp) }
+      return { mes: mesCorto(m, locale), total: sum(mp) }
     })
-    const porMetodo = METHODS.map((m, i) => ({ name: m.charAt(0).toUpperCase() + m.slice(1), value: sum(paid.filter(p => p.payment_method === m)), color: COLORS[i] })).filter(m => m.value > 0)
+    const porMetodo = METHODS.map((m, i) => ({ name: t('pagos.method.' + m), value: sum(paid.filter(p => p.payment_method === m)), color: COLORS[i] })).filter(m => m.value > 0)
     setStats({ total: sum(paid), cobros: paid.length, pendiente: sum(pend), cancelados: canc.length, porMes, porMetodo })
-  }, [])
+  }, [locale, t])
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -196,12 +198,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   const handleSave = async () => {
     const esExterno = form.modo === 'externo'
     if (esExterno) {
-      if (!form.external_name.trim()) { toast.error('Ingresa el nombre del niño/a'); return }
+      if (!form.external_name.trim()) { toast.error(t('pagos.errNombreNino')); return }
     } else {
-      if (!form.child_id) { toast.error('Selecciona el paciente'); return }
+      if (!form.child_id) { toast.error(t('pagos.errSelPaciente')); return }
     }
-    if (!form.amount || isNaN(Number(form.amount))) { toast.error('Ingresa un monto válido'); return }
-    if (!form.concept.trim()) { toast.error('Ingresa el concepto'); return }
+    if (!form.amount || isNaN(Number(form.amount))) { toast.error(t('pagos.errMontoValido')); return }
+    if (!form.concept.trim()) { toast.error(t('pagos.errConcepto')); return }
     setSaving(true)
     try {
       const { error } = await supabase.from('payments').insert({
@@ -213,7 +215,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         created_by: profile?.id,
       })
       if (error) throw error
-      toast.success('Pago registrado'); setShowNew(false); setForm(emptyForm)
+      toast.success(t('pagos.pagoRegistrado')); setShowNew(false); setForm(emptyForm)
       await cargar()   // ← refrescar tabla para que el nuevo pago aparezca de inmediato
     } catch (e: any) { toast.error(e.message) }
     finally { setSaving(false) }
@@ -232,13 +234,13 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   const handleSavePkg = async () => {
     const esExterno = pkg.modo === 'externo'
     if (esExterno) {
-      if (!pkg.external_name.trim()) { toast.error('Ingresa el nombre del niño/a'); return }
+      if (!pkg.external_name.trim()) { toast.error(t('pagos.errNombreNino')); return }
     } else {
-      if (!pkg.child_id) { toast.error('Selecciona el paciente'); return }
+      if (!pkg.child_id) { toast.error(t('pagos.errSelPaciente')); return }
     }
-    if (!pkg.amount || isNaN(Number(pkg.amount))) { toast.error('Ingresa el monto por sesión'); return }
-    if (!pkg.concept.trim()) { toast.error('Ingresa el concepto'); return }
-    if (pkgDates.length === 0) { toast.error('Selecciona al menos un día de sesión'); return }
+    if (!pkg.amount || isNaN(Number(pkg.amount))) { toast.error(t('pagos.errMontoSesion')); return }
+    if (!pkg.concept.trim()) { toast.error(t('pagos.errConcepto')); return }
+    if (pkgDates.length === 0) { toast.error(t('pagos.errSelDia')); return }
     setSavingPkg(true)
     try {
       const inserts = pkgDates.map((date, i) => ({
@@ -248,12 +250,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         concept: `${pkg.concept.trim()} (${i+1}/${pkgDates.length})`,
         payment_method: pkg.method, status: pkg.status,
         paid_at: pkg.status === 'paid' ? new Date(date + 'T12:00:00').toISOString() : null,
-        notes: `Paquete de ${pkgDates.length} sesiones seleccionadas manualmente`,
+        notes: t('pagos.notaPaquete', { n: String(pkgDates.length) }),
         created_by: profile?.id,
       }))
       const { error } = await supabase.from('payments').insert(inserts)
       if (error) throw error
-      toast.success(`${pkgDates.length} pagos creados · S/ ${(Number(pkg.amount) * pkgDates.length).toFixed(2)} total`)
+      toast.success(t('pagos.pagosCreados', { n: String(pkgDates.length), total: (Number(pkg.amount) * pkgDates.length).toFixed(2) }))
       setShowPkg(false); setPkg(emptyPkg); setPkgDates([])
       await cargar()   // ← refrescar tabla para que los nuevos pagos aparezcan de inmediato
     } catch (e: any) { toast.error(e.message) }
@@ -264,8 +266,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const handleDeletePago = async (p: any) => {
     const monto = `S/ ${Number(p.amount).toFixed(2)}`
-    const nombre = p.children?.name || p.paciente_externo || 'paciente'
-    if (!confirm(`¿Eliminar este pago de ${nombre}?\n\nConcepto: ${p.concept}\nMonto: ${monto}\n\nEsta acción no se puede deshacer.`)) return
+    const nombre = p.children?.name || p.paciente_externo || t('pagos.pacienteGenerico')
+    if (!confirm(t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto }))) return
     setDeletingId(p.id)
     // Optimistic update — sacar de la lista al instante
     const prev = payments
@@ -274,11 +276,11 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     try {
       const { error } = await supabase.from('payments').delete().eq('id', p.id)
       if (error) throw error
-      toast.success('Pago eliminado')
+      toast.success(t('pagos.pagoEliminado'))
     } catch (e: any) {
       // Rollback si falla
       setPayments(prev); buildStats(prev)
-      toast.error('No se pudo eliminar: ' + e.message)
+      toast.error(t('pagos.noSePudoEliminar') + e.message)
     } finally {
       setDeletingId(null)
     }
@@ -288,7 +290,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   const handleDeletePaquete = async (g: any) => {
     const total = `S/ ${g.total.toFixed(2)}`
     const cantidad = g.pays.length
-    if (!confirm(`¿Eliminar el paquete completo de ${g.child}?\n\n${cantidad} sesión${cantidad !== 1 ? 'es' : ''} · ${total}\n\nEsta acción borrará TODOS los pagos del paquete y no se puede deshacer.`)) return
+    if (!confirm(t('pagos.confirmEliminarPaquete', { child: g.child, cantidad: String(cantidad), total }))) return
     const ids = g.pays.map((p: any) => p.id)
     const prev = payments
     const next = payments.filter(x => !ids.includes(x.id))
@@ -296,10 +298,10 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     try {
       const { error } = await supabase.from('payments').delete().in('id', ids)
       if (error) throw error
-      toast.success(`Paquete eliminado (${cantidad} pago${cantidad !== 1 ? 's' : ''})`)
+      toast.success(t('pagos.paqueteEliminado', { n: String(cantidad) }))
     } catch (e: any) {
       setPayments(prev); buildStats(prev)
-      toast.error('No se pudo eliminar: ' + e.message)
+      toast.error(t('pagos.noSePudoEliminar') + e.message)
     }
   }
 
@@ -315,23 +317,23 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   }
 
   const handleSaveRate = async () => {
-    if (!rateForm.name.trim()) { toast.error('Ingresa el nombre del servicio'); return }
-    if (!rateForm.amount || isNaN(Number(rateForm.amount))) { toast.error('Ingresa un monto válido'); return }
+    if (!rateForm.name.trim()) { toast.error(t('pagos.errNombreServicio')); return }
+    if (!rateForm.amount || isNaN(Number(rateForm.amount))) { toast.error(t('pagos.errMontoValido')); return }
     setSavingRate(true)
     try {
       const payload = { name: rateForm.name.trim(), description: rateForm.description.trim() || null, amount: Number(rateForm.amount), duration_min: Number(rateForm.duration_min) || 60, is_active: true }
       if (editingRate) await supabase.from('service_rates').update(payload).eq('id', editingRate.id)
       else await supabase.from('service_rates').insert(payload)
-      toast.success(editingRate ? 'Tarifa actualizada' : 'Tarifa creada')
+      toast.success(editingRate ? t('pagos.tarifaActualizada') : t('pagos.tarifaCreada'))
       setShowRateForm(false); cargar()
     } catch (e: any) { toast.error(e.message) }
     finally { setSavingRate(false) }
   }
 
   const deleteRate = async (id: string) => {
-    if (!confirm('¿Eliminar esta tarifa?')) return
+    if (!confirm(t('pagos.confirmEliminarTarifa'))) return
     await supabase.from('service_rates').delete().eq('id', id)
-    toast.success('Tarifa eliminada'); cargar()
+    toast.success(t('pagos.tarifaEliminada')); cargar()
   }
 
   // ─── Excel export via API ───────────────────────────────────────────────────
@@ -347,12 +349,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       if (filterStatus !== 'all') params.set('status', filterStatus)
       if (search) params.set('search', search)
       const res = await fetch(`/api/pagos/export?${params}`)
-      if (!res.ok) throw new Error('Error al generar el reporte')
+      if (!res.ok) throw new Error(t('pagos.errGenerarReporte'))
       const blob = await res.blob()
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a'); a.href = url
       a.download = `pagos_jugando_aprendo_${new Date().toISOString().slice(0,10)}.xlsx`; a.click()
-      URL.revokeObjectURL(url); toast.success('Excel exportado')
+      URL.revokeObjectURL(url); toast.success(t('pagos.excelExportado'))
     } catch (e: any) { toast.error(e.message) }
   }
 
@@ -361,7 +363,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     return (filterStatus === 'all' || p.status === filterStatus) &&
            (!q || (p.children?.name || p.paciente_externo || '').toLowerCase().includes(q) || (p.concept || '').toLowerCase().includes(q))
   })
-  const grouped = groupByPatientMonth(filtered)
+  const grouped = groupByPatientMonth(filtered, locale)
 
   const inputCls = "w-full px-3 py-2.5 rounded-xl text-sm border-2 outline-none transition-all bg-[var(--muted-bg)] border-[var(--card-border)] text-[var(--text-primary)] focus:border-sky-500 focus:bg-[var(--card)]"
 
@@ -386,10 +388,10 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         placeholder={t("admin.phConceptoPago")} className={inputCls} list="concepts-list" />
       <datalist id="concepts-list">
         {rates.map(r => <option key={r.id} value={r.name} />)}
-        <option value="Sesión de terapia" />
-        <option value="Evaluación inicial" />
-        <option value="Consulta de seguimiento" />
-        <option value="Material terapéutico" />
+        <option value={t('pagos.optSesionTerapia')} />
+        <option value={t('pagos.optEvalInicial')} />
+        <option value={t('pagos.optConsultaSeg')} />
+        <option value={t('pagos.optMaterial')} />
       </datalist>
     </div>
   )
@@ -403,10 +405,9 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         <div className="px-6 py-4 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{t("nav.pagosFacturacion")}</h2>
-            <p className="text-xs flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-              Gestión de ingresos del centro
+            <p className="text-xs flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>{t('pagos.subtitulo')}
               <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> En tiempo real
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {t('pagos.enTiempoReal')}
               </span>
             </p>
           </div>
@@ -415,7 +416,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
               <button key={p} onClick={() => setPeriodo(p)}
                 className="px-4 py-2 text-xs font-bold transition-all"
                 style={{ background: periodo === p ? '#0284c7' : 'var(--muted-bg)', color: periodo === p ? '#fff' : 'var(--text-muted)' }}>
-                {p === 'semana' ? 'Semana' : p === 'mes' ? 'Mes' : 'Año'}
+                {p === 'semana' ? t('pagos.semana') : p === 'mes' ? t('pagos.mes') : t('pagos.anio')}
               </button>
             ))}
           </div>
@@ -424,10 +425,10 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
       {/* ── KPIs ──────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPI label="Ingresos cobrados" value={loading ? '—' : `S/ ${stats.total.toFixed(2)}`}     sub="Pagos recibidos"    icon={DollarSign}   bar="#10b981" />
-        <KPI label="Transacciones"     value={loading ? '—' : stats.cobros}                         sub="Cobros realizados"  icon={CheckCircle2} bar="#0284c7" />
-        <KPI label="Por cobrar"        value={loading ? '—' : `S/ ${stats.pendiente.toFixed(2)}`}  sub="Pendiente de pago"  icon={Clock}        bar="#f59e0b" />
-        <KPI label="Cancelados"        value={loading ? '—' : stats.cancelados}                     sub="Este período"       icon={XCircle}      bar="#ef4444" />
+        <KPI label={t('pagos.kpiIngresos')} value={loading ? '—' : `S/ ${stats.total.toFixed(2)}`}     sub={t('pagos.kpiIngresosSub')}    icon={DollarSign}   bar="#10b981" />
+        <KPI label={t('pagos.kpiTransacciones')}     value={loading ? '—' : stats.cobros}                         sub={t('pagos.kpiTransaccionesSub')}  icon={CheckCircle2} bar="#0284c7" />
+        <KPI label={t('pagos.kpiPorCobrar')}        value={loading ? '—' : `S/ ${stats.pendiente.toFixed(2)}`}  sub={t('pagos.kpiPorCobrarSub')}  icon={Clock}        bar="#f59e0b" />
+        <KPI label={t('pagos.kpiCancelados')}        value={loading ? '—' : stats.cancelados}                     sub={t('pagos.kpiCanceladosSub')}       icon={XCircle}      bar="#ef4444" />
       </div>
 
       {/* ── TABS ──────────────────────────────────────────────────────────────── */}
@@ -464,7 +465,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={45} tickFormatter={v => `S/${v}`} />
-                  <Tooltip formatter={(v: any) => [`S/ ${Number(v).toFixed(2)}`, 'Ingresos']}
+                  <Tooltip formatter={(v: any) => [`S/ ${Number(v).toFixed(2)}`, t('pagos.ingresos')]}
                     contentStyle={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 12, fontSize: 12, color: 'var(--text-primary)', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
                     labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
                     itemStyle={{ color: 'var(--text-secondary)' }}
@@ -543,7 +544,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
               className="px-3 py-2 rounded-xl text-sm border-2 outline-none flex-shrink-0"
               style={{ background: 'var(--card)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
               <option value="all">{t("docs.todosEstados")}</option>
-              {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{t('pagos.status.' + k)}</option>)}
             </select>
             <button onClick={exportExcel}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all hover:opacity-80 flex-shrink-0"
@@ -553,12 +554,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
             <button onClick={() => { setShowPkg(false); setShowNew(v => !v) }}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all flex-shrink-0"
               style={{ borderColor: '#0284c7', color: '#0284c7', background: showNew ? 'rgba(59,130,246,0.08)' : 'transparent' }}>
-              <Plus size={13} /> Pago único
+              <Plus size={13} /> {t('pagos.pagoUnico')}
             </button>
             <button onClick={() => { setShowNew(false); setShowPkg(v => !v) }}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white flex-shrink-0 transition-all"
               style={{ background: showPkg ? '#0369a1' : '#0284c7' }}>
-              <Package size={13} /> Paquete
+              <Package size={13} /> {t('pagos.paquete')}
             </button>
           </div>
 
@@ -570,17 +571,13 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                 <button onClick={() => setShowNew(false)} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--text-muted)' }}><X size={15} /></button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <Field label="Paciente *">
+                <Field label={t('pagos.paciente') + ' *'}>
                   {/* Toggle: paciente registrado vs nombre libre (no inscrito aún) */}
                   <div className="flex gap-1 mb-2">
                     <button type="button" onClick={() => setForm(f => ({ ...f, modo: 'registrado' }))}
-                      className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition ${form.modo === 'registrado' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>
-                      Registrado
-                    </button>
+                      className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition ${form.modo === 'registrado' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>{t('pagos.registrado')}</button>
                     <button type="button" onClick={() => setForm(f => ({ ...f, modo: 'externo' }))}
-                      className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition ${form.modo === 'externo' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>
-                      Sin inscribir
-                    </button>
+                      className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition ${form.modo === 'externo' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>{t('pagos.sinInscribir')}</button>
                   </div>
                   {form.modo === 'registrado' ? (
                     <select value={form.child_id} onChange={e => setForm(f => ({ ...f, child_id: e.target.value }))} className={inputCls}>
@@ -592,28 +589,28 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       placeholder={t("admin.phNombreNinoEval")} className={inputCls} />
                   )}
                 </Field>
-                <Field label="Concepto *">
+                <Field label={t('pagos.concepto') + ' *'}>
                   <ConceptInput value={form.concept} onChange={v => setForm(f => ({ ...f, concept: v }))}
                     onPriceMatch={price => setForm(f => ({ ...f, amount: price }))} />
                 </Field>
-                <Field label="Monto (S/) *">
+                <Field label={t('pagos.montoSoles') + ' *'}>
                   <input type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" className={inputCls} />
                 </Field>
-                <Field label="Fecha de pago">
+                <Field label={t('pagos.fechaPago')}>
                   <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls} />
                 </Field>
-                <Field label="Método de pago">
+                <Field label={t('pagos.metodoPago')}>
                   <select value={form.method} onChange={e => setForm(f => ({ ...f, method: e.target.value }))} className={inputCls}>
-                    {METHODS.map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
+                    {METHODS.map(m => <option key={m} value={m}>{t('pagos.method.' + m)}</option>)}
                   </select>
                 </Field>
-                <Field label="Estado">
+                <Field label={t('pagos.estado')}>
                   <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inputCls}>
-                    {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{t('pagos.status.' + k)}</option>)}
                   </select>
                 </Field>
                 <div className="sm:col-span-2 lg:col-span-3">
-                  <Field label="Notas (opcional)">
+                  <Field label={t('pagos.notasOpcional')}>
                     <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder={t("admin.phObsAdicionales")} className={inputCls} />
                   </Field>
                 </div>
@@ -622,7 +619,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                 <button onClick={() => setShowNew(false)} className="flex-1 py-3 rounded-xl text-sm font-bold border-2 transition-all" style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>{t("common.cancelar")}</button>
                 <button onClick={handleSave} disabled={saving}
                   className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar pago
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} {t('pagos.guardarPago')}
                 </button>
               </div>
             </div>
@@ -646,16 +643,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
               <div className="p-5 space-y-4">
                 {/* Row 1: Paciente, Concepto, Monto */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Field label="Paciente *">
+                  <Field label={t('pagos.paciente') + ' *'}>
                     <div className="flex gap-1 mb-2">
                       <button type="button" onClick={() => setPkg(p => ({ ...p, modo: 'registrado' }))}
-                        className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition ${pkg.modo === 'registrado' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>
-                        Registrado
-                      </button>
+                        className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition ${pkg.modo === 'registrado' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>{t('pagos.registrado')}</button>
                       <button type="button" onClick={() => setPkg(p => ({ ...p, modo: 'externo' }))}
-                        className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition ${pkg.modo === 'externo' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>
-                        Sin inscribir
-                      </button>
+                        className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold border-2 transition ${pkg.modo === 'externo' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>{t('pagos.sinInscribir')}</button>
                     </div>
                     {pkg.modo === 'registrado' ? (
                       <select value={pkg.child_id} onChange={e => setPkg(p => ({ ...p, child_id: e.target.value }))} className={inputCls}>
@@ -667,12 +660,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         placeholder={t("admin.phNombreNino")} className={inputCls} />
                     )}
                   </Field>
-                  <Field label="Concepto *">
+                  <Field label={t('pagos.concepto') + ' *'}>
                     <ConceptInput value={pkg.concept}
                       onChange={v => setPkg(p => ({ ...p, concept: v }))}
                       onPriceMatch={price => setPkg(p => ({ ...p, amount: price }))} />
                   </Field>
-                  <Field label="Monto por sesión (S/) *">
+                  <Field label={t('pagos.montoPorSesion') + ' *'}>
                     <div className="relative">
                       <input type="number" value={pkg.amount} onChange={e => setPkg(p => ({ ...p, amount: e.target.value }))}
                         placeholder="0.00" className={inputCls} />
@@ -686,14 +679,14 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
                 {/* Row 2: Método, Estado */}
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Método de pago">
+                  <Field label={t('pagos.metodoPago')}>
                     <select value={pkg.method} onChange={e => setPkg(p => ({ ...p, method: e.target.value }))} className={inputCls}>
-                      {METHODS.map(m => <option key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</option>)}
+                      {METHODS.map(m => <option key={m} value={m}>{t('pagos.method.' + m)}</option>)}
                     </select>
                   </Field>
-                  <Field label="Estado de los pagos">
+                  <Field label={t('pagos.estadoPagos')}>
                     <select value={pkg.status} onChange={e => setPkg(p => ({ ...p, status: e.target.value }))} className={inputCls}>
-                      {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                      {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{t('pagos.status.' + k)}</option>)}
                     </select>
                   </Field>
                 </div>
@@ -701,9 +694,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                 {/* Calendar picker */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-                      Selecciona las fechas de sesión
-                    </label>
+                    <label className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t('pagos.selecFechasSesion')}</label>
                     <div className="flex items-center gap-2">
                       <button onClick={() => {
                         const [y, m] = pkg.calMonth.split('-').map(Number)
@@ -711,7 +702,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         setPkg(p => ({ ...p, calMonth: `${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}` }))
                       }} className="p-1 rounded-lg hover:opacity-70" style={{ color: 'var(--text-muted)', background: 'var(--muted-bg)' }}>‹</button>
                       <span className="text-xs font-bold px-2" style={{ color: 'var(--text-primary)' }}>
-                        {(() => { const [y,m] = pkg.calMonth.split('-').map(Number); return `${MESES_LARGO[m-1]} ${y}` })()}
+                        {(() => { const [y,m] = pkg.calMonth.split('-').map(Number); return `${mesLargo(m-1, locale)} ${y}` })()}
                       </span>
                       <button onClick={() => {
                         const [y, m] = pkg.calMonth.split('-').map(Number)
@@ -738,7 +729,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       <div>
                         {/* Day headers */}
                         <div className="grid grid-cols-7 mb-1">
-                          {DAYS_ES.map(d => (
+                          {[0,1,2,3,4,5,6].map(dow => diaCorto(dow, locale)).map(d => (
                             <div key={d} className="text-center text-[10px] font-bold py-1" style={{ color: 'var(--text-muted)' }}>{d}</div>
                           ))}
                         </div>
@@ -777,13 +768,11 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                   {pkgDates.length > 0 && (
                     <div className="flex items-center justify-between mt-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(59,130,246,0.08)' }}>
                       <p className="text-xs font-bold" style={{ color: '#0284c7' }}>
-                        {pkgDates.length} fecha{pkgDates.length !== 1 ? 's' : ''} seleccionada{pkgDates.length !== 1 ? 's' : ''}
+                        {t('pagos.fechasSeleccionadas', { n: String(pkgDates.length) })}
                         {pkg.amount && ` · S/ ${(Number(pkg.amount) * pkgDates.length).toFixed(2)} total`}
                       </p>
                       <button onClick={() => setPkgDates([])}
-                        className="text-[10px] font-bold hover:opacity-70" style={{ color: '#ef4444' }}>
-                        Limpiar
-                      </button>
+                        className="text-[10px] font-bold hover:opacity-70" style={{ color: '#ef4444' }}>{t('pagos.limpiar')}</button>
                     </div>
                   )}
                 </div>
@@ -793,7 +782,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                   <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--card-border)' }}>
                     <div className="px-4 py-3 flex items-center justify-between" style={{ background: 'var(--muted-bg)', borderBottom: '1px solid var(--card-border)' }}>
                       <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
-                        Vista previa {pkg.modo === 'externo' ? (pkg.external_name ? `— ${pkg.external_name}` : '') : (pkg.child_id ? `— ${children.find(c => c.id === pkg.child_id)?.name}` : '')}
+                        {t('pagos.vistaPrevia')} {pkg.modo === 'externo' ? (pkg.external_name ? `— ${pkg.external_name}` : '') : (pkg.child_id ? `— ${children.find(c => c.id === pkg.child_id)?.name}` : '')}
                       </p>
                       <p className="text-xs font-bold" style={{ color: '#10b981' }}>
                         Total: S/ {(Number(pkg.amount || 0) * pkgDates.length).toFixed(2)}
@@ -807,7 +796,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                           <div key={date} className="flex items-center gap-3 px-4 py-2.5"
                             style={{ borderBottom: i < pkgDates.length - 1 ? '1px solid var(--card-border)' : 'none' }}>
                             <span className="text-[10px] font-bold w-8 text-center px-1 py-0.5 rounded flex-shrink-0"
-                              style={{ background: 'rgba(59,130,246,0.1)', color: '#0284c7' }}>{DAYS_ES[d.getDay()]}</span>
+                              style={{ background: 'rgba(59,130,246,0.1)', color: '#0284c7' }}>{diaCorto(d.getDay(), locale)}</span>
                             <span className="text-xs font-mono flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{lbl}</span>
                             <span className="text-xs flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>{pkg.concept}</span>
                             <button onClick={() => setPkgDates(prev => prev.filter(x => x !== date))}
@@ -833,7 +822,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     disabled={savingPkg || (pkg.modo === 'externo' ? !pkg.external_name.trim() : !pkg.child_id) || !pkg.amount || !pkg.concept || pkgDates.length === 0}
                     className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all">
                     {savingPkg ? <Loader2 size={14} className="animate-spin" /> : <Repeat size={14} />}
-                    {savingPkg ? 'Creando...' : pkgDates.length > 0 ? `Crear ${pkgDates.length} cobros` : 'Selecciona fechas'}
+                    {savingPkg ? t('pagos.creando') : pkgDates.length > 0 ? t('pagos.crearCobros', { n: String(pkgDates.length) }) : t('pagos.selecFechas')}
                   </button>
                 </div>
               </div>
@@ -870,11 +859,11 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       <p className="md:hidden text-sm font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {Number(p.amount).toFixed(2)}</p>
                     </div>
                     <p className="text-xs md:truncate" style={{ color: 'var(--text-secondary)' }}>
-                      <span className="md:hidden font-semibold" style={{ color: 'var(--text-muted)' }}>Concepto: </span>{p.concept}
+                      <span className="md:hidden font-semibold" style={{ color: 'var(--text-muted)' }}>{t('pagos.conceptoLabel')} </span>{p.concept}
                     </p>
                     <p className="hidden md:block text-sm font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {Number(p.amount).toFixed(2)}</p>
                     <p className="text-xs capitalize" style={{ color: 'var(--text-secondary)' }}>
-                      <span className="md:hidden font-semibold" style={{ color: 'var(--text-muted)' }}>Método: </span>{p.payment_method}
+                      <span className="md:hidden font-semibold" style={{ color: 'var(--text-muted)' }}>{t('pagos.metodoLabel')} </span>{t('pagos.method.' + p.payment_method)}
                     </p>
                     {/* Estado + acciones — juntos en móvil, celdas en desktop */}
                     <div className="flex items-center gap-2 md:contents">
@@ -882,7 +871,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     <div className="relative group">
                       <button className="text-[10px] font-bold px-2.5 py-1 rounded-lg whitespace-nowrap hover:opacity-80 transition-opacity"
                         style={{ background: st.bg, color: st.color }}>
-                        {st.label} ▾
+                        {t('pagos.status.' + p.status)} ▾
                       </button>
                       <div className="absolute right-0 top-full mt-1 rounded-xl overflow-hidden shadow-xl z-20 hidden group-hover:block"
                         style={{ background: 'var(--card)', border: '1px solid var(--card-border)', minWidth: 130 }}>
@@ -897,13 +886,13 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                               status: k,
                               paid_at: k === 'paid' ? new Date().toISOString() : null,
                             }).eq('id', p.id)
-                            if (!error) toast.success(`Actualizado a ${v.label}`)
-                            else { setPayments(prevPayments); buildStats(prevPayments); toast.error('Error al actualizar') }
+                            if (!error) toast.success(t('pagos.actualizadoA', { estado: t('pagos.status.' + k) }))
+                            else { setPayments(prevPayments); buildStats(prevPayments); toast.error(t('pagos.errActualizar')) }
                           }}
                             className="w-full text-left px-3 py-2.5 text-xs font-bold flex items-center gap-2 hover:opacity-80 transition-opacity"
                             style={{ color: v.color, background: p.status === k ? v.bg : 'transparent', borderBottom: '1px solid var(--card-border)' }}>
                             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: v.color }} />
-                            {v.label}
+                            {t('pagos.status.' + k)}
                           </button>
                         ))}
                       </div>
@@ -928,7 +917,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                 )
               })}
               <div className="px-5 py-3 flex items-center justify-between" style={{ background: 'var(--muted-bg)' }}>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{filtered.length} registros</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('pagos.registros', { n: String(filtered.length) })}</p>
                 <p className="text-sm font-bold" style={{ color: '#10b981' }}>
                   Total: S/ {filtered.filter(p => p.status === 'paid').reduce((a, p) => a + Number(p.amount), 0).toFixed(2)}
                 </p>
@@ -962,7 +951,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         {g.isPackage && (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(59,130,246,0.12)', color: '#0284c7' }}>{t("admin.paquete")}</span>
                         )}
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{g.monthLabel} · {g.pays.length} sesión{g.pays.length !== 1 ? 'es' : ''}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{g.monthLabel} · {t('pagos.sesionesCount', { n: String(g.pays.length) })}</p>
                       </div>
                     </div>
                   </div>
@@ -1003,7 +992,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                           <span className="text-xs font-mono font-bold w-20 flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{lbl}</span>
                           <span className="text-xs flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>{p.concept}</span>
                           <span className="text-sm font-bold flex-shrink-0" style={{ color: '#10b981' }}>S/ {Number(p.amount).toFixed(2)}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0" style={{ background: st.bg, color: st.color }}>{t('pagos.status.' + p.status)}</span>
                           <button
                             onClick={() => handleDeletePago(p)}
                             disabled={deletingId === p.id}
@@ -1031,12 +1020,10 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       {activeTab === 'tarifas' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
-              Define los servicios y tarifas de tu centro. Se usan como sugerencias al registrar pagos.
-            </p>
+            <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{t('pagos.defineServicios')}</p>
             <button onClick={() => openRateForm()}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 transition-all">
-              <Plus size={13} /> Nueva tarifa
+              <Plus size={13} /> {t('pagos.nuevaTarifa')}
             </button>
           </div>
 
@@ -1044,25 +1031,25 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
           {showRateForm && (
             <div className="rounded-2xl p-5 space-y-4" style={{ background: 'var(--card)', border: '2px solid #0284c7' }}>
               <div className="flex items-center justify-between">
-                <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{editingRate ? 'Editar tarifa' : 'Nueva tarifa'}</p>
+                <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{editingRate ? t('pagos.editarTarifa') : t('pagos.nuevaTarifa')}</p>
                 <button onClick={() => setShowRateForm(false)} style={{ color: 'var(--text-muted)' }}><X size={15} /></button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="sm:col-span-2">
-                  <Field label="Nombre del servicio *">
+                  <Field label={t('pagos.nombreServicio') + ' *'}>
                     <input value={rateForm.name} onChange={e => setRateForm(f => ({ ...f, name: e.target.value }))}
                       placeholder={t("admin.phServicioTarifa")} className={inputCls} />
                   </Field>
                 </div>
-                <Field label="Descripción">
+                <Field label={t('pagos.descripcion')}>
                   <input value={rateForm.description} onChange={e => setRateForm(f => ({ ...f, description: e.target.value }))}
                     placeholder={t("admin.phDescServicio")} className={inputCls} />
                 </Field>
-                <Field label="Duración (minutos)">
+                <Field label={t('pagos.duracionMin')}>
                   <input type="number" value={rateForm.duration_min} onChange={e => setRateForm(f => ({ ...f, duration_min: e.target.value }))}
                     placeholder="60" className={inputCls} />
                 </Field>
-                <Field label="Precio (S/) *">
+                <Field label={t('pagos.precioSoles') + ' *'}>
                   <input type="number" value={rateForm.amount} onChange={e => setRateForm(f => ({ ...f, amount: e.target.value }))}
                     placeholder="0.00" className={inputCls} />
                 </Field>
@@ -1072,7 +1059,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                 <button onClick={handleSaveRate} disabled={savingRate}
                   className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50 flex items-center justify-center gap-2">
                   {savingRate ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  {editingRate ? 'Actualizar' : 'Crear tarifa'}
+                  {editingRate ? t('pagos.actualizar') : t('pagos.crearTarifa')}
                 </button>
               </div>
             </div>
