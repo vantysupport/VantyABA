@@ -2,6 +2,7 @@
 // app/padre/components/ChatFamilias.tsx
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import { Send, Loader2, MessageCircle, CheckCheck, Check, Users, Mic, MicOff, Paperclip, X, FileAudio, File as FileIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -64,6 +65,7 @@ function SenderAvatar({ name, role, avatarUrl }: { name: string; role: string; a
 }
 
 export default function ChatFamilias({ childId, childName, profile }: Props) {
+  const { t } = useI18n()
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput]       = useState('')
   const [loading, setLoading]   = useState(true)
@@ -228,12 +230,12 @@ export default function ChatFamilias({ childId, childName, profile }: Props) {
           <p style={{ fontWeight: 800, fontSize: 14, color: 'var(--c-text-primary)', margin: 0 }}>Equipo de {childName}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
             <Users size={10} color="#94a3b8"/>
-            <p style={{ fontSize: 11, color: 'var(--c-text-muted)', margin: 0 }}>Chat privado · Admin + Terapeutas</p>
+            <p style={{ fontSize: 11, color: 'var(--c-text-muted)', margin: 0 }}>{t("familias.chatPrivado")}</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f0fdf4', padding: '4px 10px', borderRadius: 20, border: '1px solid #bbf7d0' }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }}/>
-          <span style={{ fontSize: 10, fontWeight: 700, color: '#059669' }}>En línea</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#059669' }}>{t("familias.enLinea")}</span>
         </div>
       </div>
 
@@ -249,7 +251,7 @@ export default function ChatFamilias({ childId, childName, profile }: Props) {
               <MessageCircle size={26} color="#0284c7"/>
             </div>
             <div>
-              <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--c-text-primary)', margin: '0 0 6px' }}>¡Escríbenos!</p>
+              <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--c-text-primary)', margin: '0 0 6px' }}>{t("familias.escribenos")}</p>
               <p style={{ fontSize: 12, color: 'var(--c-text-muted)', maxWidth: 240, margin: 0, lineHeight: 1.6 }}>
                 Este chat es privado entre tu familia y el equipo del centro.
               </p>
@@ -351,7 +353,7 @@ export default function ChatFamilias({ childId, childName, profile }: Props) {
         {(audioBlob || attachFile) && (
           <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', marginBottom:8, background:'var(--c-surface)', borderRadius:12, border:'1px solid var(--c-border)' }}>
             {audioBlob
-              ? <><FileAudio size={16} color="#0284c7"/><span style={{ flex:1, fontSize:12, color:'var(--c-text-secondary)' }}>Audio listo para enviar</span></>
+              ? <><FileAudio size={16} color="#0284c7"/><span style={{ flex:1, fontSize:12, color:'var(--c-text-secondary)' }}>{t("familias.audioListo")}</span></>
               : <><FileIcon size={16} color="#0284c7"/><span style={{ flex:1, fontSize:12, color:'var(--c-text-secondary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{attachFile?.name}</span></>
             }
             <button onClick={cancelRecording} style={{ background:'none', border:'none', cursor:'pointer', padding:2 }}>
@@ -382,7 +384,7 @@ export default function ChatFamilias({ childId, childName, profile }: Props) {
           </button>
 
           <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
-            placeholder="Escribe un mensaje al equipo..." rows={1}
+            placeholder={t("familias.phMensajeEquipo")} rows={1}
             style={{ flex:1, background:'transparent', border:'none', outline:'none', fontSize:13, color:'var(--c-text-primary)', resize:'none', maxHeight:100, lineHeight:1.5, fontFamily:'inherit', paddingTop:2 }}
             onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height='auto'; t.style.height=Math.min(t.scrollHeight,100)+'px' }}
           />

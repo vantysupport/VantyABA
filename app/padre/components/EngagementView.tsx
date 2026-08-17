@@ -194,7 +194,7 @@ export default function EngagementView({ childId }: { childId: string }) {
       <div style={{ width:56,height:56,borderRadius:'50%',background:'var(--c-stat-purple)',display:'flex',alignItems:'center',justifyContent:'center' }}>
         <Loader2 size={28} color="#0284c7" style={{ animation:'spin 1s linear infinite' }}/>
       </div>
-      <p style={{ fontSize:13,color:'var(--c-text-placeholder)',fontWeight:600 }}>Cargando plan semanal...</p>
+      <p style={{ fontSize:13,color:'var(--c-text-placeholder)',fontWeight:600 }}>{t("familias.cargandoPlanSemanal")}</p>
       <style>{`
   :root {
     --c-card: #ffffff;
@@ -277,10 +277,10 @@ export default function EngagementView({ childId }: { childId: string }) {
             <div style={{ flex:1 }}>
               <div style={{ display:'flex',alignItems:'center',gap:8,marginBottom:6 }}>
                 <div style={{ width:28,height:28,background:'rgba(255,255,255,.2)',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center' }}><Heart size={14}/></div>
-                <span style={{ fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.2,color:'rgba(255,255,255,.7)' }}>Actividades en casa</span>
+                <span style={{ fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.2,color:'rgba(255,255,255,.7)' }}>{t("familias.actividadesEnCasa")}</span>
               </div>
               <h1 style={{ fontSize:20,fontWeight:900,margin:'0 0 3px' }}>Plan semanal de {plan?.child_name||'tu hijo/a'}</h1>
-              <p style={{ fontSize:12,color:'rgba(255,255,255,.6)',margin:0 }}>Actividades diseñadas con IA por tu especialista</p>
+              <p style={{ fontSize:12,color:'rgba(255,255,255,.6)',margin:0 }}>{t("familias.actividadesDisenadasIA")}</p>
             </div>
             <button onClick={generar} disabled={generando} style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(255,255,255,.18)',border:'1px solid rgba(255,255,255,.25)',color:'#ffffff',borderRadius:12,fontSize:12,fontWeight:700,cursor:generando?'not-allowed':'pointer',flexShrink:0,fontFamily:'inherit' }}>
               {generando ? <Loader2 size={13} style={{ animation:'spin 1s linear infinite' }}/> : <RefreshCw size={13}/>}
@@ -291,7 +291,7 @@ export default function EngagementView({ childId }: { childId: string }) {
           {plan && (
             <div style={{ marginTop:16 }}>
               <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6 }}>
-                <span style={{ fontSize:12,color:'rgba(255,255,255,.7)',fontWeight:600 }}>Progreso semanal</span>
+                <span style={{ fontSize:12,color:'rgba(255,255,255,.7)',fontWeight:600 }}>{t("familias.progresoSemanal")}</span>
                 <div style={{ display:'flex',alignItems:'center',gap:6 }}>
                   <span style={{ fontSize:20,fontWeight:900 }}>{completadas.size}</span>
                   <span style={{ fontSize:13,color:'rgba(255,255,255,.55)' }}>/ {all}</span>
@@ -312,8 +312,8 @@ export default function EngagementView({ childId }: { childId: string }) {
           <div style={{ width:72,height:72,background:'var(--c-stat-purple)',borderRadius:20,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px' }}>
             <Brain size={32} color="#0284c7"/>
           </div>
-          <p style={{ fontWeight:800,fontSize:16,color:'var(--c-text-primary)',margin:'0 0 8px' }}>Sin plan esta semana</p>
-          <p style={{ fontSize:13,color:'var(--c-text-placeholder)',lineHeight:1.6,maxWidth:280,margin:'0 auto 24px' }}>La IA generará actividades personalizadas basadas en el progreso terapéutico.</p>
+          <p style={{ fontWeight:800,fontSize:16,color:'var(--c-text-primary)',margin:'0 0 8px' }}>{t("ui.no_plan")}</p>
+          <p style={{ fontSize:13,color:'var(--c-text-placeholder)',lineHeight:1.6,maxWidth:280,margin:'0 auto 24px' }}>{t("familias.iaGeneraraTer")}</p>
           <button onClick={generar} disabled={generando} style={{ display:'inline-flex',alignItems:'center',gap:8,background:'linear-gradient(135deg,#0369a1,#0284c7)',color:'#ffffff',border:'none',padding:'13px 24px',borderRadius:16,fontSize:14,fontWeight:700,cursor:generando?'not-allowed':'pointer',boxShadow:'0 6px 20px rgba(2,132,199,.3)',fontFamily:'inherit' }}>
             <Sparkles size={16}/>{generando ? 'Generando...' : 'Generar actividades con IA'}
           </button>
@@ -329,7 +329,7 @@ export default function EngagementView({ childId }: { childId: string }) {
           {/* Disclaimer */}
           <div className="eng-card" style={{ background:'var(--c-stat-blue)',border:'1.5px solid var(--c-border)',borderRadius:12,padding:'9px 14px',display:'flex',alignItems:'center',gap:8 }}>
             <ClipboardList size={15} color="#0284c7" style={{ flexShrink:0 }} />
-            <p style={{ fontSize:12,color:'var(--c-text-muted)',margin:0,lineHeight:1.5 }}>Plan diseñado con IA. Consultá con el terapeuta ante cualquier duda.</p>
+            <p style={{ fontSize:12,color:'var(--c-text-muted)',margin:0,lineHeight:1.5 }}>{t("familias.planDisenadoIA")}</p>
           </div>
 
           {/* ACTIVIDADES */}
@@ -431,8 +431,8 @@ export default function EngagementView({ childId }: { childId: string }) {
                       <button onClick={e => { e.stopPropagation(); toggle(i) }}
                         style={{ width:'100%',padding:'11px',background:done?'var(--c-surface)':'linear-gradient(135deg,#0369a1,#0284c7)',color:done?'var(--c-text-muted)':'var(--c-card)',border:done?'1.5px solid var(--c-border)':'none',borderRadius:14,fontSize:13,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,fontFamily:'inherit',transition:'all .2s' }}>
                         {done
-                          ? <><Circle size={15}/>Marcar como pendiente</>
-                          : <><CheckCircle size={15}/>Marcar como completada</>
+                          ? <><Circle size={15}/>{t("familias.marcarPendiente")}</>
+                          : <><CheckCircle size={15}/>{t("familias.marcarCompletada")}</>
                         }
                       </button>
                     </div>
@@ -447,7 +447,7 @@ export default function EngagementView({ childId }: { childId: string }) {
             <div className="eng-card" style={{ background:'rgba(16,185,129,0.1)',border:'1.5px solid rgba(16,185,129,0.3)',borderRadius:22,padding:'20px 22px',display:'flex',alignItems:'center',gap:16,boxShadow:'0 8px 24px rgba(16,185,129,.1)' }}>
               <div style={{ width:52, height:52, borderRadius:16, background:'rgba(16,185,129,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, color:'#059669' }}><Trophy size={28} /></div>
               <div>
-                <p style={{ fontWeight:900,fontSize:16,color:'var(--c-text-primary)',margin:'0 0 4px' }}>¡Semana completada!</p>
+                <p style={{ fontWeight:900,fontSize:16,color:'var(--c-text-primary)',margin:'0 0 4px' }}>{t("familias.semanaCompletada")}</p>
                 <p style={{ fontSize:13,color:'var(--c-text-secondary)',lineHeight:1.5,margin:0 }}>Excelente trabajo acompañando a {plan.child_name||'tu hijo/a'} esta semana. 🌱</p>
               </div>
             </div>

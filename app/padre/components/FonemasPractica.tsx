@@ -6,6 +6,7 @@
 // puede marcarse como "logrado" (se guarda por niño en localStorage).
 
 import { useState, useEffect, useRef } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   Volume2, Mic, Check, ChevronLeft, ChevronRight, RotateCcw, Sparkles,
   Video, Smile, X,
@@ -132,6 +133,7 @@ function silabear(palabra: string): string[] {
 }
 
 export default function FonemasPractica({ childId }: { childId: string }) {
+  const { t } = useI18n()
   const [idx, setIdx] = useState(0)
   const [logrados, setLogrados] = useState<Set<string>>(new Set())
   const [hablando, setHablando] = useState(false)
@@ -345,12 +347,12 @@ export default function FonemasPractica({ childId }: { childId: string }) {
       {/* Encabezado */}
       <div className="fon-head">
         <div>
-          <h2><Mic size={18} /> Practiquemos fonemas</h2>
-          <p>Escuchen el sonido y repítanlo juntos en voz alta</p>
+          <h2><Mic size={18} /> {t("familias.practiquemosFonemas")}</h2>
+          <p>{t("familias.escuchenRepitan")}</p>
         </div>
         <div className="fon-prog">
           <p className="v">{logrados.size}/{FONEMAS.length}</p>
-          <p className="l">LOGRADOS</p>
+          <p className="l">{t("familias.logrados")}</p>
         </div>
       </div>
 
@@ -459,7 +461,7 @@ export default function FonemasPractica({ childId }: { childId: string }) {
               // eslint-disable-next-line @next/next/no-img-element
               <img className="fon-modal-img" src={modal.url} alt="Posición de la boca" />
             ) : ytEmbed(modal.url) ? (
-              <iframe className="fon-modal-video" src={ytEmbed(modal.url)!} title="Cómo se pronuncia"
+              <iframe className="fon-modal-video" src={ytEmbed(modal.url)!} title={t("familias.comoPronuncia")}
                 allow="autoplay; encrypted-media; fullscreen" allowFullScreen />
             ) : (
               <video className="fon-modal-video" src={modal.url} controls autoPlay playsInline />

@@ -423,7 +423,7 @@ function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickS
       <h3 className="text-xl font-bold mb-1" style={{ color: "var(--c-text-primary)" }}>
         Hola, soy <span className="text-sky-600">ARIA</span>
       </h3>
-      <p className="text-sm mb-1" style={{ color: "var(--c-text-muted)" }}>Asistente clínico de Neuropsicología y Terapias SANTI</p>
+      <p className="text-sm mb-1" style={{ color: "var(--c-text-muted)" }}>{t("familias.ariaSubtitulo")}</p>
       <p className="text-xs mb-6 leading-relaxed max-w-[280px]" style={{ color: "var(--c-text-muted)" }}>
         He revisado el historial de <strong className="text-slate-600 dark:text-slate-300">{childName || 'tu hijo/a'}</strong>.
         Puedo explicarte sesiones, tareas para casa y mucho más.
@@ -431,7 +431,7 @@ function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickS
 
       {/* Quick actions — cleaner */}
       <div className="flex flex-col gap-2 w-full max-w-[320px]">
-        <p className="text-[10px] font-bold mb-1" style={{ color: "var(--c-text-muted)" }}>¿Por dónde empezamos?</p>
+        <p className="text-[10px] font-bold mb-1" style={{ color: "var(--c-text-muted)" }}>{t("aria.dondeEmpezamos")}</p>
         {(quick as any[]).map(({ Icon, text, accent }: any) => (
           <button key={text} onClick={() => onQuickSend(text)}
             className="group flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all active:scale-[.98] hover:-translate-y-0.5 hover:shadow-md"
@@ -683,7 +683,7 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
             className="p-2 rounded-xl transition-all" style={{ background: "var(--muted-bg)", color: voiceEnabled ? '#0284c7' : 'var(--c-text-muted)' }}>
             {voiceEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
           </button>
-          <button onClick={handleReset} title="Nueva conversación"
+          <button onClick={handleReset} title={t("aria.nuevaConversacion")}
             className="p-2 rounded-xl transition-all" style={{ background: "var(--muted-bg)", color: "var(--c-text-muted)" }}>
             <RefreshCw size={15} />
           </button>
@@ -698,7 +698,7 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
               <Mic size={14} className="text-white" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-red-700 dark:text-red-300">Escuchando...</p>
+              <p className="text-sm font-bold text-red-700 dark:text-red-300">{t("familias.escuchandoDots")}</p>
               <p className="text-xs text-red-500 font-medium">{t('aria.hablaAhora')}</p>
             </div>
             <button onClick={stopListening}

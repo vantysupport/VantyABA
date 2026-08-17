@@ -456,18 +456,18 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
         <div style={{ position:'relative',zIndex:1 }}>
           <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:4 }}>
             <FileText size={15} style={{ opacity:.8 }}/>
-            <span style={{ fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.2,color:'rgba(255,255,255,.7)' }}>Recursos adicionales</span>
+            <span style={{ fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:1.2,color:'rgba(255,255,255,.7)' }}>{t("familias.recursosAdicionales")}</span>
           </div>
-          <h2 style={{ fontSize:22,fontWeight:900,margin:'0 0 4px' }}>Formularios y materiales</h2>
+          <h2 style={{ fontSize:22,fontWeight:900,margin:'0 0 4px' }}>{t("familias.formulariosMateriales")}</h2>
           <p style={{ fontSize:12,color:'rgba(255,255,255,.65)',margin:'0 0 16px' }}>{t('familias.formsMateriales')}</p>
           <div style={{ display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10 }}>
             <div style={{ background:'rgba(255,255,255,.15)',backdropFilter:'blur(8px)',borderRadius:14,padding:'10px 14px' }}>
               <div style={{ fontSize:22,fontWeight:900,lineHeight:1 }}>{pendingCount}</div>
-              <div style={{ fontSize:10,color:'rgba(255,255,255,.7)',fontWeight:700,marginTop:2,textTransform:'uppercase',letterSpacing:.5 }}>Pendientes</div>
+              <div style={{ fontSize:10,color:'rgba(255,255,255,.7)',fontWeight:700,marginTop:2,textTransform:'uppercase',letterSpacing:.5 }}>{t("familias.pendientes")}</div>
             </div>
             <div style={{ background:'rgba(255,255,255,.15)',backdropFilter:'blur(8px)',borderRadius:14,padding:'10px 14px' }}>
               <div style={{ fontSize:22,fontWeight:900,lineHeight:1 }}>{resourcesCount}</div>
-              <div style={{ fontSize:10,color:'rgba(255,255,255,.7)',fontWeight:700,marginTop:2,textTransform:'uppercase',letterSpacing:.5 }}>Materiales</div>
+              <div style={{ fontSize:10,color:'rgba(255,255,255,.7)',fontWeight:700,marginTop:2,textTransform:'uppercase',letterSpacing:.5 }}>{t("familias.materiales")}</div>
             </div>
           </div>
         </div>
@@ -585,7 +585,7 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
                             )}
                           </div>
                           <h4 className="font-bold text-slate-500 dark:text-slate-400 dark:text-slate-500 text-base">{form.form_title}</h4>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Este formulario ya no está disponible. Si necesitás completarlo, pedile al equipo que te lo reenvíe.</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t("familias.formNoDisponible")}</p>
                         </div>
                       </div>
                     </div>
@@ -671,8 +671,8 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
           ) : (
             <div style={{ textAlign:'center',padding:'60px 20px' }}>
               <div style={{ width:64, height:64, borderRadius:20, background:'rgba(2,132,199,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', color:'#0284c7' }}><FolderOpen size={30} /></div>
-              <p style={{ fontWeight:700,fontSize:14,color:'#64748b',margin:'0 0 6px' }}>Selecciona un hijo/a</p>
-              <p style={{ fontSize:12,color:'#94a3b8' }}>Elige un paciente para ver sus documentos.</p>
+              <p style={{ fontWeight:700,fontSize:14,color:'#64748b',margin:'0 0 6px' }}>{t("evalIni.selecHijo")}</p>
+              <p style={{ fontSize:12,color:'#94a3b8' }}>{t("familias.selecHijoDocs")}</p>
             </div>
           )}
         </div>

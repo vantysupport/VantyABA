@@ -3,6 +3,7 @@
 // Vista para que los padres vean y practiquen los programas ABA en casa
 
 import { useState, useEffect, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import {
   ChevronDown, ChevronUp, CheckCircle, Circle,
@@ -176,6 +177,7 @@ function WeekTracker({ programaId, childId, objetivos }: { programaId: string; c
 }
 
 function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [expandedObj, setExpandedObj] = useState<string | null>(null)
   const area = AREA_CFG[prog.area?.toLowerCase()] || AREA_DEFAULT
@@ -238,13 +240,13 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
               </p>
               {prog.instrucciones_casa && (
                 <div style={{ marginBottom: prog.reforzadores ? 8 : 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Info size={12} /> Instrucciones</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Info size={12} /> {t("familias.instrucciones")}</span>
                   <p style={{ fontSize: 12, color: 'var(--c-text-primary)', margin: '4px 0 0', lineHeight: 1.6 }}>{prog.instrucciones_casa}</p>
                 </div>
               )}
               {prog.reforzadores && (
                 <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Gift size={12} /> Reforzadores</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Gift size={12} /> {t("familias.reforzadores")}</span>
                   <p style={{ fontSize: 12, color: 'var(--c-text-primary)', margin: '4px 0 0', lineHeight: 1.6 }}>{prog.reforzadores}</p>
                 </div>
               )}
@@ -282,7 +284,7 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
                         </span>
                         {/* Status badge */}
                         {obj.estado === 'en_progreso' && (
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(2,132,199,0.12)', color: '#0284c7', flexShrink: 0, border: '1px solid rgba(2,132,199,0.2)' }}>EN CURSO</span>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(2,132,199,0.12)', color: '#0284c7', flexShrink: 0, border: '1px solid rgba(2,132,199,0.2)' }}>{t("familias.enCurso")}</span>
                         )}
                         {/* Expand chevron */}
                         <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginLeft: 4, color: 'var(--c-text-muted)', transform: isExpObj ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform .2s' }}>
@@ -317,7 +319,7 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
                               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: area.bg, borderRadius: 10 }}>
                                 <Target size={13} color={area.color} style={{ flexShrink: 0, marginTop: 2 }} />
                                 <div>
-                                  <p style={{ fontSize: 10, fontWeight: 700, color: area.color, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Objetivo</p>
+                                  <p style={{ fontSize: 10, fontWeight: 700, color: area.color, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t("familias.objetivo")}</p>
                                   <p style={{ fontSize: 12, color: 'var(--c-text-primary)', margin: 0, lineHeight: 1.6 }}>{obj.descripcion || obj.nombre}</p>
                                 </div>
                               </div>
@@ -370,8 +372,8 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(16,185,129,0.1)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.2)' }}>
               <Award size={18} color="#10b981" />
               <div>
-                <p style={{ fontWeight: 700, fontSize: 12, color: '#10b981', margin: 0 }}>¡Programa dominado!</p>
-                <p style={{ fontSize: 11, color: 'var(--c-text-muted)', margin: 0 }}>Tu hijo/a alcanzó el criterio de dominio.</p>
+                <p style={{ fontWeight: 700, fontSize: 12, color: '#10b981', margin: 0 }}>{t("familias.programaDominado")}</p>
+                <p style={{ fontSize: 11, color: 'var(--c-text-muted)', margin: 0 }}>{t("familias.alcanzoCriterio")}</p>
               </div>
             </div>
           )}
@@ -382,6 +384,7 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
 }
 
 export default function ProgramasABAView({ childId, childName }: Props) {
+  const { t } = useI18n()
   const [programas, setProgramas] = useState<Programa[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<'activos' | 'todos'>('activos')
@@ -454,8 +457,8 @@ export default function ProgramasABAView({ childId, childName }: Props) {
           <div style={{ width: 60, height: 60, borderRadius: 20, background: 'var(--c-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
             <BookOpen size={28} color="var(--c-text-muted)" />
           </div>
-          <p style={{ fontWeight: 700, color: 'var(--c-text-primary)', margin: '0 0 6px' }}>Sin programas activos</p>
-          <p style={{ fontSize: 12, color: 'var(--c-text-muted)', margin: 0 }}>Tu terapeuta aún no ha asignado programas ABA.</p>
+          <p style={{ fontWeight: 700, color: 'var(--c-text-primary)', margin: '0 0 6px' }}>{t("familias.sinProgramasActivos")}</p>
+          <p style={{ fontSize: 12, color: 'var(--c-text-muted)', margin: 0 }}>{t("familias.terapeutaNoAsigno")}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

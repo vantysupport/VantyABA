@@ -7,6 +7,7 @@
 // ⚠️ El padre NUNCA ve documentos clínicos internos, ni razonamiento técnico.
 
 import { useEffect, useState } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   ClipboardCheck, Sparkles, Loader2, CheckCircle2, Brain, Heart,
   ChevronRight, ChevronLeft, Send, Clock, X, MessageCircle, Image as ImageIcon,
@@ -565,6 +566,7 @@ function RazonRecomendacion({ texto }: { texto: string }) {
 
 // ═════════════════════════════════════════════════════════════════════════
 export default function EvaluacionInicialView({ child, profile }: Props) {
+  const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [evaluacion, setEvaluacion] = useState<any>(null)
   const [terapias, setTerapias] = useState<any[]>([])
@@ -652,7 +654,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
   }, [evaluacion?.estado, evaluacion?.terapias_recomendadas, recIntentada, generandoRec])
 
   if (!child) {
-    return <div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>Selecciona un hijo/a.</div>
+    return <div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>{t("evalIni.selecHijo")}</div>
   }
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-sky-500" size={40} /></div>
@@ -743,9 +745,9 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             <Star size={16} className="text-amber-500" /> ¿Qué sigue si aceptas?
           </h3>
           <ol className="space-y-2.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
-            <li className="flex gap-3"><span className="font-bold text-sky-600">1.</span> Completas una ficha un poco más detallada (5-7 minutos).</li>
+            <li className="flex gap-3"><span className="font-bold text-sky-600">1.</span> {t("evalIni.fichaDetallada")}</li>
             <li className="flex gap-3"><span className="font-bold text-sky-600">2.</span> Te mostramos las terapias que podrían ayudar a {child.name}.</li>
-            <li className="flex gap-3"><span className="font-bold text-sky-600">3.</span> Eliges la que prefieras y nuestro equipo te contactará para coordinar.</li>
+            <li className="flex gap-3"><span className="font-bold text-sky-600">3.</span> {t("evalIni.eligesEquipo")}</li>
           </ol>
         </div>
 
@@ -782,7 +784,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
         {showRechazoModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur" onClick={() => setShowRechazoModal(false)}>
             <div className="max-w-md w-full rounded-2xl shadow-2xl p-6" style={{ background: 'var(--card)' }} onClick={e => e.stopPropagation()}>
-              <h3 className="font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Cuéntanos tus dudas</h3>
+              <h3 className="font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{t("evalIni.cuentanosDudas")}</h3>
               <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
                 Nuestro equipo te contactará por WhatsApp para conversar.
               </p>
@@ -790,7 +792,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
                 value={motivoRechazo}
                 onChange={e => setMotivoRechazo(e.target.value)}
                 rows={4}
-                placeholder="¿Qué te genera dudas?"
+                placeholder={t("evalIni.phDudas")}
                 className="w-full px-3 py-2 rounded-lg border outline-none text-sm resize-none mb-4"
                 style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
               />
@@ -805,9 +807,9 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
                     await cargar()
                   }}
                   className="flex-1 px-4 py-2.5 rounded-lg bg-amber-500 text-white font-bold"
-                >Enviar</button>
+                >{t("common.enviar")}</button>
                 <button onClick={() => setShowRechazoModal(false)} className="px-4 py-2.5 rounded-lg border-2 font-bold"
-                  style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>Cancelar</button>
+                  style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>{t("common.cancelar")}</button>
               </div>
             </div>
           </div>
@@ -918,13 +920,13 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             <div className="flex items-end justify-between pt-3 border-t" style={{ borderColor: 'var(--card-border)' }}>
               {t.duracion && (
                 <div>
-                  <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>Duración</p>
+                  <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>{t("ui.duracion")}</p>
                   <p className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>{t.duracion}</p>
                 </div>
               )}
               {t.precio != null && (
                 <div className="text-right">
-                  <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>Inversión</p>
+                  <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>{t("evalIni.inversion")}</p>
                   <p className="text-xl font-bold tabular-nums" style={{ color: colorTema.accent }}>
                     S/. {Number(t.precio).toFixed(0)}
                   </p>
@@ -942,8 +944,8 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
           <h1 className="text-2xl font-bold mb-2">🎉 ¡Casi terminamos!</h1>
           <p className="text-white/95">
             {recomendadas.length > 0
-              ? <>Revisamos con cuidado lo que nos contaste sobre <strong>{nombreCorto}</strong>. Más abajo verás <strong>nuestra recomendación personalizada</strong> y, debajo, <strong>todo nuestro catálogo</strong> por si quieres explorar otras opciones. Marca la(s) que te interese conocer más.</>
-              : <>Estas son las terapias que ofrecemos en SANTI. Marca la(s) que te interese conocer más. El especialista te contactará con la propuesta personalizada.</>
+              ? <>{t("evalIni.revisamosCuidado")}<strong>{nombreCorto}</strong>. Más abajo verás <strong>nuestra recomendación personalizada</strong> y, debajo, <strong>todo nuestro catálogo</strong> por si quieres explorar otras opciones. Marca la(s) que te interese conocer más.</>
+              : <>{t("evalIni.terapiasOfrecemos")}</>
             }
           </p>
         </div>
@@ -954,7 +956,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             <p className="font-bold" style={{ color: 'var(--text-primary)' }}>
               {generandoRec ? `Estamos preparando la recomendación para ${nombreCorto}…` : 'Cargando terapias…'}
             </p>
-            {generandoRec && <p className="text-sm mt-1">Esto toma unos segundos. No cierres esta página.</p>}
+            {generandoRec && <p className="text-sm mt-1">{t("evalIni.tomaSegundos")}</p>}
           </div>
         ) : (
           <>
@@ -1020,7 +1022,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             value={mensajeEspecialista}
             onChange={e => setMensajeEspecialista(e.target.value)}
             rows={3}
-            placeholder="Horarios preferidos, dudas, comentarios…"
+            placeholder={t("evalIni.phHorarios")}
             className="w-full px-4 py-3 rounded-xl border outline-none focus:border-sky-500 resize-none"
             style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
           />
@@ -1072,7 +1074,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
           </p>
           {elegidas.length > 0 && (
             <div className="rounded-2xl p-4 mb-6 text-left" style={{ background: 'var(--muted-bg)' }}>
-              <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Terapias que pediste conocer</p>
+              <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t("evalIni.terapiasPediste")}</p>
               <ul className="space-y-1">
                 {elegidas.map(t => (
                   <li key={t.id} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-primary)' }}>
@@ -1103,7 +1105,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
               <CheckCircle2 size={28} />
             </div>
             <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Respuesta del especialista</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{t("evalIni.respuestaEspecialista")}</p>
               <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Mensaje para {child.name}</h2>
             </div>
           </div>
@@ -1114,12 +1116,12 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
               {evaluacion.respuesta_especialista}
             </div>
           ) : (
-            <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>El especialista enviará su mensaje pronto.</p>
+            <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>{t("evalIni.especialistaEnviaraPronto")}</p>
           )}
 
           {elegidas.length > 0 && (
             <div className="rounded-xl p-4 mb-4" style={{ background: 'var(--muted-bg)' }}>
-              <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>Terapias solicitadas</p>
+              <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t("evalIni.terapiasSolicitadas")}</p>
               <ul className="space-y-1 text-sm" style={{ color: 'var(--text-primary)' }}>
                 {elegidas.map(t => <li key={t.id}>· {t.nombre}</li>)}
               </ul>
@@ -1141,7 +1143,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
       <div className="max-w-xl mx-auto py-10 px-4">
         <div className="rounded-3xl p-7 text-center shadow-xl border-2 border-amber-300 bg-amber-50">
           <AlertCircle size={48} className="text-amber-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-3 text-amber-900">Recibimos tus dudas</h2>
+          <h2 className="text-xl font-bold mb-3 text-amber-900">{t("evalIni.recibimosDudas")}</h2>
           <p className="text-amber-800 mb-5">
             Nuestro equipo se va a comunicar contigo para conversar sobre tu caso y resolver cualquier inquietud.
           </p>
@@ -1162,6 +1164,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
 // ═════════════════════════════════════════════════════════════════════════
 
 function WizardIntake({ child, seccionIdx, setSeccionIdx, respuestas, setRespuestas, enviando, analizando, onEnviar }: any) {
+  const { t } = useI18n()
   const seccion = SECCIONES_INTAKE[seccionIdx]
   const progreso = ((seccionIdx + 1) / SECCIONES_INTAKE.length) * 100
 
@@ -1170,7 +1173,7 @@ function WizardIntake({ child, seccionIdx, setSeccionIdx, respuestas, setRespues
       <div className="rounded-3xl p-6 mb-6 text-white shadow-xl" style={{ background: 'linear-gradient(135deg,#0284c7,#0ea5e9)' }}>
         <div className="flex items-center gap-3 mb-2">
           <ClipboardCheck size={28} />
-          <h1 className="text-2xl font-bold">Ficha inicial para papás</h1>
+          <h1 className="text-2xl font-bold">{t("evalIni.fichaInicialPapas")}</h1>
         </div>
         <p className="text-white/90 text-sm mb-2">
           Documento necesario para la entrevista inicial / primera consulta de <strong>{child.name}</strong>.
@@ -1261,6 +1264,7 @@ function BarraProgreso({ paso, total, progreso }: { paso: number; total: number;
 }
 
 function NavWizard({ idx, total, onPrev, onNext, onSubmit, enviando, textoEnviando }: any) {
+  const { t } = useI18n()
   const last = idx === total - 1
   return (
     <div className="flex items-center justify-between mt-6 pt-6 border-t" style={{ borderColor: 'var(--card-border)' }}>
@@ -1277,7 +1281,7 @@ function NavWizard({ idx, total, onPrev, onNext, onSubmit, enviando, textoEnvian
       ) : (
         <button onClick={onSubmit} disabled={enviando}
           className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg disabled:opacity-50">
-          {enviando ? <><Loader2 className="animate-spin" size={18} /> {textoEnviando}</> : <><Sparkles size={18} /> Enviar</>}
+          {enviando ? <><Loader2 className="animate-spin" size={18} /> {textoEnviando}</> : <><Sparkles size={18} /> {t("common.enviar")}</>}
         </button>
       )}
     </div>

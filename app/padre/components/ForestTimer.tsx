@@ -6,6 +6,7 @@
 // del temporizador, especies, persistencia, Mi bosque y Estadísticas.
 
 import { useState, useEffect, useRef } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import dynamic from 'next/dynamic'
 import {
   Play, Pause, X, RotateCcw, Minus, Plus,
@@ -53,6 +54,7 @@ function fmt(secs: number) {
 // COMPONENTE PRINCIPAL
 // ══════════════════════════════════════════════════════════════════════════════
 export default function ForestTimer({ childId }: { childId: string }) {
+  const { t } = useI18n()
   const [view, setView] = useState<'plantar' | 'bosque' | 'stats'>('plantar')
   const [phase, setPhase] = useState<Phase>('idle')
   const [species, setSpecies] = useState<Species>('pino')
@@ -264,8 +266,8 @@ export default function ForestTimer({ childId }: { childId: string }) {
             </div>
 
             {phase !== 'idle' && <div className="ft-time">{fmt(remaining)}</div>}
-            {phase === 'running' && <p className="ft-sub">Si se rinden, el arbolito se marchitará</p>}
-            {phase === 'idle' && <p className="ft-sub">Elige árbol y tiempo de práctica</p>}
+            {phase === 'running' && <p className="ft-sub">{t("familias.siRindenMarchita")}</p>}
+            {phase === 'idle' && <p className="ft-sub">{t("familias.eligeArbolTiempo")}</p>}
 
             {/* Especies */}
             {phase === 'idle' && (
@@ -327,18 +329,18 @@ export default function ForestTimer({ childId }: { childId: string }) {
               )}
               {phase === 'running' && (
                 <>
-                  <button className="ft-btn ghost" onClick={pause}><Pause size={15} /> Pausa</button>
-                  <button className="ft-btn ghost" onClick={giveUp}><X size={15} /> Rendirse</button>
+                  <button className="ft-btn ghost" onClick={pause}><Pause size={15} /> {t("familias.pausa")}</button>
+                  <button className="ft-btn ghost" onClick={giveUp}><X size={15} /> {t("familias.rendirse")}</button>
                 </>
               )}
               {phase === 'paused' && (
                 <>
-                  <button className="ft-btn go" onClick={resume}><Play size={15} /> Continuar</button>
-                  <button className="ft-btn ghost" onClick={giveUp}><X size={15} /> Rendirse</button>
+                  <button className="ft-btn go" onClick={resume}><Play size={15} /> {t("familias.continuar")}</button>
+                  <button className="ft-btn ghost" onClick={giveUp}><X size={15} /> {t("familias.rendirse")}</button>
                 </>
               )}
               {phase === 'done' && (
-                <button className="ft-btn go" onClick={reset}><RotateCcw size={15} /> Plantar otro</button>
+                <button className="ft-btn go" onClick={reset}><RotateCcw size={15} /> {t("familias.plantarOtro")}</button>
               )}
             </div>
           </>
@@ -373,14 +375,14 @@ export default function ForestTimer({ childId }: { childId: string }) {
         {view === 'stats' && (
           <>
             <div className="ft-kpis">
-              <div className="ft-kpi"><p className="v">{totalMin}</p><p className="l"><Clock size={9} style={{ display: 'inline', verticalAlign: '-1px' }} /> MIN DE PRÁCTICA</p></div>
-              <div className="ft-kpi"><p className="v">{oks.length}</p><p className="l"><Trees size={9} style={{ display: 'inline', verticalAlign: '-1px' }} /> ÁRBOLES</p></div>
-              <div className="ft-kpi"><p className="v">{streak}</p><p className="l"><Flame size={9} style={{ display: 'inline', verticalAlign: '-1px' }} /> RACHA DÍAS</p></div>
-              <div className="ft-kpi"><p className="v">{exito}%</p><p className="l">ÉXITO</p></div>
+              <div className="ft-kpi"><p className="v">{totalMin}</p><p className="l"><Clock size={9} style={{ display: 'inline', verticalAlign: '-1px' }} /> {t("familias.minPractica")}</p></div>
+              <div className="ft-kpi"><p className="v">{oks.length}</p><p className="l"><Trees size={9} style={{ display: 'inline', verticalAlign: '-1px' }} /> {t("familias.arboles")}</p></div>
+              <div className="ft-kpi"><p className="v">{streak}</p><p className="l"><Flame size={9} style={{ display: 'inline', verticalAlign: '-1px' }} /> {t("familias.rachaDias")}</p></div>
+              <div className="ft-kpi"><p className="v">{exito}%</p><p className="l">{t("familias.exito")}</p></div>
             </div>
 
             <div className="ft-chart">
-              <h4>MINUTOS · ÚLTIMOS 7 DÍAS</h4>
+              <h4>{t("familias.minUltimos7")}</h4>
               <svg viewBox="0 0 280 96" style={{ width: '100%', display: 'block' }}>
                 {last7.map((b, i) => {
                   const h = Math.max(3, (b.mins / maxBar) * 64)
