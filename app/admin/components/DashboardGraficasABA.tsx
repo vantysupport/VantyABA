@@ -305,7 +305,7 @@ export default function DashboardGraficasABA({ onIrAPacientes }: { onIrAPaciente
                       <span className="text-[11px] text-slate-400">{programas.length} programa{programas.length !== 1 ? 's' : ''}</span>
                       {programasActivos > 0 && <span className="text-[11px] text-sky-500 font-bold">{programasActivos} activo{programasActivos !== 1 ? 's' : ''}</span>}
                       {programasDominados > 0 && <span className="text-[11px] text-emerald-500 font-bold flex items-center gap-0.5"><CheckCircle2 size={10} /> {programasDominados} dominado{programasDominados !== 1 ? 's' : ''}</span>}
-                      {!hasDatos && <span className="text-[11px] text-amber-500 flex items-center gap-0.5"><AlertTriangle size={10} /> Sin sesiones</span>}
+                      {!hasDatos && <span className="text-[11px] text-amber-500 flex items-center gap-0.5"><AlertTriangle size={10} /> {t('auto.dashboardGraficasABA.sinSesiones')}</span>}
                       {hasDatos && <span className="text-[11px] text-slate-400">{sesionesTotales} sesión{sesionesTotales !== 1 ? 'es' : ''}</span>}
                     </div>
                   </div>

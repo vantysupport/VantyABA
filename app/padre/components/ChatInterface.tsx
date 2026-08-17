@@ -827,7 +827,7 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
           </div>
 
           {listening && (
-            <p className="text-center text-[10px] text-red-400 mt-1.5 font-medium">🔴 Grabando — habla cerca del micrófono</p>
+            <p className="text-center text-[10px] text-red-400 mt-1.5 font-medium">{t('auto.chatInterface.grabandoHablaCercaDelMicrofono')}</p>
           )}
           <p className="text-center text-[10px] text-slate-300 mt-1 font-medium">
             ARIA puede cometer errores · Consulta con tu terapeuta

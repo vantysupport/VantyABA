@@ -256,7 +256,7 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
             ) : (
               <select value={childId} onChange={e => setChildId(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-500 text-sm">
-                <option value="">— Seleccioná —</option>
+                <option value="">{t('auto.page.selecciona')}</option>
                 {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             )}
@@ -264,7 +264,7 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
         )}
         {linkInfo?.childName && (
           <div className="rounded-2xl bg-white p-4 mb-4 shadow-sm border border-slate-100 text-sm">
-            <span className="text-slate-500">Paciente: </span>
+            <span className="text-slate-500">{t('auto.page.paciente')} </span>
             <span className="font-bold text-slate-800">{linkInfo.childName}</span>
           </div>
         )}
@@ -293,7 +293,7 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
             <div className="md:col-span-2 rounded-2xl bg-white p-4 sm:p-5 shadow-sm border border-slate-100 md:sticky md:top-6">
               {(() => {
                 const dia = dias.find(d => d.fecha === selectedDate)
-                if (!dia) return <p className="text-sm text-slate-400 italic text-center py-10">Elegí un día disponible (en verde) para ver los horarios.</p>
+                if (!dia) return <p className="text-sm text-slate-400 italic text-center py-10">{t('auto.page.elegiUnDiaDisponibleEn')}</p>
                 return (
                   <>
                     <p className="text-base font-bold text-slate-800 capitalize mb-3 flex items-center gap-2">
@@ -358,6 +358,7 @@ function CalendarioReserva({ mes, onCambiarMes, disponibles, seleccionadas, diaA
   diaActivo: string
   onElegirDia: (fecha: string) => void
 }) {
+  const { t } = useI18n()
   const year = mes.getFullYear()
   const month = mes.getMonth()
   const offset = (new Date(year, month, 1).getDay() + 6) % 7 // lunes = 0
@@ -407,7 +408,7 @@ function CalendarioReserva({ mes, onCambiarMes, disponibles, seleccionadas, diaA
       <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-4 text-[11px] text-slate-500">
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-emerald-100 border border-emerald-300" /> Disponible</span>
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-indigo-600" /> Elegido</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-indigo-500" /> Con cita marcada</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-2 h-2 rounded-full bg-indigo-500" /> {t('auto.page.conCitaMarcada')}</span>
       </div>
     </div>
   )

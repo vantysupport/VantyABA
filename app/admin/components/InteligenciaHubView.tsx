@@ -356,7 +356,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
                 <div className="bg-white/15 rounded-xl px-3 py-2 text-center flex-shrink-0">
                   <p className="text-white/70 text-[10px]">{t('ui.criteria')}</p>
                   <p className="text-white font-bold text-sm">≥90% × 2</p>
-                  <p className="text-white/70 text-[10px]">sesiones consecutivas</p>
+                  <p className="text-white/70 text-[10px]">{t('auto.inteligenciaHubView.sesionesConsecutivas')}</p>
                 </div>
               </div>
             </div>
@@ -605,7 +605,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
                 <div className="bg-white/15 rounded-xl px-3 py-2 text-center flex-shrink-0">
                   <p className="text-white/70 text-[10px]">{t('ui.criteria')}</p>
                   <p className="text-white font-bold text-sm">≥90% × 2</p>
-                  <p className="text-white/70 text-[10px]">sesiones consecutivas</p>
+                  <p className="text-white/70 text-[10px]">{t('auto.inteligenciaHubView.sesionesConsecutivas')}</p>
                 </div>
               </div>
             </div>
@@ -821,7 +821,7 @@ function TabSeguridad() {
         {alertas.length === 0 ? (
           <div className="p-8 text-center">
             <CheckCircle size={32} className="text-emerald-400 mx-auto mb-2" />
-            <p className="text-slate-500 font-medium text-sm">✅ Sin alertas activas. Sistema seguro.</p>
+            <p className="text-slate-500 font-medium text-sm">{t('auto.inteligenciaHubView.sinAlertasActivasSistemaSeguro')}</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
@@ -902,7 +902,7 @@ function TabCompetitividad() {
         {/* Mini comparativa visual */}
         <div className="mt-4 space-y-2">
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-sky-200 w-28">Neuropsicología y Terapias SANTI</span>
+            <span className="text-sky-200 w-28">{t('auto.inteligenciaHubView.neuropsicologiaYTerapiasSanti')}</span>
             <div className="flex-1 bg-white/20 rounded-full h-2.5 overflow-hidden">
               <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${datos.scoreGlobal}%` }} />
             </div>
@@ -1290,7 +1290,7 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
               color: 'var(--text-primary)'
             }}
             value={selected?.id || ''} onChange={e => setSelected(pacientes.find(p => p.id === e.target.value) || null)}>
-            <option value="">— Seleccionar paciente —</option>
+            <option value="">{t('auto.inteligenciaHubView.seleccionarPaciente')}</option>
             {pacientes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
@@ -1520,7 +1520,7 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
           {/* texto_libre fallback — el JSON no se pudo parsear, mostramos crudo en bloque scrolleable */}
           {resultado.resultado?.texto_libre && (
             <div className="bg-amber-50 rounded-xl border border-amber-100 p-4 overflow-hidden max-w-full">
-              <p className="text-[11px] font-bold text-amber-700 mb-2">⚠ Respuesta sin formato (el modelo no devolvió JSON válido):</p>
+              <p className="text-[11px] font-bold text-amber-700 mb-2">{t('auto.inteligenciaHubView.respuestaSinFormatoElModelo')}</p>
               <pre className="text-xs text-amber-800 whitespace-pre-wrap break-words overflow-x-auto max-h-96 overflow-y-auto bg-white/50 rounded p-2 border border-amber-200">{resultado.resultado.texto_libre}</pre>
             </div>
           )}
@@ -2005,7 +2005,7 @@ export default function InteligenciaHubView({ enabledTabs }: { enabledTabs?: Rec
         </div>
         <div>
           <h1 className="text-xl font-bold text-slate-800" style={{ color: "var(--text-primary)" }}>{t('hub.hubInteligencia')}</h1>
-          <p className="text-xs text-slate-400">6 agentes IA · Predicciones · Patrones · Objetivos · Reportes</p>
+          <p className="text-xs text-slate-400">{t('auto.inteligenciaHubView.6AgentesIaPrediccionesPatrones')}</p>
         </div>
       </div>
 

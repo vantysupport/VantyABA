@@ -94,7 +94,7 @@ export default function AuthCallbackPage() {
         animation: 'spin 1s linear infinite'
       }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-      <p style={{ fontSize: 16, opacity: .8 }}>Iniciando sesión…</p>
+      <p style={{ fontSize: 16, opacity: .8 }}>{t('auto.page.iniciandoSesion')}</p>
     </div>
   )
 }

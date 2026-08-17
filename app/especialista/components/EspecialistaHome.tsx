@@ -253,7 +253,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
         <KPI label="Pacientes"     value={loading ? '—' : stats.totalPacientes}     sub="Total activos"      icon={Users}          bar="#0284c7" onClick={() => setActiveView('pacientes')} />
         <KPI label="Citas"         value={loading ? '—' : stats.sesionesEstaSemana} sub="Últimos 7 días"     icon={Calendar}       bar="#10b981" onClick={() => setActiveView('agenda')} />
         <KPI label="Evaluaciones"  value={loading ? '—' : total}                   sub="Total registradas"  icon={FileText}       bar="#f59e0b" urgent={stats.pendientes > 0} onClick={() => setActiveView('formularios')} />
-        <KPI label="Última sesión" value={loading ? '—' : (ultimaSesion ?? '—')}   sub="Fecha más reciente" icon={Calendar}       bar="#0ea5e9" onClick={() => setActiveView('agenda')} />
+        <KPI label={t('auto.especialistaHome.ultimaSesion')} value={loading ? '—' : (ultimaSesion ?? '—')}   sub="Fecha más reciente" icon={Calendar}       bar="#0ea5e9" onClick={() => setActiveView('agenda')} />
       </div>
 
       {/* ── MÉTRICAS MEDIAS ── */}
@@ -274,7 +274,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
                 {stats.totalPacientes - stats.pendientes}
                 <span className="text-sm font-medium ml-1" style={{ color: 'var(--text-muted)' }}>/ {stats.totalPacientes}</span>
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>pacientes con sesión reciente</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('auto.especialistaHome.pacientesConSesionReciente')}</p>
             </div>
           </div>
         </div>

@@ -302,10 +302,10 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
           <div className="w-1 h-4 bg-sky-500 rounded-full"/>
           <p className="text-[10px] font-bold" style={{ color: "var(--c-text-muted)" }}>{t("perfil.miCuenta")}</p>
         </div>
-        <MenuItem icon={<User size={17} color="#0284c7"/>} label="Editar perfil" sub="Nombre y teléfono" onClick={onEditProfile}/>
-        <MenuItem icon={<Lock size={17} color="#0284c7"/>} label="Cambiar contraseña" sub="Actualizar acceso" onClick={onChangePass}/>
+        <MenuItem icon={<User size={17} color="#0284c7"/>} label={t('auto.profileView.editarPerfil')} sub="Nombre y teléfono" onClick={onEditProfile}/>
+        <MenuItem icon={<Lock size={17} color="#0284c7"/>} label={t('auto.profileView.cambiarContrasena')} sub="Actualizar acceso" onClick={onChangePass}/>
         <MenuItem icon={<Shield size={17} color="#0ea5e9"/>} label="Privacidad y seguridad" sub="Gestión de datos" onClick={onPrivacy}/>
-        <MenuItem icon={<HelpCircle size={17} color="#10b981"/>} label="Centro de ayuda" sub="Guías y soporte" onClick={onHelp}/>
+        <MenuItem icon={<HelpCircle size={17} color="#10b981"/>} label={t('auto.profileView.centroDeAyuda')} sub="Guías y soporte" onClick={onHelp}/>
       </div>
 
       {/* ── CALENDARIOS ── */}
@@ -325,7 +325,7 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
 
       {/* ── CERRAR SESIÓN ── */}
       <div className="pv-card rounded-2xl overflow-hidden" style={{ background: "var(--c-card)", border: "1px solid rgba(239,68,68,0.25)" }}>
-        <MenuItem icon={<LogOut size={17} color="#ef4444"/>} label="Cerrar sesión" danger onClick={onLogout}/>
+        <MenuItem icon={<LogOut size={17} color="#ef4444"/>} label={t('auto.profileView.cerrarSesion')} danger onClick={onLogout}/>
       </div>
     </div>
   )

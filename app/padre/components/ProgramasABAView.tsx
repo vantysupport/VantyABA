@@ -331,11 +331,11 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
                                 <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: 1 }}>
                                   Cómo practicarlo en casa
                                 </p>
-                                <Field icon="📍" label="Qué decir o hacer (Sd)" value={sd} />
+                                <Field icon="📍" label={t('auto.programasABAView.queDecirOHacerSd')} value={sd} />
                                 <Field icon="🤝" label="Ayudas / Prompts"        value={ayudas} />
                                 <Field icon="🧸" label="Materiales"              value={materiales} />
                                 <Field icon="✏️" label="Si se equivoca"          value={correccion} />
-                                <Field icon="🌱" label="Generalización"          value={generaliz} />
+                                <Field icon="🌱" label={t('auto.programasABAView.generalizacion')}          value={generaliz} />
                               </div>
                             )}
 

@@ -549,7 +549,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             <label className={`block text-[11px] font-bold mb-1.5 ${txt3}`}>{t("admin.guardarCarpeta")}</label>
             <select value={uploadFolder ?? ''} onChange={e => setUploadFolder(e.target.value || null)}
               className={`w-full px-3 py-2.5 rounded-xl text-sm border outline-none focus:border-sky-500 ${inputCls}`}>
-              <option value="">📁 Inicio (sin carpeta)</option>
+              <option value="">{t('auto.documentosView.inicioSinCarpeta')}</option>
               {fs.carpetas.map(c => (
                 <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>
               ))}

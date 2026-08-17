@@ -175,7 +175,7 @@ export default function DashboardDirectora() {
           <h3 className="font-semibold text-gray-700 mb-4">{t('dashboard.proximasSesiones')}</h3>
           <div className="space-y-3">
             {proximasSesiones.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-4">No hay sesiones programadas</p>
+              <p className="text-gray-400 text-sm text-center py-4">{t('auto.dashboardDirectora.noHaySesionesProgramadas')}</p>
             ) : proximasSesiones.map((s: any) => (
               <div key={s.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
                 <div className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-md min-w-[56px] text-center">

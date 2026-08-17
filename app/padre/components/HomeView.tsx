@@ -72,7 +72,7 @@ function GoalCelebration({ childName, goalsAchieved, onClose }: { childName: str
         <div style={{ width: 84, height: 84, margin: '0 auto 16px', borderRadius: 26, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><Trophy size={44} /></div>
         <h2 style={{ fontWeight: 900, fontSize: 30, color: 'var(--c-card)', marginBottom: 8 }}>{t("familias.granLogro")}</h2>
         <p style={{ color: 'rgba(255,255,255,.85)', fontSize: 16, lineHeight: 1.6, marginBottom: 24 }}>
-          <strong style={{ color: '#fbbf24' }}>{childName}</strong> alcanzó <strong style={{ color: '#fbbf24' }}>{goalsAchieved} objetivo{goalsAchieved !== 1 ? 's' : ''}</strong> con dominio ≥80%.
+          <strong style={{ color: '#fbbf24' }}>{childName}</strong> {t('auto.homeView.alcanzo')} <strong style={{ color: '#fbbf24' }}>{goalsAchieved} objetivo{goalsAchieved !== 1 ? 's' : ''}</strong> con dominio ≥80%.
         </p>
       </div>
       <style>{`
@@ -162,7 +162,7 @@ function WellbeingSurvey({ childName, childId, parentId, onClose }: { childName:
               </div>
               <button onClick={onClose} style={{ background: '#f3f4f6', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer', color: '#6b7280' }}><X size={16} /></button>
             </div>
-            <p style={{ fontSize: 14, color: 'var(--c-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>{t("familias.acompanarA")}<strong>{childName || 'tu hijo/a'}</strong> es un trabajo importante. ¿Cómo te has sentido esta semana?</p>
+            <p style={{ fontSize: 14, color: 'var(--c-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>{t("familias.acompanarA")}<strong>{childName || 'tu hijo/a'}</strong> {t('auto.homeView.esUnTrabajoImportanteComo')}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {options.map(opt => {
                 const isSelected = selectedMood === opt.mood

@@ -408,7 +408,7 @@ export default function ParentDashboard() {
             <h1 className="text-xl font-bold text-slate-800 mb-2">{t("especialista.registroNoDisponible")}</h1>
             <p className="text-slate-500 text-sm leading-relaxed mb-6">
               El centro alcanzó el número máximo de cuentas de familias disponibles.
-              Para habilitar tu acceso, comunícate con <strong className="text-sky-600">Neuropsicología y Terapias SANTI</strong>.
+              Para habilitar tu acceso, comunícate con <strong className="text-sky-600">{t('auto.page.neuropsicologiaYTerapiasSanti')}</strong>.
             </p>
             <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 w-full bg-gradient-to-r from-sky-600 to-cyan-600 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-sky-200 hover:opacity-90 transition-opacity">
@@ -450,7 +450,7 @@ export default function ParentDashboard() {
               ¡Bienvenido/a, {profile?.full_name?.split(' ')[0]}! 🎉
             </h1>
             <p className="text-slate-500 text-base leading-relaxed mb-8">
-              Estamos felices de tenerte en <strong className="text-sky-600">Neuropsicología y Terapias SANTI</strong>.
+              Estamos felices de tenerte en <strong className="text-sky-600">{t('auto.page.neuropsicologiaYTerapiasSanti')}</strong>.
               Para comenzar, necesitamos registrar a tu hijo/a y podrás acceder a todo el sistema de seguimiento con IA.
             </p>
 
@@ -615,12 +615,12 @@ export default function ParentDashboard() {
             <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
                 <NavBtnDesktop icon={<Home size={17}/>} label="Inicio" active={activeView==='home'} onClick={()=>setActiveView('home')} />
                 {!evalInicialCompleta && (
-                  <NavBtnDesktop icon={<ClipboardCheck size={17}/>} label="Evaluación Inicial" active={activeView==='evaluacion-inicial'} onClick={()=>setActiveView('evaluacion-inicial')} badge="NUEVO" />
+                  <NavBtnDesktop icon={<ClipboardCheck size={17}/>} label={t('auto.page.evaluacionInicial')} active={activeView==='evaluacion-inicial'} onClick={()=>setActiveView('evaluacion-inicial')} badge="NUEVO" />
                 )}
                 <NavBtnDesktop icon={<Calendar size={17}/>} label="Agenda" active={activeView==='miscitas'} onClick={()=>setActiveView('miscitas')} />
                 <NavBtnDesktop icon={<Heart size={17}/>} label="Practicar en Casa" active={activeView==='engagement'} onClick={()=>setActiveView('engagement')} badge="IA" />
                 <NavBtnDesktop icon={<Sparkles size={17}/>} label={t('familias.asistente')} active={activeView==='chat'} onClick={()=>setActiveView('chat')} badge="NUEVO" />
-                <NavBtnDesktop icon={<BookOpen size={17}/>} label="Programas ABA" active={activeView==='programas'} onClick={()=>setActiveView('programas')} />
+                <NavBtnDesktop icon={<BookOpen size={17}/>} label={t('auto.page.programasAba')} active={activeView==='programas'} onClick={()=>setActiveView('programas')} />
                 <NavBtnDesktop icon={<Users size={17}/>} label="Chat" active={activeView==='chat-familias'} onClick={()=>setActiveView('chat-familias')} badge={familiasUnread > 0 ? familiasUnread : null} />
                 <NavBtnDesktop icon={<FileText size={17}/>} label="Recursos adicionales" active={activeView==='misformularios'||activeView==='tienda'||activeView==='documentos'} onClick={()=>setActiveView('misformularios')} badge={pendingFormsCount > 0 ? pendingFormsCount : null} />
                 <NavBtnDesktop icon={<User size={17}/>} label="Mi Perfil" active={activeView==='profile'} onClick={()=>setActiveView('profile')} />
@@ -659,7 +659,7 @@ export default function ParentDashboard() {
                     <h1 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                         {PAGE_TITLES_MOBILE[activeView as keyof typeof PAGE_TITLES_MOBILE] || 'Inicio'}
                     </h1>
-                    <p style={{ fontSize: "10px", color: "var(--text-muted)" }}>Neuropsicología y Terapias SANTI · Portal Familias</p>
+                    <p style={{ fontSize: "10px", color: "var(--text-muted)" }}>{t('auto.page.neuropsicologiaYTerapiasSantiPorta')}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <LocaleSelector compact={true} />
@@ -839,7 +839,7 @@ export default function ParentDashboard() {
                     className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${showMoreMenu ? 'text-sky-600' : 'text-slate-500'}`}
                   >
                     <MoreHorizontal size={22}/>
-                    <span className="text-[10px] font-medium">Más</span>
+                    <span className="text-[10px] font-medium">{t('auto.page.mas')}</span>
                   </button>
                   {showMoreMenu && (
                     <div className="absolute bottom-14 right-0 rounded-2xl shadow-2xl border p-2 w-56 z-50 flex flex-col gap-1" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
@@ -896,19 +896,19 @@ export default function ParentDashboard() {
                         <form onSubmit={handleAddChild} className="space-y-4">
                             <div>
                                 <label className="text-xs font-bold text-slate-500 mb-2 block flex items-center gap-2">
-                                    <User size={14}/> Nombre Completo <span className="text-red-500">*</span>
+                                    <User size={14}/> {t('auto.page.nombreCompleto')} <span className="text-red-500">*</span>
                                 </label>
                                 <input 
                                     name="name" 
                                     required 
                                     className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-sky-400 transition-all hover:bg-white" 
-                                    placeholder="Ej: María Fernanda López"
+                                    placeholder={t('auto.page.ejMariaFernandaLopez')}
                                 />
                             </div>
                             
                             <div>
                                 <label className="text-xs font-bold text-slate-500 mb-2 block flex items-center gap-2">
-                                    <Calendar size={14}/> Fecha de Nacimiento <span className="text-red-500">*</span>
+                                    <Calendar size={14}/> {t('auto.page.fechaDeNacimiento')} <span className="text-red-500">*</span>
                                 </label>
                                 <input 
                                     name="dob" 
@@ -1305,7 +1305,7 @@ export default function ParentDashboard() {
                                 Cifrado y arquitectura
                             </h4>
                             <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--c-text-secondary)' }}>
-                                Toda la información clínica de tu familia se almacena cifrada con <strong>AES-256</strong> en reposo y se transmite por <strong>TLS 1.3</strong>. Cada fila en nuestra base de datos está protegida con <strong>Row Level Security</strong> — solo cuentas autorizadas pueden verla.
+                                Toda la información clínica de tu familia se almacena cifrada con <strong>AES-256</strong> {t('auto.page.enReposoYSeTransmite')} <strong>TLS 1.3</strong>{t('auto.page.cadaFilaEnNuestraBase')} <strong>Row Level Security</strong> — solo cuentas autorizadas pueden verla.
                             </p>
                         </div>
 
@@ -1318,12 +1318,12 @@ export default function ParentDashboard() {
                                 Quién puede acceder
                             </h4>
                             <ul className="text-xs space-y-1.5" style={{ color: 'var(--c-text-secondary)' }}>
-                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>Vos</strong> (padre/madre/tutor titular de la cuenta)</span></li>
-                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>{t("familias.terapeutasCentro")}</strong> asignados al paciente</span></li>
-                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>{t("familias.soporteTecnico")}</strong> de Vanty, solo bajo consentimiento explícito y acuerdo de confidencialidad</span></li>
+                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>Vos</strong> {t('auto.page.padremadretutorTitularDeLaCuenta')}</span></li>
+                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>{t("familias.terapeutasCentro")}</strong> {t('auto.page.asignadosAlPaciente')}</span></li>
+                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>{t("familias.soporteTecnico")}</strong> {t('auto.page.deVantySoloBajoConsentimiento')}</span></li>
                                 <li className="flex items-start gap-2 pt-1 mt-1" style={{ borderTop: '1px dashed var(--c-border)' }}>
                                     <X size={12} className="text-red-500 mt-0.5 flex-shrink-0"/>
-                                    <span><strong>Nunca:</strong> anunciantes, brokers de datos, ni terceros con fines comerciales</span>
+                                    <span><strong>Nunca:</strong> {t('auto.page.anunciantesBrokersDeDatosNi')}</span>
                                 </li>
                             </ul>
                         </div>
@@ -1337,7 +1337,7 @@ export default function ParentDashboard() {
                                 Inteligencia Artificial (ARIA)
                             </h4>
                             <p className="text-xs leading-relaxed" style={{ color: 'var(--c-text-secondary)' }}>
-                                Los datos clínicos <strong>no se utilizan para entrenar modelos públicos</strong>. ARIA procesa cada consulta de forma contextual — solo se envía la información mínima necesaria al proveedor de IA y se descarta después de generar la respuesta. La generación de reportes y análisis se realiza con datos anonimizados cuando es posible.
+                                Los datos clínicos <strong>{t('auto.page.noSeUtilizanParaEntrenar')}</strong>. ARIA procesa cada consulta de forma contextual — solo se envía la información mínima necesaria al proveedor de IA y se descarta después de generar la respuesta. La generación de reportes y análisis se realiza con datos anonimizados cuando es posible.
                             </p>
                         </div>
 
@@ -1381,7 +1381,7 @@ export default function ParentDashboard() {
                                 Conservación de datos
                             </h4>
                             <p className="text-xs leading-relaxed" style={{ color: 'var(--c-text-secondary)' }}>
-                                Los datos clínicos se conservan durante el período activo de tratamiento y hasta <strong>5 años</strong> luego del último servicio, según la normativa peruana de registros clínicos. Podés solicitar la eliminación anticipada en cualquier momento.
+                                Los datos clínicos se conservan durante el período activo de tratamiento y hasta <strong>{t('auto.page.5Anos')}</strong> luego del último servicio, según la normativa peruana de registros clínicos. Podés solicitar la eliminación anticipada en cualquier momento.
                             </p>
                         </div>
 
@@ -1394,7 +1394,7 @@ export default function ParentDashboard() {
                                 className="flex-1 flex items-center justify-center gap-2 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg transition-all hover:shadow-xl active:scale-[.98]"
                                 style={{ background: 'linear-gradient(135deg,#0369a1,#0284c7,#db2777)' }}
                             >
-                                <ScrollText size={15}/> Leer Política Completa <ExternalLink size={12}/>
+                                <ScrollText size={15}/> {t('auto.page.leerPoliticaCompleta')} <ExternalLink size={12}/>
                             </a>
                             <a
                                 href="mailto:aprendizaje.santi@gmail.com?subject=Consulta%20sobre%20privacidad%20de%20datos"
@@ -1423,8 +1423,8 @@ export default function ParentDashboard() {
                                 <HelpCircle size={24}/>
                             </div>
                             <div>
-                                <h3 className="font-bold text-lg">Centro de Ayuda</h3>
-                                <p className="text-xs text-green-100">Estamos aquí para ti</p>
+                                <h3 className="font-bold text-lg">{t('auto.page.centroDeAyuda')}</h3>
+                                <p className="text-xs text-green-100">{t('auto.page.estamosAquiParaTi')}</p>
                             </div>
                         </div>
                         <button onClick={()=>setShowHelp(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all hover:rotate-90">
@@ -1434,17 +1434,17 @@ export default function ParentDashboard() {
                     <div className="p-6 space-y-3 overflow-y-auto">
                         <HelpItem 
                             icon={<Calendar className="text-sky-600"/>}
-                            title="¿Cómo ver mis citas?"
+                            title={t('auto.page.comoVerMisCitas')}
                             description="En la sección 'Agenda' podés ver todas las citas programadas por el centro. Para cambios o cancelaciones, contactá a recepción directamente."
                         />
                         <HelpItem 
                             icon={<MessageCircle className="text-sky-600"/>}
-                            title="¿Cómo usar el Asistente IA?"
+                            title={t('auto.page.comoUsarElAsistenteIa')}
                             description="El asistente puede responder dudas sobre el progreso de tu hijo/a, dar consejos y explicar los reportes de las sesiones."
                         />
                         <HelpItem 
                             icon={<Book className="text-green-600"/>}
-                            title="¿Dónde encuentro recursos?"
+                            title={t('auto.page.dondeEncuentroRecursos')}
                             description="En la sección 'Biblioteca' encontrarás guías, videos y artículos sobre terapia ABA y desarrollo infantil."
                         />
                         

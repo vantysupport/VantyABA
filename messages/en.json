@@ -2169,5 +2169,142 @@
     "excelExportado": "Excel exported",
     "actualizadoA": "Updated to {estado}",
     "errActualizar": "Error updating"
+  },
+  "auto": {
+    "patientsView": {
+      "correoejemplocom": "email@example.com",
+      "sesionesTotales": "total sessions"
+    },
+    "misPacientes": {
+      "objetivoPrincipal": "Main goal",
+      "derivadoPor": "Referred by",
+      "mensajeAPadres": "Message to parents",
+      "espacioFisico": "Physical space"
+    },
+    "inteligenciaHubView": {
+      "sesionesConsecutivas": "consecutive sessions",
+      "sinAlertasActivasSistemaSeguro": "✅ No active alerts. System safe.",
+      "neuropsicologiaYTerapiasSanti": "Neuropsicología y Terapias SANTI",
+      "seleccionarPaciente": "— Select patient —",
+      "respuestaSinFormatoElModelo": "⚠ Unformatted response (the model did not return valid JSON):",
+      "6AgentesIaPrediccionesPatrones": "6 AI agents · Predictions · Patterns · Goals · Reports"
+    },
+    "page": {
+      "evaluacionInicial": "Initial Evaluation",
+      "programasAba": "ABA Programs",
+      "ejMariaFernandaLopez": "E.g.: María Fernanda López",
+      "comoVerMisCitas": "How do I see my appointments?",
+      "comoUsarElAsistenteIa": "How to use the AI Assistant?",
+      "dondeEncuentroRecursos": "Where do I find resources?",
+      "neuropsicologiaYTerapiasSanti": "Neuropsicología y Terapias SANTI",
+      "neuropsicologiaYTerapiasSantiPorta": "Neuropsicología y Terapias SANTI · Family Portal",
+      "mas": "More",
+      "nombreCompleto": " Full Name ",
+      "fechaDeNacimiento": " Date of Birth ",
+      "enReposoYSeTransmite": " at rest and transmitted via ",
+      "cadaFilaEnNuestraBase": ". Each row in our database is protected with ",
+      "padremadretutorTitularDeLaCuenta": " (parent/guardian who owns the account)",
+      "asignadosAlPaciente": " assigned to the patient",
+      "deVantySoloBajoConsentimiento": " from Vanty, only under explicit consent and a confidentiality agreement",
+      "anunciantesBrokersDeDatosNi": " advertisers, data brokers, or third parties for commercial purposes",
+      "noSeUtilizanParaEntrenar": "are not used to train public models",
+      "5Anos": "5 years",
+      "leerPoliticaCompleta": " Read Full Policy ",
+      "centroDeAyuda": "Help Center",
+      "estamosAquiParaTi": "We're here for you",
+      "tucorreocom": "you@email.com",
+      "todosSomosDiferentes": "We are all different",
+      "minimo6Caracteres": "Minimum 6 characters",
+      "selecciona": "— Select —",
+      "paciente": "Patient: ",
+      "elegiUnDiaDisponibleEn": "Choose an available day (in green) to see the time slots.",
+      "conCitaMarcada": " Booked appointment",
+      "iniciandoSesion": "Signing in…"
+    },
+    "calendarView": {
+      "agregarEspecialista": "+ Add specialist..."
+    },
+    "storeManagementView": {
+      "totalDelPedido": "order total"
+    },
+    "homeView": {
+      "alcanzo": " achieved ",
+      "esUnTrabajoImportanteComo": " is important work. How have you felt this week?"
+    },
+    "misFormularios": {
+      "enviarAPadres": "Send to parents"
+    },
+    "knowledgeBaseView": {
+      "ejPrincipiosDeConductaMalott": "e.g.: Principles of Behavior - Malott 8th Ed.",
+      "breveDescripcionDelContenido": "Brief description of the content",
+      "pegaAquiElContenidoDel": "Paste the document content here...",
+      "ejCriterioDeDominioEstandar": "e.g.: Standard mastery criterion",
+      "instruccionQueAriaDebeSeguir": "Instruction ARIA must always follow...",
+      "compartirCualquierPersonaConEl": " share → \"Anyone with the link\"",
+      "webPublica": "Public web:",
+      "cualquierPaginaHtmlOPdf": " any HTML page or PDF online",
+      "instruccionesDelCentro": "⚡ Center Instructions",
+      "ariaLasIncluyeSiempreEn": "ARIA always includes them in its context",
+      "nuevaInstruccion": "+ New instruction",
+      "estiloDeComunicacion": "Communication style",
+      "terminologia": "Terminology",
+      "reglaClinica": "Clinical rule"
+    },
+    "chatInterface": {
+      "grabandoHablaCercaDelMicrofono": "🔴 Recording — speak near the microphone"
+    },
+    "dashboardGraficasABA": {
+      "sinSesiones": " No sessions"
+    },
+    "documentosView": {
+      "inicioSinCarpeta": "📁 Home (no folder)"
+    },
+    "fonemasPractica": {
+      "posicionDeLaBoca": "Mouth position"
+    },
+    "dashboardHome": {
+      "sinProgramasActivos": "No active programs"
+    },
+    "dashboardDirectora": {
+      "noHaySesionesProgramadas": "No scheduled sessions"
+    },
+    "agendaSesiones": {
+      "uuidDelTerapeuta": "Therapist UUID"
+    },
+    "aIReportView": {
+      "seleccionarPaciente": "🔍 Select Patient..."
+    },
+    "especialistaHome": {
+      "ultimaSesion": "Last session",
+      "pacientesConSesionReciente": "patients with a recent session"
+    },
+    "profileView": {
+      "editarPerfil": "Edit profile",
+      "cambiarContrasena": "Change password",
+      "centroDeAyuda": "Help center",
+      "cerrarSesion": "Log out"
+    },
+    "programasABAView": {
+      "queDecirOHacerSd": "What to say or do (Sd)",
+      "generalizacion": "Generalization"
+    },
+    "aRIAAgentChat": {
+      "borrarHistorialDelChat": "Clear chat history"
+    },
+    "reportGenerator": {
+      "descargarDocx": "Download .docx",
+      "eliminarReporte": "Delete report",
+      "sinReportesGenerados": "No reports generated"
+    },
+    "aprobacionesEspecialista": {
+      "tuComentario": "Your comment:"
+    },
+    "miAgenda": {
+      "sinCitasEsteDia": "No appointments this day",
+      "sinCitasProximas": "No upcoming appointments"
+    },
+    "chatPadres": {
+      "neuropsicologiaYTerapiasSantiSiemp": "Neuropsicología y Terapias SANTI • Always available"
+    }
   }
 }

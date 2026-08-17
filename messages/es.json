@@ -2169,5 +2169,167 @@
   "excelExportado": "Excel exportado",
   "actualizadoA": "Actualizado a {estado}",
   "errActualizar": "Error al actualizar"
+ },
+ "auto": {
+  "patientsView": {
+   "correoejemplocom": "correo@ejemplo.com",
+   "sesionesTotales": "sesiones totales"
+  },
+  "misPacientes": {
+   "objetivoPrincipal": "Objetivo principal",
+   "derivadoPor": "Derivado por",
+   "mensajeAPadres": "Mensaje a padres",
+   "espacioFisico": "Espacio físico"
+  },
+  "inteligenciaHubView": {
+   "sesionesConsecutivas": "sesiones consecutivas",
+   "sinAlertasActivasSistemaSeguro": "✅ Sin alertas activas. Sistema seguro.",
+   "neuropsicologiaYTerapiasSanti": "Neuropsicología y Terapias SANTI",
+   "seleccionarPaciente": "— Seleccionar paciente —",
+   "respuestaSinFormatoElModelo": "⚠ Respuesta sin formato (el modelo no devolvió JSON válido):",
+   "6AgentesIaPrediccionesPatrones": "6 agentes IA · Predicciones · Patrones · Objetivos · Reportes"
+  },
+  "page": {
+   "evaluacionInicial": "Evaluación Inicial",
+   "programasAba": "Programas ABA",
+   "ejMariaFernandaLopez": "Ej: María Fernanda López",
+   "comoVerMisCitas": "¿Cómo ver mis citas?",
+   "comoUsarElAsistenteIa": "¿Cómo usar el Asistente IA?",
+   "dondeEncuentroRecursos": "¿Dónde encuentro recursos?",
+   "neuropsicologiaYTerapiasSanti": "Neuropsicología y Terapias SANTI",
+   "neuropsicologiaYTerapiasSantiPorta": "Neuropsicología y Terapias SANTI · Portal Familias",
+   "mas": "Más",
+   "nombreCompleto": " Nombre Completo ",
+   "fechaDeNacimiento": " Fecha de Nacimiento ",
+   "enReposoYSeTransmite": " en reposo y se transmite por ",
+   "cadaFilaEnNuestraBase": ". Cada fila en nuestra base de datos está protegida con ",
+   "padremadretutorTitularDeLaCuenta": " (padre/madre/tutor titular de la cuenta)",
+   "asignadosAlPaciente": " asignados al paciente",
+   "deVantySoloBajoConsentimiento": " de Vanty, solo bajo consentimiento explícito y acuerdo de confidencialidad",
+   "anunciantesBrokersDeDatosNi": " anunciantes, brokers de datos, ni terceros con fines comerciales",
+   "noSeUtilizanParaEntrenar": "no se utilizan para entrenar modelos públicos",
+   "5Anos": "5 años",
+   "leerPoliticaCompleta": " Leer Política Completa ",
+   "centroDeAyuda": "Centro de Ayuda",
+   "estamosAquiParaTi": "Estamos aquí para ti",
+   "tucorreocom": "tu@correo.com",
+   "todosSomosDiferentes": "Todos somos diferentes",
+   "minimo6Caracteres": "Mínimo 6 caracteres",
+   "selecciona": "— Seleccioná —",
+   "paciente": "Paciente: ",
+   "elegiUnDiaDisponibleEn": "Elegí un día disponible (en verde) para ver los horarios.",
+   "conCitaMarcada": " Con cita marcada",
+   "iniciandoSesion": "Iniciando sesión…"
+  },
+  "evaluacionesUnificadas": {},
+  "calendarView": {
+   "agregarEspecialista": "+ Agregar especialista..."
+  },
+  "storeManagementView": {
+   "totalDelPedido": "total del pedido"
+  },
+  "userManagementView": {},
+  "homeView": {
+   "alcanzo": " alcanzó ",
+   "esUnTrabajoImportanteComo": " es un trabajo importante. ¿Cómo te has sentido esta semana?"
+  },
+  "aRIAFloatingChat": {},
+  "misFormularios": {
+   "enviarAPadres": "Enviar a padres"
+  },
+  "knowledgeBaseView": {
+   "ejPrincipiosDeConductaMalott": "ej: Principios de Conducta - Malott 8va Ed.",
+   "breveDescripcionDelContenido": "Breve descripción del contenido",
+   "pegaAquiElContenidoDel": "Pega aquí el contenido del documento...",
+   "ejCriterioDeDominioEstandar": "ej: Criterio de dominio estándar",
+   "instruccionQueAriaDebeSeguir": "Instrucción que ARIA debe seguir siempre...",
+   "compartirCualquierPersonaConEl": " compartir → \"Cualquier persona con el enlace\"",
+   "webPublica": "Web pública:",
+   "cualquierPaginaHtmlOPdf": " cualquier página HTML o PDF online",
+   "instruccionesDelCentro": "⚡ Instrucciones del Centro",
+   "ariaLasIncluyeSiempreEn": "ARIA las incluye siempre en su contexto",
+   "nuevaInstruccion": "+ Nueva instrucción",
+   "estiloDeComunicacion": "Estilo de comunicación",
+   "terminologia": "Terminología",
+   "reglaClinica": "Regla clínica"
+  },
+  "chatInterface": {
+   "grabandoHablaCercaDelMicrofono": "🔴 Grabando — habla cerca del micrófono"
+  },
+  "evaluationsView": {},
+  "parentFormsView": {},
+  "storeView": {},
+  "dashboardGraficasABA": {
+   "sinSesiones": " Sin sesiones"
+  },
+  "documentosView": {
+   "inicioSinCarpeta": "📁 Inicio (sin carpeta)"
+  },
+  "fonemasPractica": {
+   "posicionDeLaBoca": "Posición de la boca"
+  },
+  "dashboardHome": {
+   "sinProgramasActivos": "Sin programas activos"
+  },
+  "dashboardDirectora": {
+   "noHaySesionesProgramadas": "No hay sesiones programadas"
+  },
+  "agendaSesiones": {
+   "uuidDelTerapeuta": "UUID del terapeuta"
+  },
+  "aIReportView": {
+   "seleccionarPaciente": "🔍 Seleccionar Paciente..."
+  },
+  "chatEspecialistas": {},
+  "especialistaHome": {
+   "ultimaSesion": "Última sesión",
+   "pacientesConSesionReciente": "pacientes con sesión reciente"
+  },
+  "profileView": {
+   "editarPerfil": "Editar perfil",
+   "cambiarContrasena": "Cambiar contraseña",
+   "centroDeAyuda": "Centro de ayuda",
+   "cerrarSesion": "Cerrar sesión"
+  },
+  "secretariaCronograma": {},
+  "chatFamilias": {},
+  "programasABAView": {
+   "queDecirOHacerSd": "Qué decir o hacer (Sd)",
+   "generalizacion": "Generalización"
+  },
+  "aRIAAgentChat": {
+   "borrarHistorialDelChat": "Borrar historial del chat"
+  },
+  "reportGenerator": {
+   "descargarDocx": "Descargar .docx",
+   "eliminarReporte": "Eliminar reporte",
+   "sinReportesGenerados": "Sin reportes generados"
+  },
+  "mensajesPendientesPanel": {},
+  "chatConAdmin": {},
+  "resourcesView": {},
+  "excelImportView": {},
+  "vADIAgentChat": {},
+  "secretariaHome": {},
+  "aprobacionesEspecialista": {
+   "tuComentario": "Tu comentario:"
+  },
+  "fonemasAdminView": {},
+  "sugerenciasPanel": {},
+  "forestTimer": {},
+  "misCitasView": {},
+  "miAgenda": {
+   "sinCitasEsteDia": "Sin citas este día",
+   "sinCitasProximas": "Sin citas próximas"
+  },
+  "engagementView": {},
+  "chatPadres": {
+   "neuropsicologiaYTerapiasSantiSiemp": "Neuropsicología y Terapias SANTI • Siempre disponible"
+  },
+  "notifWhatsAppPanel": {},
+  "analyticsDashboard": {},
+  "agendaView": {},
+  "mensajesView": {},
+  "localeSelector": {}
  }
 }

@@ -738,7 +738,7 @@ export default function MisFormularios({ userId }: { userId: string }) {
                     </button>
                     {isParent && (
                       <button className="px-3 py-2.5 rounded-lg transition-all bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200"
-                        title="Enviar a padres">
+                        title={t('auto.misFormularios.enviarAPadres')}>
                         <Send size={12} />
                       </button>
                     )}

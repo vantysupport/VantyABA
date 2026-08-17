@@ -902,7 +902,7 @@ function MonthlyCalendarView() {
                         const current = newApt.specialist_id ? newApt.specialist_id.split(',').filter(Boolean) : []
                         if(!current.includes(v)) setNewApt(p=>({...p,specialist_id:[...current,v].join(',')}))
                       }}>
-                      <option value="">+ Agregar especialista...</option>
+                      <option value="">{t('auto.calendarView.agregarEspecialista')}</option>
                       {especialistas.filter(e=>!newApt.specialist_id?.split(',').includes(e.id)).map(e=><option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
                     </select>
                   </div>

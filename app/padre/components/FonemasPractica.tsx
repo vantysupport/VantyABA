@@ -459,7 +459,7 @@ export default function FonemasPractica({ childId }: { childId: string }) {
             <button className="fon-modal-x" onClick={() => setModal(null)} aria-label="Cerrar"><X size={18} /></button>
             {modal.type === 'img' ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img className="fon-modal-img" src={modal.url} alt="Posición de la boca" />
+              <img className="fon-modal-img" src={modal.url} alt={t('auto.fonemasPractica.posicionDeLaBoca')} />
             ) : ytEmbed(modal.url) ? (
               <iframe className="fon-modal-video" src={ytEmbed(modal.url)!} title={t("familias.comoPronuncia")}
                 allow="autoplay; encrypted-media; fullscreen" allowFullScreen />

@@ -269,7 +269,7 @@ export default function LoginPage(props: PageProps) {
               <Image src="/images/logo.png" alt="Logo SANTI" width={40} height={40} style={{ objectFit: 'contain' }} />
             </div>
             <div>
-              <p style={{ color: '#fff', fontWeight: 700, fontSize: 16.5, lineHeight: 1.2, letterSpacing: '-0.01em' }}>Neuropsicología y Terapias SANTI</p>
+              <p style={{ color: '#fff', fontWeight: 700, fontSize: 16.5, lineHeight: 1.2, letterSpacing: '-0.01em' }}>{t('auto.page.neuropsicologiaYTerapiasSanti')}</p>
               <p style={{ color: 'rgba(255,255,255,.55)', fontSize: 12, marginTop: 2 }}>{t('auth.centroTerapeutico')}</p>
             </div>
           </div>
@@ -287,7 +287,7 @@ export default function LoginPage(props: PageProps) {
             {/* Lema de marca con acento arcoíris animado */}
             <div className="lp-hero-anim" style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 56, animationDelay: '.52s' }}>
               <span className="lp-accent-line" style={{ width: 40, height: 3, borderRadius: 99 }} />
-              <span style={{ color: 'rgba(255,255,255,.78)', fontSize: 16, fontStyle: 'italic', letterSpacing: '0.01em' }}>Todos somos diferentes</span>
+              <span style={{ color: 'rgba(255,255,255,.78)', fontSize: 16, fontStyle: 'italic', letterSpacing: '0.01em' }}>{t('auto.page.todosSomosDiferentes')}</span>
             </div>
           </div>
 
@@ -303,7 +303,7 @@ export default function LoginPage(props: PageProps) {
             <div className="mobile-logo" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
               <Image src="/images/logo.png" alt="Logo" width={40} height={40} style={{ objectFit: 'contain', flexShrink: 0 }} />
               <div>
-                <p style={{ fontWeight: 800, color: '#0c4a6e', fontSize: 14, lineHeight: 1.2, margin: 0 }}>Neuropsicología y Terapias SANTI</p>
+                <p style={{ fontWeight: 800, color: '#0c4a6e', fontSize: 14, lineHeight: 1.2, margin: 0 }}>{t('auto.page.neuropsicologiaYTerapiasSanti')}</p>
                 <p style={{ color: '#6b7280', fontSize: 11, margin: 0 }}>{t("auth.centroTerapeutico")}</p>
               </div>
             </div>
@@ -332,7 +332,7 @@ export default function LoginPage(props: PageProps) {
               <div className="lp-field">
                 <label>{t('auth.correoElectronico')}</label>
                 <Mail size={15} className="lp-icon" />
-                <input name="email" type="email" placeholder="tu@correo.com" required />
+                <input name="email" type="email" placeholder={t('auto.page.tucorreocom')} required />
               </div>
 
               <div className="lp-field">
@@ -353,7 +353,7 @@ export default function LoginPage(props: PageProps) {
 
               {showForgotInfo && (
                 <div className="lp-forgot">
-                  <p>{t("auth.comunicateCon")} <strong>Neuropsicología y Terapias SANTI</strong> {t('auth.restablecen')}</p>
+                  <p>{t("auth.comunicateCon")} <strong>{t('auto.page.neuropsicologiaYTerapiasSanti')}</strong> {t('auth.restablecen')}</p>
                   <a href="https://wa.me/51991070734?text=Hola,%20olvidé%20mi%20contraseña." target="_blank" rel="noopener noreferrer">
                     <MessageCircle size={14} /> Contactar por WhatsApp
                   </a>

@@ -421,7 +421,7 @@ export default function ARIAAgentChat({
           <button
             onClick={() => { if (window.confirm('¿Borrar todo el historial de ARIA? Esta acción no se puede deshacer.')) clearHistory() }}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all text-red-500 hover:text-white hover:bg-red-500 border border-red-500/30 hover:border-red-500"
-            title="Borrar historial del chat"
+            title={t('auto.aRIAAgentChat.borrarHistorialDelChat')}
           >
             <Trash2 size={12} />
             Borrar chat

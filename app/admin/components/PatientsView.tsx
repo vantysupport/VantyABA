@@ -247,7 +247,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
                 <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}/>
                 <input
                   type="email"
-                  placeholder="correo@ejemplo.com"
+                  placeholder={t('auto.patientsView.correoejemplocom')}
                   value={emailSearch}
                   onChange={e => setEmailSearch(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
@@ -521,7 +521,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
         <p className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
           {loading ? '…' : total}
         </p>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>sesiones totales</p>
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('auto.patientsView.sesionesTotales')}</p>
       </div>
 
       {/* Desglose */}

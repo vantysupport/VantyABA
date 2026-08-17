@@ -242,7 +242,7 @@ export default function AgendaSesiones({ childId }: { childId?: string }) {
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-1 block">{t('agenda.terapeutaIdLabel')}</label>
                 <input value={formNueva.terapeuta_id} onChange={e => setFormNueva(f => ({ ...f, terapeuta_id: e.target.value }))}
-                  placeholder="UUID del terapeuta"
+                  placeholder={t('auto.agendaSesiones.uuidDelTerapeuta')}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
               </div>
               <div className="grid grid-cols-2 gap-2">

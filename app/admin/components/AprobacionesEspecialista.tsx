@@ -216,7 +216,7 @@ export default function AprobacionesEspecialista() {
                     {sub.admin_comment && (
                       <div style={{ background: 'rgba(255,255,255,0.04)', borderLeft: '1px solid #06b6d4' }}
                         className="mt-2 px-3 py-2 rounded-r-xl text-xs">
-                        <span style={{ color: '#64748b' }} className="font-bold">Tu comentario:</span>
+                        <span style={{ color: '#64748b' }} className="font-bold">{t('auto.aprobacionesEspecialista.tuComentario')}</span>
                         <span style={{ color: '#94a3b8' }}> {sub.admin_comment}</span>
                       </div>
                     )}

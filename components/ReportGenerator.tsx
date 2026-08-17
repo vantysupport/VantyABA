@@ -434,7 +434,7 @@ export default function ReportGenerator({
               <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
                 <FileText size={28} className="text-slate-300" />
               </div>
-              <p className="text-slate-500 font-black text-sm">Sin reportes generados</p>
+              <p className="text-slate-500 font-black text-sm">{t('auto.reportGenerator.sinReportesGenerados')}</p>
               <p className="text-xs text-slate-400 mt-1.5 text-center max-w-xs px-4 font-medium">
                 Genera tu primer reporte usando el botón de arriba. Quedará guardado aquí con fecha y hora.
               </p>
@@ -507,14 +507,14 @@ export default function ReportGenerator({
                         <button
                           onClick={() => handleDownloadReport(reporte)}
                           className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all shadow-md hover:shadow-lg hover:scale-105 active:scale-95"
-                          title="Descargar .docx"
+                          title={t('auto.reportGenerator.descargarDocx')}
                         >
                           <Download size={16} />
                         </button>
                         <button
                           onClick={() => handleDeleteReport(reporte.id)}
                           className="p-2.5 bg-slate-100 hover:bg-red-600 text-slate-400 hover:text-white rounded-xl transition-all"
-                          title="Eliminar reporte"
+                          title={t('auto.reportGenerator.eliminarReporte')}
                         >
                           <Trash2 size={16} />
                         </button>

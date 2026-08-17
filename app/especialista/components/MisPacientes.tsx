@@ -187,7 +187,7 @@ function ABADetail({ r }: { r: any }) {
   return (
     <div className="space-y-3">
       <Bloque title={t('ui.session')} icon={Calendar} color="bg-sky-50">
-        <Field label="Objetivo principal" value={d.objetivo_principal} />
+        <Field label={t('auto.misPacientes.objetivoPrincipal')} value={d.objetivo_principal} />
         <Field label={t("pacientes.tipoSesion")} value={d.tipo_sesion} />
         <Field label={t("ui.duracion")} value={d.duracion_minutos ? `${d.duracion_minutos} min` : null} />
       </Bloque>
@@ -264,7 +264,7 @@ function AnamnesisDetail({ r }: { r: any }) {
       </Bloque>
       <Bloque title={t('ui.reason_consult')} icon={AlertCircle} color="bg-sky-50">
         <div className="col-span-2"><Field label="Motivo principal" value={d.motivo_principal} /></div>
-        <Field label="Derivado por" value={d.derivado_por} />
+        <Field label={t('auto.misPacientes.derivadoPor')} value={d.derivado_por} />
         <div className="col-span-2"><Field label="Expectativas" value={d.expectativas} /></div>
       </Bloque>
       <Bloque title={t('ui.prenatal_history')} icon={Heart} color="bg-sky-50">
@@ -314,9 +314,9 @@ function EntornoDetail({ r }: { r: any }) {
         <div className="col-span-2"><Field label="Barreras identificadas" value={d.barreras_identificadas} /></div>
       </Bloque>
       <Bloque title={t("ui.recomendacionesHogar")} icon={Home} color="bg-green-50">
-        <div className="col-span-2"><Field label="Mensaje a padres" value={d.mensaje_padres_entorno} /></div>
+        <div className="col-span-2"><Field label={t('auto.misPacientes.mensajeAPadres')} value={d.mensaje_padres_entorno} /></div>
         <div className="col-span-2"><Field label={t("especialista.activCasa")} value={d.actividades_casa || d.actividades_sugeridas} /></div>
-        <Field label="Espacio físico" value={d.recomendaciones_espacio} />
+        <Field label={t('auto.misPacientes.espacioFisico')} value={d.recomendaciones_espacio} />
         <Field label="Rutinas" value={d.recomendaciones_rutinas} />
       </Bloque>
       <AIBlock analysis={r.ai_analysis} />

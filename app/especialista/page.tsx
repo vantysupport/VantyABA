@@ -232,7 +232,7 @@ export default function EspecialistaDashboard() {
           </div>
         </div>
         <div className="text-center">
-          <p className="font-bold text-slate-800 text-sm">Neuropsicología y Terapias SANTI</p>
+          <p className="font-bold text-slate-800 text-sm">{t('auto.page.neuropsicologiaYTerapiasSanti')}</p>
           <p className="text-xs text-slate-400 mt-0.5">{t('especialista.cargandoPanel')}</p>
         </div>
         <Loader2 size={18} className="animate-spin text-sky-500" />
@@ -439,7 +439,7 @@ export default function EspecialistaDashboard() {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className={`font-bold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{t('especialista.cambiarPass')}</h3>
-                <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Mínimo 6 caracteres</p>
+                <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('auto.page.minimo6Caracteres')}</p>
               </div>
               <button onClick={() => setShowChangePassword(false)}
                 className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors

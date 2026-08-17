@@ -287,7 +287,7 @@ export default function KnowledgeBaseView() {
                 <div>
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t("ui.tituloDoc")}</label>
                   <input value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
-                    placeholder="ej: Principios de Conducta - Malott 8va Ed."
+                    placeholder={t('auto.knowledgeBaseView.ejPrincipiosDeConductaMalott')}
                     className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-violet-400" />
                 </div>
                 <div>
@@ -306,7 +306,7 @@ export default function KnowledgeBaseView() {
                 <div>
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t("common.descripcion")}</label>
                   <input value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-                    placeholder="Breve descripción del contenido"
+                    placeholder={t('auto.knowledgeBaseView.breveDescripcionDelContenido')}
                     className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-violet-400" />
                 </div>
 
@@ -367,9 +367,9 @@ export default function KnowledgeBaseView() {
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
                       <p className="text-xs font-black text-blue-700 mb-1">📎 URLs compatibles</p>
                       <ul className="text-xs text-blue-600 space-y-0.5">
-                        <li>• <strong>Google Drive:</strong> compartir → "Cualquier persona con el enlace"</li>
+                        <li>• <strong>Google Drive:</strong> {t('auto.knowledgeBaseView.compartirCualquierPersonaConEl')}</li>
                         <li>• <strong>Dropbox:</strong> usar enlace directo (dl=1)</li>
-                        <li>• <strong>Web pública:</strong> cualquier página HTML o PDF online</li>
+                        <li>• <strong>{t('auto.knowledgeBaseView.webPublica')}</strong> {t('auto.knowledgeBaseView.cualquierPaginaHtmlOPdf')}</li>
                         <li>• <strong>Archive.org, libgen, etc.</strong></li>
                       </ul>
                     </div>
@@ -379,7 +379,7 @@ export default function KnowledgeBaseView() {
                 {/* ── Modo: Texto ── */}
                 {inputMode === 'texto' && (
                   <textarea value={form.texto} onChange={e => setForm(f => ({ ...f, texto: e.target.value }))}
-                    rows={6} placeholder="Pega aquí el contenido del documento..."
+                    rows={6} placeholder={t('auto.knowledgeBaseView.pegaAquiElContenidoDel')}
                     className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm resize-none outline-none focus:border-violet-400" />
                 )}
 
@@ -408,6 +408,7 @@ export default function KnowledgeBaseView() {
 }
 
 function InstruccionesModal({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [instrucciones, setInstrucciones] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -446,8 +447,8 @@ function InstruccionesModal({ onClose }: { onClose: () => void }) {
         <div className="p-6">
           <div className="flex justify-between items-center mb-5">
             <div>
-              <h3 className="font-black text-lg text-slate-800">⚡ Instrucciones del Centro</h3>
-              <p className="text-xs text-slate-400 mt-0.5">ARIA las incluye siempre en su contexto</p>
+              <h3 className="font-black text-lg text-slate-800">{t('auto.knowledgeBaseView.instruccionesDelCentro')}</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{t('auto.knowledgeBaseView.ariaLasIncluyeSiempreEn')}</p>
             </div>
             <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100"><X size={18} /></button>
           </div>
@@ -468,14 +469,14 @@ function InstruccionesModal({ onClose }: { onClose: () => void }) {
           )}
 
           <div className="border-t border-slate-100 pt-4 space-y-3">
-            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">+ Nueva instrucción</p>
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('auto.knowledgeBaseView.nuevaInstruccion')}</p>
             <div className="grid grid-cols-2 gap-3">
               <select value={nueva.categoria} onChange={e => setNueva(n => ({ ...n, categoria: e.target.value }))}
                 className="p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-violet-400">
                 <option value="protocolo">Protocolo</option>
-                <option value="estilo">Estilo de comunicación</option>
-                <option value="terminologia">Terminología</option>
-                <option value="regla">Regla clínica</option>
+                <option value="estilo">{t('auto.knowledgeBaseView.estiloDeComunicacion')}</option>
+                <option value="terminologia">{t('auto.knowledgeBaseView.terminologia')}</option>
+                <option value="regla">{t('auto.knowledgeBaseView.reglaClinica')}</option>
               </select>
               <input type="number" min="1" max="10" value={nueva.prioridad}
                 onChange={e => setNueva(n => ({ ...n, prioridad: Number(e.target.value) }))}
@@ -483,10 +484,10 @@ function InstruccionesModal({ onClose }: { onClose: () => void }) {
                 placeholder="Prioridad 1-10" />
             </div>
             <input value={nueva.titulo} onChange={e => setNueva(n => ({ ...n, titulo: e.target.value }))}
-              placeholder="ej: Criterio de dominio estándar"
+              placeholder={t('auto.knowledgeBaseView.ejCriterioDeDominioEstandar')}
               className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-violet-400" />
             <textarea value={nueva.contenido} onChange={e => setNueva(n => ({ ...n, contenido: e.target.value }))}
-              rows={3} placeholder="Instrucción que ARIA debe seguir siempre..."
+              rows={3} placeholder={t('auto.knowledgeBaseView.instruccionQueAriaDebeSeguir')}
               className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm resize-none outline-none focus:border-violet-400" />
             <button onClick={handleSave} disabled={saving}
               className="w-full py-3 bg-violet-600 text-white rounded-xl font-black text-sm hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center gap-2">

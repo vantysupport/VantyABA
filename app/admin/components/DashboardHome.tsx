@@ -613,7 +613,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
           ) : (
             <div className="flex flex-col items-center py-4">
               <Target size={20} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Sin programas activos</p>
+              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t('auto.dashboardHome.sinProgramasActivos')}</p>
               <button onClick={() => navigateTo('ninos')} className="text-xs font-bold mt-2" style={{ color: '#0284c7' }}>
                 Crear programa →
               </button>

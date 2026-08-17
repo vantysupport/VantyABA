@@ -380,7 +380,7 @@ export default function MiAgenda({ isDark = false }: { isDark?: boolean }) {
                   ${isDark ? 'bg-[#1c2128]' : 'bg-slate-50'}`}>
                   <CalendarDays size={22} className={isDark ? 'text-slate-600' : 'text-slate-300'} />
                 </div>
-                <p className={`text-sm font-bold ${txt3}`}>Sin citas este día</p>
+                <p className={`text-sm font-bold ${txt3}`}>{t('auto.miAgenda.sinCitasEsteDia')}</p>
                 <p className={`text-xs mt-1 ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>
                   Selecciona otro día del calendario
                 </p>
@@ -440,7 +440,7 @@ export default function MiAgenda({ isDark = false }: { isDark?: boolean }) {
                   ${isDark ? 'bg-[#1c2128]' : 'bg-slate-50'}`}>
                   <Users size={22} className={isDark ? 'text-slate-600' : 'text-slate-300'} />
                 </div>
-                <p className={`text-sm font-bold ${txt3}`}>Sin citas próximas</p>
+                <p className={`text-sm font-bold ${txt3}`}>{t('auto.miAgenda.sinCitasProximas')}</p>
               </div>
             ) : (
               <div className={`divide-y ${divLine} max-h-80 overflow-y-auto`}>

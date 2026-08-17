@@ -563,7 +563,7 @@ export default function StoreManagementView() {
                       </div>
                       <div className="text-right shrink-0">
                         <p className={`text-xl font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>S/ {Number(order.total_soles).toFixed(2)}</p>
-                        <p className={`text-[10px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>total del pedido</p>
+                        <p className={`text-[10px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('auto.storeManagementView.totalDelPedido')}</p>
                       </div>
                       <div className={`p-2 rounded-xl transition-all ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}>
                         {open ? <ChevronUp size={16} className="text-slate-400"/> : <ChevronDown size={16} className="text-slate-400"/>}
