@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
+
 import { Send, Users, Calendar, Loader2, Bell, RefreshCw, Clock, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
@@ -44,6 +46,7 @@ function getChild(a: any): { name: string; parent_id: string } {
 }
 
 export default function SecretariaComunicacion({ profile }: { profile: any }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [tab, setTab]           = useState<'recordatorios' | 'familias' | 'masivo'>('recordatorios')
   const [loading, setLoading]   = useState(true)
@@ -151,8 +154,8 @@ export default function SecretariaComunicacion({ profile }: { profile: any }) {
         <div className="h-0.5" style={{ background: 'linear-gradient(90deg, #0284c7, #0ea5e9, #10b981)' }} />
         <div className="px-5 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Comunicación con familias</h2>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Recordatorios, cronogramas y mensajes a padres/tutores</p>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{t("admin.comunicacionFamilias")}</h2>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t("admin.recordatoriosCronogramas")}</p>
           </div>
           <button onClick={cargar} className="p-2 rounded-xl" style={{ color: 'var(--text-muted)', background: 'var(--muted-bg)' }}><RefreshCw size={14} /></button>
         </div>
@@ -180,7 +183,7 @@ export default function SecretariaComunicacion({ profile }: { profile: any }) {
             {citasHoy.length > 0 && <button onClick={sendAll} disabled={!!sending} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50">{sending === 'all' ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Enviar a todos</button>}
           </div>
           {loading ? <div className="flex justify-center py-10"><Loader2 size={22} className="animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
-          : citasHoy.length === 0 ? <div className="rounded-xl p-10 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}><Calendar size={32} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} /><p className="font-bold text-sm" style={{ color: 'var(--text-muted)' }}>Sin citas para hoy</p></div>
+          : citasHoy.length === 0 ? <div className="rounded-xl p-10 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}><Calendar size={32} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} /><p className="font-bold text-sm" style={{ color: 'var(--text-muted)' }}>{t("admin.sinCitasHoy")}</p></div>
           : citasHoy.map(c => (
             <div key={c.id} className="rounded-xl p-4 flex items-center gap-3" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(59,130,246,0.1)' }}><Clock size={17} style={{ color: '#0284c7' }} /></div>
@@ -189,7 +192,7 @@ export default function SecretariaComunicacion({ profile }: { profile: any }) {
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{c.appointment_time?.slice(0,5) || '—'} · <span style={{ color: c.parent_id ? '#10b981' : '#ef4444' }}>{c.parent_id ? 'Tutor vinculado' : 'Sin tutor'}</span></p>
               </div>
               {c.parent_id ? <button onClick={() => sendReminder(c)} disabled={sending === c.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 disabled:opacity-50" style={{ borderColor: '#0284c7', color: '#0284c7' }}>{sending === c.id ? <Loader2 size={12} className="animate-spin" /> : <Bell size={12} />} Recordatorio</button>
-              : <span className="text-[10px] font-bold px-2 py-1 rounded-lg" style={{ background: '#fee2e2', color: '#dc2626' }}>Sin tutor</span>}
+              : <span className="text-[10px] font-bold px-2 py-1 rounded-lg" style={{ background: '#fee2e2', color: '#dc2626' }}>{t("admin.sinTutor")}</span>}
             </div>
           ))}
         </div>
@@ -197,9 +200,9 @@ export default function SecretariaComunicacion({ profile }: { profile: any }) {
 
       {tab === 'familias' && (
         <div className="space-y-3">
-          <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>Envía el cronograma de la semana a cada familia</p>
+          <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.enviaCronograma")}</p>
           {loading ? <div className="flex justify-center py-10"><Loader2 size={22} className="animate-spin" style={{ color: 'var(--text-muted)' }} /></div>
-          : familias.length === 0 ? <div className="rounded-xl p-10 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}><Users size={32} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} /><p className="font-bold text-sm" style={{ color: 'var(--text-muted)' }}>Sin familias con citas esta semana</p></div>
+          : familias.length === 0 ? <div className="rounded-xl p-10 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}><Users size={32} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} /><p className="font-bold text-sm" style={{ color: 'var(--text-muted)' }}>{t("admin.sinFamiliasCitas")}</p></div>
           : familias.map(fam => (
             <div key={fam.id} className="rounded-xl p-4 flex items-center gap-3" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-white text-sm" style={{ background: '#0ea5e9' }}>{fam.nombre.charAt(0).toUpperCase()}</div>
@@ -216,15 +219,15 @@ export default function SecretariaComunicacion({ profile }: { profile: any }) {
       {tab === 'masivo' && (
         <div className="rounded-xl p-5 space-y-4" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
           <div>
-            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Mensaje a todas las familias activas</p>
+            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.mensajeTodasFamilias")}</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Se enviará a {familias.length} familia{familias.length !== 1 ? 's' : ''} con citas esta semana</p>
           </div>
           <div>
-            <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--text-muted)' }}>Mensaje</label>
-            <textarea rows={5} value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="Estimada familia, les comunicamos que..." className={`${inputCls} resize-none`} />
+            <label className="block text-[10px] font-bold mb-1.5" style={{ color: 'var(--text-muted)' }}>{t("admin.mensaje")}</label>
+            <textarea rows={5} value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder={t("admin.phMensajeFamilia")} className={`${inputCls} resize-none`} />
           </div>
           <div>
-            <p className="text-[10px] font-bold mb-2" style={{ color: 'var(--text-muted)' }}>Variables:</p>
+            <p className="text-[10px] font-bold mb-2" style={{ color: 'var(--text-muted)' }}>{t("admin.variables")}</p>
             <div className="flex gap-2">
               {['{nombre}', '{tutor}'].map(v => <button key={v} onClick={() => setMensaje(m => m + v)} className="text-xs px-2.5 py-1.5 rounded-lg font-mono font-bold hover:opacity-80" style={{ background: 'rgba(59,130,246,0.1)', color: '#0284c7', border: '1px solid rgba(59,130,246,0.2)' }}>{v}</button>)}
             </div>

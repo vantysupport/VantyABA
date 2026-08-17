@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react';import { useI18n } from '@/lib/i18n-context'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import {
@@ -25,14 +25,15 @@ import CatalogoTerapiasView    from '@/app/admin/components/CatalogoTerapiasView
 
 // Vista de Recursos Adicionales — replica de la del admin (3 tabs)
 function RecursosAdicionalesView({ isDark }: { isDark: boolean }) {
+  const { t: tr } = useI18n()
   const [tab, setTab] = useState<'recursos' | 'tienda' | 'terapias'>('terapias')
   return (
     <div className="flex flex-col gap-4">
       <div className={`flex gap-1 p-1 rounded-xl w-fit ${isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>
         {([
-          { id: 'recursos', icon: BookOpen, label: 'Recursos' },
-          { id: 'tienda',   icon: ShoppingBag, label: 'Tienda' },
-          { id: 'terapias', icon: Sparkles,   label: 'Catálogo Terapias' },
+          { id: 'recursos', icon: BookOpen, label: tr('nav.recursos') },
+          { id: 'tienda',   icon: ShoppingBag, label: tr('nav.tienda') },
+          { id: 'terapias', icon: Sparkles,   label: tr('nav.catalogoTerapias') },
         ] as const).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
@@ -74,17 +75,18 @@ function SidebarLink({ icon: Icon, label, active, onClick, badge }: any) {
 }
 
 export default function SecretariaDashboard() {
+  const { t } = useI18n()
   const router = useRouter()
   const toast = useToast()
   const { isDark } = useTheme()
 
   const NAV_ITEMS = [
-    { id: 'inicio',        icon: LayoutDashboard, label: 'Inicio' },
-    { id: 'agenda',        icon: Calendar,        label: 'Agenda' },
-    { id: 'pagos',                icon: DollarSign,      label: 'Pagos' },
-    { id: 'reportes-financieros', icon: TrendingUp,      label: 'Rep. Financieros' },
-    { id: 'recursos-adicionales', icon: BookOpen,        label: 'Recursos Adicionales' },
-    { id: 'perfil',        icon: User,            label: 'Mi Perfil' },
+    { id: 'inicio',        icon: LayoutDashboard, label: t('nav.inicio') },
+    { id: 'agenda',        icon: Calendar,        label: t('nav.agenda') },
+    { id: 'pagos',                icon: DollarSign,      label: t('nav.pagos') },
+    { id: 'reportes-financieros', icon: TrendingUp,      label: t('nav.repFinancieros') },
+    { id: 'recursos-adicionales', icon: BookOpen,        label: t('nav.recursosAdicionales') },
+    { id: 'perfil',        icon: User,            label: t('nav.miperfil') },
   ]
 
   const PAGE_TITLES: Record<string, string> = {
@@ -170,7 +172,7 @@ export default function SecretariaDashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-[13px] leading-tight" style={{ color: 'var(--text-primary)' }}>Neuropsicología y Terapias SANTI</p>
-            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Panel Secretaría</p>
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t("especialista.panelSecretaria")}</p>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1" style={{ color: 'var(--text-muted)' }}>
             <X size={16} />

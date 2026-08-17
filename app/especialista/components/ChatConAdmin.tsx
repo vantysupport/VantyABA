@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { useTheme } from '@/components/ThemeContext'
@@ -116,6 +117,7 @@ function MessageContextMenu({ menu, esMio, onClose, onReply, onCopy, onReact, on
   menu: ContextMenu; esMio: boolean; onClose: () => void; onReply: () => void; onCopy: () => void
   onReact: (emoji: string) => void; onForward: () => void; onPin: () => void; onStar: () => void; onReport: () => void; onDelete: () => void
 }) {
+  const { t } = useI18n()
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
@@ -145,8 +147,8 @@ function MessageContextMenu({ menu, esMio, onClose, onReply, onCopy, onReact, on
         ))}
         <div className="h-px bg-slate-100" />
         {esMio
-          ? <button onClick={() => { onDelete(); onClose() }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 text-red-500 text-sm transition-colors"><Trash2 size={15} /> Eliminar</button>
-          : <button onClick={() => { onReport(); onClose() }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-orange-500 text-sm transition-colors"><Flag size={15} /> Reportar</button>
+          ? <button onClick={() => { onDelete(); onClose() }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 text-red-500 text-sm transition-colors"><Trash2 size={15} /> {t("common.eliminar")}</button>
+          : <button onClick={() => { onReport(); onClose() }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-orange-500 text-sm transition-colors"><Flag size={15} /> {t("especialista.reportar")}</button>
         }
       </div>
     </div>
@@ -165,6 +167,7 @@ export default function ChatConAdmin({
   userAvatarUrl?: string | null
   onAvatarUpdate?: (url: string) => void
 }) {
+  const { t } = useI18n()
   const toast = useToast()
   const { isDark } = useTheme()
 
@@ -485,7 +488,7 @@ export default function ChatConAdmin({
                 />
                 <div>
                   <p className="text-xs font-bold text-slate-800 leading-tight">{userName}</p>
-                  <p className="text-[10px] text-slate-400">Toca la foto para cambiarla</p>
+                  <p className="text-[10px] text-slate-400">{t("admin.tocaFoto")}</p>
                 </div>
               </div>
               <button onClick={cargarContactos} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
@@ -496,7 +499,7 @@ export default function ChatConAdmin({
               <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 value={busqueda} onChange={e => setBusqueda(e.target.value)}
-                placeholder="Buscar..."
+                placeholder={t("admin.phBuscarSimple")}
                 className={`w-full pl-8 pr-3 py-2 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 shadow-sm ${isDark ? 'bg-[#0d1117] border border-[#30363d] text-slate-300 placeholder:text-slate-600' : 'bg-white border border-slate-200 text-slate-700'}`}
               />
             </div>
@@ -507,7 +510,7 @@ export default function ChatConAdmin({
             {loadingContactos ? (
               <div className="flex justify-center py-10"><Loader2 size={18} className="animate-spin text-sky-400" /></div>
             ) : filtrados.length === 0 ? (
-              <div className="text-center py-10 px-4"><p className="text-xs text-slate-400">Sin contactos</p></div>
+              <div className="text-center py-10 px-4"><p className="text-xs text-slate-400">{t("admin.sinContactos")}</p></div>
             ) : (
               <>
                 {/* Admins */}
@@ -515,7 +518,7 @@ export default function ChatConAdmin({
                   <>
                     <div className={`px-4 py-2 flex items-center gap-1.5 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100/70'}`}>
                       <Shield size={11} className="text-sky-500" />
-                      <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Administración</p>
+                      <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{t("especialista.administracion")}</p>
                     </div>
                     {admins.map(c => <ContactoItem key={c.id} c={c} seleccionado={seleccionado} onClick={() => setSeleccionado(c)} />)}
                   </>
@@ -525,7 +528,7 @@ export default function ChatConAdmin({
                   <>
                     <div className={`px-4 py-2 flex items-center gap-1.5 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100/70'}`}>
                       <Users size={11} className="text-sky-500" />
-                      <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Especialistas</p>
+                      <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{t("especialista.especialistas")}</p>
                     </div>
                     {especialistas.map(c => <ContactoItem key={c.id} c={c} seleccionado={seleccionado} onClick={() => setSeleccionado(c)} />)}
                   </>
@@ -543,8 +546,8 @@ export default function ChatConAdmin({
                 <MessageCircle size={40} className="text-sky-200" />
               </div>
               <div>
-                <p className="text-slate-700 font-bold text-base">Selecciona un contacto</p>
-                <p className="text-slate-400 text-sm mt-1">Elige un contacto de la lista para ver su conversación</p>
+                <p className="text-slate-700 font-bold text-base">{t("admin.selecContacto")}</p>
+                <p className="text-slate-400 text-sm mt-1">{t("especialista.eligeContacto")}</p>
               </div>
             </div>
           ) : (
@@ -585,7 +588,7 @@ export default function ChatConAdmin({
                     <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
                       <MessageCircle size={24} className="text-sky-300" />
                     </div>
-                    <p className="text-slate-400 text-sm">Aún no hay mensajes. ¡Empezá la conversación!</p>
+                    <p className="text-slate-400 text-sm">{t("especialista.sinMensajesEmpeza")}</p>
                   </div>
                 ) : (
                   mensajesAgrupados.map((grupo) => (
@@ -624,7 +627,7 @@ export default function ChatConAdmin({
                                       <FileText size={18} className={esMio ? 'text-sky-200' : 'text-slate-400'} />
                                       <div>
                                         <p className="text-xs font-bold truncate max-w-[150px]">{msg.file_name}</p>
-                                        <p className={`text-[10px] ${esMio ? 'text-sky-200' : 'text-slate-400'}`}>Toca para abrir</p>
+                                        <p className={`text-[10px] ${esMio ? 'text-sky-200' : 'text-slate-400'}`}>{t("admin.tocaAbrir")}</p>
                                       </div>
                                     </a>
                                   )
@@ -642,7 +645,7 @@ export default function ChatConAdmin({
                                       <div className={`h-1.5 rounded-full ${esMio ? 'bg-sky-400' : 'bg-slate-200'}`}>
                                         <div className={`h-full rounded-full transition-all ${esMio ? 'bg-white/60' : 'bg-sky-400'}`} style={{ width: reproduciendo === msg.id ? '60%' : '0%' }} />
                                       </div>
-                                      <p className={`text-[10px] mt-1 ${esMio ? 'text-sky-200' : 'text-slate-400'}`}>Nota de voz</p>
+                                      <p className={`text-[10px] mt-1 ${esMio ? 'text-sky-200' : 'text-slate-400'}`}>{t("especialista.notaVoz")}</p>
                                     </div>
                                   </div>
                                 )}

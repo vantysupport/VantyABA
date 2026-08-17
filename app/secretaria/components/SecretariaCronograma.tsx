@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
+
 import {
   CalendarDays, Download, Send, Loader2, ChevronLeft, ChevronRight,
   Users, Clock, CheckCircle2, RefreshCw, Printer, Mail
@@ -28,6 +30,7 @@ function getMondayOfWeek(date: Date) {
 }
 
 export default function SecretariaCronograma() {
+  const { t } = useI18n()
   const toast = useToast()
   const [mode, setMode] = useState<'semana' | 'mes'>('semana')
   const [referenceDate, setReferenceDate] = useState(new Date())
@@ -106,8 +109,8 @@ export default function SecretariaCronograma() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Cronograma de Sesiones</h2>
-          <p className="text-sm text-slate-400 mt-0.5">Vista semanal y mensual de citas programadas</p>
+          <h2 className="text-2xl font-bold text-slate-800">{t("admin.cronogramaSesiones")}</h2>
+          <p className="text-sm text-slate-400 mt-0.5">{t("admin.vistaSemanalMensual")}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handlePrint} className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-colors">
@@ -217,7 +220,7 @@ export default function SecretariaCronograma() {
             {daysInRange.filter(d => byDay[d]?.length > 0).length === 0 ? (
               <div className="py-16 text-center text-slate-300">
                 <CalendarDays size={36} className="mx-auto mb-3" />
-                <p className="font-semibold">No hay citas programadas para este mes</p>
+                <p className="font-semibold">{t("admin.noCitasEsteMes")}</p>
               </div>
             ) : daysInRange.filter(d => byDay[d]?.length > 0).map(dateStr => {
               const date = new Date(dateStr + 'T00:00:00')
@@ -252,7 +255,7 @@ export default function SecretariaCronograma() {
       {/* Summary */}
       {!loading && totalSessions > 0 && (
         <div className="bg-gradient-to-br from-sky-50 to-sky-50 border border-sky-200 rounded-2xl p-5">
-          <h3 className="font-bold text-sky-800 mb-3 text-sm">Resumen del período</h3>
+          <h3 className="font-bold text-sky-800 mb-3 text-sm">{t("admin.resumenPeriodo")}</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
               { label: 'Total sesiones', value: totalSessions, icon: CalendarDays },

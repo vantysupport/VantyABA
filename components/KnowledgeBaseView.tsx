@@ -171,7 +171,7 @@ export default function KnowledgeBaseView() {
             </div>
             Cerebro de ARIA
           </h2>
-          <p className="text-slate-400 text-sm mt-1">Base de conocimiento clínico que usa la IA en cada análisis</p>
+          <p className="text-slate-400 text-sm mt-1">{t("ui.baseClinico")}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowInstrucciones(true)}
@@ -204,7 +204,7 @@ export default function KnowledgeBaseView() {
       <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex gap-3">
         <Brain size={18} className="text-violet-500 shrink-0 mt-0.5" />
         <div>
-          <p className="font-black text-violet-800 text-sm">¿Cómo funciona?</p>
+          <p className="font-black text-violet-800 text-sm">{t("ui.comoFunciona")}</p>
           <p className="text-violet-700 text-xs mt-0.5 leading-relaxed">
             Cada documento que subas se fragmenta y convierte en vectores semánticos. Cuando ARIA responde una consulta, busca automáticamente los fragmentos más relevantes y los incluye en su razonamiento. Cuanto más documentos indexes, más precisa y fundamentada será la IA.
           </p>
@@ -215,15 +215,15 @@ export default function KnowledgeBaseView() {
       {loading ? (
         <div className="flex flex-col items-center py-16 gap-3">
           <Loader2 className="animate-spin text-violet-400" size={28} />
-          <p className="text-slate-400 text-sm">Cargando base de conocimiento...</p>
+          <p className="text-slate-400 text-sm">{t("ui.cargandoBaseConoc")}</p>
         </div>
       ) : documentos.length === 0 ? (
         <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-14 text-center">
           <div className="w-14 h-14 bg-violet-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
             <BookOpen size={26} className="text-violet-300" />
           </div>
-          <p className="font-bold text-slate-500 mb-1">Base de conocimiento vacía</p>
-          <p className="text-xs text-slate-300 mb-4">Sube los libros y protocolos que usa tu centro</p>
+          <p className="font-bold text-slate-500 mb-1">{t("ui.baseVacia")}</p>
+          <p className="text-xs text-slate-300 mb-4">{t("ui.subeLibros")}</p>
           <button onClick={() => setShowForm(true)}
             className="px-4 py-2 bg-violet-600 text-white rounded-xl text-sm font-bold hover:bg-violet-700">
             Subir primer documento
@@ -280,12 +280,12 @@ export default function KnowledgeBaseView() {
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-5">
-                <h3 className="font-black text-lg text-slate-800">Agregar a la base de conocimiento</h3>
+                <h3 className="font-black text-lg text-slate-800">{t("ui.agregarBase")}</h3>
                 <button onClick={() => setShowForm(false)} className="p-2 rounded-full hover:bg-slate-100"><X size={18} /></button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">Título *</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t("ui.tituloDoc")}</label>
                   <input value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
                     placeholder="ej: Principios de Conducta - Malott 8va Ed."
                     className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-violet-400" />
@@ -304,7 +304,7 @@ export default function KnowledgeBaseView() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">Descripción</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1.5">{t("common.descripcion")}</label>
                   <input value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
                     placeholder="Breve descripción del contenido"
                     className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-violet-400" />
@@ -312,7 +312,7 @@ export default function KnowledgeBaseView() {
 
                 {/* ── Selector de modo de entrada ── */}
                 <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">Fuente del documento</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">{t("ui.fuenteDoc")}</label>
                   <div className="grid grid-cols-3 gap-2">
                     {modoConfig.map(m => (
                       <button key={m.id} onClick={() => setInputMode(m.id)}
@@ -345,8 +345,8 @@ export default function KnowledgeBaseView() {
                     ) : (
                       <>
                         <Upload size={24} className="text-slate-300 mx-auto mb-2" />
-                        <p className="font-bold text-slate-500 text-sm">Arrastra un PDF o haz clic</p>
-                        <p className="text-xs text-slate-300 mt-1">PDF, TXT o Markdown · Hasta 100MB</p>
+                        <p className="font-bold text-slate-500 text-sm">{t("ui.arrastraPDF")}</p>
+                        <p className="text-xs text-slate-300 mt-1">{t("ui.pdfTxtMd")}</p>
                       </>
                     )}
                   </div>
@@ -385,7 +385,7 @@ export default function KnowledgeBaseView() {
 
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2">
                   <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-700">El indexado puede tardar 2-5 minutos para libros largos. Puedes cerrar esta ventana — el proceso continúa en background.</p>
+                  <p className="text-xs text-amber-700">{t("ui.indexadoTarda")}</p>
                 </div>
               </div>
               <div className="flex gap-3 mt-5">

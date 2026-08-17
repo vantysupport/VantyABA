@@ -66,7 +66,7 @@ export default function ParentDashboard() {
     { id: 'home',        icon: Home,      label: t('nav.inicio') },
     { id: 'citas',       icon: Calendar,  label: t('nav.miscitas') },
     { id: 'actividades', icon: Zap,       label: t('nav.actividades') },
-    { id: 'recursos',    icon: BookOpen,  label: 'Centro de Recursos' },
+    { id: 'recursos',    icon: BookOpen,  label: t('recursos.centroRecursos') },
     { id: 'perfil',      icon: User,      label: t('nav.miperfil') },
   ]
   const [activeView, setActiveView] = useState('home')
@@ -405,7 +405,7 @@ export default function ParentDashboard() {
             <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-5">
               <Lock size={28} className="text-amber-600" />
             </div>
-            <h1 className="text-xl font-bold text-slate-800 mb-2">Registro no disponible por ahora</h1>
+            <h1 className="text-xl font-bold text-slate-800 mb-2">{t("especialista.registroNoDisponible")}</h1>
             <p className="text-slate-500 text-sm leading-relaxed mb-6">
               El centro alcanzó el número máximo de cuentas de familias disponibles.
               Para habilitar tu acceso, comunícate con <strong className="text-sky-600">Neuropsicología y Terapias SANTI</strong>.
@@ -415,7 +415,7 @@ export default function ParentDashboard() {
               <Phone size={16} /> Contactar al centro
             </a>
             <button onClick={async () => { await supabase.auth.signOut(); router.replace('/') }}
-              className="mt-3 text-xs font-bold text-slate-400 hover:text-slate-600">Cerrar sesión</button>
+              className="mt-3 text-xs font-bold text-slate-400 hover:text-slate-600">{t("common.cerrarSesion")}</button>
           </div>
         </div>
       </div>
@@ -457,9 +457,9 @@ export default function ParentDashboard() {
             {/* Features preview */}
             <div className="grid grid-cols-3 gap-4 mb-8">
               {[
-                { Icon: TrendingUp, label: 'Progreso en tiempo real' },
-                { Icon: Sparkles,   label: 'Asistente IA 24/7' },
-                { Icon: Calendar,   label: 'Citas con 1 click' },
+                { Icon: TrendingUp, label: t('familias.progresoTiempoReal') },
+                { Icon: Sparkles,   label: t('familias.asistenteIA247') },
+                { Icon: Calendar,   label: t('familias.citas1Click') },
               ].map(({ Icon, label }) => (
                 <div key={label} className="bg-sky-50 rounded-2xl p-4 border border-sky-100">
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ background: 'rgba(2,132,199,0.12)', color: '#0284c7' }}>
@@ -503,7 +503,7 @@ export default function ParentDashboard() {
                       <Baby size={24} className="text-white"/>
                     </div>
                     <div>
-                      <h3 className="font-bold text-2xl text-slate-800">Paso 2: Tu hijo/a</h3>
+                      <h3 className="font-bold text-2xl text-slate-800">{t("familias.paso2Hijo")}</h3>
                       <p className="text-sm text-slate-400 font-medium">{t('ui.enter_basic_data')}</p>
                     </div>
                   </div>
@@ -598,8 +598,8 @@ export default function ParentDashboard() {
                     {profile?.full_name?.charAt(0) || 'F'}
                 </div>
                 <div className="min-w-0">
-                    <p className="text-[10px] font-bold leading-none mb-0.5" style={{ color: "var(--text-muted)" }}>Bienvenido/a</p>
-                    <p className="font-bold text-[13px] truncate" style={{ color: "var(--text-primary)", fontSize: "12px", fontWeight: 700 }}>Portal Familias</p>
+                    <p className="text-[10px] font-bold leading-none mb-0.5" style={{ color: "var(--text-muted)" }}>{t("familias.bienvenidoA")}</p>
+                    <p className="font-bold text-[13px] truncate" style={{ color: "var(--text-primary)", fontSize: "12px", fontWeight: 700 }}>{t("familias.portalFamilias")}</p>
                 </div>
             </div>
 
@@ -607,7 +607,7 @@ export default function ParentDashboard() {
             <div className="px-4 pt-4 pb-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(2,132,199,0.1)", border: "1px solid rgba(2,132,199,0.2)" }}>
                     <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse flex-shrink-0" />
-                    <span className="text-[10px] font-bold" style={{ color: "#0284c7" }}>Portal Familias</span>
+                    <span className="text-[10px] font-bold" style={{ color: "#0284c7" }}>{t("familias.portalFamilias")}</span>
                 </div>
             </div>
 
@@ -632,7 +632,7 @@ export default function ParentDashboard() {
                     <p className="text-[10px] font-bold flex items-center gap-1.5 mb-1" style={{ color: "#0284c7" }}>
                         <Calendar size={10}/> Tus citas
                     </p>
-                    <p className="text-[10px] leading-relaxed" style={{ color: "var(--text-muted)" }}>Programadas por el equipo del centro. Para cambios contactá a recepción.</p>
+                    <p className="text-[10px] leading-relaxed" style={{ color: "var(--text-muted)" }}>{t("familias.programadasEquipoCentro")}</p>
                 </div>
                 <button
                     onClick={handleOpenNotifications}
@@ -683,7 +683,7 @@ export default function ParentDashboard() {
                         <h1 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                             {PAGE_TITLES_MOBILE[activeView as keyof typeof PAGE_TITLES_MOBILE] || 'Inicio'}
                         </h1>
-                        <p style={{ fontSize: "10px", color: "var(--text-muted)" }}>Portal Familias</p>
+                        <p style={{ fontSize: "10px", color: "var(--text-muted)" }}>{t("familias.portalFamilias")}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -770,7 +770,7 @@ export default function ParentDashboard() {
                     {activeView === 'chat-familias' && !selectedChild && (
                       <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
                         <MessageCircle size={32} className="text-slate-300"/>
-                        <p className="font-bold text-slate-500">Selecciona un hijo/a para abrir el chat</p>
+                        <p className="font-bold text-slate-500">{t("familias.selecHijoChat")}</p>
                       </div>
                     )}
                     {activeView === 'engagement' && <EngagementView childId={selectedChild?.id || ''} />}
@@ -825,7 +825,7 @@ export default function ParentDashboard() {
                           </span>
                       )}
                     </button>
-                    <span className="block text-center text-[10px] font-medium mt-0.5" style={{ color: activeView==='chat' ? '#0284c7' : 'var(--text-muted)' }}>Asistente</span>
+                    <span className="block text-center text-[10px] font-medium mt-0.5" style={{ color: activeView==='chat' ? '#0284c7' : 'var(--text-muted)' }}>{t("familias.asistente")}</span>
                   </div>
                 </div>
                 {/* Perfil */}
@@ -845,11 +845,11 @@ export default function ParentDashboard() {
                     <div className="absolute bottom-14 right-0 rounded-2xl shadow-2xl border p-2 w-56 z-50 flex flex-col gap-1" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
                       {[
                         // Solo mostramos Evaluación Inicial si aún NO está completa
-                        ...(!evalInicialCompleta ? [{ id: 'evaluacion-inicial', icon: <ClipboardCheck size={18}/>, label: 'Evaluación Inicial', badge: 'NUEVO' as any }] : []),
-                        { id: 'engagement',    icon: <Zap size={18}/>,            label: 'Practicar en Casa' },
-                        { id: 'chat-familias', icon: <MessageCircle size={18}/>,  label: 'Chat', badge: familiasUnread > 0 ? familiasUnread : null },
-                        { id: 'programas',     icon: <BookOpen size={18}/>,       label: 'Programas ABA' },
-                        { id: 'misformularios',icon: <FileText size={18}/>,       label: 'Recursos adicionales', badge: pendingFormsCount > 0 ? pendingFormsCount : null },
+                        ...(!evalInicialCompleta ? [{ id: 'evaluacion-inicial', icon: <ClipboardCheck size={18}/>, label: t('nav.evaluacionInicial'), badge: 'NUEVO' as any }] : []),
+                        { id: 'engagement',    icon: <Zap size={18}/>,            label: t('nav.actividades') },
+                        { id: 'chat-familias', icon: <MessageCircle size={18}/>,  label: t('nav.chat'), badge: familiasUnread > 0 ? familiasUnread : null },
+                        { id: 'programas',     icon: <BookOpen size={18}/>,       label: t('nav.programas') },
+                        { id: 'misformularios',icon: <FileText size={18}/>,       label: t('nav.recursosAdicionales'), badge: pendingFormsCount > 0 ? pendingFormsCount : null },
                       ].map(item => (
                         <button key={item.id} onClick={()=>{setActiveView(item.id);setShowMoreMenu(false)}}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${activeView===item.id ? 'bg-sky-50 text-sky-700' : 'text-slate-700 hover:bg-slate-50'}`}>
@@ -1126,16 +1126,16 @@ export default function ParentDashboard() {
                             {(()=>{
                                 const ft = selectedNoti.metadata?.form_type || selectedNoti.metadata?.source || selectedNoti.type || ''
                                 const cfg =
-                                    ft==='aba'            ? {icon:<Activity size={20}/>,      bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:'Sesión ABA'} :
-                                    ft==='anamnesis'      ? {icon:<FileText size={20}/>,      bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:'Historia Clínica'} :
-                                    ft==='entorno_hogar'  ? {icon:<Home size={20}/>,          bg:'bg-green-100',  text:'text-green-700',  border:'border-green-200',  label:'Entorno del Hogar'} :
-                                    ['brief2','ados2','vineland3','wiscv','basc3'].includes(ft) ? {icon:<Brain size={20}/>, bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:'Evaluación Clínica'} :
-                                    selectedNoti.type==='video_call'      ? {icon:<Video size={20}/>,         bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:'Videollamada'} :
-                                    selectedNoti.type==='form_request'    ? {icon:<FileText size={20}/>,      bg:'bg-orange-100', text:'text-orange-700', border:'border-orange-200', label:'Nuevo formulario'} :
-                                    selectedNoti.type==='parent_message'  ? {icon:<MessageCircle size={20}/>, bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:'Mensaje del terapeuta'} :
-                                    selectedNoti.type==='success'         ? {icon:<Star size={20}/>,          bg:'bg-yellow-100', text:'text-yellow-700', border:'border-yellow-200', label:'¡Buenas noticias!'} :
-                                    selectedNoti.type==='warning'         ? {icon:<AlertCircle size={20}/>,   bg:'bg-red-100',    text:'text-red-700',    border:'border-red-200',    label:'Aviso'} :
-                                                                             {icon:<Bell size={20}/>,           bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:'Notificación'}
+                                    ft==='aba'            ? {icon:<Activity size={20}/>,      bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:t('evaluaciones.sesionAba')} :
+                                    ft==='anamnesis'      ? {icon:<FileText size={20}/>,      bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:t('familias.historiaClinica')} :
+                                    ft==='entorno_hogar'  ? {icon:<Home size={20}/>,          bg:'bg-green-100',  text:'text-green-700',  border:'border-green-200',  label:t('evaluaciones.entornoHogar')} :
+                                    ['brief2','ados2','vineland3','wiscv','basc3'].includes(ft) ? {icon:<Brain size={20}/>, bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:t('familias.evaluacionClinica')} :
+                                    selectedNoti.type==='video_call'      ? {icon:<Video size={20}/>,         bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:t('familias.videollamada')} :
+                                    selectedNoti.type==='form_request'    ? {icon:<FileText size={20}/>,      bg:'bg-orange-100', text:'text-orange-700', border:'border-orange-200', label:t('familias.nuevoFormulario')} :
+                                    selectedNoti.type==='parent_message'  ? {icon:<MessageCircle size={20}/>, bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:t('familias.mensajeDeTuTerapeuta')} :
+                                    selectedNoti.type==='success'         ? {icon:<Star size={20}/>,          bg:'bg-yellow-100', text:'text-yellow-700', border:'border-yellow-200', label:t('familias.buenasNoticias')} :
+                                    selectedNoti.type==='warning'         ? {icon:<AlertCircle size={20}/>,   bg:'bg-red-100',    text:'text-red-700',    border:'border-red-200',    label:t('familias.aviso')} :
+                                                                             {icon:<Bell size={20}/>,           bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:t('familias.notificacion')}
                                 return (
                                     <div className="space-y-4">
                                         <div className={`flex items-center gap-3 p-4 rounded-2xl border ${cfg.border}`}>
@@ -1209,16 +1209,16 @@ export default function ParentDashboard() {
                             notifications.map((noti) => {
                                 const ft = noti.metadata?.form_type || noti.metadata?.source || noti.type || ''
                                 const iconConfig =
-                                    ft==='aba'            ? {icon:<Activity size={20}/>,      bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:'Sesión ABA'} :
-                                    ft==='anamnesis'      ? {icon:<FileText size={20}/>,      bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:'Historia Clínica'} :
-                                    ft==='entorno_hogar'  ? {icon:<Home size={20}/>,          bg:'bg-green-100',  text:'text-green-600',  border:'border-green-200',  label:'Entorno del Hogar'} :
-                                    ['brief2','ados2','vineland3','wiscv','basc3'].includes(ft) ? {icon:<Brain size={20}/>, bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:'Evaluación Clínica'} :
-                                    noti.type==='video_call'     ? {icon:<Video size={20}/>,         bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:'Videollamada'} :
-                                    noti.type==='form_request'   ? {icon:<FileText size={20}/>,      bg:'bg-orange-100', text:'text-orange-600', border:'border-orange-200', label:'Nuevo formulario'} :
-                                    noti.type==='parent_message' ? {icon:<MessageCircle size={20}/>, bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:'Mensaje del terapeuta'} :
-                                    noti.type==='success'        ? {icon:<Star size={20}/>,          bg:'bg-yellow-100', text:'text-yellow-600', border:'border-yellow-200', label:'¡Buenas noticias!'} :
-                                    noti.type==='warning'        ? {icon:<AlertCircle size={20}/>,   bg:'bg-red-100',    text:'text-red-600',    border:'border-red-200',    label:'Aviso'} :
-                                                                   {icon:<Bell size={20}/>,           bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:'Notificación'}
+                                    ft==='aba'            ? {icon:<Activity size={20}/>,      bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:t('evaluaciones.sesionAba')} :
+                                    ft==='anamnesis'      ? {icon:<FileText size={20}/>,      bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:t('familias.historiaClinica')} :
+                                    ft==='entorno_hogar'  ? {icon:<Home size={20}/>,          bg:'bg-green-100',  text:'text-green-600',  border:'border-green-200',  label:t('evaluaciones.entornoHogar')} :
+                                    ['brief2','ados2','vineland3','wiscv','basc3'].includes(ft) ? {icon:<Brain size={20}/>, bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:t('familias.evaluacionClinica')} :
+                                    noti.type==='video_call'     ? {icon:<Video size={20}/>,         bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:t('familias.videollamada')} :
+                                    noti.type==='form_request'   ? {icon:<FileText size={20}/>,      bg:'bg-orange-100', text:'text-orange-600', border:'border-orange-200', label:t('familias.nuevoFormulario')} :
+                                    noti.type==='parent_message' ? {icon:<MessageCircle size={20}/>, bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:t('familias.mensajeDeTuTerapeuta')} :
+                                    noti.type==='success'        ? {icon:<Star size={20}/>,          bg:'bg-yellow-100', text:'text-yellow-600', border:'border-yellow-200', label:t('familias.buenasNoticias')} :
+                                    noti.type==='warning'        ? {icon:<AlertCircle size={20}/>,   bg:'bg-red-100',    text:'text-red-600',    border:'border-red-200',    label:t('familias.aviso')} :
+                                                                   {icon:<Bell size={20}/>,           bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:t('familias.notificacion')}
                                 return (
                                     <button key={noti.id} onClick={()=>setSelectedNoti(noti)}
                                         className={`w-full text-left bg-slate-50 rounded-2xl border ${iconConfig.border} overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all`}>
@@ -1269,8 +1269,8 @@ export default function ParentDashboard() {
                                         <Shield size={24} strokeWidth={2.5}/>
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-lg leading-tight">Privacidad y Seguridad</h3>
-                                        <p className="text-xs text-white/80 font-medium">Cómo Vanty protege los datos clínicos de tu familia</p>
+                                        <h3 className="font-bold text-lg leading-tight">{t("familias.privacidadSeguridad")}</h3>
+                                        <p className="text-xs text-white/80 font-medium">{t("familias.comoVantyProtege")}</p>
                                     </div>
                                 </div>
                                 <button onClick={()=>setShowPrivacy(false)} className="p-2 hover:bg-white/15 rounded-xl transition-all">
@@ -1283,7 +1283,7 @@ export default function ParentDashboard() {
                                 {[
                                     { icon: <KeyRound size={10}/>, label: 'AES-256' },
                                     { icon: <ServerCog size={10}/>, label: 'TLS 1.3' },
-                                    { icon: <Database size={10}/>, label: 'RLS activo' },
+                                    { icon: <Database size={10}/>, label: t('legal.rlsActivo') },
                                     { icon: <CheckCircle2 size={10}/>, label: 'Ley 29733 PE' },
                                 ].map(b => (
                                     <span key={b.label} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', backdropFilter: 'blur(4px)' }}>
@@ -1319,8 +1319,8 @@ export default function ParentDashboard() {
                             </h4>
                             <ul className="text-xs space-y-1.5" style={{ color: 'var(--c-text-secondary)' }}>
                                 <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>Vos</strong> (padre/madre/tutor titular de la cuenta)</span></li>
-                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>Terapeutas y especialistas del centro</strong> asignados al paciente</span></li>
-                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>Soporte técnico</strong> de Vanty, solo bajo consentimiento explícito y acuerdo de confidencialidad</span></li>
+                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>{t("familias.terapeutasCentro")}</strong> asignados al paciente</span></li>
+                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>{t("familias.soporteTecnico")}</strong> de Vanty, solo bajo consentimiento explícito y acuerdo de confidencialidad</span></li>
                                 <li className="flex items-start gap-2 pt-1 mt-1" style={{ borderTop: '1px dashed var(--c-border)' }}>
                                     <X size={12} className="text-red-500 mt-0.5 flex-shrink-0"/>
                                     <span><strong>Nunca:</strong> anunciantes, brokers de datos, ni terceros con fines comerciales</span>
@@ -1351,12 +1351,12 @@ export default function ParentDashboard() {
                             </h4>
                             <div className="grid grid-cols-2 gap-1.5">
                                 {[
-                                    { label: 'Acceso',         desc: 'Solicitar copia de todo lo registrado' },
-                                    { label: 'Rectificación',  desc: 'Corregir datos inexactos' },
-                                    { label: 'Eliminación',    desc: 'Borrar tu cuenta y la del paciente' },
-                                    { label: 'Portabilidad',   desc: 'Exportar tu historial en formato abierto' },
-                                    { label: 'Oposición',      desc: 'Limitar el uso de tus datos' },
-                                    { label: 'Información',    desc: 'Saber qué datos tenemos y por qué' },
+                                    { label: t('legal.accesoLbl'), desc: t('legal.accesoDesc') },
+                                    { label: t('legal.rectificacionLbl'), desc: t('legal.rectificacionDesc') },
+                                    { label: t('legal.eliminacionLbl'), desc: t('legal.eliminacionDesc') },
+                                    { label: t('legal.portabilidadLbl'), desc: t('legal.portabilidadDesc') },
+                                    { label: t('legal.oposicionLbl'), desc: t('legal.oposicionDesc') },
+                                    { label: t('legal.informacionLbl'), desc: t('legal.informacionDesc') },
                                 ].map(d => (
                                     <div key={d.label} className="p-2 rounded-lg" style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)' }}>
                                         <p className="text-[11px] font-bold" style={{ color: 'var(--c-text-primary)' }}>{d.label}</p>

@@ -137,7 +137,7 @@ export default function AnalyticsDashboard({ childId, childName, onClose }: Anal
         <div className="bg-white rounded-3xl p-8 max-w-md">
           <div className="flex flex-col items-center gap-4">
             <RefreshCw className="w-12 h-12 text-blue-600 animate-spin" />
-            <p className="text-lg font-bold text-gray-800">Analizando datos...</p>
+            <p className="text-lg font-bold text-gray-800">{t("hub.analizandoDatos")}</p>
             <p className="text-sm text-gray-500">{t('dashboard.generandoInsights')}</p>
           </div>
         </div>
@@ -188,7 +188,7 @@ export default function AnalyticsDashboard({ childId, childName, onClose }: Anal
             {kpiData && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <KPICard
-                  title="Sesiones Totales"
+                  title={t("admin.sesionesTotales")}
                   value={kpiData.totalSessions}
                   change={kpiData.sessionsGrowth}
                   icon={<Calendar className="w-6 h-6" />}
@@ -202,14 +202,14 @@ export default function AnalyticsDashboard({ childId, childName, onClose }: Anal
                   color="green"
                 />
                 <KPICard
-                  title="Objetivos Logrados"
+                  title={t("admin.objetivosLogrados")}
                   value={`${kpiData.goalsAchieved}/${kpiData.totalGoals}`}
                   change={20}
                   icon={<Target className="w-6 h-6" />}
                   color="purple"
                 />
                 <KPICard
-                  title="Asistencia"
+                  title={t("reportes.asistencia")}
                   value={`${kpiData.attendanceRate}%`}
                   change={kpiData.attendanceGrowth}
                   icon={<CheckCircle2 className="w-6 h-6" />}
@@ -675,6 +675,7 @@ function DevelopmentAreaBar({ area, score, maxScore }: any) {
 
 // TARJETA DE TENDENCIA
 function TrendCard({ trend }: { trend: Trend }) {
+  const { t } = useI18n()
   const iconMap = {
     positive: { Icon: TrendingUp, bg: 'bg-green-100', text: 'text-green-600' },
     negative: { Icon: TrendingDown, bg: 'bg-red-100', text: 'text-red-600' },
@@ -694,7 +695,7 @@ function TrendCard({ trend }: { trend: Trend }) {
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <div className="text-right">
-          <p className="text-xs text-gray-500 font-medium">Confianza</p>
+          <p className="text-xs text-gray-500 font-medium">{t("admin.confianza")}</p>
           <p className="text-lg font-black text-gray-900">{trend.confidence}%</p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   User, Mail, Phone, Lock, LogOut, Globe, Shield,
   Eye, EyeOff, Save, Loader2, Camera, Check,
@@ -67,6 +68,7 @@ function Input({ className = '', ...props }: React.InputHTMLAttributes<HTMLInput
 
 /* ── Google Calendar ─────────────────────────────────────────────────────────*/
 function GoogleCalendarBlock({ userId, isDark }: { userId: string; isDark: boolean }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [email, setEmail] = useState<string | null>(null)
@@ -113,7 +115,7 @@ function GoogleCalendarBlock({ userId, isDark }: { userId: string; isDark: boole
         <p className={`text-sm font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-800'}`}>Google Calendar</p>
         {email && <p className={`text-xs truncate ${isDark ? 'text-emerald-500' : 'text-emerald-600'}`}>{email}</p>}
       </div>
-      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mr-1 ${isDark ? 'bg-emerald-900/50 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>Conectado</span>
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mr-1 ${isDark ? 'bg-emerald-900/50 text-emerald-400' : 'bg-emerald-100 text-emerald-700'}`}>{t("especialista.conectado")}</span>
       <button onClick={disconnect} className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-slate-500 hover:text-red-400 hover:bg-red-900/20' : 'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}>
         <Unlink size={13} />
       </button>
@@ -132,6 +134,7 @@ function GoogleCalendarBlock({ userId, isDark }: { userId: string; isDark: boole
 
 /* ── Outlook Calendar ────────────────────────────────────────────────────────*/
 function OutlookCalendarBlock({ userId, isDark }: { userId: string; isDark: boolean }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [email, setEmail] = useState<string | null>(null)
@@ -187,7 +190,7 @@ function OutlookCalendarBlock({ userId, isDark }: { userId: string; isDark: bool
         <p className={`text-sm font-bold ${isDark ? 'text-sky-300' : 'text-sky-800'}`}>Outlook Calendar</p>
         {email && <p className={`text-xs truncate ${isDark ? 'text-sky-500' : 'text-sky-600'}`}>{email}</p>}
       </div>
-      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mr-1 ${isDark ? 'bg-sky-900/50 text-sky-400' : 'bg-sky-100 text-sky-700'}`}>Conectado</span>
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mr-1 ${isDark ? 'bg-sky-900/50 text-sky-400' : 'bg-sky-100 text-sky-700'}`}>{t("especialista.conectado")}</span>
       <button onClick={disconnect} className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-slate-500 hover:text-red-400 hover:bg-red-900/20' : 'text-slate-300 hover:text-red-500 hover:bg-red-50'}`}>
         <Unlink size={13} />
       </button>
@@ -209,6 +212,7 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
   onUpdate?: () => void
   onAvatarUpdate?: (url: string) => void
 }) {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
@@ -275,7 +279,7 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
       <SectionTitle label="Mi Perfil" />
 
       {/* Avatar & nombre */}
-      <Card title="Foto y Nombre" subtitle="Tu identidad en el sistema" icon={User} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("admin.fotoNombre")} subtitle={t("admin.tuIdentidad")} icon={User} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 mb-6 text-center sm:text-left">
           <div className="relative group cursor-pointer shrink-0" onClick={() => fileRef.current?.click()}>
             {avatarUrl ? (
@@ -325,23 +329,23 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Nombre completo">
-            <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Ej: María García" />
+            <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder={t("pacientes.phNombre")} />
           </Field>
           <Field label="Teléfono">
             <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Ej: +51 987 654 321" />
           </Field>
           <Field label="Especialidad" >
-            <Input value={form.specialty} onChange={e => setForm(f => ({ ...f, specialty: e.target.value }))} placeholder="Ej: Terapeuta ABA" />
+            <Input value={form.specialty} onChange={e => setForm(f => ({ ...f, specialty: e.target.value }))} placeholder={t("especialista.ejTerapeutaABA")} />
           </Field>
         </div>
       </Card>
 
       {/* Email */}
-      <Card title="Correo Electrónico" subtitle="Tu email de acceso al sistema" icon={Mail} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
+      <Card title={t("admin.correoElectronico")} subtitle={t("admin.tuEmailAcceso")} icon={Mail} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
         <div className={`flex items-center gap-3 p-4 rounded-xl border-2 ${isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-slate-50 border-transparent'}`}>
           <Mail size={16} className={isDark ? 'text-slate-500' : 'text-slate-400'} />
           <span className={`text-sm font-medium flex-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{form.email}</span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>No editable</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>{t("admin.noEditable")}</span>
         </div>
         <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
           El correo es tu identificador de acceso. Para cambiarlo contacta al administrador del sistema.
@@ -355,7 +359,7 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
       </button>
 
       {/* Calendarios */}
-      <Card title="Calendarios" subtitle="Sincroniza tus citas con calendarios externos" icon={CalendarDays} iconColor="bg-gradient-to-br from-emerald-500 to-teal-600">
+      <Card title={t("especialista.calendarios")} subtitle={t("especialista.sincronizaCitasExternas")} icon={CalendarDays} iconColor="bg-gradient-to-br from-emerald-500 to-teal-600">
         <div className="space-y-3">
           {userId && <GoogleCalendarBlock userId={userId} isDark={isDark} />}
           {userId && <OutlookCalendarBlock userId={userId} isDark={isDark} />}
@@ -367,6 +371,7 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
 
 /* ── Sección: Seguridad ──────────────────────────────────────────────────────*/
 function SeccionSeguridad() {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const [form, setForm] = useState({ nueva: '', confirmar: '' })
@@ -406,13 +411,13 @@ function SeccionSeguridad() {
   return (
     <div className="space-y-4">
       <SectionTitle label="Seguridad" />
-      <Card title="Cambiar Contraseña" subtitle="Mantén tu cuenta segura con una contraseña fuerte" icon={Lock} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("common.cambiarPassword")} subtitle={t("admin.mantenSegura")} icon={Lock} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="space-y-4">
           <Field label="Nueva contraseña">
             <div className="relative">
               <Input type={show.nueva ? 'text' : 'password'} value={form.nueva}
                 onChange={e => setForm(f => ({ ...f, nueva: e.target.value }))}
-                placeholder="Mínimo 8 caracteres" className="pr-11" />
+                placeholder={t("admin.phMin8")} className="pr-11" />
               <button onClick={() => setShow(s => ({ ...s, nueva: !s.nueva }))}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg">
                 {show.nueva ? <EyeOff size={16} className="text-slate-400" /> : <Eye size={16} className="text-slate-400" />}
@@ -433,7 +438,7 @@ function SeccionSeguridad() {
             <div className="relative">
               <Input type={show.confirmar ? 'text' : 'password'} value={form.confirmar}
                 onChange={e => setForm(f => ({ ...f, confirmar: e.target.value }))}
-                placeholder="Repite la contraseña" className="pr-11" />
+                placeholder={t("familias.repitePass")} className="pr-11" />
               <button onClick={() => setShow(s => ({ ...s, confirmar: !s.confirmar }))}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg">
                 {show.confirmar ? <EyeOff size={16} className="text-slate-400" /> : <Eye size={16} className="text-slate-400" />}
@@ -442,14 +447,14 @@ function SeccionSeguridad() {
             {form.confirmar && form.nueva && (
               <div className={`flex items-center gap-1.5 mt-2 text-xs font-bold ${form.nueva === form.confirmar ? 'text-emerald-500' : 'text-red-500'}`}>
                 {form.nueva === form.confirmar
-                  ? <><CheckCircle size={12} /> Las contraseñas coinciden</>
-                  : <><AlertTriangle size={12} /> No coinciden</>}
+                  ? <><CheckCircle size={12} /> {t("admin.passwordsCoinciden")}</>
+                  : <><AlertTriangle size={12} /> {t("admin.noCoinciden")}</>}
               </div>
             )}
           </Field>
         </div>
         <div className={`mt-4 p-4 rounded-xl border ${isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-slate-50 border-slate-100'}`}>
-          <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Requisitos</p>
+          <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.requisitos")}</p>
           {[
             { label: 'Mínimo 8 caracteres',        ok: form.nueva.length >= 8 },
             { label: 'Al menos una mayúscula',      ok: /[A-Z]/.test(form.nueva) },
@@ -476,11 +481,12 @@ function SeccionSeguridad() {
 
 /* ── Sección: Apariencia ─────────────────────────────────────────────────────*/
 function SeccionApariencia() {
+  const { t } = useI18n()
   const { isDark, toggleTheme } = useTheme()
   return (
     <div className="space-y-4">
       <SectionTitle label="Apariencia" />
-      <Card title="Tema de la Interfaz" subtitle="Personaliza cómo se ve el panel" icon={Palette} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("admin.temaInterfaz")} subtitle={t("admin.personalizaPanel")} icon={Palette} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="grid grid-cols-2 gap-3">
           {[
             { id: 'light', label: 'Claro',   Icon: Sun,  desc: 'Fondo blanco y colores vivos' },
@@ -511,6 +517,7 @@ function SeccionApariencia() {
 
 /* ── Sección: Cuenta ─────────────────────────────────────────────────────────*/
 function SeccionCuenta({ onLogout }: { onLogout?: () => void }) {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const [email, setEmail] = useState('')
@@ -541,12 +548,12 @@ function SeccionCuenta({ onLogout }: { onLogout?: () => void }) {
   return (
     <div className="space-y-4">
       <SectionTitle label="Cuenta" />
-      <Card title="Información de Cuenta" subtitle="Detalles de tu acceso al sistema" icon={Shield} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
+      <Card title={t("admin.infoCuenta")} subtitle={t("admin.detallesAcceso")} icon={Shield} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
         <div className="space-y-3">
           <div className={`flex items-center gap-3 p-4 rounded-xl ${isDark ? 'bg-[#0d1117]' : 'bg-slate-50'}`}>
             <Mail size={15} className={isDark ? 'text-slate-500' : 'text-slate-400'} />
             <div>
-              <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Email</p>
+              <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("common.email")}</p>
               <p className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{email}</p>
             </div>
           </div>
@@ -557,7 +564,7 @@ function SeccionCuenta({ onLogout }: { onLogout?: () => void }) {
           )}
         </div>
       </Card>
-      <Card title="Cerrar Sesión" subtitle="Salir de tu cuenta" icon={LogOut} iconColor="bg-gradient-to-br from-orange-500 to-red-500">
+      <Card title={t("common.cerrarSesion2")} subtitle={t("admin.salirCuenta")} icon={LogOut} iconColor="bg-gradient-to-br from-orange-500 to-red-500">
         <div className="space-y-3">
           <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             Al cerrar sesión saldrás del panel y deberás ingresar nuevamente con tu email y contraseña.

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
+
 import {
   BarChart3, Calendar, Users, CheckCircle2, XCircle,
   Clock, Loader2, RefreshCw, Download, TrendingUp, AlertCircle
@@ -37,6 +39,7 @@ function KPI({ label, value, sub, icon: Icon, bar }: any) {
 }
 
 export default function SecretariaReportes() {
+  const { t } = useI18n()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [periodo, setPeriodo] = useState<'semana' | 'mes' | 'trimestre'>('mes')
@@ -125,8 +128,8 @@ export default function SecretariaReportes() {
         <div className="h-0.5" style={{ background: 'linear-gradient(90deg, #0284c7, #10b981, #f59e0b)' }} />
         <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Reportes de Asistencia</h2>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Estadísticas de sesiones y programación</p>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{t("admin.reportesAsistencia")}</h2>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t("admin.estadisticasSesiones")}</p>
           </div>
           <div className="flex items-center gap-2">
             {/* Período */}
@@ -166,7 +169,7 @@ export default function SecretariaReportes() {
           {/* Citas por día */}
           <div className="rounded-xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
             <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-              <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Citas por día</h3>
+              <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.citasPorDia")}</h3>
               <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{stats.total} total</span>
             </div>
             <div className="p-5">
@@ -186,7 +189,7 @@ export default function SecretariaReportes() {
           {/* Por estado */}
           <div className="rounded-xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
             <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-              <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Distribución por estado</h3>
+              <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.distribucionEstado")}</h3>
             </div>
             <div className="p-5 flex items-center gap-4">
               {stats.porEstado.length > 0 ? (
@@ -211,7 +214,7 @@ export default function SecretariaReportes() {
                 </>
               ) : (
                 <div className="flex items-center justify-center w-full h-[160px]">
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Sin datos</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t("admin.sinDatos")}</p>
                 </div>
               )}
             </div>
@@ -220,11 +223,11 @@ export default function SecretariaReportes() {
           {/* Por terapeuta */}
           <div className="rounded-xl overflow-hidden lg:col-span-2" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
             <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-              <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Sesiones por terapeuta</h3>
+              <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.sesionesPorTerapeuta")}</h3>
             </div>
             <div className="p-5 space-y-3">
               {stats.porTerapeuta.length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>Sin datos para este período</p>
+                <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>{t("admin.sinDatosPeriodo")}</p>
               ) : stats.porTerapeuta.map((t, i) => {
                 const max = stats.porTerapeuta[0]?.count || 1
                 const pct = Math.round((t.count / max) * 100)

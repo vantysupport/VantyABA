@@ -7,6 +7,7 @@
 //  • Registro de errores.
 
 import { useEffect, useState, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
@@ -134,6 +135,7 @@ function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: boolean
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ControlPage() {
+  const { t } = useI18n()
   const router = useRouter()
   const [phase, setPhase] = useState<'loading' | 'denied' | 'ok'>('loading')
 
@@ -374,9 +376,9 @@ export default function ControlPage() {
       <div className="min-h-screen flex items-center justify-center bg-[#0a0e1a] p-6 text-center">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 max-w-sm">
           <ShieldCheck size={28} className="text-rose-400 mx-auto mb-3" />
-          <p className="text-slate-100 font-bold mb-1">Acceso restringido</p>
-          <p className="text-slate-400 text-sm mb-5">Solo para el rol <span className="font-mono text-sky-400">programador</span>.</p>
-          <button onClick={() => router.replace('/login')} className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold">Volver</button>
+          <p className="text-slate-100 font-bold mb-1">{t("admin.accesoRestringido")}</p>
+          <p className="text-slate-400 text-sm mb-5">{t("admin.soloParaRol")} <span className="font-mono text-sky-400">programador</span>.</p>
+          <button onClick={() => router.replace('/login')} className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold">{t("admin.volver")}</button>
         </div>
       </div>
     )
@@ -405,7 +407,7 @@ export default function ControlPage() {
               <ShieldCheck size={18} className="text-sky-400" />
             </div>
             <div>
-              <h1 className="font-black text-[15px] leading-tight tracking-tight text-white">Panel del Programador</h1>
+              <h1 className="font-black text-[15px] leading-tight tracking-tight text-white">{t("admin.panelProgramador")}</h1>
               <p className="text-[11px] text-slate-500 font-mono">control.santi · sistema</p>
             </div>
           </div>
@@ -431,7 +433,7 @@ export default function ControlPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="ctl-card p-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Estado</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{t("admin.estado")}</span>
                 <Activity size={15} className={maintenance ? 'text-amber-400' : 'text-emerald-400'} />
               </div>
               <p className={`mt-2 text-lg font-black ${maintenance ? 'text-amber-300' : 'text-emerald-300'}`}>{maintenance ? 'Mantenimiento' : 'Operativo'}</p>
@@ -439,7 +441,7 @@ export default function ControlPage() {
             </div>
             <div className="ctl-card p-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Módulos</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{t("admin.modulos")}</span>
                 <Puzzle size={15} className="text-sky-400" />
               </div>
               <p className="mt-2 text-2xl font-black text-white">{activeModules}<span className="text-sm text-slate-500 font-bold"> / {MAIN_MODULES.length}</span></p>
@@ -447,7 +449,7 @@ export default function ControlPage() {
             </div>
             <div className="ctl-card p-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Sub-módulos</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{t("admin.submodulos")}</span>
                 <Layers size={15} className="text-violet-400" />
               </div>
               <p className="mt-2 text-2xl font-black text-white">{activeTabs}<span className="text-sm text-slate-500 font-bold"> / {ALL_SUB_TABS.length}</span></p>
@@ -455,7 +457,7 @@ export default function ControlPage() {
             </div>
             <div className="ctl-card p-4">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Roles</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">{t("admin.roles")}</span>
                 <Users size={15} className="text-emerald-400" />
               </div>
               <p className="mt-2 text-2xl font-black text-white">{activeRoles}<span className="text-sm text-slate-500 font-bold"> / {ROLE_OPTIONS.length}</span></p>
@@ -601,7 +603,7 @@ export default function ControlPage() {
           <section className="ctl-card p-5">
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center"><Users size={15} className="text-emerald-400" /></div>
-              <h2 className="font-bold text-[15px] text-white">Población del sistema</h2>
+              <h2 className="font-bold text-[15px] text-white">{t("admin.poblacionSistema")}</h2>
               <span className="ml-auto text-[10px] font-bold font-mono text-slate-500">en vivo desde la base</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -624,12 +626,12 @@ export default function ControlPage() {
             <section className="ctl-card p-5">
               <div className="flex items-center gap-2.5 mb-1">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-400/20 flex items-center justify-center"><Power size={15} className="text-amber-400" /></div>
-                <h2 className="font-bold text-[15px] text-white">Modo mantenimiento</h2>
+                <h2 className="font-bold text-[15px] text-white">{t("admin.modoMantenimiento")}</h2>
                 <span className={`ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full border ${maintenance ? 'bg-amber-500/10 border-amber-400/30 text-amber-300' : 'bg-white/5 border-white/10 text-slate-400'}`}>
                   {maintenance ? 'ACTIVO' : 'APAGADO'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mb-3 ml-[42px]">Cuando está activo, todos (menos tú) ven el mensaje y no pueden usar la app.</p>
+              <p className="text-xs text-slate-400 mb-3 ml-[42px]">{t("admin.cuandoActivoMant")}</p>
               <textarea
                 value={maintMsg}
                 onChange={e => setMaintMsg(e.target.value)}
@@ -653,45 +655,45 @@ export default function ControlPage() {
             <section className="ctl-card p-5">
               <div className="flex items-center gap-2.5 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-400/20 flex items-center justify-center"><Bot size={15} className="text-violet-300" /></div>
-                <h2 className="font-bold text-[15px] text-white">ARIA · IA</h2>
+                <h2 className="font-bold text-[15px] text-white">{t("admin.ariaIA")}</h2>
               </div>
               <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5 mb-3">
                 <div className="flex items-center gap-2 mb-2.5">
-                  <span className="text-sm font-bold text-white">Padres / familias</span>
+                  <span className="text-sm font-bold text-white">{t("admin.padresFamilias")}</span>
                   <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${aria.enabled ? 'bg-violet-500/10 border-violet-400/30 text-violet-200' : 'bg-white/5 border-white/10 text-slate-400'}`}>{aria.enabled ? 'LÍMITE ACTIVO' : 'SIN LÍMITE'}</span>
                 </div>
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><MessageSquare size={11} className="inline mr-1" />Máx. mensajes</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><MessageSquare size={11} className="inline mr-1" />{t("admin.maxMensajes")}</span>
                     <input type="number" min={0} value={aria.maxMessages} onChange={e => setAria(a => ({ ...a, maxMessages: e.target.value.replace(/[^0-9]/g, '') }))} placeholder="∞" className="ctl-input w-24 text-sm rounded-lg px-3 py-2 font-mono" />
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><Clock size={11} className="inline mr-1" />Cada (horas)</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><Clock size={11} className="inline mr-1" />{t("admin.cadaHoras")}</span>
                     <input type="number" min={1} value={aria.windowHours} onChange={e => setAria(a => ({ ...a, windowHours: e.target.value.replace(/[^0-9]/g, '') }))} placeholder="5" className="ctl-input w-24 text-sm rounded-lg px-3 py-2 font-mono" />
                   </label>
                   <div className="flex gap-2 ml-auto">
                     <button onClick={() => saveAria({ enabled: !aria.enabled })} disabled={busy === 'aria'} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-50 ${aria.enabled ? 'bg-rose-600 hover:bg-rose-500' : 'bg-violet-600 hover:bg-violet-500'}`}>{busy === 'aria' ? <Loader2 size={13} className="animate-spin" /> : <Power size={13} />}{aria.enabled ? 'Desactivar' : 'Activar'}</button>
-                    <button onClick={() => saveAria()} disabled={busy === 'aria'} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 disabled:opacity-50"><Save size={13} /> Guardar</button>
+                    <button onClick={() => saveAria()} disabled={busy === 'aria'} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 disabled:opacity-50"><Save size={13} /> {t("common.guardar")}</button>
                   </div>
                 </div>
               </div>
               <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
                 <div className="flex items-center gap-2 mb-2.5">
-                  <span className="text-sm font-bold text-white">Personal (jefe / especialista)</span>
+                  <span className="text-sm font-bold text-white">{t("admin.personalJefeEsp")}</span>
                   <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${aria.staffEnabled ? 'bg-violet-500/10 border-violet-400/30 text-violet-200' : 'bg-white/5 border-white/10 text-slate-400'}`}>{aria.staffEnabled ? 'LÍMITE ACTIVO' : 'SIN LÍMITE'}</span>
                 </div>
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><MessageSquare size={11} className="inline mr-1" />Máx. mensajes</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><MessageSquare size={11} className="inline mr-1" />{t("admin.maxMensajes")}</span>
                     <input type="number" min={0} value={aria.staffMaxMessages} onChange={e => setAria(a => ({ ...a, staffMaxMessages: e.target.value.replace(/[^0-9]/g, '') }))} placeholder="∞" className="ctl-input w-24 text-sm rounded-lg px-3 py-2 font-mono" />
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><Clock size={11} className="inline mr-1" />Cada (horas)</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide"><Clock size={11} className="inline mr-1" />{t("admin.cadaHoras")}</span>
                     <input type="number" min={1} value={aria.staffWindowHours} onChange={e => setAria(a => ({ ...a, staffWindowHours: e.target.value.replace(/[^0-9]/g, '') }))} placeholder="5" className="ctl-input w-24 text-sm rounded-lg px-3 py-2 font-mono" />
                   </label>
                   <div className="flex gap-2 ml-auto">
                     <button onClick={() => saveAria({ staffEnabled: !aria.staffEnabled })} disabled={busy === 'aria'} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-50 ${aria.staffEnabled ? 'bg-rose-600 hover:bg-rose-500' : 'bg-violet-600 hover:bg-violet-500'}`}>{busy === 'aria' ? <Loader2 size={13} className="animate-spin" /> : <Power size={13} />}{aria.staffEnabled ? 'Desactivar' : 'Activar'}</button>
-                    <button onClick={() => saveAria()} disabled={busy === 'aria'} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 disabled:opacity-50"><Save size={13} /> Guardar</button>
+                    <button onClick={() => saveAria()} disabled={busy === 'aria'} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 disabled:opacity-50"><Save size={13} /> {t("common.guardar")}</button>
                   </div>
                 </div>
               </div>
@@ -702,9 +704,9 @@ export default function ControlPage() {
           <section className="ctl-card p-5">
             <div className="flex items-center gap-2.5 mb-1">
               <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-400/20 flex items-center justify-center"><Gauge size={15} className="text-sky-400" /></div>
-              <h2 className="font-bold text-[15px] text-white">Límites de perfiles</h2>
+              <h2 className="font-bold text-[15px] text-white">{t("admin.limitesPerfiles")}</h2>
             </div>
-            <p className="text-xs text-slate-400 mb-4 ml-[42px]">Tope máximo por tipo. Vacío o 0 = sin límite.</p>
+            <p className="text-xs text-slate-400 mb-4 ml-[42px]">{t("admin.topeMaximo")}</p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {LIMIT_FIELDS.map(f => (
                 <label key={f.key} className="flex items-center justify-between gap-3 text-sm rounded-xl bg-white/[0.02] border border-white/5 px-3 py-2.5">
@@ -726,7 +728,7 @@ export default function ControlPage() {
           <section className="ctl-card p-5">
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-400/20 flex items-center justify-center"><Terminal size={15} className="text-rose-400" /></div>
-              <h2 className="font-bold text-[15px] text-white">Errores del sistema</h2>
+              <h2 className="font-bold text-[15px] text-white">{t("admin.erroresSistema")}</h2>
               <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400">{errors.length}</span>
               <span className="text-[10px] text-slate-600 font-mono hidden sm:inline">· se auto-limpian errores &gt;{autoPurgeDays}d al cargar</span>
               <div className="ml-auto flex items-center gap-3 flex-wrap">
@@ -745,8 +747,8 @@ export default function ControlPage() {
                     ))}
                   </select>
                 </label>
-                <button onClick={() => { loadErrors(); loadCounts() }} className="flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300"><RefreshCw size={13} /> Actualizar</button>
-                <button onClick={clearErrors} disabled={busy === 'clear'} className="flex items-center gap-1.5 text-xs font-bold text-rose-400 hover:text-rose-300 disabled:opacity-50"><Trash2 size={13} /> Limpiar todo</button>
+                <button onClick={() => { loadErrors(); loadCounts() }} className="flex items-center gap-1.5 text-xs font-bold text-sky-400 hover:text-sky-300"><RefreshCw size={13} /> {t("admin.actualizar")}</button>
+                <button onClick={clearErrors} disabled={busy === 'clear'} className="flex items-center gap-1.5 text-xs font-bold text-rose-400 hover:text-rose-300 disabled:opacity-50"><Trash2 size={13} /> {t("admin.limpiarTodo")}</button>
               </div>
             </div>
             {errors.length === 0 ? (
@@ -754,8 +756,8 @@ export default function ControlPage() {
                 <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-3">
                   <ShieldCheck size={22} className="text-emerald-400" />
                 </div>
-                <p className="text-sm text-slate-300 font-semibold">Sin errores registrados</p>
-                <p className="text-xs text-slate-500">El sistema está limpio.</p>
+                <p className="text-sm text-slate-300 font-semibold">{t("admin.sinErroresReg")}</p>
+                <p className="text-xs text-slate-500">{t("admin.sistemaLimpio")}</p>
               </div>
             ) : (
               <div className="flex flex-col gap-1.5 max-h-[460px] overflow-auto pr-1">

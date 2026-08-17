@@ -5,6 +5,7 @@
 // Las citas creadas aparecen en la agenda de especialista/jefe/secretaria/padre.
 
 import { useState, useEffect, use as usePromise } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import {
   Calendar, Clock, CheckCircle2, Loader2, AlertCircle, LogIn, CalendarCheck,
@@ -15,6 +16,7 @@ type Slot = { time: string; label: string }
 type Dia = { fecha: string; label: string; slots: Slot[] }
 
 export default function ReservarPage({ params }: { params: Promise<{ token: string }> }) {
+  const { t } = useI18n()
   const { token } = usePromise(params)
 
   const [session, setSession] = useState<any>(null)
@@ -159,23 +161,23 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
             <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center mx-auto mb-3">
               <CalendarCheck size={26} className="text-white" />
             </div>
-            <h1 className="text-xl font-bold text-slate-900">Reservá tu cita</h1>
-            <p className="text-sm text-slate-500 mt-1">Iniciá sesión para elegir tu horario</p>
+            <h1 className="text-xl font-bold text-slate-900">{t("reservar.reservaCita")}</h1>
+            <p className="text-sm text-slate-500 mt-1">{t("reservar.iniciaSesionHorario")}</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-3">
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="Correo electrónico"
+              placeholder={t("auth.correoElectronico")}
               className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-500 text-sm" />
             <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="Contraseña"
+              placeholder={t("auth.password")}
               className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-500 text-sm" />
             {loginError && <p className="text-xs text-red-600 flex items-center gap-1.5"><AlertCircle size={12} /> {loginError}</p>}
             <button type="submit" disabled={loggingIn}
               className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
-              {loggingIn ? <><Loader2 size={16} className="animate-spin" /> Ingresando…</> : <><LogIn size={16} /> Iniciar sesión</>}
+              {loggingIn ? <><Loader2 size={16} className="animate-spin" /> {t("common.procesando")}</> : <><LogIn size={16} /> {t("auth.iniciarSesion")}</>}
             </button>
           </form>
-          <p className="text-xs text-slate-400 text-center mt-4">¿No tenés cuenta? Pedile el acceso al centro.</p>
+          <p className="text-xs text-slate-400 text-center mt-4">{t("reservar.noTenesCuenta")}</p>
         </div>
       </Centro>
     )
@@ -198,7 +200,7 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
               </div>
             ))}
           </div>
-          <a href="/padre" className="inline-block px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm">Ir a mi portal</a>
+          <a href="/padre" className="inline-block px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm">{t("reservar.irMiPortal")}</a>
         </div>
       </Centro>
     )
@@ -217,7 +219,7 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
           <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-3">
             <AlertCircle size={26} className="text-red-600" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900 mb-1">No se puede reservar</h1>
+          <h1 className="text-xl font-bold text-slate-900 mb-1">{t("reservar.noSePuedeReservar")}</h1>
           <p className="text-sm text-slate-600">{error}</p>
         </div>
       </Centro>
@@ -233,7 +235,7 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
         <div className="rounded-3xl p-6 mb-5 text-white shadow-xl" style={{ background: 'linear-gradient(135deg,#6366f1,#a855f7)' }}>
           <div className="flex items-center gap-3 mb-2">
             <CalendarCheck size={26} />
-            <h1 className="text-2xl font-bold">Reservá tu cita</h1>
+            <h1 className="text-2xl font-bold">{t("reservar.reservaCita")}</h1>
           </div>
           <p className="text-white/90 text-sm">
             {meta?.serviceType || 'Terapia'}
@@ -248,9 +250,9 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
         {/* Selección de paciente (si el link no lo fijó) */}
         {!linkInfo?.link?.child_id && (
           <div className="rounded-2xl bg-white p-4 mb-4 shadow-sm border border-slate-100">
-            <label className="text-xs font-bold text-slate-500 block mb-2">¿Para quién es la cita?</label>
+            <label className="text-xs font-bold text-slate-500 block mb-2">{t("reservar.paraQuienCita")}</label>
             {children.length === 0 ? (
-              <p className="text-sm text-slate-400 italic">No hay pacientes vinculados a tu cuenta. Contactá al centro.</p>
+              <p className="text-sm text-slate-400 italic">{t("reservar.noPacientesVinc")}</p>
             ) : (
               <select value={childId} onChange={e => setChildId(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 outline-none focus:border-indigo-500 text-sm">
@@ -271,7 +273,7 @@ export default function ReservarPage({ params }: { params: Promise<{ token: stri
         {dias.length === 0 ? (
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm border border-slate-100">
             <Clock size={32} className="text-slate-300 mx-auto mb-3" />
-            <p className="text-sm text-slate-500">No hay horarios disponibles por ahora. Contactá al centro.</p>
+            <p className="text-sm text-slate-500">{t("reservar.noHorarios")}</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-5 gap-4 items-start">

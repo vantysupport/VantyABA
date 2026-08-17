@@ -200,7 +200,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
     const update = () => {
       const now = new Date()
       setHoraActual(now)
-      setSaludo(now.getHours() < 12 ? 'Buenos días' : now.getHours() < 19 ? 'Buenas tardes' : 'Buenas noches')
+      setSaludo(now.getHours() < 12 ? t('dashboard.saludoManana') : now.getHours() < 19 ? t('dashboard.saludoTarde') : t('dashboard.saludoNoche'))
       setDiaStr(now.toLocaleDateString(toBCP47(locale), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
     }
     update()
@@ -507,22 +507,22 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
         <div className="p-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <p className="text-xs capitalize mb-0.5" style={{ color: 'var(--text-muted)' }}>{diaStr}</p>
-            <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>{saludo}, Directora 👋</h2>
+            <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>{saludo}, {t('dashboard.directora')} 👋</h2>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs px-2.5 py-0.5 rounded-full font-medium"
                 style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
-                {totalSesHoy} sesiones hoy
+                {totalSesHoy} {t('dashboard.sesionesHoyMin')}
               </span>
               {sinSesion.length > 0 && (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
                   style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
-                  <AlertCircle size={10} className="inline mr-1" />{sinSesion.length} sin sesión (30d)
+                  <AlertCircle size={10} className="inline mr-1" />{sinSesion.length} {t('dashboard.sinSesion30dInline')}
                 </span>
               )}
               {alertasUrgentes > 0 && (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
                   style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
-                  {alertasUrgentes} alertas urgentes
+                  {alertasUrgentes} {t('dashboard.alertasUrgentesInline')}
                 </span>
               )}
             </div>
@@ -540,10 +540,10 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
 
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <KPI label="Pacientes" value={totalPacientes} sub="Total registrados" icon={Users} bar="#0284c7" onClick={() => navigateTo('ninos')} />
-        <KPI label="Sesiones hoy" value={totalSesHoy} sub={`${realizadasHoy} realizadas`} icon={Calendar} bar="#10b981" onClick={() => navigateTo('agenda')} />
-        <KPI label="Sin sesión 30d" value={sinSesion.length} sub="Requieren seguimiento" icon={AlertTriangle} bar="#f59e0b" urgent={sinSesion.length > 0} onClick={() => navigateTo('ninos')} />
-        <KPI label="Programas ABA" value={totalProgramasAba} sub="Activos" icon={ClipboardList} bar="#0ea5e9" onClick={() => navigateTo('ninos')} />
+        <KPI label={t('pacientes.titulo')} value={totalPacientes} sub={t('dashboard.totalRegistrados')} icon={Users} bar="#0284c7" onClick={() => navigateTo('ninos')} />
+        <KPI label={t('dashboard.sesionesHoy')} value={totalSesHoy} sub={`${realizadasHoy} ${t('dashboard.realizadasLbl')}`} icon={Calendar} bar="#10b981" onClick={() => navigateTo('agenda')} />
+        <KPI label={t('dashboard.sinSesion30d')} value={sinSesion.length} sub={t('dashboard.requierenSeguimiento')} icon={AlertTriangle} bar="#f59e0b" urgent={sinSesion.length > 0} onClick={() => navigateTo('ninos')} />
+        <KPI label={t('nav.programas')} value={totalProgramasAba} sub={t('programas.activos')} icon={ClipboardList} bar="#0ea5e9" onClick={() => navigateTo('ninos')} />
       </div>
 
       {/* ── MÉTRICAS MEDIAS ── */}

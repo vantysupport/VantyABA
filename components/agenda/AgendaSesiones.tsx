@@ -189,7 +189,7 @@ export default function AgendaSesiones({ childId }: { childId?: string }) {
               <div className="bg-blue-50 rounded-xl p-3 flex items-start gap-3">
                 <span className="text-xl">🔗</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-blue-700 mb-1">Link de Videollamada</p>
+                  <p className="text-xs font-semibold text-blue-700 mb-1">{t("admin.linkVideollamada")}</p>
                   <a
                     href={modal.meeting_link}
                     target="_blank"
@@ -233,7 +233,7 @@ export default function AgendaSesiones({ childId }: { childId?: string }) {
             <div className="space-y-3">
               {!childId && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Child ID del paciente</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">{t("admin.childIdPaciente")}</label>
                   <input value={formNueva.child_id} onChange={e => setFormNueva(f => ({ ...f, child_id: e.target.value }))}
                     placeholder={t('agenda.uuidPaciente')}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
@@ -262,23 +262,23 @@ export default function AgendaSesiones({ childId }: { childId?: string }) {
                   <label className="text-xs font-medium text-gray-600 mb-1 block">{t('agenda.tipoLabel')}</label>
                   <select value={formNueva.tipo} onChange={e => setFormNueva(f => ({ ...f, tipo: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
-                    <option value="individual">Individual</option>
-                    <option value="grupal">Grupal</option>
-                    <option value="domiciliaria">Domiciliaria</option>
+                    <option value="individual">{t("ui.individual")}</option>
+                    <option value="grupal">{t("ui.grupal")}</option>
+                    <option value="domiciliaria">{t("admin.domiciliaria")}</option>
                     <option value="evaluacion">{t('agenda.evaluacionOpt')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Modalidad</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">{t("agenda.modalidad")}</label>
                   <select value={formNueva.modalidad} onChange={e => setFormNueva(f => ({ ...f, modalidad: e.target.value }))}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400">
-                    <option value="presencial">Presencial</option>
-                    <option value="virtual">Virtual</option>
+                    <option value="presencial">{t("agenda.presencial")}</option>
+                    <option value="virtual">{t("agenda.virtual")}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Notas (opcional)</label>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">{t("agenda.notasOpcional")}</label>
                 <textarea value={formNueva.notas} onChange={e => setFormNueva(f => ({ ...f, notas: e.target.value }))} rows={2}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 resize-none" />
               </div>

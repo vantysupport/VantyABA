@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useI18n } from '@/lib/i18n-context'
+
 import {
   Calendar, CalendarDays, Users, CheckCircle2, XCircle,
   AlertCircle, Loader2, ArrowRight, Clock, ChevronRight,
@@ -142,6 +144,7 @@ function WeeklyMiniChart() {
 interface Props { onNavigate?: (view: string) => void }
 
 export default function SecretariaHome({ onNavigate }: Props) {
+  const { t } = useI18n()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [horaActual, setHoraActual] = useState<Date | null>(null)
@@ -267,13 +270,13 @@ export default function SecretariaHome({ onNavigate }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
         <div className="rounded-xl p-5 flex flex-col" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>Actividad semanal</p>
+            <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.actividadSemanal")}</p>
             <span className="text-sm font-bold" style={{ color: '#0284c7' }}>{loading ? '—' : stats.semana}</span>
           </div>
           <WeeklyMiniChart />
         </div>
         <div className="rounded-xl p-5 flex flex-col justify-between" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-          <p className="text-[11px] font-bold mb-4" style={{ color: 'var(--text-muted)' }}>Resumen</p>
+          <p className="text-[11px] font-bold mb-4" style={{ color: 'var(--text-muted)' }}>{t("admin.resumen")}</p>
           <div className="flex flex-col gap-4">
             {([
               { label: 'Pacientes activos', value: stats.pacientes,   icon: Users,        color: '#0284c7' },
@@ -319,8 +322,8 @@ export default function SecretariaHome({ onNavigate }: Props) {
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'var(--muted-bg)' }}>
               <Calendar size={22} style={{ color: 'var(--text-muted)' }}/>
             </div>
-            <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>Sin citas para hoy</p>
-            <p className="text-xs" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>Disfruta el día libre 🎉</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.sinCitasHoy")}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>{t("admin.disfrutaDiaLibre")}</p>
           </div>
         ) : (
           <div>{citasHoy.slice(0, 5).map((apt: any) => <AppointmentRow key={apt.id} apt={apt}/>)}</div>
@@ -342,7 +345,7 @@ export default function SecretariaHome({ onNavigate }: Props) {
         ) : listaCitas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 gap-2">
             <Calendar size={26} style={{ color: 'var(--text-muted)' }}/>
-            <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>Sin citas registradas</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.sinCitasRegistradas")}</p>
           </div>
         ) : (
           <div>{listaCitas.slice(0, 6).map((apt: any) => <AppointmentRow key={apt.id} apt={apt}/>)}</div>

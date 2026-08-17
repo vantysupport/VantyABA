@@ -103,12 +103,13 @@ function RecursosAdicionalesView({ isDark, enabledTabs }: {
   isDark: boolean
   enabledTabs?: Record<string, boolean>
 }) {
+  const { t } = useI18n()
   const allTabs = [
-    { id: 'recursos', icon: BookOpen,   label: 'Recursos' },
-    { id: 'tienda',   icon: ShoppingBag,label: 'Tienda' },
-    { id: 'terapias', icon: Sparkles,   label: 'Catálogo Terapias' },
-    { id: 'fonemas',  icon: Mic,        label: 'Fonemas' },
-  ] as const
+    { id: 'recursos' as const, icon: BookOpen,   label: t('nav.recursos') },
+    { id: 'tienda' as const,   icon: ShoppingBag,label: t('nav.tienda') },
+    { id: 'terapias' as const, icon: Sparkles,   label: t('nav.catalogoTerapias') },
+    { id: 'fonemas' as const,  icon: Mic,        label: t('nav.fonemas') },
+  ]
   type RecursosTab = typeof allTabs[number]['id']
   const visibleTabs = allTabs.filter(t => !enabledTabs || enabledTabs[`recursos_${t.id}`] !== false)
   const [tab, setTab] = useState<RecursosTab>('recursos')
@@ -167,10 +168,10 @@ export default function AdminDashboard() {
     { id: 'ninos',        icon: Users,           label: t('nav.pacientes'),       roles: ['jefe','admin','especialista','terapeuta'], featureKey: 'ninos' },
     { id: 'inteligencia', icon: Zap,             label: t('nav.hub'),             roles: ['jefe','admin','especialista'],             featureKey: 'inteligencia' },
     { id: 'cerebro',      icon: Database,        label: t('nav.cerebro'),         roles: ['jefe','admin'],                            featureKey: 'cerebro' },
-    { id: 'pagos',        icon: DollarSign,      label: 'Pagos',                  roles: ['jefe','admin'],                            featureKey: 'pagos' },
-    { id: 'reportes-financieros', icon: BarChart3, label: 'Reportes Financieros', roles: ['jefe'],                                   featureKey: 'reportes_financieros' },
-    { id: 'recursos-adicionales', icon: BookOpen, label: 'Recursos Adicionales',  roles: ['jefe','admin','especialista','terapeuta','secretaria'], featureKey: 'recursos_adicionales' },
-    { id: 'chat-especialistas', icon: MessageCircle, label: 'Chat Equipo',        roles: ['jefe'],                                   featureKey: 'chat_especialistas' },
+    { id: 'pagos',        icon: DollarSign,      label: t('nav.pagos'),                  roles: ['jefe','admin'],                            featureKey: 'pagos' },
+    { id: 'reportes-financieros', icon: BarChart3, label: t('nav.reportesFinancieros'), roles: ['jefe'],                                   featureKey: 'reportes_financieros' },
+    { id: 'recursos-adicionales', icon: BookOpen, label: t('nav.recursosAdicionales'),  roles: ['jefe','admin','especialista','terapeuta','secretaria'], featureKey: 'recursos_adicionales' },
+    { id: 'chat-especialistas', icon: MessageCircle, label: t('nav.chatEquipo'),        roles: ['jefe'],                                   featureKey: 'chat_especialistas' },
   ]
 
   const MOBILE_NAV = [
@@ -181,18 +182,18 @@ export default function AdminDashboard() {
   ]
   const SECONDARY_NAV = [
     { id: 'usuarios', icon: Key, label: t('nav.usuarios'), roles: ['jefe','admin'] },
-    { id: 'config',   icon: User, label: 'Mi Perfil' },
+    { id: 'config',   icon: User, label: t('nav.miperfil') },
     { id: 'importar', icon: Upload, label: t('nav.importarCSV'), hidden: true },
   ]
   const PAGE_TITLES: Record<string, string> = {
     inicio: t('dashboard.titulo'), agenda: t('nav.agenda'),
     ninos: t('nav.pacientes'),
-    reportes: t('nav.historial'), recursos: t('nav.recursos'), 'recursos-adicionales': 'Recursos Adicionales',
+    reportes: t('nav.historial'), recursos: t('nav.recursos'), 'recursos-adicionales': t('nav.recursosAdicionales'),
     mensajes: t('mensajes.titulo'), usuarios: t('nav.usuarios'),
-    importar: 'Importar CSV', vadi: t('nav.aria'),
+    importar: t('nav.importarCSV'), vadi: t('nav.aria'),
     cerebro: t('nav.cerebro'), inteligencia: t('nav.hub'),
-    pagos: 'Pagos y Facturación', 'reportes-financieros': 'Reportes Financieros',
-    'chat-especialistas': 'Chat Equipo', config: 'Mi Perfil',
+    pagos: t('nav.pagosFacturacion'), 'reportes-financieros': t('nav.reportesFinancieros'),
+    'chat-especialistas': t('nav.chatEquipo'), config: t('nav.miperfil'),
   }
 
   const [currentView, setCurrentView] = useState('inicio')
@@ -460,7 +461,7 @@ export default function AdminDashboard() {
         {focusMode && (
           <button
             onClick={() => setFocusMode(false)}
-            title="Salir del modo enfoque"
+            title={t("admin.salirModoEnfoque")}
             className={`hidden md:flex fixed top-3 right-4 z-50 items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg border transition-all hover:scale-105
               ${isDark ? 'bg-[#21262d] border-[#30363d] text-slate-300 hover:bg-[#30363d]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
@@ -503,7 +504,7 @@ export default function AdminDashboard() {
 
             <button
               onClick={() => setFocusMode(f => !f)}
-              title="Pantalla completa"
+              title={t("admin.pantallaCompleta")}
               className={`hidden md:flex p-2 rounded-lg transition-colors
                 ${focusMode
                   ? (isDark ? 'bg-sky-900/30 text-sky-400' : 'bg-sky-50 text-sky-600')
@@ -535,13 +536,13 @@ export default function AdminDashboard() {
                 <div className={`absolute right-0 top-11 w-72 rounded-2xl shadow-2xl border p-4 z-50 animate-scale-in
                   ${isDark ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200'}`}>
                   <div className="flex items-center justify-between mb-3">
-                    <p className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Notificaciones</p>
+                    <p className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{t("nav.notificaciones")}</p>
                     <button onClick={() => setShowNotifications(false)}><X size={16} className="text-slate-400" /></button>
                   </div>
                   <div className="space-y-2 max-h-72 overflow-y-auto">
                     {chatUnread > 0 && (
                       <div className="space-y-1.5">
-                        <p className={`text-[10px] font-bold px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Chat Equipo</p>
+                        <p className={`text-[10px] font-bold px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("nav.chatEquipo")}</p>
                         <button
                           onClick={() => { navigateTo('chat-especialistas'); setShowNotifications(false) }}
                           className={`w-full flex items-start gap-3 p-3 rounded-xl text-left transition-colors
@@ -555,7 +556,7 @@ export default function AdminDashboard() {
                     )}
                     {notifications.length > 0 && (
                       <div className="space-y-1.5">
-                        <p className={`text-[10px] font-bold px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Citas de hoy</p>
+                        <p className={`text-[10px] font-bold px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("nav.citasHoy")}</p>
                         {notifications.map(n => (
                           <div key={n.id} className={`flex items-start gap-3 p-3 rounded-xl ${isDark ? 'bg-sky-900/20' : 'bg-sky-50'}`}>
                             <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1.5 flex-shrink-0" />
@@ -650,7 +651,7 @@ export default function AdminDashboard() {
           <div className={`rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-scale-in
             ${isDark ? 'bg-[#161b22] border border-[#30363d]' : 'bg-white'}`}>
             <div className="flex items-center justify-between mb-5">
-              <h2 className={`text-lg font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Cambiar Contraseña</h2>
+              <h2 className={`text-lg font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{t("common.cambiarPassword")}</h2>
               <button onClick={() => setShowChangePassword(false)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                 <X size={18} className="text-slate-400" />
               </button>
@@ -671,7 +672,7 @@ export default function AdminDashboard() {
                 </button>
                 <button onClick={handleChangePassword} disabled={changingPassword}
                   className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50 transition flex items-center justify-center gap-2">
-                  {changingPassword ? <><Loader2 size={16} className="animate-spin" /> Actualizando...</> : 'Actualizar'}
+                  {changingPassword ? <><Loader2 size={16} className="animate-spin" /> {t("common.procesando")}</> : 'Actualizar'}
                 </button>
               </div>
             </div>
@@ -726,7 +727,7 @@ export default function AdminDashboard() {
               <button onClick={() => { setAriaExpanded(x => !x); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaExpanded ? 'Reducir' : 'Ampliar'}>
                 {ariaExpanded ? <Minimize2 size={15} className="text-white"/> : <Maximize2 size={15} className="text-white"/>}
               </button>
-              <button onClick={() => { setAriaOpen(false); setAriaExpanded(false); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title="Cerrar">
+              <button onClick={() => { setAriaOpen(false); setAriaExpanded(false); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={t("common.cerrar")}>
                 <X size={16} className="text-white"/>
               </button>
             </div>
@@ -747,7 +748,7 @@ export default function AdminDashboard() {
         <button
           onClick={() => setAriaOpen(true)}
           className="fixed bottom-6 md:bottom-6 right-4 md:right-6 z-[91] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 bg-gradient-to-br from-sky-600 to-cyan-600"
-          title="ARIA — Asistente IA">
+          title={t("aria.ariaNombre")}>
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="6" y="9" width="16" height="13" rx="3" fill="white" fillOpacity="0.9"/>
             <rect x="9" y="13" width="3" height="3" rx="1" fill="#0284c7"/>

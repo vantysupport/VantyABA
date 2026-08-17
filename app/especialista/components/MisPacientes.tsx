@@ -303,7 +303,7 @@ function EntornoDetail({ r }: { r: any }) {
   const d = r.datos || r
   return (
     <div className="space-y-3">
-      <Bloque title="Visita" icon={Home} color="bg-amber-50">
+      <Bloque title={t("admin.visitaDomiciliaria")} icon={Home} color="bg-amber-50">
         <Field label="Personas presentes" value={d.personas_presentes} />
         <Field label={t("ui.tipoVivienda")} value={d.tipo_vivienda} />
         <div className="col-span-2"><Field label="Comportamiento observado" value={d.comportamiento_observado} /></div>
@@ -524,8 +524,8 @@ function ResumenIA({ records, paciente }: { records: any[]; paciente: any }) {
         <div className="w-14 h-14 bg-gradient-to-br from-sky-500 to-sky-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
           <Loader2 size={24} className="text-white animate-spin" />
         </div>
-        <h3 className="font-bold text-slate-700 text-base mb-1">Analizando expediente completo...</h3>
-        <p className="text-sm text-slate-400">La IA está procesando toda la información del paciente</p>
+        <h3 className="font-bold text-slate-700 text-base mb-1">{t("especialista.analizandoExpediente")}</h3>
+        <p className="text-sm text-slate-400">{t("especialista.iaProcessando")}</p>
       </div>
     )
   }
@@ -720,7 +720,7 @@ function PatientInfoViewEspecialista({ paciente, onRefresh }: { paciente: any; o
   return (
     <div className="p-6 space-y-4 max-w-2xl">
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-sm" style={{ color: 'var(--text-muted)' }}>Datos del paciente</h3>
+        <h3 className="font-bold text-sm" style={{ color: 'var(--text-muted)' }}>{t("especialista.datosPaciente")}</h3>
         {!editing && (
           <button onClick={() => setEditing(true)}
             className="text-xs font-bold text-sky-600 hover:text-sky-700 px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 transition-colors">
@@ -1141,7 +1141,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('nav.mispacientes')}</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Expedientes clínicos completos</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t("ui.expedientesCompletos")}</p>
         </div>
         <button onClick={() => setShowCrear(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm flex-shrink-0">
@@ -1152,7 +1152,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
       <div className="bg-white dark:bg-[#161b22] rounded-2xl border border-slate-200 dark:border-[#21262d] flex items-center gap-3 px-4 py-3 shadow-sm">
         <Search size={15} className="text-slate-400" />
         <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
-          placeholder="Buscar por nombre o diagnóstico..."
+          placeholder={t("pacientes.buscarDiagnostico")}
           className="flex-1 text-sm text-slate-800 dark:text-slate-100 bg-transparent outline-none placeholder-slate-400 dark:placeholder-slate-600" />
         {busqueda && <button onClick={() => setBusqueda('')}><X size={14} className="text-slate-400 hover:text-slate-600" /></button>}
       </div>
@@ -1185,7 +1185,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
                 </div>
                 <button onClick={e => { e.stopPropagation(); setPacienteVincular(n); setShowVincular(true) }}
                   className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl hover:bg-emerald-100 transition-colors"
-                  title="Vincular cuenta de padre/tutor">
+                  title={t("especialista.vincularCuentaPadre")}>
                   <Link2 size={13} /> Vincular
                 </button>
                 <div className="flex items-center gap-1.5 text-xs font-bold text-sky-600 bg-sky-50 border border-sky-200 px-3 py-2 rounded-xl group-hover:bg-sky-100 transition-colors">
@@ -1212,7 +1212,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
                 <div className="w-9 h-9 bg-sky-100 rounded-xl flex items-center justify-center">
                   <UserPlus size={18} className="text-sky-600" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Nuevo paciente</h3>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{t("pacientes.nuevo")}</h3>
               </div>
               <button onClick={() => setShowCrear(false)} className="p-2 rounded-xl hover:bg-slate-100">
                 <X size={16} className="text-slate-400" />
@@ -1260,7 +1260,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
                   <Link2 size={18} className="text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Vincular cuenta</h3>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{t("usuarios.vincularPaciente")}</h3>
                   <p className="text-xs text-slate-500">{pacienteVincular.name}</p>
                 </div>
               </div>
@@ -1269,9 +1269,9 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
                 <X size={16} className="text-slate-400" />
               </button>
             </div>
-            <p className="text-sm text-slate-500">Busca la cuenta del padre/tutor por su email registrado en la plataforma.</p>
+            <p className="text-sm text-slate-500">{t("especialista.buscaCuentaPadre")}</p>
             <div className="flex gap-2">
-              <input type="email" placeholder="Email del padre/tutor..."
+              <input type="email" placeholder={t("especialista.phEmailPadre")}
                 value={emailBusqueda}
                 onChange={e => { setEmailBusqueda(e.target.value); setParentEncontrado(null) }}
                 onKeyDown={e => e.key === 'Enter' && buscarPadre()}

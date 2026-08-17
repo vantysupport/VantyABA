@@ -102,6 +102,7 @@ function EvalRow({ titulo, paciente, fecha, status, onClick }: any) {
 }
 
 function CitaRow({ cita, onClick }: any) {
+  const { t } = useI18n()
   const fecha = new Date((cita.appointment_date) + 'T00:00:00')
   const hoy = new Date().toISOString().split('T')[0]
   const esHoy = cita.appointment_date === hoy
@@ -121,7 +122,7 @@ function CitaRow({ cita, onClick }: any) {
         <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{nombre}</p>
         <p className="text-[11px] flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
           {hora && <><Clock size={9} /> {hora.slice(0, 5)}</>}
-          {esHoy && <span className="font-bold flex-shrink-0" style={{ color: '#0284c7' }}> · Hoy</span>}
+          {esHoy && <span className="font-bold flex-shrink-0" style={{ color: '#0284c7' }}> · {t("common.hoy")}</span>}
         </p>
       </div>
     </div>
@@ -130,7 +131,7 @@ function CitaRow({ cita, onClick }: any) {
 
 // ── COMPONENTE PRINCIPAL ───────────────────────────────────────────────────────
 export default function EspecialistaHome({ userId, profile, setActiveView }: Props) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
 
   const [stats, setStats] = useState({ pendientes: 0, aprobadas: 0, rechazadas: 0, citasHoy: 0, totalPacientes: 0, sesionesEstaSemana: 0 })
   const [recientes, setRecientes]         = useState<any[]>([])
@@ -261,14 +262,14 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
         {/* Sesiones 7 días + Retención */}
         <div className="rounded-xl p-5 flex flex-col justify-between" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>Sesiones — últimos 7 días</p>
+            <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("dashboard.sesionesUlt7")}</p>
             <span className="text-lg font-bold" style={{ color: '#0284c7' }}>{totalSes}</span>
           </div>
           <BarChart values={sesSemanales} labels={diasLabels} color="#0284c7" />
           <div className="mt-4 pt-4 border-t flex items-center gap-4" style={{ borderColor: 'var(--card-border)' }}>
             <Donut value={stats.totalPacientes - stats.pendientes} total={stats.totalPacientes} color="#10b981" size={56} />
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold mb-1" style={{ color: 'var(--text-muted)' }}>Retención activa</p>
+              <p className="text-[11px] font-bold mb-1" style={{ color: 'var(--text-muted)' }}>{t("dashboard.retencionActiva")}</p>
               <p className="text-base font-bold leading-none" style={{ color: 'var(--text-primary)' }}>
                 {stats.totalPacientes - stats.pendientes}
                 <span className="text-sm font-medium ml-1" style={{ color: 'var(--text-muted)' }}>/ {stats.totalPacientes}</span>
@@ -281,15 +282,15 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
         {/* Evaluaciones recientes */}
         <div className="rounded-xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>Mis evaluaciones recientes</p>
-            <button onClick={() => setActiveView('formularios')} className="text-[10px] font-semibold" style={{ color: '#0284c7' }}>Ver todas →</button>
+            <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("ui.recent_evaluations")}</p>
+            <button onClick={() => setActiveView('formularios')} className="text-[10px] font-semibold" style={{ color: '#0284c7' }}>{t("common.verTodos")} →</button>
           </div>
           {loading ? (
             <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--muted-bg)' }} />)}</div>
           ) : recientes.length === 0 ? (
             <div className="flex flex-col items-center py-4">
               <FileText size={20} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Sin evaluaciones aún</p>
+              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t("ui.no_recent_evals")}</p>
               <button onClick={() => setActiveView('formularios')} className="text-xs font-bold mt-2" style={{ color: '#0284c7' }}>
                 Crear evaluación →
               </button>
@@ -319,7 +320,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
           <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
             <div className="flex items-center gap-2">
               <Users size={13} style={{ color: 'var(--text-muted)' }} />
-              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>Mis pacientes</p>
+              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("especialista.misPacientes")}</p>
             </div>
             <button onClick={() => setActiveView('pacientes')} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: '#0284c7' }}>
               Ver todos <ArrowUpRight size={10} />
@@ -331,7 +332,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
             ) : pacientesRecientes.length === 0 ? (
               <div className="flex flex-col items-center py-10">
                 <Users size={24} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Sin pacientes activos</p>
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t("especialista.sinPacientesActivos")}</p>
               </div>
             ) : (
               <>
@@ -372,7 +373,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
             <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
               <div className="flex items-center gap-2">
                 <Calendar size={13} style={{ color: 'var(--text-muted)' }} />
-                <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>Citas de hoy</p>
+                <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("dashboard.citasDeHoy")}</p>
               </div>
               <button onClick={() => setActiveView('agenda')} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: '#0284c7' }}>
                 Ver agenda <ArrowUpRight size={10} />
@@ -384,7 +385,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
                 : (
                   <div className="flex flex-col items-center py-8">
                     <Calendar size={24} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                    <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>Sin citas agendadas</p>
+                    <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t("agenda.sinCitas")}</p>
                     <button onClick={() => setActiveView('agenda')} className="mt-2 text-xs font-bold" style={{ color: '#0284c7' }}>
                       Agendar ahora →
                     </button>
@@ -398,7 +399,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
           <div className="rounded-xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
             <div className="flex items-center gap-2 mb-3">
               <Brain size={13} style={{ color: '#0284c7' }} />
-              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>Tip clínico del día</p>
+              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("ui.clinical_tip")}</p>
             </div>
             <p className="text-sm leading-relaxed flex items-start gap-2" style={{ color: 'var(--text-primary)' }}>
               {(() => { const TIcon = tip.Icon; return <TIcon size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} /> })()}
@@ -410,7 +411,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
           <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(157deg, rgba(2,132,199,0.05) 0%, var(--card) 46%)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
             <div className="flex items-center gap-2 mb-2">
               <Heart size={13} style={{ color: '#0ea5e9' }} />
-              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>Recordatorio</p>
+              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("especialista.recordatorio")}</p>
             </div>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
               Tu trabajo hace una diferencia real en la vida de cada familia. ¡Gracias por tu dedicación! 💜

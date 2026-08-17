@@ -277,7 +277,7 @@ export default function LoginPage(props: PageProps) {
           {/* Contenido central — minimalista, mucho aire */}
           <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 540 }}>
             <h2 style={{ color: '#fff', fontWeight: 800, fontSize: 'clamp(46px, 4.2vw, 66px)', lineHeight: 1.0, letterSpacing: '-0.035em', marginBottom: 26 }}>
-              <span className="lp-line" style={{ animationDelay: '.05s' }}>Tu hijo merece</span>
+              <span className="lp-line" style={{ animationDelay: '.05s' }}>{t("landing.tuHijoMerece")}</span>
               <span className="lp-line" style={{ animationDelay: '.2s', color: '#7dd3fc' }}>lo mejor.</span>
             </h2>
             <p className="lp-hero-anim" style={{ color: 'rgba(255,255,255,.62)', fontSize: 17, lineHeight: 1.7, maxWidth: 400, animationDelay: '.38s' }}>
@@ -304,7 +304,7 @@ export default function LoginPage(props: PageProps) {
               <Image src="/images/logo.png" alt="Logo" width={40} height={40} style={{ objectFit: 'contain', flexShrink: 0 }} />
               <div>
                 <p style={{ fontWeight: 800, color: '#0c4a6e', fontSize: 14, lineHeight: 1.2, margin: 0 }}>Neuropsicología y Terapias SANTI</p>
-                <p style={{ color: '#6b7280', fontSize: 11, margin: 0 }}>Centro Terapéutico · Pueblo Libre</p>
+                <p style={{ color: '#6b7280', fontSize: 11, margin: 0 }}>{t("auth.centroTerapeutico")}</p>
               </div>
             </div>
 
@@ -353,7 +353,7 @@ export default function LoginPage(props: PageProps) {
 
               {showForgotInfo && (
                 <div className="lp-forgot">
-                  <p>Comunícate con <strong>Neuropsicología y Terapias SANTI</strong> {t('auth.restablecen')}</p>
+                  <p>{t("auth.comunicateCon")} <strong>Neuropsicología y Terapias SANTI</strong> {t('auth.restablecen')}</p>
                   <a href="https://wa.me/51991070734?text=Hola,%20olvidé%20mi%20contraseña." target="_blank" rel="noopener noreferrer">
                     <MessageCircle size={14} /> Contactar por WhatsApp
                   </a>

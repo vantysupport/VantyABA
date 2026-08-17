@@ -271,7 +271,7 @@ export default function ReportGenerator({
             <button
               onClick={loadReportes}
               className="p-2 hover:bg-white/10 rounded-xl transition-colors text-slate-400 hover:text-white"
-              title="Actualizar lista"
+              title={t("admin.actualizarLista")}
             >
               <RefreshCw size={16} />
             </button>
@@ -319,52 +319,52 @@ export default function ReportGenerator({
 
         {/* ── CAMPOS ADICIONALES DEL REPORTE ──────────────────────────── */}
         <div className="space-y-3">
-          <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Datos del reporte</p>
+          <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{t("admin.datosReporte")}</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Grado (estudiantil)</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t("admin.gradoEstudiantil")}</label>
               <input
                 type="text"
                 value={grado}
                 onChange={e => setGrado(e.target.value)}
-                placeholder="Ej: 1° Primaria, Kínder..."
+                placeholder={t("admin.phGrado")}
                 className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 placeholder-slate-300 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Periodo de trabajo</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t("admin.periodoTrabajo")}</label>
               <select
                 value={periodo}
                 onChange={e => setPeriodo(e.target.value)}
                 className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
               >
-                <option value="">Seleccionar periodo...</option>
-                <option value="Primer Periodo">Primer Periodo</option>
-                <option value="Segundo Periodo">Segundo Periodo</option>
-                <option value="Tercer Periodo">Tercer Periodo</option>
+                <option value="">{t("admin.selecPeriodo")}</option>
+                <option value="Primer Periodo">{t("admin.primerPeriodo")}</option>
+                <option value="Segundo Periodo">{t("admin.segundoPeriodo")}</option>
+                <option value="Tercer Periodo">{t("admin.tercerPeriodo")}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Supervisor encargado</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t("admin.supervisorEncargado")}</label>
               <input
                 type="text"
                 value={supervisor}
                 onChange={e => setSupervisor(e.target.value)}
-                placeholder="Nombre del supervisor..."
+                placeholder={t("admin.phSupervisor")}
                 className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 placeholder-slate-300 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Sets con criterio alcanzado</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t("admin.setsCriterioAlcanzado")}</label>
               <input
                 type="text"
                 value={setsAlcanzados}
                 onChange={e => setSetsAlcanzados(e.target.value)}
-                placeholder="Ej: Set 1, Set 3, Set 5..."
+                placeholder={t("admin.phSets")}
                 className="w-full border-2 border-slate-200 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 placeholder-slate-300 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
               />
             </div>
@@ -417,7 +417,7 @@ export default function ReportGenerator({
         {/* Divisor */}
         <div className="flex items-center gap-4">
           <div className="flex-1 h-px bg-slate-100" />
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reportes Guardados</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t("admin.reportesGuardados")}</span>
           <div className="flex-1 h-px bg-slate-100" />
         </div>
 

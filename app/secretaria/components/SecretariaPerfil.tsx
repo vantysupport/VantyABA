@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useI18n } from '@/lib/i18n-context'
+
 import {
   User, Mail, Phone, Lock, LogOut, Shield,
   Eye, EyeOff, Save, Loader2, Camera,
@@ -62,6 +64,7 @@ function Input({ className = '', ...props }: React.InputHTMLAttributes<HTMLInput
 
 // ── Sección Perfil ────────────────────────────────────────────────────────────
 function SeccionPerfil({ profile, onUpdate, onAvatarUpdate }: { profile: any; onUpdate?: () => void; onAvatarUpdate?: (url: string) => void }) {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -92,7 +95,7 @@ function SeccionPerfil({ profile, onUpdate, onAvatarUpdate }: { profile: any; on
     <div className="space-y-4">
       <SectionTitle label="Mi Perfil" />
 
-      <Card title="Foto y Nombre" subtitle="Tu identidad en el sistema" icon={User} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("admin.fotoNombre")} subtitle={t("admin.tuIdentidad")} icon={User} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 mb-6 text-center sm:text-left">
           <div className="relative group cursor-pointer shrink-0" onClick={() => fileRef.current?.click()}>
             {avatarUrl
@@ -133,7 +136,7 @@ function SeccionPerfil({ profile, onUpdate, onAvatarUpdate }: { profile: any; on
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Nombre completo">
-            <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Ej: María García" />
+            <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder={t("pacientes.phNombre")} />
           </Field>
           <Field label="Teléfono">
             <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Ej: +51 987 654 321" />
@@ -141,13 +144,13 @@ function SeccionPerfil({ profile, onUpdate, onAvatarUpdate }: { profile: any; on
         </div>
       </Card>
 
-      <Card title="Correo Electrónico" subtitle="Tu email de acceso al sistema" icon={Mail} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
+      <Card title={t("admin.correoElectronico")} subtitle={t("admin.tuEmailAcceso")} icon={Mail} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
         <div className={`flex items-center gap-3 p-4 rounded-xl border-2 ${isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-slate-50 border-transparent'}`}>
           <Mail size={16} className={isDark ? 'text-slate-500' : 'text-slate-400'} />
           <span className={`text-sm font-medium flex-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{profile?.email}</span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>No editable</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>{t("admin.noEditable")}</span>
         </div>
-        <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Para cambiar el correo contacta al administrador del sistema.</p>
+        <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.paraCambiarCorreo")}</p>
       </Card>
 
       <button onClick={handleSave} disabled={saving}
@@ -161,6 +164,7 @@ function SeccionPerfil({ profile, onUpdate, onAvatarUpdate }: { profile: any; on
 
 // ── Sección Seguridad ─────────────────────────────────────────────────────────
 function SeccionSeguridad() {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const [form, setForm] = useState({ nueva: '', confirmar: '' })
@@ -197,11 +201,11 @@ function SeccionSeguridad() {
   return (
     <div className="space-y-4">
       <SectionTitle label="Seguridad" />
-      <Card title="Cambiar Contraseña" subtitle="Mantén tu cuenta segura" icon={Lock} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("common.cambiarPassword")} subtitle={t("admin.mantenSeguraSimple")} icon={Lock} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="space-y-4">
           <Field label="Nueva contraseña">
             <div className="relative">
-              <Input type={show.nueva ? 'text' : 'password'} value={form.nueva} onChange={e => setForm(f => ({ ...f, nueva: e.target.value }))} placeholder="Mínimo 8 caracteres" className="pr-11" />
+              <Input type={show.nueva ? 'text' : 'password'} value={form.nueva} onChange={e => setForm(f => ({ ...f, nueva: e.target.value }))} placeholder={t("admin.phMin8")} className="pr-11" />
               <button onClick={() => setShow(s => ({ ...s, nueva: !s.nueva }))} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg">
                 {show.nueva ? <EyeOff size={16} className="text-slate-400" /> : <Eye size={16} className="text-slate-400" />}
               </button>
@@ -215,14 +219,14 @@ function SeccionSeguridad() {
           </Field>
           <Field label="Confirmar contraseña">
             <div className="relative">
-              <Input type={show.confirmar ? 'text' : 'password'} value={form.confirmar} onChange={e => setForm(f => ({ ...f, confirmar: e.target.value }))} placeholder="Repite la contraseña" className="pr-11" />
+              <Input type={show.confirmar ? 'text' : 'password'} value={form.confirmar} onChange={e => setForm(f => ({ ...f, confirmar: e.target.value }))} placeholder={t("familias.repitePass")} className="pr-11" />
               <button onClick={() => setShow(s => ({ ...s, confirmar: !s.confirmar }))} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg">
                 {show.confirmar ? <EyeOff size={16} className="text-slate-400" /> : <Eye size={16} className="text-slate-400" />}
               </button>
             </div>
             {form.confirmar && form.nueva && (
               <div className={`flex items-center gap-1.5 mt-2 text-xs font-bold ${form.nueva === form.confirmar ? 'text-emerald-500' : 'text-red-500'}`}>
-                {form.nueva === form.confirmar ? <><CheckCircle size={12} /> Las contraseñas coinciden</> : <><AlertTriangle size={12} /> No coinciden</>}
+                {form.nueva === form.confirmar ? <><CheckCircle size={12} /> {t("admin.passwordsCoinciden")}</> : <><AlertTriangle size={12} /> {t("admin.noCoinciden")}</>}
               </div>
             )}
           </Field>
@@ -239,11 +243,12 @@ function SeccionSeguridad() {
 
 // ── Sección Apariencia ────────────────────────────────────────────────────────
 function SeccionApariencia() {
+  const { t } = useI18n()
   const { isDark, toggleTheme } = useTheme()
   return (
     <div className="space-y-4">
       <SectionTitle label="Apariencia" />
-      <Card title="Tema de la Interfaz" subtitle="Personaliza cómo se ve el panel" icon={Palette} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("admin.temaInterfaz")} subtitle={t("admin.personalizaPanel")} icon={Palette} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="grid grid-cols-2 gap-3">
           {[{ id: 'light', label: 'Claro', Icon: Sun, desc: 'Fondo blanco' }, { id: 'dark', label: 'Oscuro', Icon: Moon, desc: 'Menos fatiga visual' }].map(t => {
             const isActive = (t.id === 'dark') === isDark
@@ -265,17 +270,18 @@ function SeccionApariencia() {
 
 // ── Sección Cuenta ────────────────────────────────────────────────────────────
 function SeccionCuenta({ profile }: { profile: any }) {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const handleLogout = async () => { await releaseSessionNow(); await supabase.auth.signOut(); window.location.href = '/login' }
 
   return (
     <div className="space-y-4">
       <SectionTitle label="Cuenta" />
-      <Card title="Información de Cuenta" subtitle="Detalles de tu acceso" icon={Shield} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
+      <Card title={t("admin.infoCuenta")} subtitle={t("admin.detallesAcceso")} icon={Shield} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
         <div className={`flex items-center gap-3 p-4 rounded-xl ${isDark ? 'bg-[#0d1117]' : 'bg-slate-50'}`}>
           <Mail size={15} className={isDark ? 'text-slate-500' : 'text-slate-400'} />
           <div>
-            <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Email</p>
+            <p className={`text-[10px] font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("common.email")}</p>
             <p className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{profile?.email}</p>
           </div>
         </div>
@@ -283,8 +289,8 @@ function SeccionCuenta({ profile }: { profile: any }) {
           <p className="text-xs font-bold">🗂️ Secretaria</p>
         </div>
       </Card>
-      <Card title="Cerrar Sesión" subtitle="Salir de tu cuenta" icon={LogOut} iconColor="bg-gradient-to-br from-orange-500 to-red-500">
-        <p className={`text-sm mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Al cerrar sesión saldrás del panel y deberás ingresar nuevamente.</p>
+      <Card title={t("common.cerrarSesion2")} subtitle={t("admin.salirCuenta")} icon={LogOut} iconColor="bg-gradient-to-br from-orange-500 to-red-500">
+        <p className={`text-sm mb-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{t("admin.alCerrarSesion")}</p>
         <button onClick={handleLogout}
           className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-red-600 border-2 border-red-200 bg-red-50 hover:bg-red-100 transition-all w-full justify-center active:scale-[0.98]">
           <LogOut size={15} /> Cerrar sesión

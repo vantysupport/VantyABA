@@ -54,10 +54,10 @@ export default function EspecialistaDashboard() {
 
   const NAV_ITEMS = [
     { id: 'inicio',       icon: LayoutDashboard, label: t('nav.inicio') },
-    { id: 'agenda',       icon: Calendar,        label: 'Agenda' },
-    { id: 'pacientes',    icon: Users,           label: 'Pacientes' },
-    { id: 'prediccion',   icon: Zap,             label: 'Análisis Predictivo' },
-    { id: 'evaluaciones', icon: MessageCircle,   label: 'Chat' },
+    { id: 'agenda',       icon: Calendar,        label: t('nav.agenda') },
+    { id: 'pacientes',    icon: Users,           label: t('nav.pacientes') },
+    { id: 'prediccion',   icon: Zap,             label: t('nav.hub') },
+    { id: 'evaluaciones', icon: MessageCircle,   label: t('nav.chat') },
     { id: 'perfil',       icon: User,            label: t('nav.miperfil') },
   ]
 
@@ -397,7 +397,7 @@ export default function EspecialistaDashboard() {
                         ))}
                       </>
                     ) : (
-                      chatUnread === 0 && <p className="text-xs text-slate-400 text-center py-4">Sin notificaciones</p>
+                      chatUnread === 0 && <p className="text-xs text-slate-400 text-center py-4">{t("especialista.sinNotificaciones")}</p>
                     )}
                   </div>
                 </div>
