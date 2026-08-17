@@ -974,7 +974,9 @@
   "tituloStar": "Título *",
   "etiquetas": "Etiquetas Temáticas",
   "paraQuien": "¿Para quién?",
-  "materialEducativo": "Material educativo compartido por el equipo terapéutico"
+  "materialEducativo": "Material educativo compartido por el equipo terapéutico",
+  "pedidoEnviado": "¡Pedido enviado!",
+  "pedidoRevisara": "El equipo del centro lo revisará y te contactará."
  },
  "mensajes": {
   "titulo": "Mensajes",
@@ -1149,7 +1151,11 @@
   "exploraCompra": "Explora la tienda y haz tu primera compra",
   "articuloDigital": "📄 Artículo digital",
   "totalPagado": "Total pagado",
-  "alConfirmarPedido": "Al confirmar tu pedido y pagar, recibirás el archivo por WhatsApp en menos de 24 horas."
+  "alConfirmarPedido": "Al confirmar tu pedido y pagar, recibirás el archivo por WhatsApp en menos de 24 horas.",
+  "todoCatalogo": "Todo el catálogo",
+  "catalogoActualizara": "El catálogo se actualizará pronto",
+  "sinPedidosRealizados": "Sin pedidos realizados",
+  "pedidosAparecen": "Tus pedidos aparecerán aquí"
  },
  "ui": {
   "ai_assistant": "Asistente IA",

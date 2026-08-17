@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import { ToastProvider } from '@/components/Toast'
 import { ThemeProvider } from '@/components/ThemeContext'
+import { I18nProvider } from '@/lib/i18n-context'
 import SessionGuard from '@/components/SessionGuard'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import MaintenanceGate from '@/components/MaintenanceGate'
@@ -161,14 +162,16 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <ErrorBoundary>
-          <ThemeProvider>
-            <ToastProvider>
-              <SessionGuard />
-              <MaintenanceGate>
-                {children}
-              </MaintenanceGate>
-            </ToastProvider>
-          </ThemeProvider>
+          <I18nProvider>
+            <ThemeProvider>
+              <ToastProvider>
+                <SessionGuard />
+                <MaintenanceGate>
+                  {children}
+                </MaintenanceGate>
+              </ToastProvider>
+            </ThemeProvider>
+          </I18nProvider>
         </ErrorBoundary>
 
         {/* El footer legal vive en la página de login (y landing). Se quitó del

@@ -593,7 +593,9 @@
     "tituloStar": "Title *",
     "etiquetas": "Topic Tags",
     "paraQuien": "For whom?",
-    "materialEducativo": "Educational material shared by the therapy team"
+    "materialEducativo": "Educational material shared by the therapy team",
+    "pedidoEnviado": "Order sent!",
+    "pedidoRevisara": "The center team will review it and contact you."
   },
   "agenda": {
     "titulo": "Schedule & Appointments",
@@ -1018,7 +1020,11 @@
     "exploraCompra": "Explore the store and make your first purchase",
     "articuloDigital": "📄 Digital item",
     "totalPagado": "Total paid",
-    "alConfirmarPedido": "When you confirm your order and pay, you will receive the file via WhatsApp within 24 hours."
+    "alConfirmarPedido": "When you confirm your order and pay, you will receive the file via WhatsApp within 24 hours.",
+    "todoCatalogo": "Full catalog",
+    "catalogoActualizara": "The catalog will be updated soon",
+    "sinPedidosRealizados": "No orders placed",
+    "pedidosAparecen": "Your orders will appear here"
   },
   "landing": {
     "gallery": "Gallery",

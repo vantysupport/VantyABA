@@ -36,6 +36,7 @@ const ESTADO_CFG: Record<string,any> = {
 
 // ── Carrito ────────────────────────────────────────────────────────────────
 function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
+  const { t } = useI18n()
   const total = cart.reduce((s: number, i: CartItem) => s + i.product.precio_soles * i.cantidad, 0)
   const [nota, setNota] = useState('')
   const [placing, setPlacing] = useState(false)
@@ -59,8 +60,8 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
         {done ? (
           <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:32,textAlign:'center' }}>
             <div style={{ width:80,height:80,background:'var(--c-stat-green)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20 }}><CheckCircle size={40} color="#16a34a"/></div>
-            <h3 style={{ fontWeight:900,fontSize:22,color:'var(--c-text-primary)',marginBottom:8 }}>¡Pedido enviado!</h3>
-            <p style={{ fontSize:14,color:'var(--c-text-muted)',lineHeight:1.6 }}>El equipo del centro lo revisará y te contactará.</p>
+            <h3 style={{ fontWeight:900,fontSize:22,color:'var(--c-text-primary)',marginBottom:8 }}>{t("recursos.pedidoEnviado")}</h3>
+            <p style={{ fontSize:14,color:'var(--c-text-muted)',lineHeight:1.6 }}>{t("recursos.pedidoRevisara")}</p>
           </div>
         ) : (
           <>
@@ -68,7 +69,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
               {cart.length===0 ? (
                 <div style={{ textAlign:'center',padding:'40px 0' }}>
                   <ShoppingCart size={40} color="var(--c-text-placeholder)" style={{ margin:'0 auto 12px',display:'block' }}/>
-                  <p style={{ color:'var(--c-text-placeholder)',fontSize:14 }}>Tu carrito está vacío</p>
+                  <p style={{ color:'var(--c-text-placeholder)',fontSize:14 }}>{t("ui.cart_empty")}</p>
                 </div>
               ) : cart.map((item: CartItem) => (
                 <div key={item.product.id} style={{ display:'flex',gap:12,padding:'12px',background:'var(--c-surface)',borderRadius:14 }}>
@@ -89,9 +90,9 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
             </div>
             {cart.length>0&&(
               <div style={{ padding:'16px 20px',borderTop:'1px solid var(--c-border-light)' }}>
-                <input value={nota} onChange={e=>setNota(e.target.value)} placeholder="Nota para el centro (opcional)" style={{ width:'100%',padding:'10px 14px',background:'var(--c-surface)',border:'1.5px solid var(--c-border)',borderRadius:12,fontSize:13,outline:'none',marginBottom:12,boxSizing:'border-box',fontFamily:'inherit' }}/>
+                <input value={nota} onChange={e=>setNota(e.target.value)} placeholder={t("familias.notaCentro")} style={{ width:'100%',padding:'10px 14px',background:'var(--c-surface)',border:'1.5px solid var(--c-border)',borderRadius:12,fontSize:13,outline:'none',marginBottom:12,boxSizing:'border-box',fontFamily:'inherit' }}/>
                 <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
-                  <span style={{ fontSize:14,color:'var(--c-text-muted)' }}>Total</span>
+                  <span style={{ fontSize:14,color:'var(--c-text-muted)' }}>{t("common.total")}</span>
                   <span style={{ fontSize:20,fontWeight:900,color:'var(--c-text-primary)' }}>S/ {total.toFixed(2)}</span>
                 </div>
                 <button onClick={handleCheckout} disabled={placing} style={{ width:'100%',padding:'14px',background:'linear-gradient(135deg,#0284c7,#0284c7)',color:'#ffffff',border:'none',borderRadius:14,fontSize:14,fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8 }}>
@@ -273,11 +274,11 @@ export default function ResourcesView({ profile }: Props) {
           {/* Búsqueda */}
           <div className="rv-card" style={{ position:'relative' }}>
             <Search size={15} color="var(--c-text-placeholder)" style={{ position:'absolute',left:14,top:'50%',transform:'translateY(-50%)' }}/>
-            <input type="text" placeholder="Buscar materiales..." value={searchRes} onChange={e=>setSearchRes(e.target.value)} style={{ width:'100%',padding:'12px 14px 12px 38px',background:'var(--c-card)',border:'1.5px solid var(--c-border)',borderRadius:14,fontSize:13,outline:'none',boxSizing:'border-box',fontFamily:'inherit',transition:'border-color .15s' }} onFocus={e=>(e.target as any).style.borderColor='#0284c7'} onBlur={e=>(e.target as any).style.borderColor='var(--c-border)'}/>
+            <input type="text" placeholder={t("ui.search_material")} value={searchRes} onChange={e=>setSearchRes(e.target.value)} style={{ width:'100%',padding:'12px 14px 12px 38px',background:'var(--c-card)',border:'1.5px solid var(--c-border)',borderRadius:14,fontSize:13,outline:'none',boxSizing:'border-box',fontFamily:'inherit',transition:'border-color .15s' }} onFocus={e=>(e.target as any).style.borderColor='#0284c7'} onBlur={e=>(e.target as any).style.borderColor='var(--c-border)'}/>
           </div>
           {/* Filtros */}
           <div className="rv-card" style={{ display:'flex',flexWrap:'wrap',gap:6 }}>
-            <button onClick={()=>setFilterType('all')} style={{ padding:'6px 12px',borderRadius:20,border:`1.5px solid ${filterType==='all'?'#0284c7':'var(--c-border)'}`,fontSize:12,fontWeight:700,cursor:'pointer',background:filterType==='all'?'#0284c7':'var(--c-card)',color:filterType==='all'?'var(--c-card)':'var(--c-text-muted)' }}>Todos</button>
+            <button onClick={()=>setFilterType('all')} style={{ padding:'6px 12px',borderRadius:20,border:`1.5px solid ${filterType==='all'?'#0284c7':'var(--c-border)'}`,fontSize:12,fontWeight:700,cursor:'pointer',background:filterType==='all'?'#0284c7':'var(--c-card)',color:filterType==='all'?'var(--c-card)':'var(--c-text-muted)' }}>{t("common.todos")}</button>
             {Object.entries(TYPE_CFG).map(([key,cfg])=>(
               <button key={key} onClick={()=>setFilterType(key)} style={{ padding:'6px 12px',borderRadius:20,border:`1.5px solid ${filterType===key?cfg.border:'var(--c-border)'}`,fontSize:12,fontWeight:700,cursor:'pointer',background:filterType===key?cfg.bg:'var(--c-card)',color:filterType===key?cfg.color:'var(--c-text-muted)',display:'flex',alignItems:'center',gap:4 }}>
                 <cfg.icon size={12}/>{cfg.label}
@@ -304,7 +305,7 @@ export default function ResourcesView({ profile }: Props) {
                     <div style={{ flex:1,minWidth:0 }}>
                       <div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:2,flexWrap:'wrap' }}>
                         <p style={{ fontWeight:800,fontSize:13,color:'var(--c-text-primary)',margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:200 }}>{r.title}</p>
-                        {isPersonal&&<span style={{ fontSize:9,fontWeight:800,padding:'2px 6px',background:'var(--c-stat-purple)',color:'#0284c7',border:'1px solid var(--c-border)',borderRadius:20,display:'flex',alignItems:'center',gap:3,flexShrink:0 }}><Bell size={8}/>Para ti</span>}
+                        {isPersonal&&<span style={{ fontSize:9,fontWeight:800,padding:'2px 6px',background:'var(--c-stat-purple)',color:'#0284c7',border:'1px solid var(--c-border)',borderRadius:20,display:'flex',alignItems:'center',gap:3,flexShrink:0 }}><Bell size={8}/>{t("ui.for_you")}</span>}
                       </div>
                       {r.description&&<p style={{ fontSize:12,color:'var(--c-text-placeholder)',margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{r.description}</p>}
                       <span style={{ fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`,display:'inline-block',marginTop:4 }}>{cfg.label}</span>
@@ -359,7 +360,7 @@ export default function ResourcesView({ profile }: Props) {
               {/* Búsqueda */}
               <div style={{ position:'relative' }}>
                 <Search size={15} color="var(--c-text-placeholder)" style={{ position:'absolute',left:14,top:'50%',transform:'translateY(-50%)' }}/>
-                <input type="text" placeholder="Buscar productos..." value={searchProd} onChange={e=>setSearchProd(e.target.value)} style={{ width:'100%',padding:'12px 14px 12px 38px',background:'var(--c-card)',border:'1.5px solid var(--c-border)',borderRadius:14,fontSize:13,outline:'none',boxSizing:'border-box',fontFamily:'inherit' }} onFocus={e=>(e.target as any).style.borderColor='#0284c7'} onBlur={e=>(e.target as any).style.borderColor='var(--c-border)'}/>
+                <input type="text" placeholder={t("ui.search_product")} value={searchProd} onChange={e=>setSearchProd(e.target.value)} style={{ width:'100%',padding:'12px 14px 12px 38px',background:'var(--c-card)',border:'1.5px solid var(--c-border)',borderRadius:14,fontSize:13,outline:'none',boxSizing:'border-box',fontFamily:'inherit' }} onFocus={e=>(e.target as any).style.borderColor='#0284c7'} onBlur={e=>(e.target as any).style.borderColor='var(--c-border)'}/>
               </div>
               {/* Destacados */}
               {featuredProds.length>0&&(
@@ -388,7 +389,7 @@ export default function ResourcesView({ profile }: Props) {
               {/* Catálogo regular */}
               {regularProds.length>0&&(
                 <div>
-                  {featuredProds.length>0&&<p style={{ fontSize:11,fontWeight:800,color:'var(--c-text-placeholder)',textTransform:'uppercase',letterSpacing:1,margin:'0 0 10px' }}>Todo el catálogo</p>}
+                  {featuredProds.length>0&&<p style={{ fontSize:11,fontWeight:800,color:'var(--c-text-placeholder)',textTransform:'uppercase',letterSpacing:1,margin:'0 0 10px' }}>{t("tienda.todoCatalogo")}</p>}
                   <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
                     {regularProds.map(p=>{
                       const inCart=cart.some(i=>i.product.id===p.id); const justAdded=addedId===p.id
@@ -411,8 +412,8 @@ export default function ResourcesView({ profile }: Props) {
               {filteredProds.length===0&&(
                 <div style={{ background:'var(--c-card)',borderRadius:24,border:'1.5px solid var(--c-border-light)',padding:'48px 24px',textAlign:'center' }}>
                   <div style={{ width:64,height:64,background:'var(--c-stat-blue)',borderRadius:18,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px' }}><ShoppingBag size={28} color="#93c5fd"/></div>
-                  <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-muted)',margin:'0 0 6px' }}>Sin productos disponibles</p>
-                  <p style={{ fontSize:12,color:'var(--c-text-placeholder)' }}>El catálogo se actualizará pronto</p>
+                  <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-muted)',margin:'0 0 6px' }}>{t("tienda.sinProductos")}</p>
+                  <p style={{ fontSize:12,color:'var(--c-text-placeholder)' }}>{t("tienda.catalogoActualizara")}</p>
                 </div>
               )}
               {/* Carrito flotante */}
@@ -430,8 +431,8 @@ export default function ResourcesView({ profile }: Props) {
               {orders.length===0 ? (
                 <div style={{ background:'var(--c-card)',borderRadius:24,border:'1.5px solid var(--c-border-light)',padding:'48px 24px',textAlign:'center' }}>
                   <div style={{ width:64,height:64,background:'var(--c-stat-blue)',borderRadius:18,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 14px' }}><Package size={28} color="#93c5fd"/></div>
-                  <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-muted)',margin:'0 0 6px' }}>Sin pedidos realizados</p>
-                  <p style={{ fontSize:12,color:'var(--c-text-placeholder)' }}>Tus pedidos aparecerán aquí</p>
+                  <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-muted)',margin:'0 0 6px' }}>{t("tienda.sinPedidosRealizados")}</p>
+                  <p style={{ fontSize:12,color:'var(--c-text-placeholder)' }}>{t("tienda.pedidosAparecen")}</p>
                 </div>
               ) : orders.map(order=>{
                 const cfg=ESTADO_CFG[order.estado]||ESTADO_CFG.pendiente; const Icon=cfg.Icon
