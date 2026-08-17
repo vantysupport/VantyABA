@@ -1,7 +1,8 @@
 // 🔒 Proxy / Middleware global de seguridad SANTI
 // ⚠️  Next.js 16+ con Turbopack: este archivo se llama proxy.ts (antes middleware.ts)
 // ════════════════════════════════════════════════════════════════════════════
-// Se ejecuta en EDGE antes de cualquier ruta y aplica 3 capas:
+// Se ejecuta en EDGE antes de cualquier ruta y aplica 4 capas:
+//   0. i18n: prefijo de idioma en la URL (/en, /es) + autodetección
 //   1. Auth: bloquea acceso a /admin, /secretaria, /padre, /especialista sin sesión
 //   2. Role gates: cada panel solo es accesible a su rol
 //   3. API protection: /api/* requiere sesión salvo rutas explícitamente públicas
@@ -12,6 +13,16 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { rateLimit, RATE_LIMITS, getClientIP } from './lib/rate-limit'
+
+// ── i18n ─────────────────────────────────────────────────────────────────────
+const I18N_LOCALES = ['en', 'es'] as const
+const I18N_DEFAULT = 'es'
+function detectLocale(req: NextRequest): string {
+  const cookie = req.cookies.get('vanty_locale')?.value
+  if (cookie === 'en' || cookie === 'es') return cookie
+  const al = (req.headers.get('accept-language') || '').toLowerCase()
+  return al.startsWith('en') ? 'en' : I18N_DEFAULT
+}
 
 // Rutas que NO requieren autenticación (públicas por diseño)
 const PUBLIC_PATHS = [
@@ -72,8 +83,41 @@ function pickRateLimit(pathname: string): typeof RATE_LIMITS[keyof typeof RATE_L
 }
 
 export async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl
-  const res = NextResponse.next()
+  const rawPath = req.nextUrl.pathname
+  const isApi = rawPath.startsWith('/api')
+
+  // ═══ CAPA 0 · i18n (prefijo /en, /es) ═══════════════════════════════════════
+  // Las rutas /api NO llevan prefijo de idioma. Las páginas SÍ.
+  const seg = rawPath.split('/')[1]
+  const hasLocale = seg === 'en' || seg === 'es'
+  const locale = hasLocale ? seg : detectLocale(req)
+
+  if (!isApi && !hasLocale) {
+    // Sin prefijo → redirigir a la versión con idioma (autodetectado o cookie)
+    const redirectUrl = req.nextUrl.clone()
+    redirectUrl.pathname = `/${locale}${rawPath === '/' ? '' : rawPath}`
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // Ruta lógica SIN prefijo (para toda la lógica de auth/roles/rate-limit)
+  const pathname = (!isApi && hasLocale) ? (rawPath.slice(3) || '/') : rawPath
+
+  // Respuesta base: rewrite para páginas con prefijo (así app/admin sirve /es/admin
+  // sin mover archivos); next() para API.
+  const buildBaseRes = () => {
+    if (!isApi && hasLocale) {
+      const u = req.nextUrl.clone()
+      u.pathname = pathname
+      return NextResponse.rewrite(u)
+    }
+    return NextResponse.next()
+  }
+  const res = buildBaseRes()
+  // Persistir el idioma elegido (por si vino por URL sin cookie previa)
+  if (!isApi) res.cookies.set('vanty_locale', locale, { path: '/', maxAge: 60 * 60 * 24 * 365 })
+
+  // Helper: construir redirects manteniendo el prefijo de idioma en páginas
+  const pageUrl = (p: string) => new URL(`/${locale}${p === '/' ? '' : p}`, req.url)
 
   // 0a. Rate limiting (corre ANTES que cualquier auth — para no gastar DB en bots)
   const rateConfig = pickRateLimit(pathname)
@@ -101,7 +145,7 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // 0b. Rutas explícitamente públicas → seguir sin tocar
+  // 0b. Rutas explícitamente públicas → seguir sin tocar (ya con rewrite de idioma)
   if (isPublicPath(pathname)) return res
 
   // 1. Crear cliente Supabase para leer la sesión desde cookies
@@ -144,9 +188,9 @@ export async function proxy(req: NextRequest) {
 
   if (!isProtected) return res
 
-  // Sin sesión → al login con redirect-back
+  // Sin sesión → al login con redirect-back (con prefijo de idioma)
   if (!user) {
-    const loginUrl = new URL('/login', req.url)
+    const loginUrl = pageUrl('/login')
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
   }
@@ -162,11 +206,10 @@ export async function proxy(req: NextRequest) {
   const role = (profile as any)?.role || 'padre'
 
   // 4a. 🔐 Forzar 2FA si el role lo requiere y el usuario aún no enroló
-  //     (solo aplica si las columnas mfa_required / mfa_enrolled_at existen)
   const mfaRequired = (profile as any)?.mfa_required === true
   const mfaEnrolled = !!(profile as any)?.mfa_enrolled_at
   if (mfaRequired && !mfaEnrolled && pathname !== '/mfa-required') {
-    return NextResponse.redirect(new URL('/mfa-required', req.url))
+    return NextResponse.redirect(pageUrl('/mfa-required'))
   }
 
   const allowedRoots = ROLE_ROUTES[role] || []
@@ -174,28 +217,20 @@ export async function proxy(req: NextRequest) {
 
   if (!matchesRole) {
     // El usuario está logueado pero quiere entrar a un panel que no le corresponde.
-    // Redirigir a SU panel propio en vez de tirar 403 (mejor UX).
+    // Redirigir a SU panel propio (con prefijo de idioma) en vez de tirar 403.
     const homeForRole =
       role === 'jefe' || role === 'admin' || role === 'terapeuta' || role === 'especialista' ? '/admin'
       : role === 'secretaria' ? '/secretaria'
       : '/padre'
-    return NextResponse.redirect(new URL(homeForRole, req.url))
+    return NextResponse.redirect(pageUrl(homeForRole))
   }
 
   return res
 }
 
 // Matcher: a qué rutas se aplica el middleware
-// Excluye assets estáticos para no penalizar performance.
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for:
-     * - _next/static (assets)
-     * - _next/image (next image optimization)
-     * - favicon.ico
-     * - imágenes públicas en /public
-     */
     '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?)$).*)',
   ],
 }

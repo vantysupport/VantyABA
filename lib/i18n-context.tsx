@@ -33,15 +33,34 @@ const I18nContext = createContext<I18nCtx>({
   changeLocale: () => {},
 })
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE)
+// Lee el idioma del PREFIJO de la URL (/en/... o /es/...). Es la fuente de verdad:
+// el middleware (proxy.ts) garantiza que toda página tenga prefijo de idioma.
+function localeFromPath(): Locale | null {
+  try {
+    const seg = window.location.pathname.split('/')[1]
+    return seg === 'en' || seg === 'es' ? seg : null
+  } catch { return null }
+}
 
-  // Al montar: leer el idioma guardado
+// Reconstruye la URL actual cambiando el prefijo de idioma (conserva ruta+query+hash).
+function urlWithLocale(loc: Locale): string {
+  const { pathname, search, hash } = window.location
+  const parts = pathname.split('/')
+  if (parts[1] === 'en' || parts[1] === 'es') parts[1] = loc
+  else parts.splice(1, 0, loc)
+  return parts.join('/') + search + hash
+}
+
+export function I18nProvider({ children, initialLocale }: { children: ReactNode; initialLocale?: Locale }) {
+  const [locale, setLocale] = useState<Locale>(initialLocale ?? DEFAULT_LOCALE)
+
+  // Al montar: el idioma lo dicta el prefijo de la URL (fuente de verdad).
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('vanty_locale')
-      if (stored === 'en' || stored === 'es') setLocale(stored)
-    } catch { /* noop */ }
+    const fromPath = localeFromPath()
+    if (fromPath && fromPath !== locale) setLocale(fromPath)
+    // Mantener localStorage sincronizado para el resto de la UI
+    try { if (fromPath) localStorage.setItem('vanty_locale', fromPath) } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Reflejar el idioma en <html lang> para accesibilidad/SEO
@@ -49,9 +68,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     try { document.documentElement.lang = locale } catch { /* noop */ }
   }, [locale])
 
+  // Cambiar de idioma = navegar a la MISMA página con el otro prefijo de URL
+  // (p. ej. /es/admin → /en/admin). Recarga completa: simple y 100% fiable.
   const changeLocale = useCallback((loc: Locale) => {
     if (loc !== 'es' && loc !== 'en') return
     try { localStorage.setItem('vanty_locale', loc) } catch { /* noop */ }
+    try { document.cookie = `vanty_locale=${loc}; path=/; max-age=31536000` } catch { /* noop */ }
+    try { window.location.assign(urlWithLocale(loc)); return } catch { /* noop */ }
     setLocale(loc)
   }, [])
 

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import { ToastProvider } from '@/components/Toast'
 import { ThemeProvider } from '@/components/ThemeContext'
@@ -73,13 +74,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // El middleware (proxy.ts) setea `vanty_locale` según el prefijo /en o /es de
+  // la URL. Lo leemos en el servidor para renderizar ya en el idioma correcto
+  // (sin "flash" de español) y para el atributo <html lang>.
+  const cookieStore = await cookies()
+  const cookieLocale = cookieStore.get('vanty_locale')?.value
+  const initialLocale = cookieLocale === 'en' ? 'en' : 'es'
   return (
-    <html lang="es" className={`${jakarta.variable} ${poppins.variable}`} suppressHydrationWarning>
+    <html lang={initialLocale} className={`${jakarta.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
         {/*
           🚫 ANTI-FOUC (Flash of Unstyled Content)
@@ -144,7 +151,7 @@ export default function RootLayout({
           __html: `
             (function() {
               try {
-                var p = window.location.pathname;
+                var p = window.location.pathname.replace(/^\/(en|es)(?=\/|$)/, '') || '/';
                 var isLogin = p === '/' || p === '/login';
                 if (isLogin) {
                   document.documentElement.classList.remove('dark');
@@ -162,7 +169,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <ErrorBoundary>
-          <I18nProvider>
+          <I18nProvider initialLocale={initialLocale}>
             <ThemeProvider>
               <ToastProvider>
                 <SessionGuard />
