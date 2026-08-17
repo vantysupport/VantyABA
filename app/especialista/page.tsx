@@ -186,13 +186,13 @@ export default function EspecialistaDashboard() {
   const handleLogout = async () => { await releaseSessionNow(); await supabase.auth.signOut(); router.push('/login') }
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) { toast.warning('Mínimo 6 caracteres'); return }
-    if (newPassword !== confirmPassword) { toast.error('Las contraseñas no coinciden'); return }
+    if (newPassword.length < 6) { toast.warning(t('auto.page.minimo6Caracteres3')); return }
+    if (newPassword !== confirmPassword) { toast.error(t('auto.page.lasContrasenasNoCoinciden3')); return }
     setChangingPassword(true)
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
-      toast.success('Contraseña actualizada')
+      toast.success(t('auto.page.contrasenaActualizada2'))
       setShowChangePassword(false)
       setNewPassword(''); setConfirmPassword('')
     } catch (e: any) { toast.error(e.message) }

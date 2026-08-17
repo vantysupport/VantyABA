@@ -158,7 +158,7 @@ function ABADetail({ r }: { r: any }) {
   const toast = useToast()
 
   const descargarReporteWord = async () => {
-    if (!r.id) { toast.error('No se encontró el ID del registro'); return }
+    if (!r.id) { toast.error(t('auto.misPacientes.noSeEncontroElId')); return }
     setDownloading(true)
     try {
       const res = await fetch('/api/reporte-sesion-aba', {
@@ -175,7 +175,7 @@ function ABADetail({ r }: { r: any }) {
       })
       a.click()
       URL.revokeObjectURL(url)
-      toast.success('Reporte Word descargado')
+      toast.success(t('auto.misPacientes.reporteWordDescargado'))
     } catch (e: any) {
       toast.error('Error: ' + e.message)
     } finally {
@@ -228,7 +228,7 @@ function AnamnesisDetail({ r }: { r: any }) {
   const toast = useToast()
 
   const descargarReporteWord = async () => {
-    if (!r.id) { toast.error('No se encontró el ID del registro'); return }
+    if (!r.id) { toast.error(t('auto.misPacientes.noSeEncontroElId2')); return }
     setDownloading(true)
     try {
       const res = await fetch('/api/reporte-anamnesis', {
@@ -245,7 +245,7 @@ function AnamnesisDetail({ r }: { r: any }) {
       })
       a.click()
       URL.revokeObjectURL(url)
-      toast.success('Historia Clínica descargada')
+      toast.success(t('auto.misPacientes.historiaClinicaDescargada'))
     } catch (e: any) {
       toast.error('Error: ' + e.message)
     } finally {
@@ -710,7 +710,7 @@ function PatientInfoViewEspecialista({ paciente, onRefresh }: { paciente: any; o
         diagnosis: form.diagnosis.trim() || null,
       }).eq('id', paciente.id)
       if (error) throw error
-      toast.success('Paciente actualizado')
+      toast.success(t('auto.misPacientes.pacienteActualizado'))
       setEditing(false)
       onRefresh()
     } catch (e: any) { toast.error(e.message) }
@@ -823,7 +823,7 @@ function FichasTabEspecialista({ childId, childName }: { childId: string; childN
         description:       'Ficha clínica generada automáticamente',
         visible_to_parent: false,
       })
-      toast.success('Word generado y guardado en Documentos del paciente')
+      toast.success(t('auto.misPacientes.wordGeneradoYGuardadoEn'))
     } catch (e: any) {
       console.error('Error auto-generando Word:', e)
     }
@@ -893,7 +893,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
   }, [])
 
   const handleCrear = async () => {
-    if (!newForm.name.trim()) { toast.error('El nombre es requerido'); return }
+    if (!newForm.name.trim()) { toast.error(t('auto.misPacientes.elNombreEsRequerido')); return }
     setSaving(true)
     try {
       const { data, error } = await supabase.from('children').insert({
@@ -903,7 +903,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
         is_active: true,
       }).select().single()
       if (error) throw error
-      toast.success('Paciente creado correctamente')
+      toast.success(t('auto.misPacientes.pacienteCreadoCorrectamente'))
       setNewForm({ name: '', birth_date: '', diagnosis: '' })
       setShowCrear(false)
       await cargar()
@@ -922,8 +922,8 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
         .ilike('email', emailBusqueda.trim())
         .maybeSingle()
       if (data) setParentEncontrado(data)
-      else toast.error('No se encontró ningún usuario con ese email')
-    } catch { toast.error('No se encontró ningún usuario con ese email') }
+      else toast.error(t('auto.misPacientes.noSeEncontroNingunUsuario'))
+    } catch { toast.error(t('auto.misPacientes.noSeEncontroNingunUsuario2')) }
     finally { setBuscandoPadre(false) }
   }
 
@@ -935,7 +935,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
         .update({ parent_id: parentEncontrado.id })
         .eq('id', pacienteVincular.id)
       if (error) throw error
-      toast.success(`${pacienteVincular.name} vinculado a ${parentEncontrado.full_name || parentEncontrado.email}`)
+      toast.success(t('auto.misPacientes.vinculadoA', { v1: String(pacienteVincular.name), v2: String(parentEncontrado.full_name || parentEncontrado.email) }))
       setShowVincular(false)
       setEmailBusqueda('')
       setParentEncontrado(null)

@@ -259,7 +259,7 @@ function SendFormModal({ form, children, onSend, onClose }: any) {
   const [sending, setSending] = useState(false)
 
   const handleSend = async () => {
-    if (!childId) { alert('Selecciona un paciente'); return }
+    if (!childId) { alert(t('auto.neuroFormsView.seleccionaUnPaciente')); return }
     setSending(true)
     await onSend({ childId, message, deadline })
     setSending(false)
@@ -390,7 +390,7 @@ export default function NeuroFormsView() {
       if (json.error) throw new Error(json.error)
       setAiAnalysis(json.analysis)
       setEditedMessage(json.analysis?.mensaje_padres || '')
-      toast.success('Análisis generado')
+      toast.success(t('auto.neuroFormsView.analisisGenerado'))
     } catch (err: any) {
       toast.error('Error en análisis: ' + err.message)
     } finally {
@@ -399,7 +399,7 @@ export default function NeuroFormsView() {
   }
 
   const handleSaveForm = async () => {
-    if (!selectedForm || !selectedChild) { toast.error('Selecciona un paciente'); return }
+    if (!selectedForm || !selectedChild) { toast.error(t('auto.neuroFormsView.seleccionaUnPaciente2')); return }
     setIsSaving(true)
     try {
       const { data: savedRecord } = await supabase.from('form_responses').insert([{
@@ -433,7 +433,7 @@ export default function NeuroFormsView() {
 
       setSavedRecordId((savedRecord as any)?.id || null)
       setShowSuccessScreen(true)
-      toast.success('Formulario guardado correctamente')
+      toast.success(t('auto.neuroFormsView.formularioGuardadoCorrectamente'))
     } catch (err: any) {
       toast.error('Error al guardar: ' + err.message)
     } finally {
@@ -449,7 +449,7 @@ export default function NeuroFormsView() {
 
       // Validar que el niño tenga un padre vinculado antes de enviar
       if (!parentId) {
-        toast.error('Este paciente no tiene un padre vinculado. Ve a Pacientes y vincula un padre primero.')
+        toast.error(t('auto.neuroFormsView.estePacienteNoTieneUn'))
         return
       }
 
@@ -468,7 +468,7 @@ export default function NeuroFormsView() {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success(`Formulario enviado correctamente`)
+      toast.success(t('auto.neuroFormsView.formularioEnviadoCorrectamente'))
       loadSentForms()
     } catch (err: any) {
       toast.error('Error al enviar: ' + err.message)
@@ -529,7 +529,7 @@ export default function NeuroFormsView() {
         document.body.appendChild(a); a.click()
         URL.revokeObjectURL(url); document.body.removeChild(a)
 
-        toast.success('Reporte Word descargado')
+        toast.success(t('auto.neuroFormsView.reporteWordDescargado'))
       } catch (err: any) {
         toast.error('Error generando reporte: ' + (err.message || 'Intenta de nuevo'))
       } finally {

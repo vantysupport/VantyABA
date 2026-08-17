@@ -73,7 +73,7 @@ export default function MensajesPendientesPanel() {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Cambios guardados')
+      toast.success(t('auto.mensajesPendientesPanel.cambiosGuardados'))
       setEditingId(null)
       setMessages(prev => prev.map(m => m.id === id ? { ...m, edited_message: editText } : m))
     } catch (err: any) {
@@ -95,7 +95,7 @@ export default function MensajesPendientesPanel() {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Mensaje aprobado y enviado al padre/madre')
+      toast.success(t('auto.mensajesPendientesPanel.mensajeAprobadoYEnviadoAl'))
       setEditingId(null)
       loadMessages()
     } catch (err: any) {
@@ -106,7 +106,7 @@ export default function MensajesPendientesPanel() {
   }
 
   const rejectMessage = async (id: string) => {
-    if (!confirm('¿Descartar este mensaje? No llegará al padre/madre.')) return
+    if (!confirm(t('auto.mensajesPendientesPanel.descartarEsteMensajeNoLlegara'))) return
     setActionLoading(id + '_reject')
     try {
       const res = await fetch('/api/admin/parent-messages', {
@@ -116,7 +116,7 @@ export default function MensajesPendientesPanel() {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Mensaje descartado')
+      toast.success(t('auto.mensajesPendientesPanel.mensajeDescartado'))
       loadMessages()
     } catch (err: any) {
       toast.error('Error: ' + err.message)

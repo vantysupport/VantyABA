@@ -624,7 +624,7 @@ function HistorialFormCard({ sf, onReportGenerated }: { sf: any; onReportGenerat
       document.body.appendChild(a); a.click()
       URL.revokeObjectURL(url); document.body.removeChild(a)
 
-      toast.success('Reporte Word generado y descargado')
+      toast.success(t('auto.evaluacionesUnificadas.reporteWordGeneradoYDescargado'))
       onReportGenerated()
     } catch (err: any) {
       console.error('Error generando reporte:', err)
@@ -887,7 +887,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
         setEditedMessage(analysis?.mensaje_padres || analysis?.informe_padres_vineland || analysis?.informe_padres_wisc || analysis?.informe_padres_basc || analysis?.informe_familia_ados || analysis?.informe_padres_entorno || analysis?.mensaje_padres_entorno || analysis?.informe_padres_ablls || analysis?.informe_padres || '')
         setEditedActividades(analysis?.actividades_casa || analysis?.actividad_casa || '')
       }
-      toast.success('Análisis IA generado')
+      toast.success(t('auto.evaluacionesUnificadas.analisisIaGenerado'))
     } catch (err: any) {
       const isQuota = err.message?.includes('Cuota') || err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED')
       toast.error(isQuota 
@@ -900,7 +900,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
   }
 
   const handleSave = async () => {
-    if (!selectedChild) { toast.error('Selecciona un paciente'); return }
+    if (!selectedChild) { toast.error(t('auto.evaluacionesUnificadas.seleccionaUnPaciente')); return }
     if (answeredCount < 2) { toast.error('Responde al menos 2 preguntas'); return }
     setIsSaving(true)
     try {
@@ -953,7 +953,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
       setSavedRecordId((savedRecord as any)?.id || null)
       setSavedChildId(selectedChild)
       setShowSuccessScreen(true)
-      toast.success('Formulario guardado correctamente')
+      toast.success(t('auto.evaluacionesUnificadas.formularioGuardadoCorrectamente'))
 
       // Queue AI-generated parent message for admin approval (if it exists)
       if (aiAnalysis?.mensaje_padres) {
@@ -1033,7 +1033,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
         document.body.appendChild(a); a.click()
         URL.revokeObjectURL(url); document.body.removeChild(a)
 
-        toast.success('Reporte Word descargado')
+        toast.success(t('auto.evaluacionesUnificadas.reporteWordDescargado'))
       } catch (err: any) {
         toast.error('Error generando reporte: ' + (err.message || 'Intenta de nuevo'))
       } finally {
@@ -1365,7 +1365,7 @@ export default function EvaluacionesUnificadas({ initialChildId, initialChildNam
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Formulario enviado')
+      toast.success(t('auto.evaluacionesUnificadas.formularioEnviado'))
       loadData()
     } catch (err: any) {
       toast.error('Error al enviar: ' + err.message)

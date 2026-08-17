@@ -254,7 +254,7 @@ export default function ParentDashboard() {
   // La clínica agenda las citas directamente desde el panel administrativo
 
   const handleCancelAppointment = async (appointmentId: string, isReschedule: boolean = false) => {
-    if(!confirm("¿Seguro que deseas cancelar esta cita? Si necesitás cambiar el horario, contactá al centro.")) return
+    if(!confirm(t('auto.page.seguroQueDeseasCancelarEsta'))) return
 
     setBookingLoading(true)
     try {
@@ -272,7 +272,7 @@ export default function ParentDashboard() {
   const handleAddChild = async (e: any) => {
     e.preventDefault()
     if (padreBloqueado) {
-      alert('El centro alcanzó el número máximo de cuentas de familias. Comunícate con el centro para habilitar tu acceso.')
+      alert(t('auto.page.elCentroAlcanzoElNumero'))
       return
     }
 
@@ -281,17 +281,17 @@ export default function ParentDashboard() {
     const diagnosis = e.target.diagnosis?.value || 'En evaluación'
     
     if(!profile?.id) {
-        alert("Error: No se encontró tu perfil")
+        alert(t('auto.page.errorNoSeEncontroTu'))
         return
     }
 
     if(!name.trim()) {
-        alert("El nombre es obligatorio")
+        alert(t('auto.page.elNombreEsObligatorio'))
         return
     }
 
     if(!dob) {
-        alert("La fecha de nacimiento es obligatoria")
+        alert(t('auto.page.laFechaDeNacimientoEs'))
         return
     }
 
@@ -310,7 +310,7 @@ export default function ParentDashboard() {
             // El trigger de base rechaza al padre que excede el límite → mensaje amable.
             if (/máximo de cuentas|PADRE_LIMIT/i.test(error.message || '')) {
                 setPadreBloqueado(true)
-                alert('El centro alcanzó el número máximo de cuentas de familias. Comunícate con el centro para habilitar tu acceso.')
+                alert(t('auto.page.elCentroAlcanzoElNumero2'))
             } else {
                 alert("Error al guardar: " + error.message)
             }
@@ -318,7 +318,7 @@ export default function ParentDashboard() {
         }
 
         if (!data || data.length === 0) {
-            alert("No se pudo crear el registro. Verifica los permisos en Supabase.")
+            alert(t('auto.page.noSePudoCrearEl'))
             return
         }
 
@@ -364,12 +364,12 @@ export default function ParentDashboard() {
     const confirmPass = e.target.confirmPassword.value
     
     if (newPass !== confirmPass) {
-      alert("Las contraseñas no coinciden")
+      alert(t('auto.page.lasContrasenasNoCoinciden'))
       return
     }
     
     if (newPass.length < 6) {
-      alert("La contraseña debe tener al menos 6 caracteres")
+      alert(t('auto.page.laContrasenaDebeTenerAl'))
       return
     }
     

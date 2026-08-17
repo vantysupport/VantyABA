@@ -1030,7 +1030,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
 
         <button
           onClick={async () => {
-            if (terapiasElegidas.length === 0) { alert('Elige al menos una terapia'); return }
+            if (terapiasElegidas.length === 0) { alert(t('auto.evaluacionInicialView.eligeAlMenosUnaTerapia')); return }
             setEnviandoSeleccion(true)
             try {
               const r = await fetch('/api/evaluacion-inicial/seleccionar', {

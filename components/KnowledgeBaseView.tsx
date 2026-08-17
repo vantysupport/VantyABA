@@ -37,24 +37,24 @@ export default function KnowledgeBaseView() {
       const res = await fetch('/api/knowledge/ingest')
       const json = await res.json()
       setDocumentos(json.data || [])
-    } catch { toast.error('Error cargando documentos') }
+    } catch { toast.error(t('auto.knowledgeBaseView.errorCargandoDocumentos2')) }
     finally { setLoading(false) }
   }
 
   useEffect(() => { loadDocs() }, [])
 
   const handleUpload = async () => {
-    if (!form.titulo) { toast.error('El título es requerido'); return }
+    if (!form.titulo) { toast.error(t('auto.knowledgeBaseView.elTituloEsRequerido2')); return }
 
     // Validar según modo
-    if (inputMode === 'archivo' && !selectedFile) { toast.error('Selecciona un archivo'); return }
-    if (inputMode === 'url' && !form.url.trim()) { toast.error('Ingresa una URL válida'); return }
-    if (inputMode === 'texto' && !form.texto.trim()) { toast.error('Pega el contenido del documento'); return }
+    if (inputMode === 'archivo' && !selectedFile) { toast.error(t('auto.knowledgeBaseView.seleccionaUnArchivo2')); return }
+    if (inputMode === 'url' && !form.url.trim()) { toast.error(t('auto.knowledgeBaseView.ingresaUnaUrlValida2')); return }
+    if (inputMode === 'texto' && !form.texto.trim()) { toast.error(t('auto.knowledgeBaseView.pegaElContenidoDelDocumento')); return }
 
     // Validar URL básica
     if (inputMode === 'url') {
       try { new URL(form.url) } catch {
-        toast.error('La URL no es válida. Ejemplo: https://drive.google.com/...')
+        toast.error(t('auto.knowledgeBaseView.laUrlNoEsValida'))
         return
       }
     }
@@ -71,7 +71,7 @@ export default function KnowledgeBaseView() {
       if (inputMode === 'archivo' && selectedFile) {
         const MAX_SIZE = 100 * 1024 * 1024
         if (selectedFile.size > MAX_SIZE) {
-          toast.error(`Archivo muy grande (${Math.round(selectedFile.size / 1024 / 1024)}MB). Máx: 100MB. Usá el modo URL en su lugar.`)
+          toast.error(t('auto.knowledgeBaseView.archivoMuyGrandeMbMax', { v1: String(Math.round(selectedFile.size / 1024 / 1024)) }))
           return
         }
         setUploadProgress(`Subiendo archivo (${Math.round(selectedFile.size / 1024 / 1024)}MB)...`)
@@ -114,7 +114,7 @@ export default function KnowledgeBaseView() {
       const json = await res.json()
       if (json.error) throw new Error(json.error)
 
-      toast.success(`✅ "${form.titulo}" recibido — indexando en background`)
+      toast.success(t('auto.knowledgeBaseView.recibidoIndexandoEnBackground', { v1: String(form.titulo) }))
       setForm({ titulo: '', tipo: 'libro', descripcion: '', texto: '', url: '' })
       setSelectedFile(null)
       setUploadProgress('')
@@ -128,16 +128,16 @@ export default function KnowledgeBaseView() {
   }
 
   const handleDelete = async (id: string, titulo: string) => {
-    if (!confirm(`¿Eliminar "${titulo}" de la base de conocimiento?`)) return
+    if (!confirm(t('auto.knowledgeBaseView.eliminarDeLaBaseDe', { v1: String(titulo) }))) return
     try {
       await fetch('/api/knowledge/ingest', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       })
-      toast.success('Documento eliminado')
+      toast.success(t('auto.knowledgeBaseView.documentoEliminado2'))
       loadDocs()
-    } catch { toast.error('Error eliminando') }
+    } catch { toast.error(t('auto.knowledgeBaseView.errorEliminando')) }
   }
 
   const stats = {
@@ -424,7 +424,7 @@ function InstruccionesModal({ onClose }: { onClose: () => void }) {
   }, [])
 
   const handleSave = async () => {
-    if (!nueva.titulo || !nueva.contenido) { toast.error('Título y contenido son requeridos'); return }
+    if (!nueva.titulo || !nueva.contenido) { toast.error(t('auto.knowledgeBaseView.tituloYContenidoSonRequeridos')); return }
     setSaving(true)
     try {
       await fetch('/api/knowledge/instrucciones', {
@@ -432,12 +432,12 @@ function InstruccionesModal({ onClose }: { onClose: () => void }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(nueva),
       })
-      toast.success('Instrucción guardada')
+      toast.success(t('auto.knowledgeBaseView.instruccionGuardada'))
       setNueva({ categoria: 'protocolo', titulo: '', contenido: '', prioridad: 5 })
       const res = await fetch('/api/knowledge/instrucciones')
       const json = await res.json()
       setInstrucciones(json.data || [])
-    } catch { toast.error('Error guardando') }
+    } catch { toast.error(t('auto.knowledgeBaseView.errorGuardando')) }
     finally { setSaving(false) }
   }
 

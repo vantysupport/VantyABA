@@ -43,7 +43,7 @@ export default function FonemasAdminView() {
     const url = entry.url.trim()
     const label = entry.label.trim()
     if (!url) return
-    if (!/^https?:\/\//i.test(url)) { toast.error('La URL debe empezar con http:// o https://'); return }
+    if (!/^https?:\/\//i.test(url)) { toast.error(t('auto.fonemasAdminView.laUrlDebeEmpezarCon')); return }
     setBusy(fid + ':add')
     try {
       const token = await getToken()
@@ -56,8 +56,8 @@ export default function FonemasAdminView() {
       if (!r.ok) { toast.error(j.error || 'Error al agregar'); return }
       setInputs(s => ({ ...s, [fid]: { label: '', url: '' } }))
       await load()
-      toast.success('Imagen agregada')
-    } catch { toast.error('Error de red') } finally { setBusy(null) }
+      toast.success(t('auto.fonemasAdminView.imagenAgregada'))
+    } catch { toast.error(t('auto.fonemasAdminView.errorDeRed')) } finally { setBusy(null) }
   }
 
   const del = async (id: string) => {
@@ -71,7 +71,7 @@ export default function FonemasAdminView() {
       })
       if (!r.ok) { const j = await r.json().catch(() => ({})); toast.error(j.error || 'Error al eliminar'); return }
       await load()
-    } catch { toast.error('Error de red') } finally { setBusy(null) }
+    } catch { toast.error(t('auto.fonemasAdminView.errorDeRed2')) } finally { setBusy(null) }
   }
 
   const saveAyuda = async (fid: string) => {
@@ -87,7 +87,7 @@ export default function FonemasAdminView() {
       const j = await r.json().catch(() => ({}))
       if (!r.ok) { toast.error(j.error || 'Error al guardar'); return }
       toast.success('Ayuda guardada')
-    } catch { toast.error('Error de red') } finally { setBusy(null) }
+    } catch { toast.error(t('auto.fonemasAdminView.errorDeRed3')) } finally { setBusy(null) }
   }
 
   return (

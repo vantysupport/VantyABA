@@ -217,7 +217,7 @@ export default function ReportGenerator({
 
   // ─── Eliminar reporte ─────────────────────────────────────────────────────
   const handleDeleteReport = async (reporteId: string) => {
-    if (!confirm('¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.')) return
+    if (!confirm(t('auto.reportGenerator.eliminarEsteReportePermanentemente'))) return
     try {
       const { error } = await supabase
         .from('reportes_generados')

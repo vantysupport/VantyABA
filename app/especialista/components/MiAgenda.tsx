@@ -39,11 +39,11 @@ function GoogleCalendarMini({ userId, isDark }: { userId: string; isDark: boolea
       const res  = await fetch(`/api/google-calendar?action=auth-url&userId=${userId}&role=especialista`)
       const data = await res.json()
       if (data.url) window.location.href = data.url
-    } catch { toast.error('Error conectando Google Calendar'); setBusy(false) }
+    } catch { toast.error(t('auto.miAgenda.errorConectandoGoogleCalendar')); setBusy(false) }
   }
 
   const disconnect = async () => {
-    if (!confirm('¿Desconectar Google Calendar?')) return
+    if (!confirm(t('auto.miAgenda.desconectarGoogleCalendar'))) return
     await fetch(`/api/google-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected')
     toast.success('Google Calendar desconectado')
@@ -102,11 +102,11 @@ function MicrosoftCalendarMini({ userId, isDark }: { userId: string; isDark: boo
       const res  = await fetch(`/api/microsoft-calendar?action=auth-url&userId=${userId}&role=especialista`)
       const data = await res.json()
       if (data.url) window.location.href = data.url
-    } catch { toast.error('Error conectando Outlook Calendar'); setBusy(false) }
+    } catch { toast.error(t('auto.miAgenda.errorConectandoOutlookCalendar')); setBusy(false) }
   }
 
   const disconnect = async () => {
-    if (!confirm('¿Desconectar Outlook Calendar?')) return
+    if (!confirm(t('auto.miAgenda.desconectarOutlookCalendar'))) return
     await fetch(`/api/microsoft-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected')
     toast.success('Outlook Calendar desconectado')

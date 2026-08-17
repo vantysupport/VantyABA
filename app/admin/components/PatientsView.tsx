@@ -136,7 +136,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success(`${nino.name} vinculado a ${user.full_name || user.email}`)
+      toast.success(t('auto.patientsView.vinculadoA', { v1: String(nino.name), v2: String(user.full_name || user.email) }))
       setLinkedUser(user)
       setShowLinkModal(false)
       setEmailSearch(''); setSearchResults([])
@@ -155,7 +155,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Paciente desvinculado de la cuenta')
+      toast.success(t('auto.patientsView.pacienteDesvinculadoDeLaCuenta'))
       setLinkedUser(null)
       onLinked()
     } catch (e: any) { toast.error(e.message) }
@@ -479,7 +479,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
 
   const handleSave = async () => {
     const n = parseInt(tempInput.replace(/[^0-9]/g, ''), 10)
-    if (isNaN(n) || n < 0) { toast.error('Ingresá un número válido (0 o mayor)'); return }
+    if (isNaN(n) || n < 0) { toast.error(t('auto.patientsView.ingresaUnNumeroValido0')); return }
     setSaving(true)
     try {
       const { error } = await supabase
@@ -489,7 +489,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
       if (error) throw error
       setSessionsBefore(n)
       setEditing(false)
-      toast.success('✓ Contador actualizado')
+      toast.success(t('auto.patientsView.contadorActualizado'))
       onSaved()
     } catch (e: any) {
       toast.error('Error: ' + (e?.message || 'no se pudo guardar'))
@@ -674,7 +674,7 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
       const respuesta = prompt(mensaje, '')
       if (respuesta == null) return  // cancelado
       if (respuesta.trim() !== nombre.trim()) {
-        toast.error('El nombre no coincide. Eliminación cancelada.')
+        toast.error(t('auto.patientsView.elNombreNoCoincideEliminacion'))
         return
       }
       confirmName = respuesta.trim()
@@ -700,10 +700,10 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
       if (json.registros_limpiados) {
         console.log(`[delete-patient] "${nombre}" eliminado · limpieza:`, json.registros_limpiados)
       }
-      toast.success(`"${nombre}" eliminado correctamente`)
+      toast.success(t('auto.patientsView.eliminadoCorrectamente', { v1: String(nombre) }))
       onDeleted?.()
     } catch (e: any) {
-      toast.error(`No se pudo eliminar: ${e?.message || 'error desconocido'}`)
+      toast.error(t('auto.patientsView.noSePudoEliminar', { v1: String(e?.message || 'error desconocido') }))
     } finally {
       setDeleting(false)
     }
@@ -999,7 +999,7 @@ function RellenarFichaConWord({ childId, childName, isDark }: {
         visible_to_parent: false,
       })
 
-      toast.success('Word generado y guardado en Documentos del paciente')
+      toast.success(t('auto.patientsView.wordGeneradoYGuardadoEn'))
     } catch (e: any) {
       console.error('Error auto-generando Word:', e)
     }
@@ -1120,7 +1120,7 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
       if (limit > 0) {
         const { count } = await supabase.from('children').select('id', { count: 'exact', head: true })
         if ((count || 0) >= limit) {
-          toast.error(`Límite de pacientes alcanzado (${count}/${limit}). Solo el programador puede ampliarlo.`)
+          toast.error(t('auto.patientsView.limiteDePacientesAlcanzadoSolo', { v1: String(count), v2: String(limit) }))
           return
         }
       }

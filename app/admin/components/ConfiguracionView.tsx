@@ -110,7 +110,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
         updated_at: new Date().toISOString(),
       }).eq('id', user.id)
       if (error) throw error
-      toast.success('Perfil actualizado correctamente')
+      toast.success(t('auto.configuracionView.perfilActualizadoCorrectamente'))
     } catch (e: any) {
       toast.error('Error: ' + e.message)
     } finally {
@@ -156,7 +156,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
               if (!file) return
               try {
                 const { data: { user } } = await supabase.auth.getUser()
-                if (!user) { toast.error('No estás logueado'); return }
+                if (!user) { toast.error(t('auto.configuracionView.noEstasLogueado')); return }
 
                 // 1. Subir vía endpoint server-side (auto-crea bucket, valida tipo, etc.)
                 const fd = new FormData()
@@ -175,7 +175,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
                 const finalUrl = `${upData.url}?t=${Date.now()}`
                 setAvatarUrl(finalUrl)
                 onAvatarUpdate?.(finalUrl)
-                toast.success('Foto actualizada')
+                toast.success(t('auto.configuracionView.fotoActualizada'))
               } catch (err: any) {
                 console.error('[avatar-upload]', err)
                 toast.error(err?.message || 'Error al actualizar la foto')
@@ -258,14 +258,14 @@ function SeccionSeguridad() {
   }
 
   const handleChange = async () => {
-    if (!form.nueva) { toast.error('Ingresa la nueva contraseña'); return }
-    if (form.nueva.length < 8) { toast.error('Mínimo 8 caracteres'); return }
-    if (form.nueva !== form.confirmar) { toast.error('Las contraseñas no coinciden'); return }
+    if (!form.nueva) { toast.error(t('auto.configuracionView.ingresaLaNuevaContrasena')); return }
+    if (form.nueva.length < 8) { toast.error(t('auto.configuracionView.minimo8Caracteres')); return }
+    if (form.nueva !== form.confirmar) { toast.error(t('auto.configuracionView.lasContrasenasNoCoinciden')); return }
     setSaving(true)
     try {
       const { error } = await supabase.auth.updateUser({ password: form.nueva })
       if (error) throw error
-      toast.success('¡Contraseña actualizada!')
+      toast.success(t('auto.configuracionView.contrasenaActualizada'))
       setForm({ nueva: '', confirmar: '' })
     } catch (e: any) {
       toast.error('Error: ' + e.message)

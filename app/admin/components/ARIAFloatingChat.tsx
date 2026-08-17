@@ -721,7 +721,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                     {speaking ? 'Hablando…' : voiceEnabled ? 'Voz ON' : 'Voz OFF'}
                   </button>
                   <button
-                    onClick={() => { if (window.confirm('¿Borrar todo el historial de ARIA?')) clearHistory() }}
+                    onClick={() => { if (window.confirm(t('auto.aRIAFloatingChat.borrarTodoElHistorialDe'))) clearHistory() }}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10"
                     title={t("admin.borrarHistorial")}
                   >

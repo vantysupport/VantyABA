@@ -81,7 +81,7 @@ export default function CatalogoTerapiasView() {
   }
 
   const guardar = async () => {
-    if (!editing?.nombre?.trim()) { alert('Nombre obligatorio'); return }
+    if (!editing?.nombre?.trim()) { alert(t('auto.catalogoTerapiasView.nombreObligatorio')); return }
     setSaving(true)
     try {
       const method = editing.id ? 'PATCH' : 'POST'
@@ -98,7 +98,7 @@ export default function CatalogoTerapiasView() {
   }
 
   const eliminar = async (id: string) => {
-    if (!confirm('¿Eliminar esta terapia del catálogo?')) return
+    if (!confirm(t('auto.catalogoTerapiasView.eliminarEstaTerapiaDelCatalogo'))) return
     await fetch(`/api/terapias-catalogo?id=${id}&force=1`, { method: 'DELETE' })
     cargar()
   }

@@ -164,7 +164,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
       const res = await fetch(`/api/programas-aba?child_id=${childId}&t=${Date.now()}`, { cache: 'no-store' })
       const json = await res.json()
       setProgramas(json.data || [])
-    } catch { toast.error('Error cargando programas') }
+    } catch { toast.error(t('auto.programasABAView.errorCargandoProgramas')) }
     finally { setLoading(false) }
   }, [childId])
 
@@ -196,7 +196,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
-      toast.success('Documento descargado')
+      toast.success(t('auto.programasABAView.documentoDescargado'))
     } catch (e: any) {
       toast.error(e?.message || 'Error al generar el documento')
     } finally {
@@ -888,7 +888,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
       a.href = url; a.download = fileName
       document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
-      toast.success('Guía descargada')
+      toast.success(t('auto.programasABAView.guiaDescargada'))
     } catch (e: any) {
       toast.error(e?.message || 'Error al generar la guía')
     } finally {
@@ -905,7 +905,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
     const json = await res.json()
     if (json.error) { toast.error(json.error); return }
     onSuccess?.()
-    toast.success('Actualizado')
+    toast.success(t('auto.programasABAView.actualizado'))
   }
 
   // Close dropdowns when clicking outside
@@ -928,7 +928,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
     })
     const json = await res.json()
     if (json.error) { toast.error(json.error); setLocalTitulo(programa.titulo); setTempTitulo(programa.titulo); return }
-    toast.success('Título actualizado')
+    toast.success(t('auto.programasABAView.tituloActualizado'))
   }
 
   const saveObjetivo = async (nuevo: string) => {
@@ -943,7 +943,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
     })
     const json = await res.json()
     if (json.error) { toast.error(json.error); setLocalObjetivo(programa.objetivo_lp || ''); setTempObjetivo(programa.objetivo_lp || ''); return }
-    toast.success('Objetivo actualizado')
+    toast.success(t('auto.programasABAView.objetivoActualizado'))
   }
 
   const area = AREA_CONFIG[programa.area] || AREA_CONFIG.comunicacion
@@ -1231,7 +1231,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
             <button
               onClick={async (e) => {
                 e.stopPropagation()
-                if (!confirm(`¿Eliminar el programa "${programa.titulo}" y todas sus sesiones? Esta acción no se puede deshacer.`)) return
+                if (!confirm(t('auto.programasABAView.eliminarElProgramaYTodas', { v1: String(programa.titulo) }))) return
                 const res = await fetch('/api/programas-aba', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -1615,7 +1615,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               })
                               const json = await res.json()
                               if (json.error) { toast.error(json.error); return }
-                              toast.success('Set actualizado')
+                              toast.success(t('auto.programasABAView.setActualizado'))
                               fetchDetalle()
                             }}
                             onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
@@ -1638,7 +1638,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                         <button
                           onClick={async (e) => {
                             e.stopPropagation()
-                            if (!confirm(`¿Eliminar el Set ${obj.numero_set} ("${obj.descripcion}")? Esto también borrará las sesiones registradas para este set. Esta acción no se puede deshacer.`)) return
+                            if (!confirm(t('auto.programasABAView.eliminarElSetEstoTambien', { v1: String(obj.numero_set), v2: String(obj.descripcion) }))) return
                             const res = await fetch('/api/programas-aba', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
@@ -1646,7 +1646,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                             })
                             const json = await res.json()
                             if (json.error) { toast.error(json.error); return }
-                            toast.success('Set eliminado')
+                            toast.success(t('auto.programasABAView.setEliminado'))
                             setSetExpandidoId(prev => prev === obj.id ? null : prev)
                             setDetalle((prev: any) => prev ? {
                               ...prev,
@@ -1851,7 +1851,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                   })
                                   const json = await res.json()
                                   if (json.error) { toast.error(json.error); return }
-                                  toast.success('Set agregado')
+                                  toast.success(t('auto.programasABAView.setAgregado'))
                                   setShowAgregarSet(false)
                                   setNuevoSet({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' })
                                   fetchDetalle()
@@ -1883,7 +1883,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                         s={s}
                         programa={programa}
                         onDelete={async () => {
-                          if (!confirm('¿Eliminar esta sesión?')) return
+                          if (!confirm(t('auto.programasABAView.eliminarEstaSesion'))) return
                           const res = await fetch('/api/programas-aba', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -1891,7 +1891,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                           })
                           const json = await res.json()
                           if (json.error) { toast.error(json.error); return }
-                          toast.success('Sesión eliminada')
+                          toast.success(t('auto.programasABAView.sesionEliminada'))
                           onDeleteSesion?.(s.id)
                           setDetalle((prev: any) => {
                             const base = prev ?? programa
@@ -1909,7 +1909,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                           })
                           const json = await res.json()
                           if (json.error) { toast.error(json.error); return }
-                          toast.success('Fecha actualizada')
+                          toast.success(t('auto.programasABAView.fechaActualizada'))
                           setDetalle((prev: any) => {
                             const base = prev ?? programa
                             return {
@@ -1932,7 +1932,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                           })
                           const json = await res.json()
                           if (json.error) { toast.error(json.error); return }
-                          toast.success('Porcentaje actualizado')
+                          toast.success(t('auto.programasABAView.porcentajeActualizado'))
                           setDetalle((prev: any) => {
                             const base = prev ?? programa
                             return {
@@ -2393,7 +2393,7 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
 
   const handleSave = async () => {
     if (!form.oportunidades_totales) {
-      toast.error('Ingresa oportunidades totales')
+      toast.error(t('auto.programasABAView.ingresaOportunidadesTotales'))
       return
     }
     setSaving(true)
@@ -2418,7 +2418,7 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Sesión registrada')
+      toast.success(t('auto.programasABAView.sesionRegistrada'))
       onSaved()
     } catch (e: any) {
       toast.error(e.message)
@@ -2585,7 +2585,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
   }
 
   const handleSave = async () => {
-    if (!form.titulo || !form.objetivo_lp || !form.area) { toast.error('Título, área y objetivo son requeridos'); return }
+    if (!form.titulo || !form.objetivo_lp || !form.area) { toast.error(t('auto.programasABAView.tituloAreaYObjetivoSon')); return }
     setSaving(true)
     try {
       const res = await fetch('/api/programas-aba', {
@@ -2603,7 +2603,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Programa creado')
+      toast.success(t('auto.programasABAView.programaCreado'))
       onCreated()
     } catch (e: any) { toast.error(e.message) }
     finally { setSaving(false) }

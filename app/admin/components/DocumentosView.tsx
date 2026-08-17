@@ -233,7 +233,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
   }
 
   const handleUpload = async () => {
-    if (selectedFiles.length === 0) { toast.error('Selecciona al menos un archivo'); return }
+    if (selectedFiles.length === 0) { toast.error(t('auto.documentosView.seleccionaAlMenosUnArchivo')); return }
     setUploading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -297,7 +297,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
       } else if (uploaded > 0 && fallidos.length > 0) {
         toast.warning(`Se subieron ${uploaded}, pero fallaron ${fallidos.length}: ${fallidos.join(', ')}`)
       } else {
-        toast.error(`No se pudo subir ningún archivo. Intentá de nuevo.`)
+        toast.error(t('auto.documentosView.noSePudoSubirNingun'))
       }
 
       if (uploaded > 0) {
@@ -319,7 +319,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
       const { error } = await supabase.from('patient_documents').update({ file_name: nombre }).eq('id', doc.id)
       if (error) throw error
       setDocs(prev => prev.map(d => d.id === doc.id ? { ...d, file_name: nombre } : d))
-      toast.success('Nombre actualizado')
+      toast.success(t('auto.documentosView.nombreActualizado'))
     } catch (e: any) {
       toast.error('Error: ' + e.message)
     } finally {
@@ -328,10 +328,10 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
   }
 
   const handleDelete = async (doc: Doc) => {
-    if (!confirm(`¿Eliminar "${doc.file_name}"?`)) return
+    if (!confirm(t('auto.documentosView.eliminar', { v1: String(doc.file_name) }))) return
     try {
       await supabase.from('patient_documents').delete().eq('id', doc.id)
-      toast.success('Documento eliminado')
+      toast.success(t('auto.documentosView.documentoEliminado'))
       setDocs(prev => prev.filter(d => d.id !== doc.id))
     } catch (e: any) { toast.error('Error: ' + e.message) }
   }
@@ -385,14 +385,14 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
     if (!newFolderName.trim()) return
     crearCarpeta(newFolderName.trim(), newFolderEmoji, currentFolder)
     setNewFolderName(''); setNewFolderEmoji('📁'); setShowNewFolder(false)
-    toast.success('Carpeta creada')
+    toast.success(t('auto.documentosView.carpetaCreada'))
   }
 
   const handleEditarCarpeta = () => {
     if (!editingFolder || !newFolderName.trim()) return
     renombrarCarpeta(editingFolder.id, newFolderName.trim(), newFolderEmoji)
     setEditingFolder(null); setNewFolderName(''); setNewFolderEmoji('📁')
-    toast.success('Carpeta actualizada')
+    toast.success(t('auto.documentosView.carpetaActualizada'))
   }
 
   const isEmpty = subCarpetas.length === 0 && filtered.length === 0 && !search && catFilter === 'all'
@@ -690,7 +690,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
                           ${isDark ? 'hover:bg-[#21262d] text-slate-300' : 'hover:bg-slate-50 text-slate-700'}`}>
                         <Edit2 size={12} /> Renombrar
                       </button>
-                      <button onClick={() => { if (confirm(`¿Eliminar carpeta "${carpeta.name}"? Los documentos se moverán a Inicio.`)) { eliminarCarpeta(carpeta.id); setOpenMenuId(null) } }}
+                      <button onClick={() => { if (confirm(t('auto.documentosView.eliminarCarpetaLosDocumentosSe', { v1: String(carpeta.name) }))) { eliminarCarpeta(carpeta.id); setOpenMenuId(null) } }}
                         className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-left text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                         <Trash2 size={12} /> Eliminar
                       </button>

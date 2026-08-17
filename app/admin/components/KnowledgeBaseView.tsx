@@ -71,7 +71,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
 
   const handleSeedAblls = async () => {
     if (seedingAblls) return
-    if (!confirm('Esto cargará el protocolo ABLLS-R completo (25 secciones, 545 ítems) al Cerebro IA. Reemplaza cualquier versión previa. ¿Continuar?')) return
+    if (!confirm(t('auto.knowledgeBaseView.estoCargaraElProtocoloAbllsr'))) return
     setSeedingAblls(true)
     setSeedProgress('Obteniendo lista de secciones…')
     try {
@@ -93,7 +93,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
         } catch { /* seguir con la siguiente sección */ }
         hechas++
       }
-      toast.success(`ABLLS-R cargado: ${okChunks} ítems indexados en el Cerebro IA`)
+      toast.success(t('auto.knowledgeBaseView.abllsrCargadoItemsIndexadosEn', { v1: String(okChunks) }))
       setSeedProgress('')
       await loadDocs()
     } catch (e: any) {
@@ -114,7 +114,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
       const listJson = await listRes.json()
       const archivos: any[] = listJson.archivos || []
       if (archivos.length === 0) {
-        toast.error('No hay archivos .md/.txt en la carpeta knowledge-seed del código')
+        toast.error(t('auto.knowledgeBaseView.noHayArchivosMdtxtEn'))
         return
       }
       const res = await fetch('/api/knowledge/seed-archivos', {
@@ -124,7 +124,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
       })
       const json = await res.json()
       if (json.error) { toast.error(json.error); return }
-      toast.success(`Conocimiento del código cargado: ${json.archivos_procesados} archivo(s), ${json.total_chunks} fragmentos`)
+      toast.success(t('auto.knowledgeBaseView.conocimientoDelCodigoCargadoArchiv', { v1: String(json.archivos_procesados), v2: String(json.total_chunks) }))
       await loadDocs()
     } catch (e: any) {
       toast.error(e?.message || 'Error cargando conocimiento del código')
@@ -139,14 +139,14 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
       const res = await fetch('/api/knowledge/ingest')
       const json = await res.json()
       setDocumentos(json.data || [])
-    } catch { toast.error('Error cargando documentos') }
+    } catch { toast.error(t('auto.knowledgeBaseView.errorCargandoDocumentos')) }
     finally { setLoading(false) }
   }
 
   useEffect(() => { loadDocs() }, [])
 
   const handleAprender = async () => {
-    if (!keywords.trim()) { toast.error('Escribe palabras clave'); return }
+    if (!keywords.trim()) { toast.error(t('auto.knowledgeBaseView.escribePalabrasClave')); return }
     setAprendiendo(true)
     setLogAprender([`🚀 Iniciando aprendizaje: "${keywords}"...`])
     setResultadoAprender(null)
@@ -182,7 +182,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
   }
 
   const handleAprenderUrl = async () => {
-    if (!urlAprender.trim()) { toast.error('Ingresa una URL'); return }
+    if (!urlAprender.trim()) { toast.error(t('auto.knowledgeBaseView.ingresaUnaUrl')); return }
     setAprendiendo(true)
     setLogAprender([`🌐 Leyendo URL: "${urlAprender}"...`])
     setResultadoAprender(null)
@@ -207,7 +207,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
         `🎉 La IA ya aprendió el contenido de esa página`,
       ])
       setResultadoAprender({ keywords: urlAprender, terminos: [urlAprender], fuentes: 1, documentos: 1, totalChunks: json.chunks || 0 })
-      toast.success(`${json.chunks} fragmentos aprendidos de la URL`)
+      toast.success(t('auto.knowledgeBaseView.fragmentosAprendidosDeLaUrl', { v1: String(json.chunks) }))
       await loadDocs()
     } catch (e: any) {
       toast.error(e.message)
@@ -223,7 +223,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
       const json = await res.json()
       if (json.error) throw new Error(json.error)
       setResultadosBusqueda(json.resultados || [])
-      if (!json.resultados?.length) toast.error('Sin resultados. Prueba otro título.')
+      if (!json.resultados?.length) toast.error(t('auto.knowledgeBaseView.sinResultadosPruebaOtroTitulo'))
     } catch (e: any) { toast.error(e.message) }
     finally { setBuscando(false) }
   }
@@ -597,11 +597,11 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
   }
 
   const handleUpload = async () => {
-    if (!form.titulo) { toast.error('El título es requerido'); return }
-    if (inputMode === 'archivo' && !selectedFile) { toast.error('Selecciona un archivo'); return }
-    if (inputMode === 'url' && !form.url.trim()) { toast.error('Ingresa una URL válida'); return }
+    if (!form.titulo) { toast.error(t('auto.knowledgeBaseView.elTituloEsRequerido')); return }
+    if (inputMode === 'archivo' && !selectedFile) { toast.error(t('auto.knowledgeBaseView.seleccionaUnArchivo')); return }
+    if (inputMode === 'url' && !form.url.trim()) { toast.error(t('auto.knowledgeBaseView.ingresaUnaUrlValida')); return }
     if (inputMode === 'texto' && !form.texto.trim()) { toast.error('Pega el contenido'); return }
-    if (inputMode === 'buscar' && !libroSeleccionado) { toast.error('Selecciona un libro'); return }
+    if (inputMode === 'buscar' && !libroSeleccionado) { toast.error(t('auto.knowledgeBaseView.seleccionaUnLibro')); return }
 
     setUploading(true)
     try {
@@ -745,7 +745,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
         catch { throw new Error(await res.text() || `Error HTTP ${res.status}`) }
         if (!res.ok) throw new Error(json.error || 'Error al indexar')
         if (!json.success) throw new Error(json.error || 'El indexado falló')
-        toast.success(`${json.chunks} fragmentos indexados correctamente`)
+        toast.success(t('auto.knowledgeBaseView.fragmentosIndexadosCorrectamente', { v1: String(json.chunks) }))
       }
 
       setShowForm(false)
@@ -757,12 +757,12 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este documento?')) return
+    if (!confirm(t('auto.knowledgeBaseView.eliminarEsteDocumento'))) return
     await fetch('/api/knowledge/ingest', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-locale': typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es' },
       body: JSON.stringify({ id, locale: localStorage.getItem('vanty_locale') || 'es' }),
     })
-    toast.success('Documento eliminado')
+    toast.success(t('auto.knowledgeBaseView.documentoEliminado'))
     await loadDocs()
   }
 

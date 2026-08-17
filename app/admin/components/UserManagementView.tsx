@@ -320,8 +320,8 @@ export default function UserManagementView({ rolesConfig }: {
     if (!canChangeRole(user)) {
       const targetRole = user.profile?.role || ''
       const isDirector = targetRole === 'jefe' || targetRole === 'admin'
-      if (isDirector) toast.error('No podés cambiar el rol de un Director.')
-      else toast.warning('No podés cambiarte el rol a ti mismo.')
+      if (isDirector) toast.error(t('auto.userManagementView.noPodesCambiarElRol'))
+      else toast.warning(t('auto.userManagementView.noPodesCambiarteElRol'))
       return
     }
     // Bloqueo de límite al CAMBIAR de rol (no solo al crear). No deja pasarse del tope.
@@ -338,7 +338,7 @@ export default function UserManagementView({ rolesConfig }: {
           return r === newRole
         }).length
         if (current >= limit) {
-          toast.error(`Límite de "${limitKey}" alcanzado (${current}/${limit}). Solo el programador puede ampliarlo.`)
+          toast.error(t('auto.userManagementView.limiteDeAlcanzadoSoloEl', { v1: String(limitKey), v2: String(current), v3: String(limit) }))
           return
         }
       }
@@ -352,7 +352,7 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success(`Rol actualizado → ${newRole}`)
+      toast.success(t('auto.userManagementView.rolActualizado', { v1: String(newRole) }))
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, profile: { ...u.profile, role: newRole } } : u))
     } catch (err: any) {
       toast.error('Error: ' + err.message)
@@ -362,7 +362,7 @@ export default function UserManagementView({ rolesConfig }: {
   }
 
   const handleDeleteUser = async (user: UserData) => {
-    if (user.id === currentUserId) { toast.error('No puedes eliminar tu propia cuenta.'); return }
+    if (user.id === currentUserId) { toast.error(t('auto.userManagementView.noPuedesEliminarTuPropia')); return }
     const esPadre = user.profile?.role === 'padre'
     const ok = confirm(
       `¿Eliminar a ${user.profile?.full_name || user.email}?\n` +
@@ -379,7 +379,7 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Usuario eliminado')
+      toast.success(t('auto.userManagementView.usuarioEliminado'))
       setUsers(prev => prev.filter(u => u.id !== user.id))
     } catch (err: any) {
       toast.error('Error: ' + err.message)
@@ -390,7 +390,7 @@ export default function UserManagementView({ rolesConfig }: {
     if (user.id === currentUserId) return
     const targetRole = user.profile?.role || ''
     if (targetRole === 'jefe' || targetRole === 'admin') {
-      toast.error('No podés desactivar a un Director.')
+      toast.error(t('auto.userManagementView.noPodesDesactivarAUn'))
       return
     }
     try {
@@ -410,8 +410,8 @@ export default function UserManagementView({ rolesConfig }: {
 
   const handleChangePassword = async () => {
     if (!changingPasswordFor) return
-    if (!newPassword || newPassword.length < 6) { toast.error('Mínimo 6 caracteres'); return }
-    if (newPassword !== confirmPassword) { toast.error('Las contraseñas no coinciden'); return }
+    if (!newPassword || newPassword.length < 6) { toast.error(t('auto.userManagementView.minimo6Caracteres')); return }
+    if (newPassword !== confirmPassword) { toast.error(t('auto.userManagementView.lasContrasenasNoCoinciden')); return }
     setSavingPassword(true)
     try {
       const res = await fetch('/api/admin/users', {
@@ -421,7 +421,7 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Contraseña actualizada')
+      toast.success(t('auto.userManagementView.contrasenaActualizada'))
       setChangingPasswordFor(null); setNewPassword(''); setConfirmPassword('')
     } catch (err: any) {
       toast.error('Error: ' + err.message)
@@ -456,7 +456,7 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Especialidad actualizada')
+      toast.success(t('auto.userManagementView.especialidadActualizada'))
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, profile: { ...u.profile, specialty: newSpecialty.trim() } } : u))
       setEditingSpecialtyFor(null)
     } catch (err: any) {
@@ -473,7 +473,7 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success(`Email enviado a ${user.email}`)
+      toast.success(t('auto.userManagementView.emailEnviadoA', { v1: String(user.email) }))
     } catch (err: any) { toast.error('Error: ' + err.message) }
   }
 
@@ -495,7 +495,7 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const linkJson = await linkRes.json()
       if (linkJson.error) throw new Error(linkJson.error)
-      toast.success(`${child.name} vinculado a ${linkingParent.profile?.full_name || linkingParent.email}`)
+      toast.success(t('auto.userManagementView.vinculadoA', { v1: String(child.name), v2: String(linkingParent.profile?.full_name || linkingParent.email) }))
 
       setChildren(prev => prev.map(c => c.id === selectedChildId ? { ...c, parent_id: linkingParent.id } : c))
       setLinkingParent(null); setSelectedChildId('')
@@ -514,12 +514,12 @@ export default function UserManagementView({ rolesConfig }: {
       const json = await res.json()
       if (json.error) throw new Error(json.error)
       setChildren(prev => prev.map(c => c.id === childId ? { ...c, parent_id: null } : c))
-      toast.success('Paciente desvinculado')
+      toast.success(t('auto.userManagementView.pacienteDesvinculado'))
     } catch (err: any) { toast.error('Error: ' + err.message) }
   }
 
   const handleCreateUser = async () => {
-    if (!createForm.email || !createForm.password) { toast.error('Email y contraseña son requeridos'); return }
+    if (!createForm.email || !createForm.password) { toast.error(t('auto.userManagementView.emailYContrasenaSonRequeridos')); return }
     // Bloqueo de límite de perfiles (lo define el programador en /control).
     try {
       const st = await getControlStatus()
@@ -533,7 +533,7 @@ export default function UserManagementView({ rolesConfig }: {
           return r === createForm.role
         }).length
         if (current >= limit) {
-          toast.error(`Límite de "${limitKey}" alcanzado (${current}/${limit}). Solo el programador puede ampliarlo.`)
+          toast.error(t('auto.userManagementView.limiteDeAlcanzadoSoloEl2', { v1: String(limitKey), v2: String(current), v3: String(limit) }))
           return
         }
       }
@@ -547,7 +547,7 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Usuario creado')
+      toast.success(t('auto.userManagementView.usuarioCreado'))
       setShowCreateModal(false)
       setCreateForm({ email: '', password: '', full_name: '', role: 'especialista', specialty: '' })
       cargarUsuarios()

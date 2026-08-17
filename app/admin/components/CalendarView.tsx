@@ -194,7 +194,7 @@ function MonthlyCalendarView() {
         body: JSON.stringify({ id, status: 'completed' , locale: localStorage.getItem('vanty_locale') || 'es' }),
       })
       setApts(prev => prev.map(a => a.id === id ? { ...a, status: 'completed' } : a))
-      toast.success('Sesión finalizada · Cita movida al historial')
+      toast.success(t('auto.calendarView.sesionFinalizadaCitaMovidaAl'))
     } catch {
       cargarCitas()
     }
@@ -233,7 +233,7 @@ function MonthlyCalendarView() {
   const guardarEdicion = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!editDate || !editTime) {
-      toast.error('Fecha y hora son requeridas')
+      toast.error(t('auto.calendarView.fechaYHoraSonRequeridas'))
       return
     }
     setSavingEdit(true)
@@ -260,9 +260,9 @@ function MonthlyCalendarView() {
       if (sync.parentMicrosoft?.ok && sync.parentMicrosoft?.updated) synced.push('Outlook padre')
 
       if (synced.length > 0) {
-        toast.success(`Horario actualizado · Sincronizado en: ${synced.join(', ')}`)
+        toast.success(t('auto.calendarView.horarioActualizadoSincronizadoEn', { v1: String(synced.join(', ')) }))
       } else {
-        toast.success('Horario actualizado')
+        toast.success(t('auto.calendarView.horarioActualizado'))
       }
       cancelarEdicion()
     } catch (err: any) {
@@ -274,18 +274,18 @@ function MonthlyCalendarView() {
 
   const eliminarCita = async (id:string, e:React.MouseEvent) => {
     e.stopPropagation()
-    if (!confirm('¿Eliminar esta cita?')) return
+    if (!confirm(t('auto.calendarView.eliminarEstaCita'))) return
     try {
       const res = await fetch('/api/admin/appointments', { method:'DELETE', headers:{'Content-Type':'application/json', 'x-locale': localStorage.getItem('vanty_locale') || 'es'}, body: JSON.stringify({ id }) })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Cita eliminada'); cargarCitas()
+      toast.success(t('auto.calendarView.citaEliminada')); cargarCitas()
     } catch (err:any) { toast.error('Error: ' + err.message) }
   }
 
   const handleSave = async () => {
-    if (tipoSesion==='individual' && !newApt.child_id) { toast.error('Selecciona un paciente'); return }
-    if (tipoSesion==='grupal' && selectedParticipants.length===0) { toast.error('Selecciona participantes'); return }
+    if (tipoSesion==='individual' && !newApt.child_id) { toast.error(t('auto.calendarView.seleccionaUnPaciente')); return }
+    if (tipoSesion==='grupal' && selectedParticipants.length===0) { toast.error(t('auto.calendarView.seleccionaParticipantes')); return }
     setIsSaving(true)
     try {
       // Obtener userId del admin para guardarlo en la cita (necesario para borrar del calendar)
@@ -357,7 +357,7 @@ function MonthlyCalendarView() {
 
           // Avisar si ningún calendario está conectado para el especialista
           if (!gcalData.connected && !msData.connected) {
-            toast.warning('El especialista no tiene Google ni Outlook Calendar conectado. La cita se guardó correctamente.')
+            toast.warning(t('auto.calendarView.elEspecialistaNoTieneGoogle'))
           }
 
           // Construir lista de citas a sincronizar (una por participante en grupal)
@@ -415,8 +415,8 @@ function MonthlyCalendarView() {
             }
           }
 
-          if (gcalSynced > 0) toast.success(`${gcalSynced} cita${gcalSynced > 1 ? 's' : ''} añadida${gcalSynced > 1 ? 's' : ''} a Google Calendar`)
-          if (msSynced > 0)   toast.success(`${msSynced} cita${msSynced > 1 ? 's' : ''} añadida${msSynced > 1 ? 's' : ''} a Outlook Calendar`)
+          if (gcalSynced > 0) toast.success(t('auto.calendarView.citaAnadidaAGoogleCalendar', { v1: String(gcalSynced), v2: String(gcalSynced > 1 ? 's' : ''), v3: String(gcalSynced > 1 ? 's' : '') }))
+          if (msSynced > 0)   toast.success(t('auto.calendarView.citaAnadidaAOutlookCalendar', { v1: String(msSynced), v2: String(msSynced > 1 ? 's' : ''), v3: String(msSynced > 1 ? 's' : '') }))
         }
       } catch (calError) {
         console.error('Calendar sync error:', calError)
@@ -463,10 +463,10 @@ function MonthlyCalendarView() {
         body: JSON.stringify({ appointment_id: apt.id, child_id: apt.child_id, initiated_by: 'admin' , locale: localStorage.getItem('vanty_locale') || 'es' }),
       })
       const data = await res.json()
-      if (data.limitReached) { toast.error('Límite mensual de 10,000 min alcanzado. Se reinicia el próximo mes.'); return }
+      if (data.limitReached) { toast.error(t('auto.calendarView.limiteMensualDe10000Min')); return }
       if (data.error) throw new Error(data.error)
       setVideoSession({ roomUrl: data.room_url, sessionId: data.session_id, appointmentId: apt.id })
-      toast.success('Sala creada · Padre notificado')
+      toast.success(t('auto.calendarView.salaCreadaPadreNotificado'))
     } catch (err:any) { toast.error('Error: ' + err.message) }
     finally { setStartingCall(null) }
   }

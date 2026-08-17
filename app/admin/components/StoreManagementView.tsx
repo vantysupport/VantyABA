@@ -58,8 +58,8 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
   const [dragOver, setDragOver] = useState(false)
 
   const handleImage = (file: File) => {
-    if (!file.type.startsWith('image/')) { toast.error('Solo imágenes'); return }
-    if (file.size > 5*1024*1024) { toast.error('Máximo 5MB'); return }
+    if (!file.type.startsWith('image/')) { toast.error(t('auto.storeManagementView.soloImagenes')); return }
+    if (file.size > 5*1024*1024) { toast.error(t('auto.storeManagementView.maximo5mb')); return }
     setImageFile(file); setImagePreview(URL.createObjectURL(file))
   }
   const uploadImage = async (): Promise<string|null> => {
@@ -79,8 +79,8 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
     }
   }
   const handleSave = async () => {
-    if (!form.nombre.trim()) { toast.error('El nombre es obligatorio'); return }
-    if (!form.precio_soles || Number(form.precio_soles) < 0) { toast.error('Precio inválido'); return }
+    if (!form.nombre.trim()) { toast.error(t('auto.storeManagementView.elNombreEsObligatorio')); return }
+    if (!form.precio_soles || Number(form.precio_soles) < 0) { toast.error(t('auto.storeManagementView.precioInvalido')); return }
     setSaving(true)
     try {
       const imagen_url = await uploadImage()
@@ -94,10 +94,10 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
       }
       if (product) {
         const { error } = await supabase.from('store_products').update(payload).eq('id', product.id)
-        if (error) throw error; toast.success('Producto actualizado')
+        if (error) throw error; toast.success(t('auto.storeManagementView.productoActualizado'))
       } else {
         const { error } = await supabase.from('store_products').insert(payload)
-        if (error) throw error; toast.success('Producto creado')
+        if (error) throw error; toast.success(t('auto.storeManagementView.productoCreado'))
       }
       onSaved()
     } catch (e: any) { toast.error('Error: ' + e.message) }
@@ -368,10 +368,10 @@ export default function StoreManagementView() {
     toast.success(p.activo ? 'Producto ocultado' : 'Producto activado')
   }
   const deleteProduct = async (p: Product) => {
-    if (!confirm(`¿Eliminar "${p.nombre}"?`)) return
+    if (!confirm(t('auto.storeManagementView.eliminar', { v1: String(p.nombre) }))) return
     const { error } = await supabase.from('store_products').delete().eq('id', p.id)
     if (error) { toast.error('Error: '+error.message); return }
-    setProducts(prev => prev.filter(x => x.id!==p.id)); toast.success('Producto eliminado')
+    setProducts(prev => prev.filter(x => x.id!==p.id)); toast.success(t('auto.storeManagementView.productoEliminado'))
   }
   const updateOrderEstado = async (orderId: string, estado: string) => {
     setUpdatingOrder(orderId)

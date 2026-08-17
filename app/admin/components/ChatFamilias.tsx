@@ -352,7 +352,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
       mr.start(100); mediaRecRef.current = mr
       setRecording(true); setRecSeconds(0)
       recTimerRef.current = setInterval(() => setRecSeconds(s => s + 1), 1000)
-    } catch { alert('No se pudo acceder al micrófono. Verifica los permisos del navegador.') }
+    } catch { alert(t('auto.chatFamilias.noSePudoAccederAl')) }
   }
 
   const stopRecording = async (cancel = false) => {

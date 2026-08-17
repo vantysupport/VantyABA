@@ -204,7 +204,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob); const a = document.createElement('a')
     a.href = url; a.download = `reporte_financiero_${anio}.csv`; a.click()
-    URL.revokeObjectURL(url); toast.success('Reporte exportado')
+    URL.revokeObjectURL(url); toast.success(t('auto.adminReportesFinancieros.reporteExportado'))
   }
 
   const fmt = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
@@ -407,7 +407,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                   <button
                     onClick={async () => {
                       const res = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=0`)
-                      if (!res.ok) { toast.error('Error generando reporte'); return }
+                      if (!res.ok) { toast.error(t('auto.adminReportesFinancieros.errorGenerandoReporte')); return }
                       const blob = await res.blob()
                       const url  = URL.createObjectURL(blob)
                       const a    = document.createElement('a')
@@ -443,13 +443,13 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                               <button
                                 onClick={async () => {
                                   const res  = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=${i + 1}`)
-                                  if (!res.ok) { toast.error('Error'); return }
+                                  if (!res.ok) { toast.error(t('auto.adminReportesFinancieros.error')); return }
                                   const blob = await res.blob()
                                   const url  = URL.createObjectURL(blob)
                                   const a    = document.createElement('a')
                                   a.href     = url; a.download = `reporte_${MESES_L[i].toLowerCase()}_${anio}.xlsx`
                                   a.click(); URL.revokeObjectURL(url)
-                                  toast.success(`Excel de ${MESES_L[i]} exportado`)
+                                  toast.success(t('auto.adminReportesFinancieros.excelDeExportado', { v1: String(MESES_L[i]) }))
                                 }}
                                 title={`Descargar reporte de ${MESES_L[i]}`}
                                 className="p-1.5 rounded-lg transition-all hover:opacity-70"

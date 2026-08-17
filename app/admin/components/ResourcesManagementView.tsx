@@ -66,9 +66,9 @@ export default function ResourcesManagementView() {
   useEffect(() => { load() }, [load])
 
   const handleSave = async () => {
-    if (!newResource.title.trim()) { toast.error('El título es obligatorio'); return }
+    if (!newResource.title.trim()) { toast.error(t('auto.resourcesManagementView.elTituloEsObligatorio')); return }
     if (!newResource.url.trim()) { toast.error('La URL es obligatoria'); return }
-    if (!newResource.is_global && !newResource.child_id) { toast.error('Selecciona un paciente'); return }
+    if (!newResource.is_global && !newResource.child_id) { toast.error(t('auto.resourcesManagementView.seleccionaUnPaciente')); return }
     setIsSaving(true)
     try {
       // Get parent_id from child if specific patient selected
@@ -91,7 +91,7 @@ export default function ResourcesManagementView() {
           tags: newResource.tags,
         }).eq('id', editingId)
         if (error) throw new Error(error.message)
-        toast.success('Recurso actualizado correctamente')
+        toast.success(t('auto.resourcesManagementView.recursoActualizadoCorrectamente'))
       } else {
         const res = await fetch('/api/admin/resources', {
           method: 'POST',
@@ -104,7 +104,7 @@ export default function ResourcesManagementView() {
         })
         const json = await res.json()
         if (json.error) throw new Error(json.error)
-        toast.success('Recurso compartido correctamente')
+        toast.success(t('auto.resourcesManagementView.recursoCompartidoCorrectamente'))
       }
       setShowForm(false)
       setEditingId(null)
@@ -118,10 +118,10 @@ export default function ResourcesManagementView() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este recurso?')) return
+    if (!confirm(t('auto.resourcesManagementView.eliminarEsteRecurso'))) return
     try {
       await fetch('/api/admin/resources', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-locale': typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es' }, body: JSON.stringify({ id }) })
-      toast.success('Recurso eliminado')
+      toast.success(t('auto.resourcesManagementView.recursoEliminado'))
       load()
     } catch (err: any) {
       toast.error('Error: ' + err.message)

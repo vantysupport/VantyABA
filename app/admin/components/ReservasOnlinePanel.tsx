@@ -113,12 +113,12 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
   }
 
   const eliminarLink = async (id: string) => {
-    if (!confirm('¿Eliminar este link de reserva? Esta acción no se puede deshacer. (Las citas ya reservadas con él NO se borran.)')) return
+    if (!confirm(t('auto.reservasOnlinePanel.eliminarEsteLinkDeReserva'))) return
     try {
       const r = await fetch(`/api/booking/links?id=${id}`, { method: 'DELETE' })
       const d = await r.json()
       if (d.error) throw new Error(d.error)
-      toast.success('Link eliminado')
+      toast.success(t('auto.reservasOnlinePanel.linkEliminado'))
       setLinks(prev => prev.filter(l => l.id !== id))
     } catch (e: any) { toast.error('Error: ' + e.message) }
   }

@@ -96,11 +96,11 @@ function GoogleCalendarBlock({ userId, isDark }: { userId: string; isDark: boole
       const res = await fetch(`/api/google-calendar?action=auth-url&userId=${userId}&role=especialista`)
       const data = await res.json()
       if (data.url) window.location.href = data.url
-    } catch { toast.error('Error iniciando conexión'); setBusy(false) }
+    } catch { toast.error(t('auto.miPerfil.errorIniciandoConexion')); setBusy(false) }
   }
 
   const disconnect = async () => {
-    if (!confirm('¿Desconectar Google Calendar?')) return
+    if (!confirm(t('auto.miPerfil.desconectarGoogleCalendar'))) return
     await fetch(`/api/google-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected'); setEmail(null)
     toast.success('Google Calendar desconectado')
@@ -162,11 +162,11 @@ function OutlookCalendarBlock({ userId, isDark }: { userId: string; isDark: bool
       const res = await fetch(`/api/microsoft-calendar?action=auth-url&userId=${userId}&role=especialista`)
       const data = await res.json()
       if (data.url) window.location.href = data.url
-    } catch { toast.error('Error iniciando conexión'); setBusy(false) }
+    } catch { toast.error(t('auto.miPerfil.errorIniciandoConexion2')); setBusy(false) }
   }
 
   const disconnect = async () => {
-    if (!confirm('¿Desconectar Outlook Calendar?')) return
+    if (!confirm(t('auto.miPerfil.desconectarOutlookCalendar'))) return
     await fetch(`/api/microsoft-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected'); setEmail(null)
     toast.success('Outlook Calendar desconectado')
@@ -252,7 +252,7 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
         specialty: form.specialty.trim(),
         updated_at: new Date().toISOString(),
       }).eq('id', user.id)
-      toast.success('Perfil actualizado correctamente')
+      toast.success(t('auto.miPerfil.perfilActualizadoCorrectamente'))
       onUpdate?.()
     } catch (e: any) {
       toast.error('Error: ' + e.message)
@@ -308,7 +308,7 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
                 const finalUrl = `${upData.url}?t=${Date.now()}`
                 setAvatarUrl(finalUrl)
                 onAvatarUpdate?.(finalUrl)
-                toast.success('Foto actualizada')
+                toast.success(t('auto.miPerfil.fotoActualizada'))
               } catch (err: any) {
                 toast.error(err?.message || 'Error al actualizar la foto')
               } finally {
@@ -388,14 +388,14 @@ function SeccionSeguridad() {
   }
 
   const handleChange = async () => {
-    if (!form.nueva) { toast.error('Ingresa la nueva contraseña'); return }
-    if (form.nueva.length < 8) { toast.error('Mínimo 8 caracteres'); return }
-    if (form.nueva !== form.confirmar) { toast.error('Las contraseñas no coinciden'); return }
+    if (!form.nueva) { toast.error(t('auto.miPerfil.ingresaLaNuevaContrasena')); return }
+    if (form.nueva.length < 8) { toast.error(t('auto.miPerfil.minimo8Caracteres')); return }
+    if (form.nueva !== form.confirmar) { toast.error(t('auto.miPerfil.lasContrasenasNoCoinciden')); return }
     setSaving(true)
     try {
       const { error } = await supabase.auth.updateUser({ password: form.nueva })
       if (error) throw error
-      toast.success('¡Contraseña actualizada!')
+      toast.success(t('auto.miPerfil.contrasenaActualizada'))
       setForm({ nueva: '', confirmar: '' })
     } catch (e: any) {
       toast.error('Error: ' + e.message)

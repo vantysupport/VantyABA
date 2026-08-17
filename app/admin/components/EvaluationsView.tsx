@@ -63,7 +63,7 @@ function DynamicEvaluationsView() {
      if (isGenerating) return // Guard contra doble click
      const hasEnoughData = Object.keys(respuestas).length > 2;
      if (!hasEnoughData) {
-         return alert("Por favor responde algunas preguntas antes de generar con IA.");
+         return alert(t('auto.evaluationsView.porFavorRespondeAlgunasPreguntas'));
      }
 
      console.log('🤖 Generando IA para formulario:', activeForm);
@@ -162,7 +162,7 @@ function DynamicEvaluationsView() {
           return newState
         })
         
-        alert("¡Análisis IA completado!");
+        alert(t('auto.evaluationsView.analisisIaCompletado'));
 
      } catch (e: any) {
         console.error('💥 Error completo:', e);
@@ -280,7 +280,7 @@ function DynamicEvaluationsView() {
   // =====================================================================
 
   const handleSave = async () => {
-    if (!selectedChild) return alert("Selecciona un paciente");
+    if (!selectedChild) return alert(t('auto.evaluationsView.seleccionaUnPaciente'));
     
     console.log('🔍 GUARDANDO FORMULARIO:', {
       formulario: activeForm,
@@ -323,7 +323,7 @@ function DynamicEvaluationsView() {
       // 🔔 NUEVO: ENVIAR NOTIFICACIÓN AL PADRE AUTOMÁTICAMENTE
       await enviarNotificacionPadre(selectedChild, activeForm, respuestas);
 
-      const wantsReport = confirm('✅ ¡Evaluación guardada exitosamente!\n\n¿Deseas generar el Reporte Word ahora?');
+      const wantsReport = confirm(t('auto.evaluationsView.evaluacionGuardadaExitosamenteDese'));
       if (wantsReport) {
         setShowReportModal(true);
       } else {

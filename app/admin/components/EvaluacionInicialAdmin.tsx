@@ -130,7 +130,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
       })
       const d = await r.json()
       if (!d.ok) throw new Error(d.error)
-      alert(`Informe generado: ${d.file_name}\nDisponible en la pestaña "Historial & IA" del paciente.`)
+      alert(t('auto.evaluacionInicialAdmin.informeGeneradoDisponibleEnLa', { v1: String(d.file_name) }))
     } catch (e: any) { alert('Error: ' + e.message) }
     finally { setGenerandoWord(false) }
   }
@@ -201,7 +201,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
   }
 
   const enviarRespuesta = async () => {
-    if (!respuesta.trim()) { alert('Escribe una respuesta'); return }
+    if (!respuesta.trim()) { alert(t('auto.evaluacionInicialAdmin.escribeUnaRespuesta')); return }
     setEnviandoResp(true)
     try {
       const r = await fetch('/api/evaluacion-inicial/responder', {

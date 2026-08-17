@@ -199,7 +199,7 @@ export default function AgendaSesiones({ childId }: { childId?: string }) {
                     {modal.meeting_link}
                   </a>
                   <button
-                    onClick={() => { navigator.clipboard.writeText(modal.meeting_link); alert('Link copiado ✅') }}
+                    onClick={() => { navigator.clipboard.writeText(modal.meeting_link); alert(t('auto.agendaSesiones.linkCopiado')) }}
                     className="mt-2 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors w-full"
                   >
                     📋 Copiar link

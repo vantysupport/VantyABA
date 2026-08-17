@@ -288,7 +288,7 @@ export default function ControlPage() {
       const j = await res.json().catch(() => ({}))
       if (!res.ok) alert('Error al guardar límites: ' + (j.error || res.status))
       else await loadStatus()
-    } catch { alert('Error de red.') } finally { setBusy(null) }
+    } catch { alert(t('auto.page.errorDeRed')) } finally { setBusy(null) }
   }
 
   const saveAria = async (override?: Partial<{ enabled: boolean; staffEnabled: boolean }>) => {
@@ -315,7 +315,7 @@ export default function ControlPage() {
       const j = await res.json().catch(() => ({}))
       if (!res.ok) alert('Error ARIA: ' + (j.error || res.status))
       else await loadStatus()
-    } catch { alert('Error de red.') } finally { setBusy(null) }
+    } catch { alert(t('auto.page.errorDeRed2')) } finally { setBusy(null) }
   }
 
   /** Toggle a single feature and persist immediately */
@@ -331,7 +331,7 @@ export default function ControlPage() {
       })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { setFeatures(features); alert('Error: ' + (j.error || res.status)) }
-    } catch { setFeatures(features); alert('Error de red.') }
+    } catch { setFeatures(features); alert(t('auto.page.errorDeRed3')) }
   }
 
   /** Toggle a single role and persist immediately */
@@ -348,11 +348,11 @@ export default function ControlPage() {
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { setRolesConfig(rolesConfig); alert('Error: ' + (j.error || res.status)) }
       else if (j.roles_config) setRolesConfig({ ...DEFAULT_ROLES, ...j.roles_config })
-    } catch { setRolesConfig(rolesConfig); alert('Error de red.') }
+    } catch { setRolesConfig(rolesConfig); alert(t('auto.page.errorDeRed4')) }
   }
 
   const clearErrors = async () => {
-    if (!confirm('¿Borrar todos los errores?')) return
+    if (!confirm(t('auto.page.borrarTodosLosErrores'))) return
     setBusy('clear')
     try {
       const token = await getToken()

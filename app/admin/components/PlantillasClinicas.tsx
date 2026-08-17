@@ -103,9 +103,9 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
   useEffect(() => { load() }, [load])
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm('¿Eliminar esta ficha? Esta acción no se puede deshacer.')) return
+    if (!confirm(t('auto.plantillasClinicas.eliminarEstaFichaEstaAccion'))) return
     await supabase.from('clinical_templates').delete().eq('id', id)
-    toast.success('Ficha eliminada')
+    toast.success(t('auto.plantillasClinicas.fichaEliminada'))
     load()
   }
 
@@ -244,7 +244,7 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
   }
 
   const handleSave = async () => {
-    if (!name.trim()) { toast.error('El nombre es obligatorio'); return }
+    if (!name.trim()) { toast.error(t('auto.plantillasClinicas.elNombreEsObligatorio')); return }
     const valid = fields.filter(f => f.label.trim())
     if (valid.length === 0) { toast.error('Agrega al menos un campo'); return }
     setSaving(true)
@@ -254,11 +254,11 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
       if (template?.id) {
         const { error } = await supabase.from('clinical_templates').update(payload).eq('id', template.id)
         if (error) throw error
-        toast.success('Ficha actualizada')
+        toast.success(t('auto.plantillasClinicas.fichaActualizada'))
       } else {
         const { error } = await supabase.from('clinical_templates').insert({ ...payload, created_by: user?.id })
         if (error) throw error
-        toast.success('Ficha creada')
+        toast.success(t('auto.plantillasClinicas.fichaCreada'))
       }
       onSave()
     } catch (e: any) { toast.error('Error: ' + e.message) }

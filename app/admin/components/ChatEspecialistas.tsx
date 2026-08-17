@@ -109,7 +109,7 @@ function AvatarUpload({
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
-      alert('Máximo 5MB para la foto de perfil')
+      alert(t('auto.chatEspecialistas.maximo5mbParaLaFoto'))
       return
     }
     setUploading(true)
@@ -347,7 +347,7 @@ export default function ChatEspecialistas({
       })
       setEspecialistas(conInfo)
     } catch {
-      toast.error('Error al cargar especialistas')
+      toast.error(t('auto.chatEspecialistas.errorAlCargarEspecialistas'))
     } finally {
       setLoadingEsp(false)
     }
@@ -379,7 +379,7 @@ export default function ChatEspecialistas({
           )
         }
       } catch {
-        toast.error('Error al cargar mensajes')
+        toast.error(t('auto.chatEspecialistas.errorAlCargarMensajes'))
       } finally {
         setLoadingMsg(false)
       }
@@ -467,7 +467,7 @@ export default function ChatEspecialistas({
         setMensajes(prev => prev.map(m => m.id === tempId ? data : m))
       }
     } catch {
-      toast.error('Error al enviar')
+      toast.error(t('auto.chatEspecialistas.errorAlEnviar'))
       // Revertir el optimista si falló
       setMensajes(prev => prev.filter(m => m.id !== tempId))
       setTexto(contenido)
@@ -482,7 +482,7 @@ export default function ChatEspecialistas({
     const file = e.target.files?.[0]
     if (!file || !seleccionado) return
     if (file.size > 10 * 1024 * 1024) {
-      toast.error('Máximo 10MB')
+      toast.error(t('auto.chatEspecialistas.maximo10mb'))
       return
     }
     setSubiendo(true)
@@ -510,9 +510,9 @@ export default function ChatEspecialistas({
         read_at: null,
       })
       if (error) throw new Error(error.message)
-      toast.success('Archivo enviado')
+      toast.success(t('auto.chatEspecialistas.archivoEnviado'))
     } catch (err) {
-      toast.error(`Error al subir: ${err instanceof Error ? err.message : 'Error desconocido'}`)
+      toast.error(t('auto.chatEspecialistas.errorAlSubir', { v1: String(err instanceof Error ? err.message : 'Error desconocido') }))
     } finally {
       setSubiendo(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -543,7 +543,7 @@ export default function ChatEspecialistas({
         1000
       )
     } catch {
-      toast.error('No se pudo acceder al micrófono')
+      toast.error(t('auto.chatEspecialistas.noSePudoAccederAl'))
     }
   }
 
@@ -602,7 +602,7 @@ export default function ChatEspecialistas({
       })
       if (error) throw new Error(error.message)
       cancelarAudio()
-      toast.success('Audio enviado')
+      toast.success(t('auto.chatEspecialistas.audioEnviado'))
     } catch (err) {
       toast.error(
         `Error al enviar audio: ${err instanceof Error ? err.message : 'Error desconocido'}`
@@ -672,7 +672,7 @@ export default function ChatEspecialistas({
   const handleCopy = (msgId: string) => {
     const msg = mensajes.find((m) => m.id === msgId)
     if (msg) navigator.clipboard.writeText(msg.content)
-    toast.success('Copiado')
+    toast.success(t('auto.chatEspecialistas.copiado'))
   }
 
   // ── Utilidades ────────────────────────────────────────────────────────────
@@ -730,10 +730,10 @@ export default function ChatEspecialistas({
           onReply={() => setReplyTo(contextMsg)}
           onCopy={() => handleCopy(contextMsg.id)}
           onReact={(emoji) => handleReaction(contextMsg.id, emoji)}
-          onForward={() => toast.success('Función de reenvío próximamente')}
-          onPin={() => toast.success('Mensaje fijado')}
-          onStar={() => toast.success('Mensaje destacado')}
-          onReport={() => toast.success('Mensaje reportado')}
+          onForward={() => toast.success(t('auto.chatEspecialistas.funcionDeReenvioProximamente'))}
+          onPin={() => toast.success(t('auto.chatEspecialistas.mensajeFijado'))}
+          onStar={() => toast.success(t('auto.chatEspecialistas.mensajeDestacado'))}
+          onReport={() => toast.success(t('auto.chatEspecialistas.mensajeReportado'))}
           onDelete={() => handleDelete(contextMsg.id)}
         />
       )}

@@ -145,7 +145,7 @@ export default function ChatFamilias({ childId, childName, profile }: Props) {
       setRecording(true)
       setRecordSecs(0)
       timerRef.current = setInterval(() => setRecordSecs(s => s + 1), 1000)
-    } catch { alert('No se pudo acceder al micrófono') }
+    } catch { alert(t('auto.chatFamilias.noSePudoAccederAl2')) }
   }
 
   const stopRecording = () => {

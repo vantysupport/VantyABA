@@ -186,7 +186,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
   const answer = (id: string, val: any) => setResponses(p => ({ ...p, [id]: val }))
 
   const handleAnalyze = async () => {
-    if (!childId) { toast.error('Selecciona un paciente'); return }
+    if (!childId) { toast.error(t('auto.misFormularios.seleccionaUnPaciente')); return }
     setAnalyzing(true)
     try {
       const child = children.find((c: any) => c.id === childId)
@@ -251,13 +251,13 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
         analysis?.informe_padres || ''
       )
       setEditedActividades(analysis?.actividades_casa || analysis?.actividad_casa || '')
-      toast.success('Análisis IA generado')
+      toast.success(t('auto.misFormularios.analisisIaGenerado'))
     } catch (e: any) { toast.error('Error: ' + e.message) }
     finally { setAnalyzing(false) }
   }
 
   const handleSave = async () => {
-    if (!childId) { toast.error('Selecciona un paciente'); return }
+    if (!childId) { toast.error(t('auto.misFormularios.seleccionaUnPaciente2')); return }
     setSaving(true)
     try {
       const table = form.isSoft ? 'form_responses' :
@@ -329,7 +329,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
         }
       }
       setDone(true)
-      toast.success('Formulario guardado correctamente')
+      toast.success(t('auto.misFormularios.formularioGuardadoCorrectamente'))
     } catch (e: any) { toast.error('Error: ' + e.message) }
     finally { setSaving(false) }
   }

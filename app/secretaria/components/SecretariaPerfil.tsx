@@ -83,7 +83,7 @@ function SeccionPerfil({ profile, onUpdate, onAvatarUpdate }: { profile: any; on
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('No autenticado')
       await supabase.from('profiles').update({ full_name: form.full_name.trim(), phone: form.phone.trim(), updated_at: new Date().toISOString() }).eq('id', user.id)
-      toast.success('Perfil actualizado')
+      toast.success(t('auto.secretariaPerfil.perfilActualizado'))
       onUpdate?.()
     } catch (e: any) { toast.error('Error: ' + e.message) }
     finally { setSaving(false) }
@@ -118,7 +118,7 @@ function SeccionPerfil({ profile, onUpdate, onAvatarUpdate }: { profile: any; on
                 const upData = await upRes.json()
                 if (!upRes.ok || !upData.url) throw new Error(upData.error || 'No se pudo subir la imagen')
                 const finalUrl = `${upData.url}?t=${Date.now()}`
-                setAvatarUrl(finalUrl); onAvatarUpdate?.(finalUrl); toast.success('Foto actualizada')
+                setAvatarUrl(finalUrl); onAvatarUpdate?.(finalUrl); toast.success(t('auto.secretariaPerfil.fotoActualizada'))
               } catch (err: any) {
                 toast.error(err?.message || 'Error al actualizar la foto')
               } finally {
@@ -181,14 +181,14 @@ function SeccionSeguridad() {
   }
 
   const handleChange = async () => {
-    if (!form.nueva) { toast.error('Ingresa la nueva contraseña'); return }
-    if (form.nueva.length < 8) { toast.error('Mínimo 8 caracteres'); return }
-    if (form.nueva !== form.confirmar) { toast.error('Las contraseñas no coinciden'); return }
+    if (!form.nueva) { toast.error(t('auto.secretariaPerfil.ingresaLaNuevaContrasena')); return }
+    if (form.nueva.length < 8) { toast.error(t('auto.secretariaPerfil.minimo8Caracteres')); return }
+    if (form.nueva !== form.confirmar) { toast.error(t('auto.secretariaPerfil.lasContrasenasNoCoinciden')); return }
     setSaving(true)
     try {
       const { error } = await supabase.auth.updateUser({ password: form.nueva })
       if (error) throw error
-      toast.success('¡Contraseña actualizada!')
+      toast.success(t('auto.secretariaPerfil.contrasenaActualizada'))
       setForm({ nueva: '', confirmar: '' })
     } catch (e: any) { toast.error('Error: ' + e.message) }
     finally { setSaving(false) }

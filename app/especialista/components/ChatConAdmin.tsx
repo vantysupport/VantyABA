@@ -88,7 +88,7 @@ function AvatarUpload({ userId, currentUrl, name, onUpdate }: { userId: string; 
   const inputRef = useRef<HTMLInputElement>(null)
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return
-    if (file.size > 5 * 1024 * 1024) { alert('Máximo 5MB'); return }
+    if (file.size > 5 * 1024 * 1024) { alert(t('auto.chatConAdmin.maximo5mb')); return }
     setUploading(true)
     try {
       const ext = file.name.split('.').pop()
@@ -245,7 +245,7 @@ export default function ChatConAdmin({
       })
       setContactos(conInfo)
     } catch {
-      toast.error('Error al cargar contactos')
+      toast.error(t('auto.chatConAdmin.errorAlCargarContactos'))
     } finally {
       setLoadingContactos(false)
     }
@@ -271,7 +271,7 @@ export default function ChatConAdmin({
         setContactos(prev => prev.map(c => c.id === contactoId ? { ...c, unread: 0 } : c))
       }
     } catch {
-      toast.error('Error al cargar mensajes')
+      toast.error(t('auto.chatConAdmin.errorAlCargarMensajes'))
     } finally {
       setLoadingMsg(false)
     }
@@ -313,7 +313,7 @@ export default function ChatConAdmin({
         recipient_id: seleccionado.id, message_type: 'text', read_at: null,
       })
       if (error) throw error
-    } catch { toast.error('Error al enviar'); setTexto(contenido) }
+    } catch { toast.error(t('auto.chatConAdmin.errorAlEnviar')); setTexto(contenido) }
     finally { setEnviando(false); textareaRef.current?.focus() }
   }
 
@@ -321,7 +321,7 @@ export default function ChatConAdmin({
   const handleArchivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !seleccionado) return
-    if (file.size > 10 * 1024 * 1024) { toast.error('Máximo 10MB'); return }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t('auto.chatConAdmin.maximo10mb')); return }
     setSubiendo(true)
     try {
       const ext = file.name.split('.').pop()
@@ -337,8 +337,8 @@ export default function ChatConAdmin({
         file_url: publicUrl, file_name: file.name, file_type: file.type, read_at: null,
       })
       if (error) throw new Error(error.message)
-      toast.success('Archivo enviado')
-    } catch (err) { toast.error(`Error al subir: ${err instanceof Error ? err.message : 'Error'}`) }
+      toast.success(t('auto.chatConAdmin.archivoEnviado'))
+    } catch (err) { toast.error(t('auto.chatConAdmin.errorAlSubir', { v1: String(err instanceof Error ? err.message : 'Error') })) }
     finally { setSubiendo(false); if (fileInputRef.current) fileInputRef.current.value = '' }
   }
 
@@ -356,7 +356,7 @@ export default function ChatConAdmin({
       }
       mr.start(); setGrabando(true); setTiempoGrabacion(0)
       timerRef.current = setInterval(() => setTiempoGrabacion(t => t + 1), 1000)
-    } catch { toast.error('No se pudo acceder al micrófono') }
+    } catch { toast.error(t('auto.chatConAdmin.noSePudoAccederAl')) }
   }
   const detenerGrabacion = () => {
     if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop()
@@ -389,8 +389,8 @@ export default function ChatConAdmin({
         file_url: publicUrl, file_name: audioName, file_type: 'audio/webm', read_at: null,
       })
       if (error) throw new Error(error.message)
-      cancelarAudio(); toast.success('Audio enviado')
-    } catch (err) { toast.error(`Error al enviar audio: ${err instanceof Error ? err.message : 'Error'}`) }
+      cancelarAudio(); toast.success(t('auto.chatConAdmin.audioEnviado'))
+    } catch (err) { toast.error(t('auto.chatConAdmin.errorAlEnviarAudio', { v1: String(err instanceof Error ? err.message : 'Error') })) }
     finally { setSubiendo(false) }
   }
   // Precargar notas de voz apenas llegan los mensajes → reproducción instantánea
@@ -462,11 +462,11 @@ export default function ChatConAdmin({
             menu={contextMenu} esMio={msg.sender_id === userId}
             onClose={() => setContextMenu(null)}
             onReply={() => { setReplyTo(msg); setContextMenu(null); textareaRef.current?.focus() }}
-            onCopy={() => { navigator.clipboard.writeText(msg.content); toast.success('Copiado') }}
+            onCopy={() => { navigator.clipboard.writeText(msg.content); toast.success(t('auto.chatConAdmin.copiado')) }}
             onReact={(emoji) => handleReaction(msg.id, emoji)}
-            onForward={() => toast.info('Reenviar próximamente')}
-            onPin={() => toast.info('Fijar próximamente')}
-            onStar={() => toast.info('Destacar próximamente')}
+            onForward={() => toast.info(t('auto.chatConAdmin.reenviarProximamente'))}
+            onPin={() => toast.info(t('auto.chatConAdmin.fijarProximamente'))}
+            onStar={() => toast.info(t('auto.chatConAdmin.destacarProximamente'))}
             onReport={() => toast.info('Reportado')}
             onDelete={() => handleDelete(msg.id)}
           />

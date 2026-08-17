@@ -78,12 +78,12 @@ export default function MisEvaluaciones({ userId }: { userId: string }) {
   useEffect(() => { cargar() }, [cargar])
 
   const enviar = async () => {
-    if (!form.child_id || !form.titulo || !form.contenido) { toast.error('Completa los campos requeridos'); return }
+    if (!form.child_id || !form.titulo || !form.contenido) { toast.error(t('auto.misEvaluaciones.completaLosCamposRequeridos')); return }
     setEnviando(true)
     try {
       const { error } = await supabase.from('specialist_submissions').insert({ specialist_id: userId, ...form, status: 'pending_approval' })
       if (error) throw error
-      toast.success('¡Enviado para aprobación!')
+      toast.success(t('auto.misEvaluaciones.enviadoParaAprobacion'))
       setMostrarForm(false)
       setForm({ child_id: '', tipo: 'conducta', titulo: '', contenido: '', observaciones: '', recomendaciones: '' })
       cargar()

@@ -320,17 +320,17 @@ export default function AdminDashboard() {
       await releaseSessionNow()
       await supabase.auth.signOut()
       router.push('/login')
-    } catch { toast.error('Error al cerrar sesión') }
+    } catch { toast.error(t('auto.page.errorAlCerrarSesion')) }
   }
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) { toast.warning('Mínimo 6 caracteres'); return }
-    if (newPassword !== confirmPassword) { toast.error('Las contraseñas no coinciden'); return }
+    if (newPassword.length < 6) { toast.warning(t('auto.page.minimo6Caracteres2')); return }
+    if (newPassword !== confirmPassword) { toast.error(t('auto.page.lasContrasenasNoCoinciden2')); return }
     setChangingPassword(true)
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
-      toast.success('Contraseña actualizada')
+      toast.success(t('auto.page.contrasenaActualizada'))
       setShowChangePassword(false)
     } catch (e: any) { toast.error(e.message) }
     finally { setChangingPassword(false) }

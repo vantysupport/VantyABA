@@ -107,7 +107,7 @@ export default function SecretariaComunicacion({ profile }: { profile: any }) {
   }
 
   const sendReminder = async (c: Cita) => {
-    if (!c.parent_id) { toast.error('El paciente no tiene tutor vinculado'); return }
+    if (!c.parent_id) { toast.error(t('auto.secretariaComunicacion.elPacienteNoTieneTutor')); return }
     setSending(c.id)
     const ok = await notify(c.parent_id, c.child_name, c.appointment_time)
     toast[ok ? 'success' : 'warning'](`${ok ? 'Recordatorio enviado' : 'Registrado (sin WhatsApp)'} — ${c.child_name}`)
@@ -123,7 +123,7 @@ export default function SecretariaComunicacion({ profile }: { profile: any }) {
   }
 
   const sendSchedule = async (fam: Familia) => {
-    if (!fam.phone && !fam.email) { toast.error('La familia no tiene contacto registrado'); return }
+    if (!fam.phone && !fam.email) { toast.error(t('auto.secretariaComunicacion.laFamiliaNoTieneContacto')); return }
     setSending(fam.id)
     const detalle = citasSem.filter(c => c.parent_id === fam.id).map(c => {
       const d = new Date((c.appointment_date || '') + 'T12:00:00')
@@ -135,14 +135,14 @@ export default function SecretariaComunicacion({ profile }: { profile: any }) {
   }
 
   const sendMasivo = async () => {
-    if (!mensaje.trim()) { toast.error('Escribe un mensaje'); return }
-    if (!familias.length) { toast.error('No hay familias con citas'); return }
+    if (!mensaje.trim()) { toast.error(t('auto.secretariaComunicacion.escribeUnMensaje')); return }
+    if (!familias.length) { toast.error(t('auto.secretariaComunicacion.noHayFamiliasConCitas')); return }
     setSending('masivo'); let ok = 0
     for (const fam of familias) {
       const msg = mensaje.replace('{nombre}', fam.pacientes[0] || '').replace('{tutor}', fam.nombre)
       if (await notify(fam.id, fam.pacientes.join(', '), undefined, 'custom', msg)) ok++
     }
-    toast.success(`Enviado a ${ok}/${familias.length} familias`)
+    toast.success(t('auto.secretariaComunicacion.enviadoAFamilias', { v1: String(ok), v2: String(familias.length) }))
     setMensaje(''); setSending(null)
   }
 

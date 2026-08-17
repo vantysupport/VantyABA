@@ -31,7 +31,7 @@ function CalBtn({ label, icon, grad, profile, apiBase, paramKey, role='padre' }:
     const p = new URLSearchParams(window.location.search)
     const v = p.get(paramKey)
     if (v==='connected') { toast.success(`${label} conectado.`); check(); window.history.replaceState({},'',window.location.pathname) }
-    else if (v==='error') { toast.error(`Error al conectar ${label}`); window.history.replaceState({},'',window.location.pathname) }
+    else if (v==='error') { toast.error(t('auto.profileView.errorAlConectar', { v1: String(label) })); window.history.replaceState({},'',window.location.pathname) }
   },[profile?.id])
 
   const connect = async () => {
@@ -39,10 +39,10 @@ function CalBtn({ label, icon, grad, profile, apiBase, paramKey, role='padre' }:
     try {
       const r = await fetch(`/api/${apiBase}?action=auth-url&userId=${profile.id}&role=${role}`)
       const d = await r.json(); if (d.url) window.location.href = d.url
-    } catch { toast.error('Error iniciando conexión'); setConnecting(false) }
+    } catch { toast.error(t('auto.profileView.errorIniciandoConexion')); setConnecting(false) }
   }
   const disconnect = async () => {
-    if (!profile?.id||!confirm(`¿Desconectar ${label}?`)) return
+    if (!profile?.id||!confirm(t('auto.profileView.desconectar', { v1: String(label) }))) return
     await fetch(`/api/${apiBase}?action=disconnect&userId=${profile.id}`)
     setStatus('disconnected'); setEmail(null); toast.success(`${label} desconectado`)
   }
@@ -119,7 +119,7 @@ function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: 
   }
 
   const handleRemove = async () => {
-    if (!confirm('¿Desactivar notificaciones WhatsApp?')) return
+    if (!confirm(t('auto.profileView.desactivarNotificacionesWhatsapp'))) return
     setSaving(true)
     try {
       await supabase.from('profiles').update({ phone: null, wsp_notif: false }).eq('id', profile.id)
@@ -216,11 +216,11 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
         if (!upRes.ok || !upData.url) throw new Error(upData.error || 'No se pudo subir la imagen')
         const finalUrl = `${upData.url}?t=${Date.now()}`
         setAvatarUrl(finalUrl)
-        toast.success('Foto actualizada ✅')
+        toast.success(t('auto.profileView.fotoActualizada'))
       } catch (err: any) {
         toast.error('Error: ' + (err.message || 'No se pudo subir la foto'))
       } finally { setUploadingPhoto(false) }
-    } catch { toast.error('Error al leer el archivo'); setUploadingPhoto(false) }
+    } catch { toast.error(t('auto.profileView.errorAlLeerElArchivo')); setUploadingPhoto(false) }
   }
 
   return (

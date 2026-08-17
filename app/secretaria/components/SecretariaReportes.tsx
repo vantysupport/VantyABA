@@ -117,7 +117,7 @@ export default function SecretariaReportes() {
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob); const el = document.createElement('a')
     el.href = url; el.download = `reporte_asistencia_${new Date().toISOString().slice(0,7)}.csv`; el.click()
-    URL.revokeObjectURL(url); toast.success('Reporte exportado')
+    URL.revokeObjectURL(url); toast.success(t('auto.secretariaReportes.reporteExportado'))
   }
 
   return (

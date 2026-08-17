@@ -2173,13 +2173,33 @@
  "auto": {
   "patientsView": {
    "correoejemplocom": "correo@ejemplo.com",
-   "sesionesTotales": "sesiones totales"
+   "sesionesTotales": "sesiones totales",
+   "vinculadoA": "{v1} vinculado a {v2}",
+   "pacienteDesvinculadoDeLaCuenta": "Paciente desvinculado de la cuenta",
+   "ingresaUnNumeroValido0": "Ingresá un número válido (0 o mayor)",
+   "contadorActualizado": "✓ Contador actualizado",
+   "elNombreNoCoincideEliminacion": "El nombre no coincide. Eliminación cancelada.",
+   "eliminadoCorrectamente": "\"{v1}\" eliminado correctamente",
+   "noSePudoEliminar": "No se pudo eliminar: {v1}",
+   "wordGeneradoYGuardadoEn": "Word generado y guardado en Documentos del paciente",
+   "limiteDePacientesAlcanzadoSolo": "Límite de pacientes alcanzado ({v1}/{v2}). Solo el programador puede ampliarlo."
   },
   "misPacientes": {
    "objetivoPrincipal": "Objetivo principal",
    "derivadoPor": "Derivado por",
    "mensajeAPadres": "Mensaje a padres",
-   "espacioFisico": "Espacio físico"
+   "espacioFisico": "Espacio físico",
+   "noSeEncontroElId": "No se encontró el ID del registro",
+   "reporteWordDescargado": "Reporte Word descargado",
+   "noSeEncontroElId2": "No se encontró el ID del registro",
+   "historiaClinicaDescargada": "Historia Clínica descargada",
+   "pacienteActualizado": "Paciente actualizado",
+   "wordGeneradoYGuardadoEn": "Word generado y guardado en Documentos del paciente",
+   "elNombreEsRequerido": "El nombre es requerido",
+   "pacienteCreadoCorrectamente": "Paciente creado correctamente",
+   "noSeEncontroNingunUsuario": "No se encontró ningún usuario con ese email",
+   "noSeEncontroNingunUsuario2": "No se encontró ningún usuario con ese email",
+   "vinculadoA": "{v1} vinculado a {v2}"
   },
   "inteligenciaHubView": {
    "sesionesConsecutivas": "sesiones consecutivas",
@@ -2219,23 +2239,96 @@
    "paciente": "Paciente: ",
    "elegiUnDiaDisponibleEn": "Elegí un día disponible (en verde) para ver los horarios.",
    "conCitaMarcada": " Con cita marcada",
-   "iniciandoSesion": "Iniciando sesión…"
+   "iniciandoSesion": "Iniciando sesión…",
+   "seguroQueDeseasCancelarEsta": "¿Seguro que deseas cancelar esta cita? Si necesitás cambiar el horario, contactá al centro.",
+   "elCentroAlcanzoElNumero": "El centro alcanzó el número máximo de cuentas de familias. Comunícate con el centro para habilitar tu acceso.",
+   "errorNoSeEncontroTu": "Error: No se encontró tu perfil",
+   "elNombreEsObligatorio": "El nombre es obligatorio",
+   "laFechaDeNacimientoEs": "La fecha de nacimiento es obligatoria",
+   "elCentroAlcanzoElNumero2": "El centro alcanzó el número máximo de cuentas de familias. Comunícate con el centro para habilitar tu acceso.",
+   "noSePudoCrearEl": "No se pudo crear el registro. Verifica los permisos en Supabase.",
+   "lasContrasenasNoCoinciden": "Las contraseñas no coinciden",
+   "laContrasenaDebeTenerAl": "La contraseña debe tener al menos 6 caracteres",
+   "errorDeRed": "Error de red.",
+   "errorDeRed2": "Error de red.",
+   "errorDeRed3": "Error de red.",
+   "errorDeRed4": "Error de red.",
+   "borrarTodosLosErrores": "¿Borrar todos los errores?",
+   "errorAlCerrarSesion": "Error al cerrar sesión",
+   "minimo6Caracteres2": "Mínimo 6 caracteres",
+   "lasContrasenasNoCoinciden2": "Las contraseñas no coinciden",
+   "contrasenaActualizada": "Contraseña actualizada",
+   "minimo6Caracteres3": "Mínimo 6 caracteres",
+   "lasContrasenasNoCoinciden3": "Las contraseñas no coinciden",
+   "contrasenaActualizada2": "Contraseña actualizada"
   },
-  "evaluacionesUnificadas": {},
+  "evaluacionesUnificadas": {
+   "reporteWordGeneradoYDescargado": "Reporte Word generado y descargado",
+   "analisisIaGenerado": "Análisis IA generado",
+   "seleccionaUnPaciente": "Selecciona un paciente",
+   "formularioGuardadoCorrectamente": "Formulario guardado correctamente",
+   "reporteWordDescargado": "Reporte Word descargado",
+   "formularioEnviado": "Formulario enviado"
+  },
   "calendarView": {
-   "agregarEspecialista": "+ Agregar especialista..."
+   "agregarEspecialista": "+ Agregar especialista...",
+   "sesionFinalizadaCitaMovidaAl": "Sesión finalizada · Cita movida al historial",
+   "fechaYHoraSonRequeridas": "Fecha y hora son requeridas",
+   "horarioActualizadoSincronizadoEn": "Horario actualizado · Sincronizado en: {v1}",
+   "horarioActualizado": "Horario actualizado",
+   "eliminarEstaCita": "¿Eliminar esta cita?",
+   "citaEliminada": "Cita eliminada",
+   "seleccionaUnPaciente": "Selecciona un paciente",
+   "seleccionaParticipantes": "Selecciona participantes",
+   "elEspecialistaNoTieneGoogle": "El especialista no tiene Google ni Outlook Calendar conectado. La cita se guardó correctamente.",
+   "citaAnadidaAGoogleCalendar": "{v1} cita{v2} añadida{v3} a Google Calendar",
+   "citaAnadidaAOutlookCalendar": "{v1} cita{v2} añadida{v3} a Outlook Calendar",
+   "limiteMensualDe10000Min": "Límite mensual de 10,000 min alcanzado. Se reinicia el próximo mes.",
+   "salaCreadaPadreNotificado": "Sala creada · Padre notificado"
   },
   "storeManagementView": {
-   "totalDelPedido": "total del pedido"
+   "totalDelPedido": "total del pedido",
+   "soloImagenes": "Solo imágenes",
+   "maximo5mb": "Máximo 5MB",
+   "elNombreEsObligatorio": "El nombre es obligatorio",
+   "precioInvalido": "Precio inválido",
+   "productoActualizado": "Producto actualizado",
+   "productoCreado": "Producto creado",
+   "eliminar": "¿Eliminar \"{v1}\"?",
+   "productoEliminado": "Producto eliminado"
   },
-  "userManagementView": {},
+  "userManagementView": {
+   "noPodesCambiarElRol": "No podés cambiar el rol de un Director.",
+   "noPodesCambiarteElRol": "No podés cambiarte el rol a ti mismo.",
+   "limiteDeAlcanzadoSoloEl": "Límite de \"{v1}\" alcanzado ({v2}/{v3}). Solo el programador puede ampliarlo.",
+   "rolActualizado": "Rol actualizado → {v1}",
+   "noPuedesEliminarTuPropia": "No puedes eliminar tu propia cuenta.",
+   "usuarioEliminado": "Usuario eliminado",
+   "noPodesDesactivarAUn": "No podés desactivar a un Director.",
+   "minimo6Caracteres": "Mínimo 6 caracteres",
+   "lasContrasenasNoCoinciden": "Las contraseñas no coinciden",
+   "contrasenaActualizada": "Contraseña actualizada",
+   "especialidadActualizada": "Especialidad actualizada",
+   "emailEnviadoA": "Email enviado a {v1}",
+   "vinculadoA": "{v1} vinculado a {v2}",
+   "pacienteDesvinculado": "Paciente desvinculado",
+   "emailYContrasenaSonRequeridos": "Email y contraseña son requeridos",
+   "limiteDeAlcanzadoSoloEl2": "Límite de \"{v1}\" alcanzado ({v2}/{v3}). Solo el programador puede ampliarlo.",
+   "usuarioCreado": "Usuario creado"
+  },
   "homeView": {
    "alcanzo": " alcanzó ",
    "esUnTrabajoImportanteComo": " es un trabajo importante. ¿Cómo te has sentido esta semana?"
   },
-  "aRIAFloatingChat": {},
+  "aRIAFloatingChat": {
+   "borrarTodoElHistorialDe": "¿Borrar todo el historial de ARIA?"
+  },
   "misFormularios": {
-   "enviarAPadres": "Enviar a padres"
+   "enviarAPadres": "Enviar a padres",
+   "seleccionaUnPaciente": "Selecciona un paciente",
+   "analisisIaGenerado": "Análisis IA generado",
+   "seleccionaUnPaciente2": "Selecciona un paciente",
+   "formularioGuardadoCorrectamente": "Formulario guardado correctamente"
   },
   "knowledgeBaseView": {
    "ejPrincipiosDeConductaMalott": "ej: Principios de Conducta - Malott 8va Ed.",
@@ -2251,19 +2344,62 @@
    "nuevaInstruccion": "+ Nueva instrucción",
    "estiloDeComunicacion": "Estilo de comunicación",
    "terminologia": "Terminología",
-   "reglaClinica": "Regla clínica"
+   "reglaClinica": "Regla clínica",
+   "estoCargaraElProtocoloAbllsr": "Esto cargará el protocolo ABLLS-R completo (25 secciones, 545 ítems) al Cerebro IA. Reemplaza cualquier versión previa. ¿Continuar?",
+   "abllsrCargadoItemsIndexadosEn": "ABLLS-R cargado: {v1} ítems indexados en el Cerebro IA",
+   "noHayArchivosMdtxtEn": "No hay archivos .md/.txt en la carpeta knowledge-seed del código",
+   "conocimientoDelCodigoCargadoArchiv": "Conocimiento del código cargado: {v1} archivo(s), {v2} fragmentos",
+   "errorCargandoDocumentos": "Error cargando documentos",
+   "escribePalabrasClave": "Escribe palabras clave",
+   "ingresaUnaUrl": "Ingresa una URL",
+   "fragmentosAprendidosDeLaUrl": "{v1} fragmentos aprendidos de la URL",
+   "sinResultadosPruebaOtroTitulo": "Sin resultados. Prueba otro título.",
+   "elTituloEsRequerido": "El título es requerido",
+   "seleccionaUnArchivo": "Selecciona un archivo",
+   "ingresaUnaUrlValida": "Ingresa una URL válida",
+   "seleccionaUnLibro": "Selecciona un libro",
+   "fragmentosIndexadosCorrectamente": "{v1} fragmentos indexados correctamente",
+   "eliminarEsteDocumento": "¿Eliminar este documento?",
+   "documentoEliminado": "Documento eliminado",
+   "errorCargandoDocumentos2": "Error cargando documentos",
+   "elTituloEsRequerido2": "El título es requerido",
+   "seleccionaUnArchivo2": "Selecciona un archivo",
+   "ingresaUnaUrlValida2": "Ingresa una URL válida",
+   "pegaElContenidoDelDocumento": "Pega el contenido del documento",
+   "laUrlNoEsValida": "La URL no es válida. Ejemplo: https://drive.google.com/...",
+   "archivoMuyGrandeMbMax": "Archivo muy grande ({v1}MB). Máx: 100MB. Usá el modo URL en su lugar.",
+   "recibidoIndexandoEnBackground": "✅ \"{v1}\" recibido — indexando en background",
+   "eliminarDeLaBaseDe": "¿Eliminar \"{v1}\" de la base de conocimiento?",
+   "documentoEliminado2": "Documento eliminado",
+   "errorEliminando": "Error eliminando",
+   "tituloYContenidoSonRequeridos": "Título y contenido son requeridos",
+   "instruccionGuardada": "Instrucción guardada",
+   "errorGuardando": "Error guardando"
   },
   "chatInterface": {
    "grabandoHablaCercaDelMicrofono": "🔴 Grabando — habla cerca del micrófono"
   },
-  "evaluationsView": {},
+  "evaluationsView": {
+   "porFavorRespondeAlgunasPreguntas": "Por favor responde algunas preguntas antes de generar con IA.",
+   "analisisIaCompletado": "¡Análisis IA completado!",
+   "seleccionaUnPaciente": "Selecciona un paciente",
+   "evaluacionGuardadaExitosamenteDese": "✅ ¡Evaluación guardada exitosamente!\n\n¿Deseas generar el Reporte Word ahora?"
+  },
   "parentFormsView": {},
   "storeView": {},
   "dashboardGraficasABA": {
    "sinSesiones": " Sin sesiones"
   },
   "documentosView": {
-   "inicioSinCarpeta": "📁 Inicio (sin carpeta)"
+   "inicioSinCarpeta": "📁 Inicio (sin carpeta)",
+   "seleccionaAlMenosUnArchivo": "Selecciona al menos un archivo",
+   "noSePudoSubirNingun": "No se pudo subir ningún archivo. Intentá de nuevo.",
+   "nombreActualizado": "Nombre actualizado",
+   "eliminar": "¿Eliminar \"{v1}\"?",
+   "documentoEliminado": "Documento eliminado",
+   "carpetaCreada": "Carpeta creada",
+   "carpetaActualizada": "Carpeta actualizada",
+   "eliminarCarpetaLosDocumentosSe": "¿Eliminar carpeta \"{v1}\"? Los documentos se moverán a Inicio."
   },
   "fonemasPractica": {
    "posicionDeLaBoca": "Posición de la boca"
@@ -2275,12 +2411,28 @@
    "noHaySesionesProgramadas": "No hay sesiones programadas"
   },
   "agendaSesiones": {
-   "uuidDelTerapeuta": "UUID del terapeuta"
+   "uuidDelTerapeuta": "UUID del terapeuta",
+   "linkCopiado": "Link copiado ✅"
   },
   "aIReportView": {
    "seleccionarPaciente": "🔍 Seleccionar Paciente..."
   },
-  "chatEspecialistas": {},
+  "chatEspecialistas": {
+   "maximo5mbParaLaFoto": "Máximo 5MB para la foto de perfil",
+   "errorAlCargarEspecialistas": "Error al cargar especialistas",
+   "errorAlCargarMensajes": "Error al cargar mensajes",
+   "errorAlEnviar": "Error al enviar",
+   "maximo10mb": "Máximo 10MB",
+   "archivoEnviado": "Archivo enviado",
+   "errorAlSubir": "Error al subir: {v1}",
+   "noSePudoAccederAl": "No se pudo acceder al micrófono",
+   "audioEnviado": "Audio enviado",
+   "copiado": "Copiado",
+   "funcionDeReenvioProximamente": "Función de reenvío próximamente",
+   "mensajeFijado": "Mensaje fijado",
+   "mensajeDestacado": "Mensaje destacado",
+   "mensajeReportado": "Mensaje reportado"
+  },
   "especialistaHome": {
    "ultimaSesion": "Última sesión",
    "pacientesConSesionReciente": "pacientes con sesión reciente"
@@ -2289,24 +2441,74 @@
    "editarPerfil": "Editar perfil",
    "cambiarContrasena": "Cambiar contraseña",
    "centroDeAyuda": "Centro de ayuda",
-   "cerrarSesion": "Cerrar sesión"
+   "cerrarSesion": "Cerrar sesión",
+   "errorAlConectar": "Error al conectar {v1}",
+   "errorIniciandoConexion": "Error iniciando conexión",
+   "desconectar": "¿Desconectar {v1}?",
+   "desactivarNotificacionesWhatsapp": "¿Desactivar notificaciones WhatsApp?",
+   "fotoActualizada": "Foto actualizada ✅",
+   "errorAlLeerElArchivo": "Error al leer el archivo"
   },
   "secretariaCronograma": {},
-  "chatFamilias": {},
+  "chatFamilias": {
+   "noSePudoAccederAl": "No se pudo acceder al micrófono. Verifica los permisos del navegador.",
+   "noSePudoAccederAl2": "No se pudo acceder al micrófono"
+  },
   "programasABAView": {
    "queDecirOHacerSd": "Qué decir o hacer (Sd)",
-   "generalizacion": "Generalización"
+   "generalizacion": "Generalización",
+   "errorCargandoProgramas": "Error cargando programas",
+   "documentoDescargado": "Documento descargado",
+   "guiaDescargada": "Guía descargada",
+   "actualizado": "Actualizado",
+   "tituloActualizado": "Título actualizado",
+   "objetivoActualizado": "Objetivo actualizado",
+   "eliminarElProgramaYTodas": "¿Eliminar el programa \"{v1}\" y todas sus sesiones? Esta acción no se puede deshacer.",
+   "setActualizado": "Set actualizado",
+   "eliminarElSetEstoTambien": "¿Eliminar el Set {v1} (\"{v2}\")? Esto también borrará las sesiones registradas para este set. Esta acción no se puede deshacer.",
+   "setEliminado": "Set eliminado",
+   "setAgregado": "Set agregado",
+   "eliminarEstaSesion": "¿Eliminar esta sesión?",
+   "sesionEliminada": "Sesión eliminada",
+   "fechaActualizada": "Fecha actualizada",
+   "porcentajeActualizado": "Porcentaje actualizado",
+   "ingresaOportunidadesTotales": "Ingresa oportunidades totales",
+   "sesionRegistrada": "Sesión registrada",
+   "tituloAreaYObjetivoSon": "Título, área y objetivo son requeridos",
+   "programaCreado": "Programa creado"
   },
   "aRIAAgentChat": {
-   "borrarHistorialDelChat": "Borrar historial del chat"
+   "borrarHistorialDelChat": "Borrar historial del chat",
+   "borrarTodoElHistorialDe": "¿Borrar todo el historial de ARIA? Esta acción no se puede deshacer."
   },
   "reportGenerator": {
    "descargarDocx": "Descargar .docx",
    "eliminarReporte": "Eliminar reporte",
-   "sinReportesGenerados": "Sin reportes generados"
+   "sinReportesGenerados": "Sin reportes generados",
+   "eliminarEsteReportePermanentemente": "¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer."
   },
-  "mensajesPendientesPanel": {},
-  "chatConAdmin": {},
+  "mensajesPendientesPanel": {
+   "cambiosGuardados": "Cambios guardados",
+   "mensajeAprobadoYEnviadoAl": "Mensaje aprobado y enviado al padre/madre",
+   "descartarEsteMensajeNoLlegara": "¿Descartar este mensaje? No llegará al padre/madre.",
+   "mensajeDescartado": "Mensaje descartado"
+  },
+  "chatConAdmin": {
+   "maximo5mb": "Máximo 5MB",
+   "errorAlCargarContactos": "Error al cargar contactos",
+   "errorAlCargarMensajes": "Error al cargar mensajes",
+   "errorAlEnviar": "Error al enviar",
+   "maximo10mb": "Máximo 10MB",
+   "archivoEnviado": "Archivo enviado",
+   "errorAlSubir": "Error al subir: {v1}",
+   "noSePudoAccederAl": "No se pudo acceder al micrófono",
+   "audioEnviado": "Audio enviado",
+   "errorAlEnviarAudio": "Error al enviar audio: {v1}",
+   "copiado": "Copiado",
+   "reenviarProximamente": "Reenviar próximamente",
+   "fijarProximamente": "Fijar próximamente",
+   "destacarProximamente": "Destacar próximamente"
+  },
   "resourcesView": {},
   "excelImportView": {},
   "vADIAgentChat": {},
@@ -2314,13 +2516,23 @@
   "aprobacionesEspecialista": {
    "tuComentario": "Tu comentario:"
   },
-  "fonemasAdminView": {},
+  "fonemasAdminView": {
+   "laUrlDebeEmpezarCon": "La URL debe empezar con http:// o https://",
+   "imagenAgregada": "Imagen agregada",
+   "errorDeRed": "Error de red",
+   "errorDeRed2": "Error de red",
+   "errorDeRed3": "Error de red"
+  },
   "sugerenciasPanel": {},
   "forestTimer": {},
   "misCitasView": {},
   "miAgenda": {
    "sinCitasEsteDia": "Sin citas este día",
-   "sinCitasProximas": "Sin citas próximas"
+   "sinCitasProximas": "Sin citas próximas",
+   "errorConectandoGoogleCalendar": "Error conectando Google Calendar",
+   "desconectarGoogleCalendar": "¿Desconectar Google Calendar?",
+   "errorConectandoOutlookCalendar": "Error conectando Outlook Calendar",
+   "desconectarOutlookCalendar": "¿Desconectar Outlook Calendar?"
   },
   "engagementView": {},
   "chatPadres": {
@@ -2330,6 +2542,100 @@
   "analyticsDashboard": {},
   "agendaView": {},
   "mensajesView": {},
-  "localeSelector": {}
+  "localeSelector": {},
+  "evaluacionInicialView": {
+   "eligeAlMenosUnaTerapia": "Elige al menos una terapia"
+  },
+  "adminReportesFinancieros": {
+   "reporteExportado": "Reporte exportado",
+   "errorGenerandoReporte": "Error generando reporte",
+   "error": "Error",
+   "excelDeExportado": "Excel de {v1} exportado"
+  },
+  "progresoGraficas": {},
+  "catalogoTerapiasView": {
+   "nombreObligatorio": "Nombre obligatorio",
+   "eliminarEstaTerapiaDelCatalogo": "¿Eliminar esta terapia del catálogo?"
+  },
+  "configuracionView": {
+   "perfilActualizadoCorrectamente": "Perfil actualizado correctamente",
+   "noEstasLogueado": "No estás logueado",
+   "fotoActualizada": "Foto actualizada",
+   "ingresaLaNuevaContrasena": "Ingresa la nueva contraseña",
+   "minimo8Caracteres": "Mínimo 8 caracteres",
+   "lasContrasenasNoCoinciden": "Las contraseñas no coinciden",
+   "contrasenaActualizada": "¡Contraseña actualizada!"
+  },
+  "misEvaluaciones": {
+   "completaLosCamposRequeridos": "Completa los campos requeridos",
+   "enviadoParaAprobacion": "¡Enviado para aprobación!"
+  },
+  "secretariaComunicacion": {
+   "elPacienteNoTieneTutor": "El paciente no tiene tutor vinculado",
+   "laFamiliaNoTieneContacto": "La familia no tiene contacto registrado",
+   "escribeUnMensaje": "Escribe un mensaje",
+   "noHayFamiliasConCitas": "No hay familias con citas",
+   "enviadoAFamilias": "Enviado a {v1}/{v2} familias"
+  },
+  "plantillasClinicas": {
+   "eliminarEstaFichaEstaAccion": "¿Eliminar esta ficha? Esta acción no se puede deshacer.",
+   "fichaEliminada": "Ficha eliminada",
+   "elNombreEsObligatorio": "El nombre es obligatorio",
+   "fichaActualizada": "Ficha actualizada",
+   "fichaCreada": "Ficha creada"
+  },
+  "miPerfil": {
+   "errorIniciandoConexion": "Error iniciando conexión",
+   "desconectarGoogleCalendar": "¿Desconectar Google Calendar?",
+   "errorIniciandoConexion2": "Error iniciando conexión",
+   "desconectarOutlookCalendar": "¿Desconectar Outlook Calendar?",
+   "perfilActualizadoCorrectamente": "Perfil actualizado correctamente",
+   "fotoActualizada": "Foto actualizada",
+   "ingresaLaNuevaContrasena": "Ingresa la nueva contraseña",
+   "minimo8Caracteres": "Mínimo 8 caracteres",
+   "lasContrasenasNoCoinciden": "Las contraseñas no coinciden",
+   "contrasenaActualizada": "¡Contraseña actualizada!"
+  },
+  "neuroFormsView": {
+   "seleccionaUnPaciente": "Selecciona un paciente",
+   "analisisGenerado": "Análisis generado",
+   "seleccionaUnPaciente2": "Selecciona un paciente",
+   "formularioGuardadoCorrectamente": "Formulario guardado correctamente",
+   "estePacienteNoTieneUn": "Este paciente no tiene un padre vinculado. Ve a Pacientes y vincula un padre primero.",
+   "formularioEnviadoCorrectamente": "Formulario enviado correctamente",
+   "reporteWordDescargado": "Reporte Word descargado"
+  },
+  "evaluacionInicialAdmin": {
+   "informeGeneradoDisponibleEnLa": "Informe generado: {v1}\nDisponible en la pestaña \"Historial & IA\" del paciente.",
+   "escribeUnaRespuesta": "Escribe una respuesta"
+  },
+  "secretariaReportes": {
+   "reporteExportado": "Reporte exportado"
+  },
+  "diagnosticoBuscador": {},
+  "reservasOnlinePanel": {
+   "eliminarEsteLinkDeReserva": "¿Eliminar este link de reserva? Esta acción no se puede deshacer. (Las citas ya reservadas con él NO se borran.)",
+   "linkEliminado": "Link eliminado"
+  },
+  "secretariaPerfil": {
+   "perfilActualizado": "Perfil actualizado",
+   "fotoActualizada": "Foto actualizada",
+   "ingresaLaNuevaContrasena": "Ingresa la nueva contraseña",
+   "minimo8Caracteres": "Mínimo 8 caracteres",
+   "lasContrasenasNoCoinciden": "Las contraseñas no coinciden",
+   "contrasenaActualizada": "¡Contraseña actualizada!"
+  },
+  "resourcesManagementView": {
+   "elTituloEsObligatorio": "El título es obligatorio",
+   "seleccionaUnPaciente": "Selecciona un paciente",
+   "recursoActualizadoCorrectamente": "Recurso actualizado correctamente",
+   "recursoCompartidoCorrectamente": "Recurso compartido correctamente",
+   "eliminarEsteRecurso": "¿Eliminar este recurso?",
+   "recursoEliminado": "Recurso eliminado"
+  },
+  "whatsAppConfigView": {},
+  "whatsAppQRPanel": {},
+  "portalPadres": {},
+  "tareasHogar": {}
  }
 }
