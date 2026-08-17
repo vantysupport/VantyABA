@@ -44,6 +44,7 @@ const EMPTY_FORM = {
 }
 
 function ProductModal({ product, onClose, onSaved }: { product: Product|null; onClose:()=>void; onSaved:()=>void }) {
+  const { t } = useI18n()
   const toast = useToast(); const { isDark } = useTheme()
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<any>(product ? {
@@ -123,7 +124,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
 
         <div className="p-7 space-y-6">
           <div>
-            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Imagen del producto</label>
+            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("ui.product_image")}</label>
             <div
               className={`relative border-2 border-dashed rounded-2xl transition-all cursor-pointer overflow-hidden group ${dragOver ? 'border-sky-400 bg-sky-50/50 scale-[0.99]' : isDark ? 'border-[#30363d] hover:border-sky-500' : 'border-slate-200 hover:border-sky-300 hover:bg-slate-50/50'}`}
               style={{ minHeight: 180 }}
@@ -136,7 +137,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
                 <div className="relative">
                   <img src={imagePreview} alt="Preview" className="w-full h-52 object-cover" />
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                    <div className="bg-white rounded-2xl px-5 py-3 text-sm font-bold text-slate-800 flex items-center gap-2 shadow-xl"><Upload size={15}/> Cambiar imagen</div>
+                    <div className="bg-white rounded-2xl px-5 py-3 text-sm font-bold text-slate-800 flex items-center gap-2 shadow-xl"><Upload size={15}/> {t("tienda.cambiarImagen")}</div>
                   </div>
                 </div>
               ) : (
@@ -145,8 +146,8 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
                     <ImageIcon size={28} className={isDark ? 'text-slate-500' : 'text-slate-300'} />
                   </div>
                   <div className="text-center">
-                    <p className={`text-sm font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Arrastrá o hacé clic para subir</p>
-                    <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>JPG, PNG, WEBP · máx. 5MB</p>
+                    <p className={`text-sm font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{t("tienda.arrastraClic")}</p>
+                    <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>{t("tienda.jpgPng")}</p>
                   </div>
                 </div>
               )}
@@ -155,19 +156,19 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
           </div>
 
           <div>
-            <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Nombre *</label>
+            <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.nombre2")}</label>
             <input value={form.nombre} onChange={e => setForm((f:any) => ({ ...f, nombre: e.target.value }))}
-              placeholder="Ej: Kit de materiales sensoriales" className={inp} />
+              placeholder={t("tienda.phNombreProd")} className={inp} />
           </div>
 
           <div>
-            <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Descripción</label>
+            <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("common.descripcion")}</label>
             <textarea value={form.descripcion} onChange={e => setForm((f:any) => ({ ...f, descripcion: e.target.value }))}
-              rows={3} placeholder="Describe el producto, materiales, beneficios…" className={inp + ' resize-none'} />
+              rows={3} placeholder={t("ui.describe_product")} className={inp + ' resize-none'} />
           </div>
 
           <div>
-            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Tipo de producto</label>
+            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.tipoProd")}</label>
             <div className="grid grid-cols-2 gap-3">
               {([['fisico','📦','Físico','Se retira en el centro'],['digital','📄','Digital','PDF o archivo descargable']] as const).map(([val,emoji,lbl,desc]) => (
                 <button key={val} type="button" onClick={() => setForm((f:any) => ({ ...f, tipo: val }))}
@@ -184,7 +185,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Precio (S/.) *</label>
+              <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.precioSoles")}</label>
               <div className="relative">
                 <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>S/</span>
                 <input type="number" min="0" step="0.50" value={form.precio_soles}
@@ -202,7 +203,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
           </div>
 
           <div>
-            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Categoría</label>
+            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("common.categoria")}</label>
             <div className="flex flex-wrap gap-2">
               {CATEGORIAS.map(cat => (
                 <button key={cat} type="button" onClick={() => setForm((f:any) => ({ ...f, categoria: cat }))}
@@ -239,7 +240,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
         </div>
 
         <div className={`sticky bottom-0 px-7 py-5 border-t flex gap-3 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white/95 backdrop-blur-sm border-slate-100'}`}>
-          <button onClick={onClose} className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all ${isDark ? 'bg-[#21262d] text-slate-300 hover:bg-[#30363d]' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>Cancelar</button>
+          <button onClick={onClose} className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all ${isDark ? 'bg-[#21262d] text-slate-300 hover:bg-[#30363d]' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>{t("common.cancelar")}</button>
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-3.5 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-sky-200">
             {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
@@ -252,6 +253,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
 }
 
 function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>void; onToggle:()=>void|Promise<void>; onDelete:()=>void|Promise<void>; key?:any }) {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const lowStock = p.tipo==='fisico' && p.stock<=3
 
@@ -286,7 +288,7 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
         )}
         {!p.activo && (
           <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center backdrop-blur-[1px]">
-            <span className="text-xs font-bold text-white bg-slate-800/90 px-4 py-2 rounded-full">Oculto</span>
+            <span className="text-xs font-bold text-white bg-slate-800/90 px-4 py-2 rounded-full">{t("tienda.oculto")}</span>
           </div>
         )}
       </div>
@@ -316,7 +318,7 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
             className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${p.activo
               ? isDark ? 'bg-emerald-900/20 text-emerald-400 border-emerald-800 hover:bg-emerald-900/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
               : isDark ? 'bg-[#21262d] text-slate-500 border-[#30363d] hover:bg-[#30363d]' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}>
-            {p.activo ? <><ToggleRight size={13}/> Activo</> : <><ToggleLeft size={13}/> Inactivo</>}
+            {p.activo ? <><ToggleRight size={13}/> {t("common.activo")}</> : <><ToggleLeft size={13}/> {t("common.inactivo")}</>}
           </button>
           <button onClick={onEdit}
             className={`px-3.5 py-2.5 rounded-xl border transition-all ${isDark ? 'bg-sky-900/20 text-sky-400 border-sky-800/50 hover:bg-sky-900/30' : 'bg-sky-50 text-sky-600 border-sky-200 hover:bg-sky-100'}`}>
@@ -333,7 +335,7 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
 }
 
 export default function StoreManagementView() {
-  const toast = useToast(); const { isDark } = useTheme(); const { locale } = useI18n()
+  const toast = useToast(); const { isDark } = useTheme(); const { locale, t } = useI18n()
   const [tab, setTab] = useState<'productos'|'pedidos'>('productos')
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -396,7 +398,7 @@ export default function StoreManagementView() {
       <div className="w-16 h-16 rounded-2xl bg-sky-600/10 flex items-center justify-center">
         <Loader2 size={28} className="animate-spin text-sky-600"/>
       </div>
-      <p className={`text-sm font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Cargando tienda…</p>
+      <p className={`text-sm font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.cargandoTienda")}</p>
     </div>
   )
 
@@ -413,8 +415,8 @@ export default function StoreManagementView() {
               <ShoppingBag size={24} className="text-white"/>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Gestión de Tienda</h2>
-              <p className="text-sm text-sky-200/80 mt-0.5 font-medium">Productos, stock y pedidos de las familias</p>
+              <h2 className="text-xl font-bold text-white tracking-tight">{t("tienda.gestionTienda")}</h2>
+              <p className="text-sm text-sky-200/80 mt-0.5 font-medium">{t("tienda.productosStockPedidos")}</p>
             </div>
           </div>
           <button onClick={() => { setEditProduct(null); setShowModal(true) }}
@@ -468,7 +470,7 @@ export default function StoreManagementView() {
           <div className={`flex gap-3 flex-wrap items-center p-4 rounded-2xl border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80 shadow-sm'}`}>
             <div className="relative flex-1 min-w-52">
               <Search size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}/>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar producto…"
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("ui.search_product")}
                 className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium outline-none transition-all border-2 ${isDark ? 'bg-[#0d1117] border-[#30363d] text-slate-300 placeholder-slate-600 focus:border-sky-500' : 'bg-slate-50 border-transparent text-slate-700 focus:border-sky-400 focus:bg-white'}`}/>
             </div>
             <div className={`flex items-center gap-1 p-1 rounded-xl ${isDark ? 'bg-[#0d1117]' : 'bg-slate-100'}`}>
@@ -486,8 +488,8 @@ export default function StoreManagementView() {
             <div className={`rounded-3xl border py-24 flex flex-col items-center gap-5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-gradient-to-br from-slate-50 to-sky-50/30 border-slate-200/80'}`}>
               <div className={`w-24 h-24 rounded-3xl flex items-center justify-center text-5xl ${isDark ? 'bg-[#21262d]' : 'bg-white shadow-sm'}`}>🛍️</div>
               <div className="text-center">
-                <p className={`font-bold text-xl ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>No hay productos</p>
-                <p className={`text-sm mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Crea el primer artículo de la tienda</p>
+                <p className={`font-bold text-xl ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{t("tienda.sinProductos")}</p>
+                <p className={`text-sm mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.creaPrimerArticulo")}</p>
               </div>
               <button onClick={() => { setEditProduct(null); setShowModal(true) }}
                 className="flex items-center gap-2 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold px-7 py-3.5 rounded-xl text-sm shadow-lg shadow-sky-200 transition-all hover:-translate-y-0.5 active:scale-95">
@@ -531,8 +533,8 @@ export default function StoreManagementView() {
             <div className={`rounded-3xl border py-24 flex flex-col items-center gap-5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-gradient-to-br from-slate-50 to-sky-50/30 border-slate-200/80'}`}>
               <div className={`w-24 h-24 rounded-3xl flex items-center justify-center text-5xl ${isDark ? 'bg-[#21262d]' : 'bg-white shadow-sm'}`}>📭</div>
               <div className="text-center">
-                <p className={`font-bold text-xl ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>Sin pedidos</p>
-                <p className={`text-sm mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Aún no hay pedidos registrados</p>
+                <p className={`font-bold text-xl ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{t("tienda.sinPedidos2")}</p>
+                <p className={`text-sm mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.sinPedidos")}</p>
               </div>
             </div>
           ) : (
@@ -571,7 +573,7 @@ export default function StoreManagementView() {
                     {open && (
                       <div className={`border-t p-5 space-y-5 ${isDark ? 'border-[#21262d] bg-[#0d1117]/40' : 'border-slate-100 bg-slate-50/60'}`}>
                         <div>
-                          <p className={`text-[10px] font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Artículos del pedido</p>
+                          <p className={`text-[10px] font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.articulosPedido")}</p>
                           <div className="space-y-2">
                             {(order.store_order_items||[]).map(item => (
                               <div key={item.id} className={`flex items-center gap-3 rounded-xl p-3 border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80'}`}>
@@ -590,21 +592,21 @@ export default function StoreManagementView() {
 
                         {order.notas && (
                           <div className={`rounded-xl p-4 border ${isDark ? 'bg-amber-900/10 border-amber-800/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
-                            <p className="text-[10px] font-bold mb-1 opacity-60">Nota del padre</p>
+                            <p className="text-[10px] font-bold mb-1 opacity-60">{t("tienda.notaPadre")}</p>
                             <p className="text-sm">{order.notas}</p>
                           </div>
                         )}
 
                         <div>
-                          <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Nota interna (solo equipo)</p>
+                          <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.notaInterna")}</p>
                           <textarea defaultValue={order.admin_notas||''} rows={2}
-                            placeholder="Ej: Pagado en efectivo, entregado el lunes…"
+                            placeholder={t("tienda.phNotaInterna")}
                             onBlur={e => updateAdminNota(order.id, e.target.value)}
                             className={`w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all resize-none border-2 ${isDark ? 'bg-[#161b22] border-[#30363d] text-slate-300 placeholder-slate-600 focus:border-sky-500' : 'bg-white border-slate-200 text-slate-700 focus:border-sky-400'}`}/>
                         </div>
 
                         <div>
-                          <p className={`text-[10px] font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Actualizar estado</p>
+                          <p className={`text-[10px] font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.actualizarEstado")}</p>
                           <div className="flex flex-wrap gap-2">
                             {ESTADOS_FLUJO.map(e => {
                               const c=ESTADO_CFG[e]; const isActive=order.estado===e

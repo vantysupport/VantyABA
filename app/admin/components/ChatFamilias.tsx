@@ -3,6 +3,7 @@
 // Chat familias con soporte completo: texto, imágenes, documentos y audio
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   MessageCircle, Send, Loader2, Search, Users, CheckCheck, Check,
   ChevronLeft, Paperclip, Mic, Image, FileText, X,
@@ -124,6 +125,7 @@ function AudioPlayer({ url, isMe }: { url: string; isMe: boolean }) {
 }
 
 function MsgContent({ msg, isMe }: { msg: Msg; isMe: boolean }) {
+  const { t } = useI18n()
   if (msg.message_type === 'image' && msg.file_url) return (
     <div>
       <img src={msg.file_url} alt="imagen"
@@ -175,7 +177,7 @@ function MsgContent({ msg, isMe }: { msg: Msg; isMe: boolean }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: isMe ? '#fff' : 'var(--text-primary)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{name}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 10, color: isMe ? 'rgba(255,255,255,.65)' : 'var(--text-muted)' }}>Toca para abrir</p>
+          <p style={{ margin: '2px 0 0', fontSize: 10, color: isMe ? 'rgba(255,255,255,.65)' : 'var(--text-muted)' }}>{t("admin.tocaAbrir")}</p>
         </div>
         <Download size={14} color={isMe ? 'rgba(255,255,255,.75)' : 'var(--text-muted,#94a3b8)'}/>
       </a>
@@ -185,6 +187,7 @@ function MsgContent({ msg, isMe }: { msg: Msg; isMe: boolean }) {
 }
 
 export default function ChatFamilias({ profile, userId: _userId, userName: _userName, isDark: _isDark }: Props) {
+  const { t } = useI18n()
   const [families, setFamilies]       = useState<Family[]>([])
   const [selected, setSelected]       = useState<Family | null>(null)
   const [messages, setMessages]       = useState<Msg[]>([])
@@ -403,7 +406,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
         <div style={{ padding: '14px 16px', borderBottom: `1px solid ${borderColor}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <Users size={16} style={{ color: textMuted }}/>
-            <p style={{ fontWeight: 800, fontSize: 13, color: textPrimary, margin: 0 }}>Familias</p>
+            <p style={{ fontWeight: 800, fontSize: 13, color: textPrimary, margin: 0 }}>{t("admin.familias")}</p>
             {families.some(f => f.unread > 0) && (
               <span style={{ marginLeft: 'auto', background: '#0284c7', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>
                 {families.filter(f => f.unread > 0).length} sin leer
@@ -412,7 +415,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: mutedBg, borderRadius: 10, padding: '7px 10px', border: `1px solid ${borderColor}` }}>
             <Search size={13} style={{ color: textMuted, flexShrink: 0 }}/>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar familia..."
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("admin.buscarFamilia")}
               style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: textPrimary }}/>
           </div>
         </div>
@@ -422,7 +425,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
               <Loader2 size={18} style={{ color: textMuted, animation: 'cf3spin 1s linear infinite' }}/>
             </div>
           ) : filtered.length === 0 ? (
-            <p style={{ textAlign: 'center', fontSize: 12, color: textMuted, padding: 20 }}>Sin familias</p>
+            <p style={{ textAlign: 'center', fontSize: 12, color: textMuted, padding: 20 }}>{t("admin.sinFamilias")}</p>
           ) : filtered.map(f => (
             <button key={f.child_id} onClick={() => selectFamily(f)}
               style={{ width: '100%', textAlign: 'left', padding: '11px 16px',
@@ -461,8 +464,8 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
             <div style={{ width: 60, height: 60, background: mutedBg, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <MessageCircle size={28} style={{ color: textMuted }}/>
             </div>
-            <p style={{ fontWeight: 700, fontSize: 14, color: textPrimary, margin: 0 }}>Selecciona una familia</p>
-            <p style={{ fontSize: 12, color: textMuted, margin: 0 }}>Elige una familia de la lista para ver su chat</p>
+            <p style={{ fontWeight: 700, fontSize: 14, color: textPrimary, margin: 0 }}>{t("admin.selecFamilia")}</p>
+            <p style={{ fontSize: 12, color: textMuted, margin: 0 }}>{t("admin.eligeFamilia")}</p>
           </div>
         ) : (<>
           {/* Header */}
@@ -477,7 +480,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontWeight: 800, fontSize: 14, color: textPrimary, margin: 0 }}>Familia de {selected.child_name}</p>
-              <p style={{ fontSize: 11, color: textMuted, margin: '1px 0 0' }}>Chat privado · Padre + Admin + Terapeutas</p>
+              <p style={{ fontSize: 11, color: textMuted, margin: '1px 0 0' }}>{t("admin.chatPrivadoPadre")}</p>
             </div>
           </div>
 
@@ -490,7 +493,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
             ) : messages.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 8 }}>
                 <MessageCircle size={28} style={{ color: textMuted }}/>
-                <p style={{ fontSize: 13, color: textMuted, margin: 0 }}>Sin mensajes aún. ¡Inicia la conversación!</p>
+                <p style={{ fontSize: 13, color: textMuted, margin: 0 }}>{t("admin.sinMensajesInicia")}</p>
               </div>
             ) : messages.map((msg, i) => {
               const isMe    = msg.sender_id === userId
@@ -589,7 +592,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
                 background: isDark ? '#1a0a0a' : '#fff5f5',
                 border: `1.5px solid ${isDark ? '#7f1d1d' : '#fecaca'}`, borderRadius: 12, marginBottom: 8 }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444', animation: 'cf3pulse 1s ease-in-out infinite' }}/>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#dc2626' }}>Grabando</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#dc2626' }}>{t("admin.grabando")}</span>
                 <span style={{ fontSize: 13, color: '#ef4444', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
                   {formatDuration(recSeconds)}
                 </span>
@@ -608,14 +611,14 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
                     background: isDark ? '#1c2128' : '#eff6ff', border: `1.5px solid ${isDark ? '#30363d' : '#bfdbfe'}`,
                     borderRadius: 14, cursor: 'pointer', flex: 1 }}>
                   <Image size={22} color="#0284c7"/>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7' }}>Imagen</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7' }}>{t("recursos.imagen")}</span>
                 </button>
                 <button onClick={() => { fileInputRef.current?.click(); setShowAttach(false) }}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '12px 0',
                     background: isDark ? '#0d1e17' : '#f0fdf4', border: `1.5px solid ${isDark ? '#14532d' : '#bbf7d0'}`,
                     borderRadius: 14, cursor: 'pointer', flex: 1 }}>
                   <FileText size={22} color="#059669"/>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#059669' }}>Documento</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#059669' }}>{t("recursos.documento")}</span>
                 </button>
               </div>
             )}
@@ -623,7 +626,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
             {/* Main row */}
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
               {!recording && (
-                <button onClick={() => setShowAttach(v => !v)} disabled={sending || uploading} title="Adjuntar"
+                <button onClick={() => setShowAttach(v => !v)} disabled={sending || uploading} title={t("admin.adjuntar")}
                   style={{ width: 36, height: 36, borderRadius: 11, border: 'none', flexShrink: 0,
                     background: showAttach ? '#0284c7' : (isDark ? '#21262d' : '#f1f5f9'),
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -669,7 +672,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
                   onMouseUp={() => stopRecording(false)}
                   onTouchStart={handleMicTouch}
                   disabled={sending || uploading}
-                  title="Mantén (PC) o toca (móvil) para grabar"
+                  title={t("admin.mantenGrabar")}
                   style={{ width: 36, height: 36, borderRadius: 11, border: 'none', flexShrink: 0,
                     background: 'linear-gradient(135deg,#0284c7,#0369a1)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',

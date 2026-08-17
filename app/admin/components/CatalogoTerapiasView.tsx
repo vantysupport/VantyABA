@@ -4,6 +4,7 @@
 // Diseño profesional con modo oscuro adaptativo (CSS vars) y picker de color por tarjeta.
 
 import { useEffect, useState } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   Sparkles, Plus, Edit3, Trash2, Save, X, Image as ImageIcon, Loader2,
   Clock, Upload, Eye, EyeOff, Palette, Tag, DollarSign, Wifi, MapPin, Layers, Search,
@@ -59,6 +60,7 @@ const colorDe = (key?: string | null) => COLORES[key || 'indigo'] || COLORES.ind
 // Tailwind no nos da var() para `from-`/`to-` así que aplicamos gradiente vía style.
 
 export default function CatalogoTerapiasView() {
+  const { t } = useI18n()
   const [terapias, setTerapias] = useState<Terapia[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Terapia> | null>(null)
@@ -153,7 +155,7 @@ export default function CatalogoTerapiasView() {
               <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/20 flex items-center justify-center flex-shrink-0">
                 <Sparkles size={20} />
               </div>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight">Catálogo de Terapias</h1>
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">{t("admin.catalogoTerapias")}</h1>
             </div>
             <p className="text-white/90 text-sm leading-relaxed max-w-2xl">
               Las terapias que verán los padres tras la evaluación inicial. La IA usará estos datos para recomendar las más adecuadas según cada caso.
@@ -173,7 +175,7 @@ export default function CatalogoTerapiasView() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar terapia…"
+            placeholder={t("admin.phBuscarTerapia")}
             className="w-full pl-9 pr-3 py-2.5 rounded-2xl border outline-none text-sm focus:border-sky-500"
             style={{ background: 'var(--card)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
           />
@@ -181,7 +183,7 @@ export default function CatalogoTerapiasView() {
         <select value={filtroCat} onChange={e => setFiltroCat(e.target.value)}
           className="px-3 py-2.5 rounded-2xl border outline-none text-sm focus:border-sky-500"
           style={{ background: 'var(--card)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-          <option value="">Todas las categorías</option>
+          <option value="">{t("recursos.todas")}</option>
           {/* Categorías dinámicas extraídas de las terapias existentes */}
           {Array.from(new Set(terapias.map(t => t.categoria).filter(Boolean) as string[])).sort().map(c => (
             <option key={c} value={c}>{c}</option>
@@ -239,6 +241,7 @@ export default function CatalogoTerapiasView() {
 function TerapiaCard({
   t, onEdit, onDelete, onToggle,
 }: { t: Terapia; onEdit: () => void; onDelete: () => void; onToggle: () => void }) {
+  const { t: tr } = useI18n()
   const c = colorDe(t.color_tema)
   const ModIcon = MODALIDADES.find(m => m.id === t.modalidad)?.icon || MapPin
 
@@ -282,12 +285,12 @@ function TerapiaCard({
             {t.activo ? <Eye size={14} className="text-green-600" /> : <EyeOff size={14} className="text-slate-500" />}
           </button>
           <button onClick={onEdit}
-            title="Editar"
+            title={tr("common.editar")}
             className="w-8 h-8 rounded-lg backdrop-blur bg-white/90 dark:bg-slate-800/90 flex items-center justify-center hover:scale-110 transition">
             <Edit3 size={14} className="text-sky-600" />
           </button>
           <button onClick={onDelete}
-            title="Eliminar"
+            title={tr("common.eliminar")}
             className="w-8 h-8 rounded-lg backdrop-blur bg-white/90 dark:bg-slate-800/90 flex items-center justify-center hover:scale-110 transition">
             <Trash2 size={14} className="text-red-600" />
           </button>
@@ -354,7 +357,7 @@ function TerapiaCard({
                 </span>
               </div>
             ) : (
-              <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>A consultar</p>
+              <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{tr("admin.aConsultar")}</p>
             )}
           </div>
         </div>
@@ -369,6 +372,7 @@ function TerapiaCard({
 function EditorModal({
   editing, setEditing, saving, uploading, onSubirImagen, onGuardar, onClose,
 }: any) {
+  const { t: tr } = useI18n()
   const c = colorDe(editing?.color_tema)
 
   return (
@@ -440,7 +444,7 @@ function EditorModal({
               )}
               <div className="flex-1">
                 <input value={editing.imagen_url || ''} onChange={e => setEditing({ ...editing, imagen_url: e.target.value })}
-                  placeholder="URL de imagen…"
+                  placeholder={tr("admin.phUrlImagen")}
                   className="w-full px-3 py-2 rounded-lg border outline-none text-sm mb-2"
                   style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
                 <label className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-bold cursor-pointer bg-gradient-to-r ${c.gradient}`}>
@@ -463,7 +467,7 @@ function EditorModal({
                 type="text"
                 value={editing.categoria || ''}
                 onChange={e => setEditing({ ...editing, categoria: e.target.value })}
-                placeholder="Ej: ABA, Lenguaje, Aprendizaje, Conducta…"
+                placeholder={tr("admin.phCatTerapia")}
                 className="w-full px-3 py-2.5 rounded-lg border outline-none text-sm focus:border-sky-500"
                 style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
             </Field>
@@ -499,7 +503,7 @@ function EditorModal({
             </Field>
             <Field label="Duración">
               <input value={editing.duracion || ''} onChange={e => setEditing({ ...editing, duracion: e.target.value })}
-                placeholder="2 sesiones semanales de 45 min"
+                placeholder={tr("admin.phSesiones")}
                 className="w-full px-3 py-2.5 rounded-lg border outline-none text-sm focus:border-sky-500"
                 style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
             </Field>
@@ -508,7 +512,7 @@ function EditorModal({
           {/* DESCRIPCIÓN */}
           <Field label="Descripción">
             <textarea value={editing.descripcion || ''} onChange={e => setEditing({ ...editing, descripcion: e.target.value })}
-              rows={3} placeholder="Qué hace la terapia, en qué consiste…"
+              rows={3} placeholder={tr("admin.phQueHace")}
               className="w-full px-3 py-2.5 rounded-lg border outline-none text-sm resize-none focus:border-sky-500"
               style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
           </Field>
@@ -519,7 +523,7 @@ function EditorModal({
             hint="✨ Este texto lo usa la IA para decidir cuándo recomendar esta terapia. Sé específico."
           >
             <textarea value={editing.por_que || ''} onChange={e => setEditing({ ...editing, por_que: e.target.value })}
-              rows={3} placeholder="Beneficios, casos en que ayuda especialmente…"
+              rows={3} placeholder={tr("admin.phBeneficios")}
               className="w-full px-3 py-2.5 rounded-lg border outline-none text-sm resize-none focus:border-sky-500"
               style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
           </Field>

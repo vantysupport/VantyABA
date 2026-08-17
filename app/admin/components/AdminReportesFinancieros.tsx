@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   DollarSign, TrendingUp, Users, Calendar, Download,
   RefreshCw, Loader2, CheckCircle2, ArrowUpRight, ArrowDownRight,
@@ -63,6 +64,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?: Record<string, boolean> } = {}) {
+  const { t } = useI18n()
   const toast = useToast()
   const [loading, setLoading]         = useState(true)
   const [tab, setTab] = useState<'overview' | 'pacientes' | 'servicios'>('overview')
@@ -218,7 +220,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
         <div className="h-1" style={{ background: 'linear-gradient(90deg, #10b981 0%, #0284c7 40%, #f59e0b 70%, #0ea5e9 100%)' }} />
         <div className="px-6 py-4 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Reportes Financieros</h2>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{t("admin.reportesFinancieros")}</h2>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Ingresos, facturación y métricas del centro · {MESES_L[new Date().getMonth()]} {anio}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -236,7 +238,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
             <select value={mesFilter ?? ''} onChange={e => setMesFilter(e.target.value === '' ? null : Number(e.target.value))}
               className="px-3 py-2 rounded-xl text-xs font-bold border-2 outline-none"
               style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-              <option value="">Todo el año</option>
+              <option value="">{t("admin.todoAnio")}</option>
               {MESES_L.map((m, i) => <option key={i} value={i}>{m}</option>)}
             </select>
             <button onClick={exportCSV}
@@ -279,7 +281,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 size={28} className="animate-spin" style={{ color: '#0284c7' }} />
-          <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>Calculando métricas...</p>
+          <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.calculandoMetricas")}</p>
         </div>
       ) : (
         <>
@@ -292,7 +294,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                 <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
                   <div>
                     <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Evolución de ingresos {anio}</h3>
-                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Ingresos cobrados vs pendientes por mes</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{t("admin.ingresosCobrados")}</p>
                   </div>
                   <div className="flex items-center gap-3 text-[11px]">
                     {[{ color: '#10b981', label: 'Cobrado' }, { color: '#f59e0b', label: 'Pendiente' }].map(l => (
@@ -332,13 +334,13 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                 {/* Por método */}
                 <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
                   <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Métodos de pago</h3>
+                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.metodosPago")}</h3>
                     <DollarSign size={15} style={{ color: '#f59e0b' }} />
                   </div>
                   <div className="p-5">
                     {data.porMetodo.length === 0 ? (
                       <div className="flex items-center justify-center h-[160px]">
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Sin datos</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t("admin.sinDatos")}</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-4">
@@ -381,7 +383,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                 {/* Sesiones por mes */}
                 <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
                   <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Sesiones pagadas por mes</h3>
+                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.sesionesPagadas")}</h3>
                     <Activity size={15} style={{ color: '#0284c7' }} />
                   </div>
                   <div className="p-5">
@@ -486,7 +488,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                 </div>
                 <div className="p-5 space-y-3">
                   {data.porPaciente.length === 0 ? (
-                    <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>Sin datos</p>
+                    <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>{t("admin.sinDatos")}</p>
                   ) : data.porPaciente.map((p, i) => {
                     const max = data.porPaciente[0]?.ingresos || 1
                     const pct = Math.round(p.ingresos / max * 100)
@@ -519,12 +521,12 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
                   <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Distribución por servicio</h3>
+                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.distribServicio")}</h3>
                   </div>
                   <div className="p-5">
                     {data.porServicio.length === 0 ? (
                       <div className="flex items-center justify-center h-[200px]">
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Sin datos</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t("admin.sinDatos")}</p>
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height={200}>
@@ -545,7 +547,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
 
                 <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
                   <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Ranking por servicio</h3>
+                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.rankingServicio")}</h3>
                   </div>
                   <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
                     {data.porServicio.slice(0, 8).map((s, i) => (

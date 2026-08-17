@@ -667,7 +667,7 @@ export default function UserManagementView({ rolesConfig }: {
             <select value={filterSpecialty} onChange={e => setFilterSpecialty(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all appearance-none"
               style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}>
-              <option value="">Todas las especialidades</option>
+              <option value="">{t("admin.todasEspecialidades")}</option>
               {especialidadesEquipo.map(sp => <option key={sp} value={sp}>{sp}</option>)}
             </select>
           </div>
@@ -779,14 +779,14 @@ export default function UserManagementView({ rolesConfig }: {
                               type="text" value={newSpecialty} autoFocus list="specialty-suggestions"
                               onChange={e => setNewSpecialty(e.target.value)}
                               onKeyDown={e => { if (e.key === 'Enter') handleUpdateSpecialty(user.id); if (e.key === 'Escape') setEditingSpecialtyFor(null) }}
-                              placeholder="Elegí una o escribí la tuya…"
+                              placeholder={t("admin.phEspecialidad")}
                               className="flex-1 px-2 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                               style={{ background: 'var(--card)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
                             <button onClick={() => handleUpdateSpecialty(user.id)} disabled={savingSpecialty}
-                              className="p-1 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50" title="Guardar">
+                              className="p-1 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50" title={t("common.guardar")}>
                               {savingSpecialty ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
                             </button>
-                            <button onClick={() => setEditingSpecialtyFor(null)} className="p-1 rounded-md hover:text-red-500" style={{ color: 'var(--text-muted)' }} title="Cancelar">
+                            <button onClick={() => setEditingSpecialtyFor(null)} className="p-1 rounded-md hover:text-red-500" style={{ color: 'var(--text-muted)' }} title={t("common.cancelar")}>
                               <X size={12} />
                             </button>
                           </div>
@@ -795,7 +795,7 @@ export default function UserManagementView({ rolesConfig }: {
                             <Briefcase size={11} />
                             {user.profile?.specialty
                               ? <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{user.profile.specialty}</span>
-                              : <span className="italic">Sin especialidad asignada</span>}
+                              : <span className="italic">{t("admin.sinEspecialidad")}</span>}
                             <button
                               onClick={() => { setEditingSpecialtyFor(user.id); setNewSpecialty(user.profile?.specialty || '') }}
                               className="ml-1 text-sky-500 hover:underline font-semibold">
@@ -950,7 +950,7 @@ export default function UserManagementView({ rolesConfig }: {
                 <option value="secretaria">📋 Secretaria(o) — Apoyo administrativo</option>
               </select>
               {createForm.role !== 'padre' && (
-                <input list="specialty-suggestions" placeholder="Especialidad / área (elegí una o escribí la tuya)" value={createForm.specialty}
+                <input list="specialty-suggestions" placeholder={t("admin.phEspecialidadArea")} value={createForm.specialty}
                   onChange={e => setCreateForm(f => ({ ...f, specialty: e.target.value }))}
                   className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                   style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
@@ -995,7 +995,7 @@ export default function UserManagementView({ rolesConfig }: {
               ))}
             </select>
             {children.length === 0 && (
-              <p className="text-xs text-amber-500 font-medium mb-3">No hay pacientes registrados.</p>
+              <p className="text-xs text-amber-500 font-medium mb-3">{t("ui.no_patients_registered")}</p>
             )}
             <button onClick={handleLinkParentChild} disabled={savingLink || !selectedChildId}
               className="w-full py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-white"

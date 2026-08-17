@@ -11,6 +11,7 @@
 //  • Descarga del documento clínico interno
 
 import { useEffect, useState } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   ClipboardCheck, Brain, Heart, Loader2, X, Sparkles, FileText, RefreshCw,
   CheckCircle2, User, Send, Award, Clock, Download, MessageCircle, Edit3, Trash2,
@@ -63,6 +64,7 @@ function RichText({ texto }: { texto: string }) {
 }
 
 export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
+  const { t } = useI18n()
   const [loading, setLoading] = useState(true)
   const [evaluacion, setEvaluacion] = useState<any>(null)
   const [terapias, setTerapias] = useState<any[]>([])  // catálogo completo
@@ -227,8 +229,8 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
     return (
       <div className="rounded-2xl p-8 text-center border-2 border-dashed" style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
         <ClipboardCheck size={40} className="mx-auto mb-3 opacity-40" />
-        <p className="font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Sin evaluación inicial</p>
-        <p className="text-sm">El padre aún no ha llenado la ficha intake.</p>
+        <p className="font-bold mb-1" style={{ color: 'var(--text-primary)' }}>{t("admin.sinEvalInicial")}</p>
+        <p className="text-sm">{t("admin.padreNoLleno")}</p>
       </div>
     )
   }
@@ -344,7 +346,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
               </button>
               <button onClick={eliminarEvaluacion} disabled={eliminando}
                 className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold flex items-center gap-1.5 disabled:opacity-50">
-                {eliminando ? <><Loader2 size={14} className="animate-spin" /> Eliminando…</> : <><Trash2 size={14} /> Sí, eliminar</>}
+                {eliminando ? <><Loader2 size={14} className="animate-spin" /> {t("admin.eliminando")}</> : <><Trash2 size={14} /> {t("admin.siEliminar")}</>}
               </button>
             </div>
           </div>
@@ -358,7 +360,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
             <Send size={18} />
           </div>
           <div className="flex-1">
-            <p className="font-bold text-amber-900">El padre está esperando tu respuesta</p>
+            <p className="font-bold text-amber-900">{t("admin.padreEsperando")}</p>
             <p className="text-sm text-amber-800">
               Eligió {terapiasElegidas.length} terapia{terapiasElegidas.length === 1 ? '' : 's'}. Revisa toda la información abajo y envía un mensaje personalizado.
             </p>
@@ -372,7 +374,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold flex items-center gap-2 flex-wrap" style={{ color: 'var(--text-primary)' }}>
               {evaluacion.recomendacion === 'psicologica' ? <Heart size={16} className="text-pink-500" /> : <Brain size={16} className="text-sky-500" />}
-              Recomendación IA <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">USO INTERNO</span>
+              Recomendación IA <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">{t("admin.usoInterno")}</span>
             </h3>
           </div>
 
@@ -388,7 +390,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
 
           {evaluacion.mensaje_amigable_padre && (
             <details className="mb-3 rounded-lg p-3" style={{ background: 'rgba(99,102,241,0.06)' }}>
-              <summary className="cursor-pointer text-xs font-bold uppercase text-sky-700">Mensaje que vio el padre</summary>
+              <summary className="cursor-pointer text-xs font-bold uppercase text-sky-700">{t("admin.mensajeVioPadre")}</summary>
               <p className="text-sm mt-2 whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
                 {evaluacion.mensaje_amigable_padre}
               </p>
@@ -397,7 +399,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
 
           {evaluacion.recomendacion_razon && (
             <details className="text-sm" open>
-              <summary className="cursor-pointer font-bold text-sky-600 mb-2">Razonamiento clínico completo</summary>
+              <summary className="cursor-pointer font-bold text-sky-600 mb-2">{t("admin.razonamientoCompleto")}</summary>
               <div className="mt-2 leading-relaxed rounded-lg p-3 text-sm"
                 style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)' }}>
                 <RichText texto={evaluacion.recomendacion_razon} />
@@ -409,7 +411,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
             <div className="grid sm:grid-cols-2 gap-3 mt-4 text-xs">
               {areas.areas_a_evaluar?.length > 0 && (
                 <div>
-                  <p className="font-bold uppercase mb-1.5" style={{ color: 'var(--text-muted)' }}>Áreas a evaluar</p>
+                  <p className="font-bold uppercase mb-1.5" style={{ color: 'var(--text-muted)' }}>{t("admin.areasEvaluar")}</p>
                   <ul className="space-y-0.5" style={{ color: 'var(--text-secondary)' }}>
                     {areas.areas_a_evaluar.map((a: string, i: number) => <li key={i}>· {a}</li>)}
                   </ul>
@@ -417,7 +419,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
               )}
               {areas.señales_detectadas?.length > 0 && (
                 <div>
-                  <p className="font-bold uppercase mb-1.5" style={{ color: 'var(--text-muted)' }}>Señales detectadas</p>
+                  <p className="font-bold uppercase mb-1.5" style={{ color: 'var(--text-muted)' }}>{t("admin.senalesDetectadas")}</p>
                   <ul className="space-y-1" style={{ color: 'var(--text-secondary)' }}>
                     {areas.señales_detectadas.map((s: any, i: number) => (
                       <li key={i}><strong>{s.categoria}:</strong> {s.descripcion}</li>
@@ -429,7 +431,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
           )}
           {areas.urgencia && (
             <p className="mt-3 text-xs">
-              <span className="font-bold" style={{ color: 'var(--text-muted)' }}>Urgencia: </span>
+              <span className="font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.urgencia")}</span>
               <span className={`font-bold ${
                 areas.urgencia === 'alta' ? 'text-red-600' : areas.urgencia === 'media' ? 'text-amber-600' : 'text-green-600'
               }`}>{areas.urgencia.toUpperCase()}</span>
@@ -444,7 +446,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               <Sparkles size={16} className="text-sky-500" />
-              Terapias recomendadas por IA <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">DEL CATÁLOGO</span>
+              Terapias recomendadas por IA <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">{t("admin.delCatalogo")}</span>
             </h3>
             {evaluacion.anamnesis_especifica && (
               <button onClick={reRecomendarTerapias} disabled={reRecomendando}
@@ -493,7 +495,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
           {/* Razonamiento */}
           {evaluacion.terapias_recomendadas_razon && (
             <details className="text-sm">
-              <summary className="cursor-pointer font-bold text-sky-700 mb-2">Ver razonamiento de la IA</summary>
+              <summary className="cursor-pointer font-bold text-sky-700 mb-2">{t("admin.verRazonamientoIA")}</summary>
               <div className="mt-2 leading-relaxed rounded-lg p-3 text-sm"
                 style={{ background: 'var(--card)', color: 'var(--text-secondary)' }}>
                 <RichText texto={evaluacion.terapias_recomendadas_razon} />
@@ -509,7 +511,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
           style={{ borderColor: 'var(--card-border)' }}>
           <div className="flex items-center gap-2 text-sm min-w-0" style={{ color: 'var(--text-secondary)' }}>
             <Sparkles size={16} className="text-sky-500 shrink-0" />
-            <span>La IA aún no ha recomendado terapias del catálogo para este caso.</span>
+            <span>{t("admin.iaNoRecomendo")}</span>
           </div>
           <button onClick={reRecomendarTerapias} disabled={reRecomendando}
             className="px-3 py-2 rounded-lg bg-sky-600 text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 shrink-0">
@@ -661,7 +663,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
                 Nota clínica (opcional) — por qué hiciste este cambio
               </label>
               <textarea value={notaCambio} onChange={e => setNotaCambio(e.target.value)} rows={2}
-                placeholder="Ej: Tras la entrevista presencial considero que la terapia X es más prioritaria que la Y por…"
+                placeholder={t("admin.phTrasEntrevista")}
                 className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-sky-500 resize-none"
                 style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
               <div className="flex gap-2 justify-end mt-3">
@@ -672,7 +674,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
                 </button>
                 <button onClick={guardarSeleccionTerapias} disabled={guardandoTerapias || seleccionEdit.length === 0}
                   className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold flex items-center gap-1.5 disabled:opacity-50">
-                  {guardandoTerapias ? <><Loader2 size={14} className="animate-spin" /> Guardando…</> : <><CheckCircle2 size={14} /> Guardar selección</>}
+                  {guardandoTerapias ? <><Loader2 size={14} className="animate-spin" /> {t("admin.guardando")}</> : <><CheckCircle2 size={14} /> {t("admin.guardarSeleccion")}</>}
                 </button>
               </div>
             </div>
@@ -810,7 +812,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
             </div>
 
             <div className="rounded-lg p-3 mb-4 text-xs" style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)' }}>
-              <strong>Esta respuesta se enviará al padre por la plataforma</strong> (y por notificación). Sé cálido, claro y profesional.
+              <strong>{t("admin.respuestaSeEnviara")}</strong> (y por notificación). Sé cálido, claro y profesional.
               Confirma terapias, propón horarios o pide info adicional.
             </div>
 
@@ -830,7 +832,7 @@ export default function EvaluacionInicialAdmin({ childId, childName }: Props) {
                 Enviar al padre
               </button>
               <button onClick={() => setShowResponder(false)} className="px-4 py-2.5 rounded-lg border-2 font-bold"
-                style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>Cancelar</button>
+                style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>{t("common.cancelar")}</button>
             </div>
           </div>
         </div>

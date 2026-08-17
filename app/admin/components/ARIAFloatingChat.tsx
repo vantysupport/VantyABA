@@ -577,7 +577,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
               <button
                 onClick={() => setMinimized(m => !m)}
                 className="w-7 h-7 flex items-center justify-center hover:bg-white/20 rounded-lg transition-all text-white"
-                title="Minimizar"
+                title={t("admin.minimizar")}
               >
                 <Minus size={14} />
               </button>
@@ -591,7 +591,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
               <button
                 onClick={() => { setOpen(false); setExpanded(false) }}
                 className="w-7 h-7 flex items-center justify-center hover:bg-white/20 rounded-lg transition-all text-white"
-                title="Cerrar"
+                title={t("common.cerrar")}
               >
                 <X size={14} />
               </button>
@@ -634,7 +634,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                 {loadingHistory && (
                   <div className="flex items-center justify-center gap-2 py-4" style={{ color: 'var(--muted-foreground)', fontSize: '0.75rem' }}>
                     <Loader2 size={14} className="animate-spin" />
-                    <span>Cargando historial...</span>
+                    <span>{t("admin.cargandoHistorial")}</span>
                   </div>
                 )}
                 {messages.map((msg, i) => (
@@ -681,7 +681,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                     <div className="rounded-2xl px-3 py-2 flex items-center gap-2"
                       style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
                       <Loader2 size={12} className="animate-spin text-sky-500" />
-                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>ARIA está pensando...</span>
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t("aria.ariaPensando")}</span>
                     </div>
                   </div>
                 )}
@@ -723,7 +723,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                   <button
                     onClick={() => { if (window.confirm('¿Borrar todo el historial de ARIA?')) clearHistory() }}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                    title="Borrar historial"
+                    title={t("admin.borrarHistorial")}
                   >
                     <Trash2 size={11} />
                     Borrar chat
@@ -766,7 +766,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
         className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95
           ${open ? 'opacity-0 pointer-events-none scale-75' : 'opacity-100 scale-100'}`}
         style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}
-        title="Abrir ARIA"
+        title={t("admin.abrirARIA")}
       >
         <Brain size={26} className="text-white" />
         {unread > 0 && (

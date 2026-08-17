@@ -69,8 +69,8 @@ function DynamicFormQuestion({ question, value, onChange }: any) {
           ))}
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-xs text-slate-400">Nunca/Leve</span>
-          <span className="text-xs text-slate-400">Siempre/Severo</span>
+          <span className="text-xs text-slate-400">{t("admin.nuncaLeve")}</span>
+          <span className="text-xs text-slate-400">{t("admin.siempreSevero")}</span>
         </div>
       </div>
     )
@@ -269,7 +269,7 @@ function SendFormModal({ form, children, onSend, onClose }: any) {
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2"><Send size={20} className="text-sky-600"/> Enviar Formulario</h3>
+          <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2"><Send size={20} className="text-sky-600"/> {t("evaluaciones.enviarForm")}</h3>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100"><X size={20}/></button>
         </div>
 
@@ -549,7 +549,7 @@ export default function NeuroFormsView() {
           <CheckCircle2 size={40} className="text-emerald-500" />
         </div>
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-slate-800 mb-2" style={{ color: 'var(--text-primary)' }}>Formulario guardado</h2>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2" style={{ color: 'var(--text-primary)' }}>{t("admin.formGuardado")}</h2>
           <p className="text-slate-500 font-medium">{selectedForm.title}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
@@ -559,9 +559,9 @@ export default function NeuroFormsView() {
             className="flex-1 flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white rounded-2xl font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed active:scale-95"
           >
             {isGeneratingReport ? (
-              <><Loader2 size={18} className="animate-spin" /> Generando reporte...</>
+              <><Loader2 size={18} className="animate-spin" /> {t("common.generandoReporte")}</>
             ) : (
-              <><FileText size={18} /> Generar y Descargar Reporte Word</>
+              <><FileText size={18} /> {t("evaluaciones.genDescarga")}</>
             )}
           </button>
           <button
@@ -798,7 +798,7 @@ export default function NeuroFormsView() {
                         <FileText size={14}/> Completar
                       </button>
                       {(form.targetRole === 'parent' || form.targetRole === 'both') && (
-                        <button onClick={() => setSendFormModal(form)} className="px-3 py-2.5 rounded-xl border-2 border-slate-200 text-slate-500 hover:border-sky-400 hover:text-sky-600 transition-all" title="Enviar a padres">
+                        <button onClick={() => setSendFormModal(form)} className="px-3 py-2.5 rounded-xl border-2 border-slate-200 text-slate-500 hover:border-sky-400 hover:text-sky-600 transition-all" title={t("evaluaciones.enviarPadres")}>
                           <Send size={14}/>
                         </button>
                       )}

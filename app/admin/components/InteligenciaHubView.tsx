@@ -248,7 +248,7 @@ function ProgramaCard({ prog, t }: { prog: any; t: any }) {
               </p>
             </>
           ) : (
-            <p className="text-xs text-center py-3" style={{ color: 'var(--text-muted)' }}>Sin sesiones registradas</p>
+            <p className="text-xs text-center py-3" style={{ color: 'var(--text-muted)' }}>{t("hub.sinSesionesReg")}</p>
           )}
         </div>
       )}
@@ -328,8 +328,8 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
         {!selectedPaciente && !loading && (
           <div className="flex flex-col items-center justify-center h-full p-12 text-center" style={{ minHeight: '200px' }}>
             <Brain size={48} className="text-slate-300 mb-4" style={{ opacity: 0.4 }} />
-            <p className="font-bold text-base" style={{ color: 'var(--text-muted)' }}>Selecciona un paciente</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>La IA analizará sus últimas 12 semanas</p>
+            <p className="font-bold text-base" style={{ color: 'var(--text-muted)' }}>{t("hub.selecPacienteMsg")}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>{t("hub.iaAnalizara")}</p>
           </div>
         )}
 
@@ -364,7 +364,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
             {/* Sin programas */}
             {((prediccion as any).programas_analizados === 0) && (
               <div className="rounded-xl p-6 text-center border-2 border-dashed" style={{ borderColor: "var(--card-border)", background: "var(--muted-bg)" }}>
-                <p className="font-bold text-sm mb-1" style={{ color: "var(--text-primary)" }}>Sin programas ABA con datos</p>
+                <p className="font-bold text-sm mb-1" style={{ color: "var(--text-primary)" }}>{t("hub.sinProgramasDatos")}</p>
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>{(prediccion as any).mensaje || 'Crea programas ABA en la ficha del paciente y registra al menos una sesión para generar análisis.'}</p>
               </div>
             )}
@@ -379,7 +379,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
               <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
                 <div className="px-5 py-3 border-b flex items-center gap-2" style={{ background: "linear-gradient(135deg, #082f49, #0c4a6e)", borderColor: "var(--card-border)" }}>
                   <Sparkles size={14} className="text-sky-300" />
-                  <p className="text-xs font-bold text-sky-200">Análisis Clínico IA — Analista Conductual ABA</p>
+                  <p className="text-xs font-bold text-sky-200">{t("hub.analisisClinicoAnalista")}</p>
                   <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-sky-500/30 text-sky-300 font-bold border border-sky-500/30">IA</span>
                 </div>
                 <div className="p-4 md:p-5 space-y-4">
@@ -476,7 +476,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
                 type="text"
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                placeholder="Buscar paciente..."
+                placeholder={t("hub.buscarPaciente")}
                 className="w-full pl-8 pr-3 py-2 rounded-lg text-xs border outline-none focus:ring-2 focus:ring-sky-500/40"
                 style={{ borderColor: 'var(--card-border)', background: 'var(--card)', color: 'var(--text-primary)' }}
               />
@@ -532,7 +532,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
                 type="text"
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                placeholder="Buscar paciente..."
+                placeholder={t("hub.buscarPaciente")}
                 className="w-full pl-8 pr-3 py-2 rounded-lg text-xs border outline-none focus:ring-2 focus:ring-sky-500/40"
                 style={{ borderColor: 'var(--card-border)', background: 'var(--card)', color: 'var(--text-primary)' }}
               />
@@ -577,8 +577,8 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
         {!selectedPaciente && !loading && (
           <div className="flex flex-col items-center justify-center h-full p-12 text-center" style={{ minHeight: '200px' }}>
             <Brain size={48} className="text-slate-300 mb-4" style={{ opacity: 0.4 }} />
-            <p className="font-bold text-base" style={{ color: 'var(--text-muted)' }}>Selecciona un paciente</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>La IA analizará sus últimas 12 semanas</p>
+            <p className="font-bold text-base" style={{ color: 'var(--text-muted)' }}>{t("hub.selecPacienteMsg")}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>{t("hub.iaAnalizara")}</p>
           </div>
         )}
 
@@ -613,7 +613,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
             {/* Sin programas */}
             {((prediccion as any).programas_analizados === 0) && (
               <div className="rounded-xl p-6 text-center border-2 border-dashed" style={{ borderColor: "var(--card-border)", background: "var(--muted-bg)" }}>
-                <p className="font-bold text-sm mb-1" style={{ color: "var(--text-primary)" }}>Sin programas ABA con datos</p>
+                <p className="font-bold text-sm mb-1" style={{ color: "var(--text-primary)" }}>{t("hub.sinProgramasDatos")}</p>
                 <p className="text-xs" style={{ color: "var(--text-muted)" }}>{(prediccion as any).mensaje || 'Crea programas ABA en la ficha del paciente y registra al menos una sesión para generar análisis.'}</p>
               </div>
             )}
@@ -628,7 +628,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
               <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
                 <div className="px-5 py-3 border-b flex items-center gap-2" style={{ background: "linear-gradient(135deg, #082f49, #0c4a6e)", borderColor: "var(--card-border)" }}>
                   <Sparkles size={14} className="text-sky-300" />
-                  <p className="text-xs font-bold text-sky-200">Análisis Clínico IA — Analista Conductual ABA</p>
+                  <p className="text-xs font-bold text-sky-200">{t("hub.analisisClinicoAnalista")}</p>
                   <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-sky-500/30 text-sky-300 font-bold border border-sky-500/30">IA</span>
                 </div>
                 <div className="p-4 md:p-5 space-y-4">
@@ -717,6 +717,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
 // TAB: SEGURIDAD
 // ═══════════════════════════════════════════════════════════════════════════════
 function TabSeguridad() {
+  const { t } = useI18n()
   const [datos, setDatos] = useState<Seguridad | null>(null)
   const [alertas, setAlertas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -758,7 +759,7 @@ function TabSeguridad() {
               <span className="text-2xl font-bold" style={{ color: scoreColor }}>{datos?.scoreSeguridad}</span>
             </div>
           </div>
-          <p className="text-xs font-bold text-slate-500 uppercase mt-2">Score Seguridad</p>
+          <p className="text-xs font-bold text-slate-500 uppercase mt-2">{t("hub.scoreSeguridad")}</p>
           <Badge label={datos?.estado || 'desconocido'} color={estadoColor} />
         </div>
 
@@ -881,7 +882,7 @@ function TabCompetitividad() {
       <div className="bg-gradient-to-br from-sky-500 via-sky-600 to-sky-700 rounded-2xl p-6 text-white">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sky-200 text-xs font-bold mb-1">Score Competitivo</p>
+            <p className="text-sky-200 text-xs font-bold mb-1">{t("hub.scoreCompetitivo")}</p>
             <div className="flex items-end gap-3">
               <span className="text-5xl font-bold">{datos.scoreGlobal}</span>
               <span className="text-sky-300 text-lg mb-1">/100</span>
@@ -1098,6 +1099,7 @@ function getSectionCfg(text: string) {
 }
 
 function ResumenIACard({ texto }: { texto: string }) {
+  const { t } = useI18n()
   const bloques = texto
     .split(/\n(?=\*\*[A-ZÁÉÍÓÚÑ])|\n\n+/)
     .map((b: string) => b?.trim())
@@ -1129,15 +1131,15 @@ function ResumenIACard({ texto }: { texto: string }) {
             <Brain size={16} className="text-sky-300" />
           </div>
           <div>
-            <p className="text-sm font-bold" style={{ color: '#d0d0e8' }}>Informe Neuropsicológico Clínico</p>
-            <p className="text-[11px]" style={{ color: '#7a7a9a' }}>Análisis ABA · Supervisión Conductual</p>
+            <p className="text-sm font-bold" style={{ color: '#d0d0e8' }}>{t("hub.informeNeuro")}</p>
+            <p className="text-[11px]" style={{ color: '#7a7a9a' }}>{t("hub.analisisSupervision")}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] px-2.5 py-1 rounded-full font-bold border hidden sm:inline-block"
             style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', borderColor: 'var(--card-border)' }}>IA</span>
           <span className="text-[10px] px-2.5 py-1 rounded-full font-bold border"
-            style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>CONFIDENCIAL</span>
+            style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', borderColor: 'var(--card-border)' }}>{t("hub.confidencial")}</span>
         </div>
       </div>
 
@@ -1209,7 +1211,7 @@ function ResumenIACard({ texto }: { texto: string }) {
 
       <div className="px-6 py-3 flex items-center justify-between"
         style={{ background: 'var(--muted-bg)', borderTop: '1px solid var(--card-border)' }}>
-        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Generado por Analista Conductual IA · No reemplaza evaluación profesional certificada</p>
+        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t("hub.generadoAnalista")}</p>
         <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
       </div>
     </div>
@@ -1255,8 +1257,8 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
             <Activity size={16} style={{ color: 'var(--text-secondary)' }} />
           </div>
           <div>
-            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Detector de Patrones ABA — CAPA 1</p>
-            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Análisis de regresiones, plateaus, aceleraciones e inconsistencias conductuales</p>
+            <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("hub.detectorPatrones")}</p>
+            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{t("hub.analisisRegresiones")}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3 mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
@@ -1300,8 +1302,8 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
             boxShadow: 'none'
           }}>
           {loading
-            ? <><RefreshCw size={15} className="animate-spin" /> Analizando historial clínico...</>
-            : <><Activity size={15} /> Detectar Patrones</>}
+            ? <><RefreshCw size={15} className="animate-spin" /> {t("hub.analizandoHistorial")}</>
+            : <><Activity size={15} /> {t("hub.detectarPatrones")}</>}
         </button>
         {error && (
           <div className="rounded-xl px-4 py-3 text-xs font-medium"
@@ -1338,7 +1340,7 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
             <div className="rounded-2xl p-8 text-center border"
               style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)' }}>
               <p className="text-3xl mb-3">✓</p>
-              <p className="font-bold text-sm mb-1" style={{ color: '#10b981' }}>Progreso Estable</p>
+              <p className="font-bold text-sm mb-1" style={{ color: '#10b981' }}>{t("hub.progresoEstable")}</p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {resultado.resumen || `Sin patrones problemáticos en ${resultado.sesiones_analizadas} sesiones.`}
               </p>
@@ -1429,7 +1431,7 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
           <Target size={16} className="text-amber-600" />
           <span className="font-bold text-amber-800 text-sm">{t('hub.generadorObjetivos')}</span>
         </div>
-        <p className="text-xs text-amber-600">Genera o ajusta objetivos terapéuticos ABA automáticamente según el progreso real del paciente.</p>
+        <p className="text-xs text-amber-600">{t("hub.generaAjustaObjetivos")}</p>
       </div>
       <div className=" rounded-2xl border border-slate-100 p-4 space-y-3" style={{ background: "var(--card)" }}>
         <select className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
@@ -1447,7 +1449,7 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
         </div>
         <button onClick={ejecutar} disabled={!selected || loading}
           className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition">
-          {loading ? <><RefreshCw size={14} className="animate-spin" /> {t('common.procesando')}</> : <><Target size={14} /> Ejecutar</>}
+          {loading ? <><RefreshCw size={14} className="animate-spin" /> {t('common.procesando')}</> : <><Target size={14} /> {t("hub.ejecutar")}</>}
         </button>
         {error && <p className="text-red-500 text-xs">{error}</p>}
       </div>
@@ -1569,7 +1571,7 @@ function TabSugerencias() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Sparkles size={16} className="text-orange-600" />
-            <span className="font-bold text-orange-800 text-sm">Alertas Proactivas — CAPA 4</span>
+            <span className="font-bold text-orange-800 text-sm">{t("hub.alertasProactivas")}</span>
           </div>
           <p className="text-xs text-orange-600">{t('hub.iaAlertaAntes')}</p>
           {meta && (
@@ -1598,7 +1600,7 @@ function TabSugerencias() {
       {!loading && sugerencias.length === 0 && (
         <div className=" rounded-2xl border border-slate-100 p-10 text-center" style={{ background: "var(--card)" }}>
           <CheckCircle size={32} className="text-emerald-400 mx-auto mb-3" />
-          <p className="font-bold text-slate-700" style={{ color: "var(--text-secondary)" }}>Sin alertas activas</p>
+          <p className="font-bold text-slate-700" style={{ color: "var(--text-secondary)" }}>{t("hub.sinAlertasActivas")}</p>
           <p className="text-xs text-slate-400 mt-1">{t('hub.todosPacientesOk')}</p>
         </div>
       )}

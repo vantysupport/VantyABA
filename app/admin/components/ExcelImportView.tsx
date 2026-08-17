@@ -124,7 +124,7 @@ export default function ExcelImportView() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Importar Pacientes</h2>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{t("admin.importarPacientes")}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('ui.subeCSV')}</p>
         </div>
         <button onClick={downloadTemplate}
@@ -162,7 +162,7 @@ export default function ExcelImportView() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
             <FileText className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Vista previa (primeras 5 filas)</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("admin.vistaPrevia5")}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -185,7 +185,7 @@ export default function ExcelImportView() {
       {file && !result && (
         <button onClick={handleImport} disabled={loading}
           className="w-full py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-sky-400 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition">
-          {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> Importando...</> : <><Upload className="w-5 h-5" /> Importar pacientes</>}
+          {loading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t("admin.importando")}</> : <><Upload className="w-5 h-5" /> {t("admin.importarPacientes")}</>}
         </button>
       )}
 

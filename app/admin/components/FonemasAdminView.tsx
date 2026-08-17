@@ -5,6 +5,7 @@
 // las ven en Practicar en Casa → Fonemas. Sin imágenes propias → sticker OpenMoji.
 
 import { useEffect, useState } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { Mic, Plus, Trash2, Loader2, Eye, EyeOff, Images, Save, Smile, Video } from 'lucide-react'
@@ -14,6 +15,7 @@ type ImgRow = { id: string; url: string; label?: string }
 type Ayuda = { boca_url?: string | null; video_url?: string | null }
 
 export default function FonemasAdminView() {
+  const { t } = useI18n()
   const toast = useToast()
   const [imgs, setImgs] = useState<Record<string, ImgRow[]>>({})
   const [inputs, setInputs] = useState<Record<string, { label: string; url: string }>>({})
@@ -115,7 +117,7 @@ export default function FonemasAdminView() {
 
       <div className="flex items-center gap-2 mb-3 text-slate-600 dark:text-slate-300">
         <Images size={16} />
-        <h2 className="text-sm font-extrabold">Repositorio de imágenes</h2>
+        <h2 className="text-sm font-extrabold">{t("admin.repositorioImagenes")}</h2>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -141,7 +143,7 @@ export default function FonemasAdminView() {
                       <button
                         onClick={() => del(im.id)} disabled={busy === im.id}
                         className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center shadow"
-                        title="Eliminar">
+                        title={t("common.eliminar")}>
                         {busy === im.id ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
                       </button>
                     </div>
@@ -151,7 +153,7 @@ export default function FonemasAdminView() {
                   </div>
                 ))}
                 {list.length === 0 && (
-                  <span className="text-xs text-slate-400 italic py-2">Sin imágenes propias — se usa el sticker por defecto.</span>
+                  <span className="text-xs text-slate-400 italic py-2">{t("admin.sinImagenesPropias")}</span>
                 )}
               </div>
 
@@ -159,14 +161,14 @@ export default function FonemasAdminView() {
                 <input
                   value={inputs[f.id]?.label || ''}
                   onChange={e => setInputs(s => ({ ...s, [f.id]: { label: e.target.value, url: s[f.id]?.url || '' } }))}
-                  placeholder="Etiqueta / palabra que dirá (ej. Avión)"
+                  placeholder={t("admin.phEtiquetaPalabra")}
                   className="text-xs rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1.5 outline-none focus:border-sky-400" />
                 <div className="flex gap-2">
                   <input
                     value={inputs[f.id]?.url || ''}
                     onChange={e => setInputs(s => ({ ...s, [f.id]: { url: e.target.value, label: s[f.id]?.label || '' } }))}
                     onKeyDown={e => { if (e.key === 'Enter') add(f.id) }}
-                    placeholder="URL de la imagen (https://…)"
+                    placeholder={t("admin.phUrlImagenHttps")}
                     className="flex-1 min-w-0 text-xs rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1.5 outline-none focus:border-sky-400" />
                   <button
                     onClick={() => add(f.id)} disabled={busy === f.id + ':add'}
@@ -178,13 +180,13 @@ export default function FonemasAdminView() {
 
               {/* Boca + video de cómo se pronuncia (1 por fonema) */}
               <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex flex-col gap-2">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Cómo se pronuncia</p>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">{t("familias.comoPronuncia")}</p>
                 <div className="flex items-center gap-2">
                   <Smile size={14} className="text-slate-400 shrink-0" />
                   <input
                     value={ayudaInputs[f.id]?.boca || ''}
                     onChange={e => setAyudaInputs(s => ({ ...s, [f.id]: { boca: e.target.value, video: s[f.id]?.video || '' } }))}
-                    placeholder="URL imagen de la boca (https://…)"
+                    placeholder={t("admin.phUrlBoca")}
                     className="flex-1 min-w-0 text-xs rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1.5 outline-none focus:border-sky-400" />
                 </div>
                 <div className="flex items-center gap-2">
@@ -192,7 +194,7 @@ export default function FonemasAdminView() {
                   <input
                     value={ayudaInputs[f.id]?.video || ''}
                     onChange={e => setAyudaInputs(s => ({ ...s, [f.id]: { video: e.target.value, boca: s[f.id]?.boca || '' } }))}
-                    placeholder="URL del video (YouTube o MP4)"
+                    placeholder={t("admin.phUrlVideo")}
                     className="flex-1 min-w-0 text-xs rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 py-1.5 outline-none focus:border-sky-400" />
                   <button
                     onClick={() => saveAyuda(f.id)} disabled={busy === f.id + ':ayuda'}

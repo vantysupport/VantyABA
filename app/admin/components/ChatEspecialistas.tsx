@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { useTheme } from '@/components/ThemeContext'
@@ -255,6 +256,7 @@ export default function ChatEspecialistas({
   userAvatarUrl?: string | null
   onAvatarUpdate?: (url: string) => void
 }) {
+  const { t } = useI18n()
   const toast = useToast()
   const { isDark } = useTheme()
   const [activeMainTab, setActiveMainTab] = useState<'equipo' | 'familias'>('equipo')
@@ -747,7 +749,7 @@ export default function ChatEspecialistas({
               ? isDark ? 'bg-[#161b22] text-sky-400 shadow-sm' : 'bg-white text-sky-700 shadow-sm'
               : isDark ? 'text-slate-500' : 'text-slate-500'
             }`}>
-            {tab === 'equipo' ? <><Users size={14} /> Chat Equipo</> : <><Heart size={14} /> Chat Familias</>}
+            {tab === 'equipo' ? <><Users size={14} /> {t("admin.chatEquipo")}</> : <><Heart size={14} /> {t("admin.chatFamilias")}</>}
           </button>
         ))}
       </div>
@@ -774,7 +776,7 @@ export default function ChatEspecialistas({
               />
               <div className="flex-1 min-w-0">
                 <p className={`text-xs font-bold truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{userName}</p>
-                <p className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Toca la foto para cambiarla</p>
+                <p className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.tocaFoto")}</p>
               </div>
               <button
                 onClick={cargarEspecialistas}
@@ -794,7 +796,7 @@ export default function ChatEspecialistas({
               <input
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar..."
+                placeholder={t("admin.phBuscarSimple")}
                 className={`w-full pl-8 pr-3 py-2 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 shadow-sm ${isDark ? 'bg-[#0d1117] border border-[#30363d] text-slate-300 placeholder-slate-600' : 'bg-white border border-slate-200 text-slate-700'}`}
               />
             </div>
@@ -808,7 +810,7 @@ export default function ChatEspecialistas({
               </div>
             ) : filtrados.length === 0 ? (
               <div className="text-center py-10 px-4">
-                <p className="text-xs text-slate-400">No hay contactos registrados</p>
+                <p className="text-xs text-slate-400">{t("admin.sinContactos")}</p>
               </div>
             ) : (
               <>
@@ -928,7 +930,7 @@ export default function ChatEspecialistas({
                 <MessageCircle size={40} className="text-sky-200" />
               </div>
               <div>
-                <p className={`font-bold text-base ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Selecciona un contacto</p>
+                <p className={`font-bold text-base ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{t("admin.selecContacto")}</p>
                 <p className={`text-sm mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                   Elige un especialista o administrador de la lista para ver su conversación
                 </p>
@@ -1004,7 +1006,7 @@ export default function ChatEspecialistas({
                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'}`}>
                       <MessageCircle size={24} className="text-sky-300" />
                     </div>
-                    <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Sin mensajes aún con este especialista</p>
+                    <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.sinMensajesEsp")}</p>
                   </div>
                 ) : (
                   mensajesAgrupados.map((grupo) => (
@@ -1248,7 +1250,7 @@ export default function ChatEspecialistas({
                     disabled={subiendo || grabando}
                     className={`w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40
                       ${isDark ? 'hover:bg-[#21262d] text-slate-500 hover:text-slate-300' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'}`}
-                    title="Adjuntar archivo"
+                    title={t("mensajes.adjuntar")}
                   >
                     {subiendo ? (
                       <Loader2 size={16} className="animate-spin" />

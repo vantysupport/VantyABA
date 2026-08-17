@@ -4,6 +4,7 @@
 // que se envían a los padres. Se abre como modal desde la Agenda.
 
 import { useState, useEffect } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   X, Clock, Plus, Trash2, Loader2, Link2, Copy, CheckCircle2,
   Settings, CalendarClock, Power, ChevronLeft, ChevronRight,
@@ -23,6 +24,7 @@ type Props = {
 }
 
 export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: Props) {
+  const { t } = useI18n()
   const toast = useToast()
   const [tab, setTab] = useState<'config' | 'links'>('config')
 
@@ -209,7 +211,7 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
 
                 {/* Horario por día */}
                 <div>
-                  <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>Horario de atención</p>
+                  <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>{t("admin.horarioAtencion")}</p>
                   <div className="space-y-2">
                     {DIAS.map(d => {
                       const dia = cfg.working_hours[d.k] || { activo: false, bloques: [] }
@@ -226,7 +228,7 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
                           </div>
                           {dia.activo && (
                             <div className="space-y-1.5">
-                              {(dia.bloques || []).length === 0 && <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>Sin horario — agregá un bloque</p>}
+                              {(dia.bloques || []).length === 0 && <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t("admin.sinHorario")}</p>}
                               {(dia.bloques || []).map((b: any, i: number) => (
                                 <div key={i} className="flex items-center gap-2">
                                   <input type="time" value={b.inicio} onChange={e => setBloque(d.k, i, 'inicio', e.target.value)} className={inpSm} />
@@ -245,8 +247,8 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
 
                 {/* Días cerrados — calendario navegable por mes */}
                 <div>
-                  <p className="text-xs font-bold mb-1" style={{ color: 'var(--text-muted)' }}>Días cerrados (feriados / vacaciones)</p>
-                  <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Tocá los días que el centro estará cerrado. Podés marcar varios y cambiar de mes con las flechas.</p>
+                  <p className="text-xs font-bold mb-1" style={{ color: 'var(--text-muted)' }}>{t("admin.diasCerrados")}</p>
+                  <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>{t("admin.tocaDiasCerrado")}</p>
                   <CalendarioDiasCerrados
                     mes={calMonth}
                     onCambiarMes={setCalMonth}
@@ -266,7 +268,7 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
 
                 <button onClick={guardarConfig} disabled={savingCfg}
                   className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
-                  {savingCfg ? <><Loader2 size={16} className="animate-spin" /> Guardando…</> : <><CheckCircle2 size={16} /> Guardar disponibilidad</>}
+                  {savingCfg ? <><Loader2 size={16} className="animate-spin" /> {t("admin.guardando")}</> : <><CheckCircle2 size={16} /> {t("admin.guardarDisponibilidad")}</>}
                 </button>
               </div>
             )
@@ -277,17 +279,17 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
             <div className="space-y-5">
               {/* Crear link */}
               <div className="rounded-xl border p-4" style={{ borderColor: 'var(--card-border)' }}>
-                <p className="text-sm font-bold mb-3" style={{ color: 'var(--text-primary)' }}>Nuevo link de reserva</p>
+                <p className="text-sm font-bold mb-3" style={{ color: 'var(--text-primary)' }}>{t("admin.nuevoLinkReserva")}</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Campo label="Paciente (opcional)">
                     <select value={form.child_id} onChange={e => setForm(f => ({ ...f, child_id: e.target.value }))} className={inp}>
-                      <option value="">El padre elige su hijo</option>
+                      <option value="">{t("admin.padreEligeHijo")}</option>
                       {ninos.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
                     </select>
                   </Campo>
                   <Campo label="Especialista (opcional)">
                     <select value={form.specialist_id} onChange={e => setForm(f => ({ ...f, specialist_id: e.target.value }))} className={inp}>
-                      <option value="">Sin especialista fijo</option>
+                      <option value="">{t("admin.sinEspecialistaFijo")}</option>
                       {especialistas.map(e => <option key={e.id} value={e.id}>{e.full_name || e.email}</option>)}
                     </select>
                   </Campo>
@@ -327,16 +329,16 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
                 </div>
                 <button onClick={crearLink} disabled={creando}
                   className="mt-3 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
-                  {creando ? <><Loader2 size={16} className="animate-spin" /> Generando…</> : <><Link2 size={16} /> Generar link</>}
+                  {creando ? <><Loader2 size={16} className="animate-spin" /> {t("common.generando")}</> : <><Link2 size={16} /> {t("admin.generarLink")}</>}
                 </button>
               </div>
 
               {/* Lista de links */}
               <div>
-                <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>Links generados</p>
+                <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>{t("admin.linksGenerados")}</p>
                 {loadingLinks ? <div className="flex justify-center py-6"><Loader2 className="animate-spin text-sky-500" /></div> : (
                   <div className="space-y-2">
-                    {links.length === 0 && <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>Aún no generaste links.</p>}
+                    {links.length === 0 && <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>{t("admin.sinLinks")}</p>}
                     {links.map(l => {
                       const agotado = l.slots_used >= l.max_slots
                       const vencido = l.expires_at && new Date(l.expires_at) < new Date()
@@ -354,15 +356,15 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
                               </p>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <button onClick={() => copiar(l.token)} title="Copiar link"
+                              <button onClick={() => copiar(l.token)} title={t("admin.copiarLink")}
                                 className="px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-bold flex items-center gap-1.5">
-                                {copiado === l.token ? <><CheckCircle2 size={13} /> Copiado</> : <><Copy size={13} /> Copiar link</>}
+                                {copiado === l.token ? <><CheckCircle2 size={13} /> {t("admin.copiado")}</> : <><Copy size={13} /> {t("admin.copiarLink")}</>}
                               </button>
                               <button onClick={() => toggleLink(l.id, l.active)} title={l.active ? 'Desactivar' : 'Activar'}
                                 className="p-1.5 rounded-lg" style={{ color: l.active ? '#d97706' : '#16a34a', background: 'var(--card)' }}>
                                 <Power size={14} />
                               </button>
-                              <button onClick={() => eliminarLink(l.id)} title="Eliminar link"
+                              <button onClick={() => eliminarLink(l.id)} title={t("admin.eliminarLink")}
                                 className="p-1.5 rounded-lg" style={{ color: '#dc2626', background: 'var(--card)' }}>
                                 <Trash2 size={14} />
                               </button>

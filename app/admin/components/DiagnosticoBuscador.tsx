@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   Search, X, Loader2, Copy, Check, ChevronRight, ChevronLeft,
   AlertCircle, ExternalLink, Star, Wifi, WifiOff, Home, Tag,
@@ -49,6 +50,7 @@ interface Props {
 }
 
 export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: Props) {
+  const { t } = useI18n()
   const [q, setQ]               = useState('')
   const [results, setResults]   = useState<Result[]>([])
   const [loading, setLoading]   = useState(false)
@@ -172,7 +174,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
       )}
       {apiOk === false && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
-          <WifiOff size={13}/> Usando base local. Configura <code className="bg-amber-100 px-1 rounded">WHO_ICD_CLIENT_ID</code> y <code className="bg-amberity-100 px-1 rounded">WHO_ICD_CLIENT_SECRET</code> para acceso completo.
+          <WifiOff size={13}/> {t("admin.usandoBaseLocal")}<code className="bg-amber-100 px-1 rounded">WHO_ICD_CLIENT_ID</code> y <code className="bg-amberity-100 px-1 rounded">WHO_ICD_CLIENT_SECRET</code> para acceso completo.
         </div>
       )}
 
@@ -184,7 +186,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
           value={q}
           onChange={e => setQ(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && q.trim().length >= 2 && doSearch(q)}
-          placeholder="Buscar diagnóstico — nombre, código CIE-11, sigla (TEA, TDAH, TOC...)..."
+          placeholder={t("admin.phBuscarDiag")}
           className="w-full pl-10 pr-10 py-3.5 rounded-xl text-sm font-medium border-2 outline-none focus:border-sky-500 transition-colors shadow-sm"
           style={{ background:'var(--input-bg)', borderColor:'var(--input-border)', color:'var(--text-primary)' }}
           autoComplete="off"
@@ -200,7 +202,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
         <div className="space-y-2">
           {history.length > 0 && (
             <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-[10px] font-bold text-slate-400">Recientes:</span>
+              <span className="text-[10px] font-bold text-slate-400">{t("admin.recientes")}</span>
               {history.map(h => (
                 <button key={h} onClick={() => setQ(h)}
                   className="px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-50 border-slate-200 text-slate-500 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700 transition-all">
@@ -210,7 +212,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
             </div>
           )}
           <div className="flex flex-wrap gap-1.5 items-center">
-            <span className="text-[10px] font-bold text-slate-400">Explorar:</span>
+            <span className="text-[10px] font-bold text-slate-400">{t("admin.explorar")}</span>
             {CHIPS.map(c => (
               <button key={c} onClick={() => setQ(c)}
                 className="px-2.5 py-1 rounded-full text-xs font-bold border transition-all hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700"
@@ -438,8 +440,8 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               <div className="text-center py-12">
                 <AlertCircle size={36} className="mx-auto mb-3 text-slate-200"/>
                 <p className="text-sm font-semibold mb-1" style={{ color:'var(--text-muted)' }}>Sin resultados para "{q}"</p>
-                <p className="text-xs mb-4" style={{ color:'var(--text-muted)' }}>Intentá con el código CIE-11 (ej: 6A02), otro idioma o sinónimo</p>
-                <button onClick={clear} className="px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 text-white hover:bg-sky-700 transition-colors">Nueva búsqueda</button>
+                <p className="text-xs mb-4" style={{ color:'var(--text-muted)' }}>{t("admin.intentaCodigoCIE")}</p>
+                <button onClick={clear} className="px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 text-white hover:bg-sky-700 transition-colors">{t("admin.nuevaBusqueda")}</button>
               </div>
             )}
 

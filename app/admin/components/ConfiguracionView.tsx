@@ -1,5 +1,6 @@
 'use client'
 import React from 'react'
+import { useI18n } from '@/lib/i18n-context'
 
 import { useState, useEffect, useRef } from 'react'
 import {
@@ -72,6 +73,7 @@ function Input({ className = '', ...props }: React.InputHTMLAttributes<HTMLInput
 
 // ── Sección: Mi Perfil ────────────────────────────────────────────────────────
 function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => void }) {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
@@ -136,7 +138,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
       <SectionTitle label="Mi Perfil" />
 
       {/* Avatar & nombre */}
-      <Card title="Foto y Nombre" subtitle="Tu identidad en el sistema" icon={User} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("admin.fotoNombre")} subtitle={t("admin.tuIdentidad")} icon={User} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-6 text-center sm:text-left">
           <div className="relative group cursor-pointer" onClick={() => fileRef.current?.click()}>
             {avatarUrl ? (
@@ -199,7 +201,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
             <Input
               value={form.full_name}
               onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-              placeholder="Ej: María García"
+              placeholder={t("pacientes.phNombre")}
             />
           </Field>
           <Field label="Teléfono">
@@ -213,11 +215,11 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
       </Card>
 
       {/* Email (info) */}
-      <Card title="Correo Electrónico" subtitle="Tu email de acceso al sistema" icon={Mail} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
+      <Card title={t("admin.correoElectronico")} subtitle={t("admin.tuEmailAcceso")} icon={Mail} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
         <div className={`flex items-center gap-3 p-4 rounded-xl border-2 ${isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-slate-50 border-transparent'}`}>
           <Mail size={16} className={isDark ? 'text-slate-500' : 'text-slate-400'} />
           <span className={`text-sm font-medium flex-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{form.email}</span>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>No editable</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>{t("admin.noEditable")}</span>
         </div>
         <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
           El correo es tu identificador de acceso. Para cambiarlo contacta al administrador del sistema.
@@ -239,6 +241,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
 
 // ── Sección: Contraseña ───────────────────────────────────────────────────────
 function SeccionSeguridad() {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const [form, setForm] = useState({ nueva: '', confirmar: '' })
@@ -279,7 +282,7 @@ function SeccionSeguridad() {
     <div className="space-y-4">
       <SectionTitle label="Seguridad" />
 
-      <Card title="Cambiar Contraseña" subtitle="Mantén tu cuenta segura con una contraseña fuerte" icon={Lock} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("common.cambiarPassword")} subtitle={t("admin.mantenSegura")} icon={Lock} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="space-y-4">
           <Field label="Nueva contraseña">
             <div className="relative">
@@ -287,7 +290,7 @@ function SeccionSeguridad() {
                 type={show.nueva ? 'text' : 'password'}
                 value={form.nueva}
                 onChange={e => setForm(f => ({ ...f, nueva: e.target.value }))}
-                placeholder="Mínimo 8 caracteres"
+                placeholder={t("admin.phMin8")}
                 className="pr-11"
               />
               <button onClick={() => setShow(s => ({ ...s, nueva: !s.nueva }))}
@@ -313,7 +316,7 @@ function SeccionSeguridad() {
                 type={show.confirmar ? 'text' : 'password'}
                 value={form.confirmar}
                 onChange={e => setForm(f => ({ ...f, confirmar: e.target.value }))}
-                placeholder="Repite la contraseña"
+                placeholder={t("familias.repitePass")}
                 className="pr-11"
               />
               <button onClick={() => setShow(s => ({ ...s, confirmar: !s.confirmar }))}
@@ -324,8 +327,8 @@ function SeccionSeguridad() {
             {form.confirmar && form.nueva && (
               <div className={`flex items-center gap-1.5 mt-2 text-xs font-bold ${form.nueva === form.confirmar ? 'text-emerald-500' : 'text-red-500'}`}>
                 {form.nueva === form.confirmar
-                  ? <><CheckCircle size={12} /> Las contraseñas coinciden</>
-                  : <><AlertTriangle size={12} /> No coinciden</>}
+                  ? <><CheckCircle size={12} /> {t("admin.passwordsCoinciden")}</>
+                  : <><AlertTriangle size={12} /> {t("admin.noCoinciden")}</>}
               </div>
             )}
           </Field>
@@ -333,7 +336,7 @@ function SeccionSeguridad() {
 
         {/* Requisitos */}
         <div className={`mt-4 p-4 rounded-xl border ${isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-slate-50 border-slate-100'}`}>
-          <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Requisitos</p>
+          <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.requisitos")}</p>
           {[
             { label: 'Mínimo 8 caracteres', ok: form.nueva.length >= 8 },
             { label: 'Al menos una mayúscula', ok: /[A-Z]/.test(form.nueva) },
@@ -374,6 +377,7 @@ function StorageBar({ icon: Icon, label, used, cap, accent, unavailable }: {
   icon: any; label: string; used: number | null; cap: number; accent: string; unavailable?: boolean
 }) {
   const { isDark } = useTheme()
+  const { t } = useI18n()
   const pct = used != null && cap > 0 ? Math.min(100, (used / cap) * 100) : 0
   // Color del relleno según ocupación
   const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : accent
@@ -388,7 +392,7 @@ function StorageBar({ icon: Icon, label, used, cap, accent, unavailable }: {
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{label}</p>
           {unavailable ? (
-            <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>No disponible</p>
+            <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.noDisponible")}</p>
           ) : (
             <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}
                style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -419,6 +423,7 @@ function StorageBar({ icon: Icon, label, used, cap, accent, unavailable }: {
 }
 
 function SeccionAlmacenamiento() {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -454,12 +459,12 @@ function SeccionAlmacenamiento() {
             <HardDrive size={18} className="text-white" />
           </div>
           <div className="flex-1">
-            <h3 className={`text-sm font-bold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>Espacio del Sistema</h3>
-            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Uso de archivos y base de datos en Supabase</p>
+            <h3 className={`text-sm font-bold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{t("admin.espacioSistema")}</h3>
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.usoArchivos")}</p>
           </div>
           <button onClick={load} disabled={loading}
             className={`p-2 rounded-xl transition-colors disabled:opacity-50 ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
-            title="Actualizar">
+            title={t("admin.actualizar")}>
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
@@ -512,12 +517,13 @@ function SeccionAlmacenamiento() {
 
 // ── Sección: Apariencia ───────────────────────────────────────────────────────
 function SeccionApariencia() {
+  const { t } = useI18n()
   const { isDark, toggleTheme } = useTheme()
   return (
     <div className="space-y-4">
       <SectionTitle label="Apariencia" />
 
-      <Card title="Tema de la Interfaz" subtitle="Personaliza cómo se ve el panel" icon={Palette} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
+      <Card title={t("admin.temaInterfaz")} subtitle={t("admin.personalizaPanel")} icon={Palette} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="grid grid-cols-2 gap-3">
           {[
             { id: 'light', label: 'Claro', emoji: '☀️', desc: 'Fondo blanco y colores vivos' },
@@ -549,6 +555,7 @@ function SeccionApariencia() {
 
 // ── Sección: Cuenta ───────────────────────────────────────────────────────────
 function SeccionCuenta() {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const [email, setEmail] = useState('')
@@ -582,7 +589,7 @@ function SeccionCuenta() {
     <div className="space-y-4">
       <SectionTitle label="Cuenta" />
 
-      <Card title="Información de Cuenta" subtitle="Detalles de tu acceso al sistema" icon={Shield} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
+      <Card title={t("admin.infoCuenta")} subtitle={t("admin.detallesAcceso")} icon={Shield} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
         <div className="space-y-3">
           <div className={`flex items-center gap-3 p-4 rounded-xl ${isDark ? 'bg-[#0d1117]' : 'bg-slate-50'}`}>
             <Mail size={15} className={isDark ? 'text-slate-500' : 'text-slate-400'} />
@@ -604,7 +611,7 @@ function SeccionCuenta() {
         </div>
       </Card>
 
-      <Card title="Sesión" subtitle="Administra tu sesión activa" icon={LogOut} iconColor="bg-gradient-to-br from-orange-500 to-red-500">
+      <Card title={t("admin.sesion")} subtitle={t("admin.administraSesion")} icon={LogOut} iconColor="bg-gradient-to-br from-orange-500 to-red-500">
         <div className="space-y-3">
           <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             Al cerrar sesión saldrás del panel y deberás ingresar nuevamente con tu email y contraseña.
@@ -621,6 +628,7 @@ function SeccionCuenta() {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function ConfiguracionView({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => void }) {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 pb-10">

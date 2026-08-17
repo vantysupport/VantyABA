@@ -108,7 +108,7 @@ function SugerenciaCard({ s, onResolver }: { s: Sugerencia; onResolver: (id: str
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
                   {resolviendo
                     ? <span className="animate-spin">⏳</span>
-                    : <><CheckCircle size={12} className="text-emerald-500" /> Marcar como resuelto</>
+                    : <><CheckCircle size={12} className="text-emerald-500" /> {t("admin.marcarResuelto")}</>
                   }
                 </button>
               </div>
@@ -156,7 +156,7 @@ export default function SugerenciasPanel({ childId }: { childId?: string }) {
             <Brain size={15} className="text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-slate-800 text-sm">Sugerencias Proactivas</h3>
+            <h3 className="font-bold text-slate-800 text-sm">{t("admin.sugerenciasProactivas")}</h3>
             <p className="text-[11px] text-slate-400">
               {sugerencias.length} sugerencia{sugerencias.length !== 1 ? 's' : ''}
               {urgentes > 0 && <span className="text-red-600 font-bold ml-1">· {urgentes} urgente{urgentes !== 1 ? 's' : ''}</span>}
@@ -165,7 +165,7 @@ export default function SugerenciasPanel({ childId }: { childId?: string }) {
         </div>
         <button onClick={cargar}
           className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
-          title="Actualizar">
+          title={t("admin.actualizar")}>
           <RefreshCw size={14} className={`text-slate-400 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -200,7 +200,7 @@ export default function SugerenciasPanel({ childId }: { childId?: string }) {
         {loading && (
           <div className="py-8 text-center">
             <div className="w-8 h-8 border-3 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-2" />
-            <p className="text-xs text-slate-400">Analizando pacientes...</p>
+            <p className="text-xs text-slate-400">{t("admin.analizandoPacientes")}</p>
           </div>
         )}
 

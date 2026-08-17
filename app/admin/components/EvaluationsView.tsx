@@ -363,10 +363,10 @@ function DynamicEvaluationsView() {
                 <div className="w-20 h-20 md:w-28 md:h-28 bg-gradient-to-br from-sky-500 to-sky-600 text-white rounded-3xl md:rounded-[2.5rem] flex items-center justify-center mb-6 md:mb-8 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-xl shadow-sky-200">
                    <Activity size={40} className="md:w-16 md:h-16" strokeWidth={2.5}/>
                 </div>
-                <h3 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3 md:mb-4 tracking-tight">Registro ABA</h3>
+                <h3 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3 md:mb-4 tracking-tight">{t("admin.registroABA")}</h3>
                 <p className="text-slate-500 text-sm md:text-base max-w-xs font-medium leading-relaxed mb-4">{t('evaluaciones.sistemaCompleto')}</p>
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                  <span className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold">IA Pro</span>
+                  <span className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold">{t("admin.iaPro")}</span>
                 </div>
               </div>
             </button>
@@ -396,10 +396,10 @@ function DynamicEvaluationsView() {
                 <div className="w-20 h-20 md:w-28 md:h-28 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-3xl md:rounded-[2.5rem] flex items-center justify-center mb-6 md:mb-8 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-xl shadow-green-200">
                    <Home size={40} className="md:w-16 md:h-16" strokeWidth={2.5}/>
                 </div>
-                <h3 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3 md:mb-4 tracking-tight">Entorno Hogar</h3>
+                <h3 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3 md:mb-4 tracking-tight">{t("evaluaciones.entornoHogar")}</h3>
                 <p className="text-slate-500 text-sm md:text-base max-w-xs font-medium leading-relaxed mb-4">{t('ui.home_analysis')}</p>
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                  <span className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold">IA Avanzada</span>
+                  <span className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold">{t("admin.iaAvanzada")}</span>
                 </div>
               </div>
             </button>

@@ -455,7 +455,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
                 <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shrink-0 animate-pulse">
                   <Mic size={11} className="text-white"/>
                 </div>
-                <p className="text-xs font-bold text-red-400 flex-1">Escuchando... habla ahora</p>
+                <p className="text-xs font-bold text-red-400 flex-1">{t("admin.escuchandoHabla")}</p>
                 <button onClick={stopListening} className="p-1 rounded-lg" style={{ background: 'rgba(239,68,68,0.2)' }}>
                   <StopCircle size={13} className="text-red-400"/>
                 </button>
@@ -544,7 +544,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
                           <span className="text-[9px] font-bold uppercase opacity-80 mt-0.5">{t('ui.home_env')}</span>
                         </div>
                         <div>
-                          <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Visita Domiciliaria</p>
+                          <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t("admin.visitaDomiciliaria")}</p>
                           <span className="text-xs text-green-500 font-bold">{visita.fecha_visita}</span>
                         </div>
                       </div>
@@ -559,7 +559,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
                           <DetailBox title={t('ui.barriers')} content={d.barreras_identificadas} icon={<ShieldAlert size={13}/>} color="bg-red-50 border-red-200 text-red-700"/>
                           <DetailBox title={t('ui.facilitators')} content={d.facilitadores} icon={<CheckCircle2 size={13}/>} color="bg-emerald-50 border-emerald-200 text-emerald-700"/>
                         </div>
-                        <DetailBox title="Mensaje Padres" content={d.mensaje_padres_entorno} icon={<MessageCircle size={13}/>} color="bg-emerald-50 border-emerald-200 text-emerald-700" full/>
+                        <DetailBox title={t("ui.mensajePadresLabel")} content={d.mensaje_padres_entorno} icon={<MessageCircle size={13}/>} color="bg-emerald-50 border-emerald-200 text-emerald-700" full/>
                       </div>
                     )}
                   </div>
@@ -583,7 +583,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
                     </div>
                     {isExpanded && (
                       <div className="px-4 pb-4 border-t pt-3 animate-fade-in space-y-3" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)' }}>
-                        <DetailBox title="Objetivo" content={d.objetivo_principal} icon={<Target size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
+                        <DetailBox title={t("familias.objetivo")} content={d.objetivo_principal} icon={<Target size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
                         <DetailBox title={t('ui.observations')} content={d.observaciones_tecnicas} icon={<Eye size={13}/>} color="bg-slate-50 border-slate-200 text-slate-700" full/>
                         <div className="grid grid-cols-2 gap-3">
                           <DetailBox title="ABC" content={d.antecedente} icon={<Activity size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700"/>
@@ -636,11 +636,11 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
                         <div className="grid grid-cols-3 gap-2 mb-3">
                           <div className="rounded-xl p-2.5 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
                             <p className="text-lg font-extrabold tabular-nums" style={{ color: pctColor }}>{pct ?? '—'}{pct != null ? '%' : ''}</p>
-                            <p className="text-[9px] font-semibold" style={{ color: 'var(--text-muted)' }}>Éxito</p>
+                            <p className="text-[9px] font-semibold" style={{ color: 'var(--text-muted)' }}>{t("admin.exito")}</p>
                           </div>
                           <div className="rounded-xl p-2.5 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
                             <p className="text-lg font-extrabold tabular-nums" style={{ color: 'var(--text-primary)' }}>{ses.respuestas_correctas ?? '—'}</p>
-                            <p className="text-[9px] font-semibold" style={{ color: 'var(--text-muted)' }}>Correctas</p>
+                            <p className="text-[9px] font-semibold" style={{ color: 'var(--text-muted)' }}>{t("admin.correctas")}</p>
                           </div>
                           <div className="rounded-xl p-2.5 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
                             <p className="text-lg font-extrabold tabular-nums" style={{ color: 'var(--text-primary)' }}>{ses.oportunidades_totales ?? '—'}</p>
@@ -648,7 +648,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
                           </div>
                         </div>
                         {ses.notas && (
-                          <DetailBox title="Notas" content={ses.notas} icon={<MessageCircle size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
+                          <DetailBox title={t("common.notas")} content={ses.notas} icon={<MessageCircle size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
                         )}
                       </div>
                     )}
@@ -659,7 +659,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
               {(historyData.aba.length === 0 && historyData.entorno.length === 0 && (historyData.sesionesDataAba || []).length === 0) && (
                 <div className="py-16 text-center" style={{ color: 'var(--text-muted)' }}>
                   <History size={48} className="mx-auto mb-3 opacity-20"/>
-                  <p className="font-bold text-sm">Sin registros</p>
+                  <p className="font-bold text-sm">{t("admin.sinRegistros")}</p>
                 </div>
               )}
             </div>
@@ -699,7 +699,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
           {/* ══ SECCIÓN 4: REPORTES WORD (cerrado por defecto) ══ */}
           <AccordionSection
             id="reportes"
-            title="Reportes Word Generados"
+            title={t("admin.reportesGenerados")}
             icon={<FileText size={17}/>}
             accent="#0891b2"
             badge={reportesHistorial.length > 0 ? <span className="text-xs bg-sky-600 text-white px-2 py-0.5 rounded-full font-bold">{reportesHistorial.length}</span> : undefined}
@@ -713,7 +713,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
               ) : reportesHistorial.length === 0 ? (
                 <div className="py-10 text-center rounded-xl border-2 border-dashed" style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)' }}>
                   <FileText size={32} className="mx-auto mb-2 opacity-20" style={{ color: 'var(--text-muted)' }}/>
-                  <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>Sin reportes generados</p>
+                  <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.sinReportesGenerados")}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">

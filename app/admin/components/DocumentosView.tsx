@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   Upload, FileText, Image, File, Trash2, Download,
   Eye, EyeOff, Plus, Loader2, X, Search, Filter,
@@ -150,6 +151,7 @@ interface DocumentosViewProps {
 }
 
 export default function DocumentosView({ childId, childName, currentRole, isDark = false }: DocumentosViewProps) {
+  const { t } = useI18n()
   const toast = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -478,7 +480,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             <input autoFocus value={newFolderName}
               onChange={e => setNewFolderName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && (editingFolder ? handleEditarCarpeta() : handleCrearCarpeta())}
-              placeholder="Nombre de la carpeta..."
+              placeholder={t("admin.phCarpeta")}
               className={`flex-1 px-3 py-2 rounded-xl text-sm border-2 outline-none transition-all ${inputCls}`} />
           </div>
           <div className="flex gap-2 justify-end">
@@ -501,7 +503,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
           onClick={() => setMovingDoc(null)}>
           <div className={`${card} border rounded-2xl p-5 w-80 shadow-2xl space-y-3`}
             onClick={e => e.stopPropagation()}>
-            <p className={`text-sm font-bold ${txt1}`}>Mover a carpeta</p>
+            <p className={`text-sm font-bold ${txt1}`}>{t("admin.moverCarpeta")}</p>
             <p className={`text-xs truncate ${txt3}`}>{movingDoc.file_name}</p>
             <div className="space-y-1 max-h-60 overflow-y-auto">
               {/* Root option */}
@@ -535,7 +537,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
       {showUpload && (
         <div className={`${card} border rounded-2xl p-5 space-y-4`}>
           <div className="flex items-center justify-between">
-            <p className={`text-sm font-bold ${txt1}`}>Subir documento</p>
+            <p className={`text-sm font-bold ${txt1}`}>{t("admin.subirDocumento")}</p>
             <button onClick={() => { setShowUpload(false); setSelectedFiles([]) }}
               className={`p-1.5 rounded-lg ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}>
               <X size={14} className={txt3} />
@@ -544,7 +546,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
 
           {/* Selector de carpeta destino */}
           <div>
-            <label className={`block text-[11px] font-bold mb-1.5 ${txt3}`}>Guardar en carpeta</label>
+            <label className={`block text-[11px] font-bold mb-1.5 ${txt3}`}>{t("admin.guardarCarpeta")}</label>
             <select value={uploadFolder ?? ''} onChange={e => setUploadFolder(e.target.value || null)}
               className={`w-full px-3 py-2.5 rounded-xl text-sm border outline-none focus:border-sky-500 ${inputCls}`}>
               <option value="">📁 Inicio (sin carpeta)</option>
@@ -566,7 +568,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             <p className={`text-sm font-bold ${txt1}`}>
               {isDragging ? 'Suelta los archivos aquí' : 'Arrastra archivos o haz clic para seleccionar'}
             </p>
-            <p className={`text-xs mt-1 ${txt3}`}>PDF, imágenes, Word, Excel — varios a la vez — máx. 20MB c/u</p>
+            <p className={`text-xs mt-1 ${txt3}`}>{t("admin.formatosArchivo")}</p>
           </div>
           <input ref={fileRef} type="file" className="hidden" multiple
             accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mp3"
@@ -586,7 +588,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             </div>
           )}
           <div>
-            <label className={`block text-[10px] font-bold mb-2 ${txt3}`}>Categoría</label>
+            <label className={`block text-[10px] font-bold mb-2 ${txt3}`}>{t("common.categoria")}</label>
             <div className="flex flex-wrap gap-1.5">
               {CATEGORIES.filter(c => c.id !== 'all').map(c => (
                 <button key={c.id} onClick={() => setNewCat(c.id)}
@@ -599,14 +601,14 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             </div>
             {newCat === 'otro' && (
               <input autoFocus value={otroLabel} onChange={e => setOtroLabel(e.target.value)}
-                placeholder="Escribe el nombre de la categoría..."
+                placeholder={t("admin.phCategoriaDoc")}
                 className={`mt-2 w-full px-3 py-2.5 rounded-xl text-sm border-2 outline-none transition-all ${inputCls}`} />
             )}
           </div>
           <div>
-            <label className={`block text-[10px] font-bold mb-2 ${txt3}`}>Descripción (opcional)</label>
+            <label className={`block text-[10px] font-bold mb-2 ${txt3}`}>{t("ui.descripcionOpcional")}</label>
             <input value={newDesc} onChange={e => setNewDesc(e.target.value)}
-              placeholder="Ej: Tarea de la semana 3..."
+              placeholder={t("admin.phDescDoc")}
               className={`w-full px-3 py-2.5 rounded-xl text-sm border-2 outline-none transition-all ${inputCls}`} />
           </div>
           {!isPadre && (
@@ -615,7 +617,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
                 className={`w-10 h-5 rounded-full transition-all relative ${visibleParent ? 'bg-sky-600' : isDark ? 'bg-[#30363d]' : 'bg-slate-200'}`}>
                 <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${visibleParent ? 'left-5' : 'left-0.5'}`} />
               </div>
-              <span className={`text-sm ${txt1}`}>Visible para la familia</span>
+              <span className={`text-sm ${txt1}`}>{t("admin.visibleFamilia")}</span>
             </label>
           )}
           <button onClick={handleUpload} disabled={uploading || selectedFiles.length === 0}
@@ -632,7 +634,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
           <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border flex-1 ${isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-white border-slate-200'}`}>
             <Search size={14} className={txt3} />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nombre, descripción..."
+              placeholder={t("admin.phBuscarDoc")}
               className={`flex-1 text-sm bg-transparent outline-none ${isDark ? 'text-slate-300 placeholder:text-slate-600' : 'text-slate-700'}`} />
           </div>
           <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
@@ -743,16 +745,16 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
               <div className="flex items-center gap-0.5 flex-shrink-0 w-full sm:w-auto justify-end opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
                   className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
-                  title="Ver / descargar"><ExternalLink size={14} /></a>
+                  title={t("admin.verDescargar")}><ExternalLink size={14} /></a>
                 {canUpload && (
                   <button onClick={() => { setRenamingDoc(doc.id); setRenameValue(doc.file_name) }}
                     className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
-                    title="Renombrar"><Edit2 size={14} /></button>
+                    title={t("admin.renombrar")}><Edit2 size={14} /></button>
                 )}
                 {canUpload && (
                   <button onClick={() => setMovingDoc(doc)}
                     className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
-                    title="Mover a carpeta"><FolderInput size={14} /></button>
+                    title={t("admin.moverCarpeta")}><FolderInput size={14} /></button>
                 )}
                 {canToggleVisibility && (
                   <button onClick={() => toggleVisibility(doc)}
@@ -765,7 +767,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
                 {canDelete && (
                   <button onClick={() => handleDelete(doc)}
                     className={`p-2 rounded-lg transition-colors text-red-400 ${isDark ? 'hover:bg-red-900/20' : 'hover:bg-red-50'}`}
-                    title="Eliminar"><Trash2 size={14} /></button>
+                    title={t("common.eliminar")}><Trash2 size={14} /></button>
                 )}
               </div>
             </div>

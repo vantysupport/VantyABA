@@ -808,7 +808,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
             : isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
           <Sparkles size={13} />
           <span className="hidden sm:inline">{t('whatsapp.aprenderInternet')}</span>
-          <span className="sm:hidden">Aprender</span>
+          <span className="sm:hidden">{t("admin.aprender")}</span>
         </button>
         <button onClick={() => setTab('diagnosticos')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 md:px-4 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${tab === 'diagnosticos'
@@ -886,7 +886,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
                   disabled={aprendiendo}
                 />
                 <div>
-                  <p className="text-[11px] font-bold text-slate-400 mb-2">Temas sugeridos:</p>
+                  <p className="text-[11px] font-bold text-slate-400 mb-2">{t("admin.temasSugeridos")}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {temasSugeridos.map(tema => (
                       <button key={tema} onClick={() => setKeywords(tema)} disabled={aprendiendo}
@@ -900,7 +900,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
                   {(['completo', 'rapido'] as const).map(m => (
                     <button key={m} onClick={() => setModo(m)}
                       className={`flex-1 p-3 rounded-xl border text-left transition ${modo === m ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-200 text-slate-500 hover:border-sky-200'}`}>
-                      <p className="text-xs font-bold flex items-center gap-1.5">{m === 'completo' ? <><Sparkles size={12}/> Completo</> : <><Cpu size={12}/> Rápido</>}</p>
+                      <p className="text-xs font-bold flex items-center gap-1.5">{m === 'completo' ? <><Sparkles size={12}/> {t("admin.completo")}</> : <><Cpu size={12}/> {t("admin.rapido")}</>}</p>
                       <p className={`text-[10px] mt-0.5 ${modo === m ? 'text-sky-200' : 'text-slate-400'}`}>
                         {m === 'completo' ? 'Más fuentes, más fragmentos, más rico' : 'Solo síntesis IA, más veloz'}
                       </p>
@@ -938,8 +938,8 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
               disabled={aprendiendo || (modoFuente === 'keywords' ? !keywords.trim() : !urlAprender.trim())}
               className="w-full py-3.5 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition shadow-md">
               {aprendiendo
-                ? <><Loader2 size={16} className="animate-spin" /> Aprendiendo desde internet...</>
-                : <><Sparkles size={16} /> Aprender ahora</>}
+                ? <><Loader2 size={16} className="animate-spin" /> {t("admin.aprendiendoInternet")}</>
+                : <><Sparkles size={16} /> {t("admin.aprenderAhora")}</>}
             </button>
           </div>
 
@@ -1033,7 +1033,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
           <div className={`rounded-2xl p-4 border ${isDark ? 'bg-sky-900/20 border-sky-800/30' : 'bg-sky-50 border-sky-100'}`}>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg">🏥</span>
-              <span className={`font-bold text-sm ${isDark ? 'text-sky-300' : 'text-sky-800'}`}>Buscador de Diagnósticos — CIE-11 / DSM-5 / ICD-10</span>
+              <span className={`font-bold text-sm ${isDark ? 'text-sky-300' : 'text-sky-800'}`}>{t("admin.buscadorDiagnosticos")}</span>
             </div>
             <p className="text-xs text-sky-600">
               Busca por nombre, código CIE-11 (ej: <b>6A02</b>), ICD-10 (ej: <b>F84</b>), DSM-5 o sinónimo. Haz clic en los códigos para copiarlos directamente.
@@ -1081,7 +1081,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
 
           <button onClick={() => setShowForm(v => !v)}
             className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 text-sm transition">
-            {showForm ? <><X size={16} /> {t('common.cancelar')}</> : <><Plus size={16} /> Agregar documento manualmente</>}
+            {showForm ? <><X size={16} /> {t('common.cancelar')}</> : <><Plus size={16} /> {t("ui.agregarDocManual")}</>}
           </button>
 
           {showForm && (
@@ -1194,7 +1194,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
                 className="w-full py-3 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
                 {uploading
                   ? <><Loader2 size={14} className="animate-spin" /> {uploadProgress || 'Procesando...'}</>
-                  : <><Save size={14} /> Indexar en el Cerebro</>}
+                  : <><Save size={14} /> {t("ui.indexarCerebro")}</>}
               </button>
             </div>
           )}

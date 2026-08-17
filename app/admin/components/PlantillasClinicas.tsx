@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useI18n } from '@/lib/i18n-context'
 import {
   Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp,
   Loader2, FileText, ArrowLeft, Eye, LayoutTemplate
@@ -75,6 +76,7 @@ function uid() { return `f_${Date.now()}_${Math.random().toString(36).slice(2, 7
 // GESTOR DE PLANTILLAS — para Admin/Jefe
 // ══════════════════════════════════════════════════════════════════════════════
 export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
+  const { t: tr } = useI18n()
   const { isDark: isDarkCtx } = useTheme()
   const isDark = isDarkProp ?? isDarkCtx
   const toast = useToast()
@@ -132,7 +134,7 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
             <LayoutTemplate size={18} className="text-sky-500" />
             Fichas Clínicas
           </h3>
-          <p className={`text-xs mt-0.5 ${cc.txt3}`}>Crea y gestiona los modelos de ficha de tu centro</p>
+          <p className={`text-xs mt-0.5 ${cc.txt3}`}>{tr("admin.creaGestionaModelos")}</p>
         </div>
         <button onClick={() => { setEditing(null); setView('create') }}
           className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm">
@@ -145,8 +147,8 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
       ) : templates.length === 0 ? (
         <div className={`${cc.card} border rounded-2xl p-12 text-center`}>
           <LayoutTemplate size={40} className={`mx-auto mb-3 ${cc.txt3}`} />
-          <p className={`font-bold text-sm ${cc.txt3}`}>Sin fichas creadas</p>
-          <p className={`text-xs mt-1 ${cc.txt3} opacity-60`}>Crea la primera ficha clínica de tu centro</p>
+          <p className={`font-bold text-sm ${cc.txt3}`}>{tr("admin.sinFichasCreadas")}</p>
+          <p className={`text-xs mt-1 ${cc.txt3} opacity-60`}>{tr("admin.creaPrimeraFicha")}</p>
           <button onClick={() => setView('create')}
             className="mt-4 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl">
             Crear primera ficha
@@ -163,7 +165,7 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className={`font-bold text-sm ${cc.txt1}`}>{t.name}</p>
-                    {t.is_default && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700">Sistema</span>}
+                    {t.is_default && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700">{tr("admin.sistema")}</span>}
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${t.is_active ? 'bg-emerald-100 text-emerald-700' : isDark ? 'bg-[#21262d] text-slate-500' : 'bg-slate-100 text-slate-400'}`}>
                       {t.is_active ? '● Activa' : '○ Inactiva'}
                     </span>
@@ -208,6 +210,7 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
 function FormBuilder({ isDark, template, onSave, onCancel }: {
   isDark: boolean; template?: Template; onSave: () => void; onCancel: () => void
 }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [name, setName]         = useState(template?.name || '')
   const [desc, setDesc]         = useState(template?.description || '')
@@ -276,7 +279,7 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
         </button>
         <div className="flex-1">
           <p className={`font-bold text-base ${cc.txt1}`}>{template ? 'Editar ficha' : 'Nueva ficha clínica'}</p>
-          <p className={`text-xs ${cc.txt3}`}>Diseña el formulario con secciones y preguntas</p>
+          <p className={`text-xs ${cc.txt3}`}>{t("admin.disenaFormulario")}</p>
         </div>
         <button onClick={() => setPreview(true)}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${isDark ? 'border-[#30363d] text-slate-400 hover:bg-[#21262d]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
@@ -292,16 +295,16 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
       {/* Datos básicos */}
       <div className={`${cc.card} border rounded-2xl p-5 space-y-4`}>
         <div>
-          <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>Nombre de la ficha *</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Historia Clínica, Seguimiento Mensual..." className={inputCls} />
+          <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>{t("admin.nombreFicha")}</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder={t("admin.phNombreFicha")} className={inputCls} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>Descripción</label>
-            <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Para qué se usa esta ficha..." className={inputCls} />
+            <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>{t("common.descripcion")}</label>
+            <input value={desc} onChange={e => setDesc(e.target.value)} placeholder={t("admin.phParaQueFicha")} className={inputCls} />
           </div>
           <div>
-            <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>Categoría</label>
+            <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>{t("common.categoria")}</label>
             <select value={category} onChange={e => setCategory(e.target.value)} className={`${inputCls} cursor-pointer`}>
               {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
             </select>
@@ -312,14 +315,14 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
       {/* Campos sin sección */}
       <div className={`${cc.card} border rounded-2xl overflow-hidden`}>
         <div className={`px-5 py-3 border-b flex items-center justify-between ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-          <p className={`text-xs font-bold ${cc.txt3}`}>Campos generales</p>
+          <p className={`text-xs font-bold ${cc.txt3}`}>{t("admin.camposGenerales")}</p>
           <button onClick={() => addField()} className="flex items-center gap-1 text-xs font-bold text-sky-500 hover:text-sky-400">
             <Plus size={13} /> Añadir campo
           </button>
         </div>
         <div className="p-4 space-y-2">
           {unsectioned.length === 0 && (
-            <p className={`text-xs text-center py-4 ${cc.txt3}`}>Sin campos — agrega campos aquí o crea secciones abajo</p>
+            <p className={`text-xs text-center py-4 ${cc.txt3}`}>{t("admin.sinCamposAqui")}</p>
           )}
           {unsectioned.map(field => (
             <FieldEditor key={field.id} field={field} isDark={isDark}
@@ -338,10 +341,10 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
             <div className="flex items-start gap-2">
               <div className="flex-1 space-y-1.5">
                 <input value={section.title} onChange={e => updateSection(section.id, { title: e.target.value })}
-                  placeholder="Título de la sección"
+                  placeholder={t("admin.phTituloSeccion")}
                   className={`w-full px-3 py-1.5 rounded-lg text-sm font-bold border-2 outline-none ${isDark ? 'bg-[#161b22] border-[#21262d] text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`} />
                 <input value={section.description || ''} onChange={e => updateSection(section.id, { description: e.target.value })}
-                  placeholder="Descripción de la sección (opcional)"
+                  placeholder={t("admin.phDescSeccion")}
                   className={`w-full px-3 py-1 rounded-lg text-xs border outline-none ${isDark ? 'bg-[#161b22] border-[#21262d] text-slate-400' : 'bg-white border-slate-200 text-slate-500'}`} />
               </div>
               <button onClick={() => addField(section.id)} className="flex items-center gap-1 text-xs font-bold text-sky-500 hover:text-sky-400 whitespace-nowrap mt-1">
@@ -354,7 +357,7 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
           </div>
           <div className="p-4 space-y-2">
             {bySection(section.id).length === 0 && (
-              <p className={`text-xs text-center py-3 ${cc.txt3}`}>Sin campos — usa "+ Campo" para agregar</p>
+              <p className={`text-xs text-center py-3 ${cc.txt3}`}>{t("admin.sinCamposUsa")}</p>
             )}
             {bySection(section.id).map(field => (
               <FieldEditor key={field.id} field={field} isDark={isDark}
@@ -383,6 +386,7 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
   onChange: (p: Partial<Field>) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void
 }) {
+  const { t } = useI18n()
   const cc = {
     border: isDark ? 'border-[#30363d]' : 'border-slate-200',
     bg:     isDark ? 'bg-[#0d1117]'     : 'bg-slate-50',
@@ -397,7 +401,7 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
           <button onClick={onMoveDown} className={`text-[9px] leading-none ${cc.txt3} hover:text-sky-500`}>▼</button>
         </div>
         <input value={field.label} onChange={e => onChange({ label: e.target.value })}
-          placeholder="Pregunta o etiqueta del campo"
+          placeholder={t("admin.phPreguntaCampo")}
           className={`flex-1 px-3 py-2 rounded-lg text-sm border-2 outline-none focus:border-sky-400 transition-all ${cc.input}`} />
         <select value={field.type} onChange={e => {
           const newType = e.target.value as Field['type']
@@ -410,7 +414,7 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
           className={`px-2 py-2 rounded-lg text-xs font-bold border-2 outline-none cursor-pointer ${isDark ? 'bg-[#161b22] border-[#21262d] text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
           {FIELD_TYPES.map(ft => <option key={ft.id} value={ft.id}>{ft.label}</option>)}
         </select>
-        <label className="flex items-center gap-1 cursor-pointer flex-shrink-0" title="Campo obligatorio">
+        <label className="flex items-center gap-1 cursor-pointer flex-shrink-0" title={t("admin.campoObligatorio")}>
           <input type="checkbox" checked={field.required} onChange={e => onChange({ required: e.target.checked })} className="rounded accent-sky-500" />
           <span className={`text-[10px] font-bold ${cc.txt3}`}>*</span>
         </label>
@@ -420,12 +424,12 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
       </div>
       {['text', 'textarea', 'number'].includes(field.type) && (
         <input value={field.placeholder || ''} onChange={e => onChange({ placeholder: e.target.value })}
-          placeholder="Texto de ayuda (opcional)"
+          placeholder={t("admin.phTextoAyuda")}
           className={`w-full px-3 py-1.5 rounded-lg text-xs border-2 outline-none ${cc.input}`} />
       )}
       {['select', 'radio'].includes(field.type) && (
         <div className="space-y-1.5">
-          <p className={`text-[9px] font-bold ${cc.txt3}`}>Opciones</p>
+          <p className={`text-[9px] font-bold ${cc.txt3}`}>{t("admin.opciones")}</p>
           <div className="space-y-1">
             {(field.options || []).map((opt, idx) => (
               <div key={idx} className="flex items-center gap-1.5">
@@ -479,6 +483,7 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
 function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
   name: string; desc: string; sections: Section[]; fields: Field[]; isDark: boolean; onBack: () => void
 }) {
+  const { t } = useI18n()
   const cc = {
     card:  isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200',
     txt1:  isDark ? 'text-slate-100' : 'text-slate-800',
@@ -496,7 +501,7 @@ function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
       {f.type === 'date' && <input type="date" disabled className={`w-full px-3 py-2 rounded-xl text-sm border-2 opacity-70 ${cc.input}`} />}
       {f.type === 'select' && (
         <select disabled className={`w-full px-3 py-2 rounded-xl text-sm border-2 opacity-70 ${cc.input}`}>
-          <option>Seleccionar...</option>
+          <option>{t("common.seleccionar")}</option>
           {(f.options || []).map(o => <option key={o}>{o}</option>)}
         </select>
       )}
@@ -522,7 +527,7 @@ function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
         <button onClick={onBack} className={`p-2 rounded-xl ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}>
           <ArrowLeft size={16} className={cc.txt3} />
         </button>
-        <p className={`font-bold text-sm ${cc.txt1}`}>Vista previa — así verán la ficha los especialistas</p>
+        <p className={`font-bold text-sm ${cc.txt1}`}>{t("admin.vistaPreviaFicha")}</p>
       </div>
       <div className={`${cc.card} border rounded-2xl p-6 space-y-5`}>
         <div className={`pb-4 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
@@ -555,6 +560,7 @@ export function RellenarFicha({
 }: {
   childId: string; childName: string; isDark?: boolean; onSaved?: (responseId: string) => void
 }) {
+  const { t } = useI18n()
   const { isDark: isDarkCtx } = useTheme()
   const isDark = isDarkProp ?? isDarkCtx
   const toast = useToast()
@@ -658,7 +664,7 @@ export function RellenarFicha({
       {field.type === 'date'     && <input type="date"   value={answers[field.id] || ''} onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))} className={inputCls} />}
       {field.type === 'select'   && (
         <select value={answers[field.id] || ''} onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))} className={`${inputCls} cursor-pointer`}>
-          <option value="">Seleccionar...</option>
+          <option value="">{t("common.seleccionar")}</option>
           {(field.options || []).map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       )}
@@ -713,7 +719,7 @@ export function RellenarFicha({
           {responses.length === 0 ? (
             <div className={`${cc.card} border rounded-2xl p-8 text-center`}>
               <FileText size={28} className={`mx-auto mb-2 ${cc.txt3}`} />
-              <p className={`text-sm font-bold ${cc.txt3}`}>Sin fichas registradas</p>
+              <p className={`text-sm font-bold ${cc.txt3}`}>{t("admin.sinFichasRegistradas")}</p>
             </div>
           ) : responses.map(r => <ResponseCard key={r.id} response={r} isDark={isDark} />)}
         </div>
@@ -724,8 +730,8 @@ export function RellenarFicha({
         templates.length === 0 ? (
           <div className={`${cc.card} border rounded-2xl p-10 text-center`}>
             <LayoutTemplate size={32} className={`mx-auto mb-3 ${cc.txt3}`} />
-            <p className={`font-bold text-sm ${cc.txt3}`}>Sin fichas disponibles</p>
-            <p className={`text-xs mt-1 opacity-70 ${cc.txt3}`}>El administrador debe crear fichas primero desde Mi Perfil</p>
+            <p className={`font-bold text-sm ${cc.txt3}`}>{t("admin.sinFichasDisponibles")}</p>
+            <p className={`text-xs mt-1 opacity-70 ${cc.txt3}`}>{t("admin.adminCrearFichas")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -777,7 +783,7 @@ export function RellenarFicha({
                     <span className={`ml-1.5 text-[10px] font-semibold ${cc.txt3}`}>· {roleLabel(currentUser.role)}</span>
                   </p>
                 ) : (
-                  <p className={`text-xs italic ${cc.txt3}`}>Cargando...</p>
+                  <p className={`text-xs italic ${cc.txt3}`}>{t("common.cargando")}</p>
                 )}
               </div>
             </div>
@@ -801,8 +807,8 @@ export function RellenarFicha({
             )
           })}
           <div>
-            <label className={`block text-xs font-bold mb-1.5 ${cc.txt3}`}>Observaciones adicionales</label>
-            <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas del clínico..." className={`${inputCls} resize-none`} />
+            <label className={`block text-xs font-bold mb-1.5 ${cc.txt3}`}>{t("admin.observacionesAdicionales")}</label>
+            <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder={t("admin.phNotasClinico")} className={`${inputCls} resize-none`} />
           </div>
           <button onClick={handleSave} disabled={saving}
             className="w-full py-3 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2">
@@ -817,6 +823,7 @@ export function RellenarFicha({
 
 // ── Response Card ─────────────────────────────────────────────────────────────
 function ResponseCard({ response, isDark }: { response: TemplateResponse; isDark: boolean }) {
+  const { t } = useI18n()
   const [open, setOpen]           = useState(false)
   const [downloading, setDownloading] = useState(false)
   const template = (response as any).clinical_templates
@@ -873,7 +880,7 @@ function ResponseCard({ response, isDark }: { response: TemplateResponse; isDark
               </div>
             )
           })}
-          {response.notes && <div><p className={`text-[10px] font-bold mb-0.5 ${cc.txt3}`}>Observaciones</p><p className={`text-sm ${cc.txt1}`}>{response.notes}</p></div>}
+          {response.notes && <div><p className={`text-[10px] font-bold mb-0.5 ${cc.txt3}`}>{t("admin.observaciones")}</p><p className={`text-sm ${cc.txt1}`}>{response.notes}</p></div>}
         </div>
       )}
     </div>
