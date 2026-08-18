@@ -598,7 +598,7 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
                 </span>
                 <button onClick={() => stopRecording(true)}
                   style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: textMuted }}>
-                  Cancelar
+                  {t('auto.chatFamilias.cancelar')}
                 </button>
               </div>
             )}

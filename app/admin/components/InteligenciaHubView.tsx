@@ -1281,7 +1281,7 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
       <div className="rounded-2xl p-5 border space-y-4" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
         <div>
           <label className="block text-[10px] font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
-            Selecciona Paciente
+            {t('auto.inteligenciaHubView.seleccionaPaciente')}
           </label>
           <select
             className="w-full rounded-xl px-4 py-3 text-sm font-semibold outline-none border transition-all"

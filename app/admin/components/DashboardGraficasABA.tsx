@@ -248,7 +248,7 @@ export default function DashboardGraficasABA({ onIrAPacientes }: { onIrAPaciente
               : 'bg-white text-slate-600 border-slate-200 hover:border-sky-300'
           }`}
         >
-          Solo con datos
+          {t('auto.dashboardGraficasABA.soloConDatos')}
         </button>
         <button onClick={cargarTodo} className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:border-sky-300 transition-all">
           Actualizar
@@ -323,7 +323,7 @@ export default function DashboardGraficasABA({ onIrAPacientes }: { onIrAPaciente
                     {programas.length === 0 ? (
                       <div className="text-center py-6 text-sm text-slate-400">
                         <Plus size={20} className="mx-auto mb-2 text-slate-300" />
-                        Este paciente no tiene programas ABA. Crea uno desde la vista de Pacientes.
+                        {t('auto.dashboardGraficasABA.estePacienteNoTieneProgramas')}
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">

@@ -189,7 +189,7 @@ function WellbeingSurvey({ childName, childId, parentId, onClose }: { childName:
             {selectedMood === 'dificil' && (
               <div style={{ marginTop: 16, animation: 'fadeIn .3s ease' }}>
                 <p style={{ fontSize: 13, color: 'var(--c-text-secondary)', marginBottom: 8 }}>
-                  ¿Querés contarnos más? (opcional)
+                  {t('auto.homeView.queresContarnosMasOpcional')}
                 </p>
                 <textarea
                   value={nota}
@@ -497,7 +497,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
                   </span>
                 ) : (
                   <span style={{ background:'rgba(255,255,255,.15)', backdropFilter:'blur(8px)', color:'rgba(255,255,255,.85)', fontSize:11, fontWeight:600, padding:'4px 12px', borderRadius:20, border:'1px solid rgba(255,255,255,.2)' }}>
-                    Aún sin sesiones
+                    {t('auto.homeView.aunSinSesiones')}
                   </span>
                 )}
               </div>

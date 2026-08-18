@@ -407,7 +407,7 @@ export default function ParentDashboard() {
             </div>
             <h1 className="text-xl font-bold text-slate-800 mb-2">{t("especialista.registroNoDisponible")}</h1>
             <p className="text-slate-500 text-sm leading-relaxed mb-6">
-              El centro alcanzó el número máximo de cuentas de familias disponibles.
+              {t('auto.page.elCentroAlcanzoElNumero3')}
               Para habilitar tu acceso, comunícate con <strong className="text-sky-600">{t('auto.page.neuropsicologiaYTerapiasSanti')}</strong>.
             </p>
             <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
@@ -640,7 +640,7 @@ export default function ParentDashboard() {
                     style={{ background: "var(--muted-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}
                 >
                     <Bell size={14}/>
-                    Ver Notificaciones
+                    {t('auto.page.verNotificaciones')}
                     {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
                             {unreadCount}
@@ -941,7 +941,7 @@ export default function ParentDashboard() {
                                     onClick={()=>setShowAddChild(false)} 
                                     className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 rounded-2xl transition-all hover:scale-105 active:scale-95"
                                 >
-                                    Cancelar
+                                    {t('auto.page.cancelar')}
                                 </button>
                                 <button 
                                     type="submit" 
@@ -977,7 +977,7 @@ export default function ParentDashboard() {
                     <form onSubmit={handleChangePassword} className="space-y-4">
                         <div>
                             <label className="text-xs font-bold text-slate-500 mb-2 block">
-                                Nueva Contraseña
+                                {t('auto.page.nuevaContrasena')}
                             </label>
                             <input 
                                 name="newPassword" 
@@ -990,7 +990,7 @@ export default function ParentDashboard() {
                         </div>
                         <div>
                             <label className="text-xs font-bold text-slate-500 mb-2 block">
-                                Confirmar Contraseña
+                                {t('auto.page.confirmarContrasena')}
                             </label>
                             <input 
                                 name="confirmPassword" 
@@ -1007,7 +1007,7 @@ export default function ParentDashboard() {
                                 onClick={()=>setShowChangePass(false)} 
                                 className="flex-1 py-4 font-bold text-slate-400 hover:bg-slate-50 rounded-2xl transition-all hover:scale-105 active:scale-95"
                             >
-                                Cancelar
+                                {t('auto.page.cancelar2')}
                             </button>
                             <button 
                                 type="submit" 
@@ -1057,7 +1057,7 @@ export default function ParentDashboard() {
                                   <span>📱</span> Número WhatsApp
                                 </span>
                                 <span className="text-[10px] font-normal text-green-600 mt-0.5 block">
-                                  Recibirás alertas de citas, informes y mensajes del terapeuta
+                                  {t('auto.page.recibirasAlertasDeCitasInformes')}
                                 </span>
                             </label>
                             <input 
@@ -1084,13 +1084,13 @@ export default function ParentDashboard() {
                                 onClick={()=>setShowEditProfile(false)} 
                                 className="flex-1 py-4 font-bold text-slate-400 hover:bg-slate-50 rounded-2xl transition-all hover:scale-105 active:scale-95"
                             >
-                                Cancelar
+                                {t('auto.page.cancelar3')}
                             </button>
                             <button 
                                 type="submit" 
                                 className="flex-1 bg-gradient-to-r from-green-600 to-teal-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
                             >
-                                Guardar Cambios
+                                {t('auto.page.guardarCambios')}
                             </button>
                         </div>
                     </form>
@@ -1315,7 +1315,7 @@ export default function ParentDashboard() {
                                 <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(2,132,199,0.15)' }}>
                                     <UserCog size={13} className="text-sky-500"/>
                                 </div>
-                                Quién puede acceder
+                                {t('auto.page.quienPuedeAcceder')}
                             </h4>
                             <ul className="text-xs space-y-1.5" style={{ color: 'var(--c-text-secondary)' }}>
                                 <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>Vos</strong> {t('auto.page.padremadretutorTitularDeLaCuenta')}</span></li>
@@ -1378,7 +1378,7 @@ export default function ParentDashboard() {
                                 <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.15)' }}>
                                     <Database size={13} className="text-amber-500"/>
                                 </div>
-                                Conservación de datos
+                                {t('auto.page.conservacionDeDatos')}
                             </h4>
                             <p className="text-xs leading-relaxed" style={{ color: 'var(--c-text-secondary)' }}>
                                 Los datos clínicos se conservan durante el período activo de tratamiento y hasta <strong>{t('auto.page.5Anos')}</strong> luego del último servicio, según la normativa peruana de registros clínicos. Podés solicitar la eliminación anticipada en cualquier momento.

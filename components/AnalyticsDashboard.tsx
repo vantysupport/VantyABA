@@ -289,7 +289,7 @@ export default function AnalyticsDashboard({ childId, childName, onClose }: Anal
                 ) : (
                   <>
                     <Download className="w-5 h-5" />
-                    Exportar Reporte Word
+                    {t('auto.analyticsDashboard.exportarReporteWord')}
                   </>
                 )}
               </button>

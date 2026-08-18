@@ -169,7 +169,7 @@ export default function KnowledgeBaseView() {
             <div className="p-2.5 bg-violet-100 rounded-2xl">
               <Brain className="text-violet-600" size={24} />
             </div>
-            Cerebro de ARIA
+            {t('auto.knowledgeBaseView.cerebroDeAria')}
           </h2>
           <p className="text-slate-400 text-sm mt-1">{t("ui.baseClinico")}</p>
         </div>
@@ -492,7 +492,7 @@ function InstruccionesModal({ onClose }: { onClose: () => void }) {
             <button onClick={handleSave} disabled={saving}
               className="w-full py-3 bg-violet-600 text-white rounded-xl font-black text-sm hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center gap-2">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              Guardar instrucción
+              {t('auto.knowledgeBaseView.guardarInstruccion')}
             </button>
           </div>
         </div>

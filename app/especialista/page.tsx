@@ -265,10 +265,10 @@ export default function EspecialistaDashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <p className={`font-bold text-[13px] leading-tight truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-              Neuropsicología y Terapias SANTI
+              {t('auto.page.neuropsicologiaYTerapiasSanti2')}
             </p>
             <p className={`text-[10px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              Panel Clínico
+              {t('auto.page.panelClinico')}
             </p>
           </div>
           <button onClick={() => setSidebarOpen(false)}
@@ -357,7 +357,7 @@ export default function EspecialistaDashboard() {
                   ${isDark ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200'}`}>
                   <div className="flex items-center justify-between mb-3">
                     <p className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      Notificaciones
+                      {t('auto.page.notificaciones')}
                     </p>
                     <button onClick={() => setShowNotifications(false)}>
                       <X size={16} className="text-slate-400" />
@@ -384,7 +384,7 @@ export default function EspecialistaDashboard() {
                     {citasHoy.length > 0 ? (
                       <>
                         <p className={`text-[10px] font-bold px-1 mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                          Citas de hoy
+                          {t('auto.page.citasDeHoy')}
                         </p>
                         {citasHoy.map(c => (
                           <div key={c.id} className={`flex items-start gap-3 p-3 rounded-xl

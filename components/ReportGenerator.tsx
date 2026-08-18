@@ -436,7 +436,7 @@ export default function ReportGenerator({
               </div>
               <p className="text-slate-500 font-black text-sm">{t('auto.reportGenerator.sinReportesGenerados')}</p>
               <p className="text-xs text-slate-400 mt-1.5 text-center max-w-xs px-4 font-medium">
-                Genera tu primer reporte usando el botón de arriba. Quedará guardado aquí con fecha y hora.
+                {t('auto.reportGenerator.generaTuPrimerReporteUsando')}
               </p>
             </div>
 
@@ -465,7 +465,7 @@ export default function ReportGenerator({
                           <div className="flex items-center gap-1.5 mb-2">
                             <CheckCircle2 size={14} className="text-green-600" />
                             <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">
-                              Recién generado
+                              {t('auto.reportGenerator.recienGenerado')}
                             </span>
                           </div>
                         )}

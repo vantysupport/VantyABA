@@ -2182,7 +2182,15 @@
    "eliminadoCorrectamente": "\"{v1}\" eliminado correctamente",
    "noSePudoEliminar": "No se pudo eliminar: {v1}",
    "wordGeneradoYGuardadoEn": "Word generado y guardado en Documentos del paciente",
-   "limiteDePacientesAlcanzadoSolo": "Límite de pacientes alcanzado ({v1}/{v2}). Solo el programador puede ampliarlo."
+   "limiteDePacientesAlcanzadoSolo": "Límite de pacientes alcanzado ({v1}/{v2}). Solo el programador puede ampliarlo.",
+   "cuentaVinculada": "Cuenta vinculada",
+   "buscaPorEmailDelPadre": "Busca por email del padre, tutor o familiar",
+   "buscar": "Buscar",
+   "vincular": "Vincular",
+   "noSeEncontraronUsuariosCon": "No se encontraron usuarios con ese email",
+   "primeroCreaLaCuentaDel": "Primero crea la cuenta del padre desde Gestión de Usuarios",
+   "totalDeSesionesDelPaciente": "Total de sesiones del paciente",
+   "eliminar": "Eliminar"
   },
   "misPacientes": {
    "objetivoPrincipal": "Objetivo principal",
@@ -2199,7 +2207,16 @@
    "pacienteCreadoCorrectamente": "Paciente creado correctamente",
    "noSeEncontroNingunUsuario": "No se encontró ningún usuario con ese email",
    "noSeEncontroNingunUsuario2": "No se encontró ningún usuario con ese email",
-   "vinculadoA": "{v1} vinculado a {v2}"
+   "vinculadoA": "{v1} vinculado a {v2}",
+   "generaUnAnalisisCompletoDel": "Genera un análisis completo del paciente con perfil clínico, áreas prioritarias, plan de tratamiento personalizado y estrategias para el hogar.",
+   "editar": "Editar",
+   "cancelar": "Cancelar",
+   "guardar": "Guardar",
+   "cancelar2": "Cancelar",
+   "crearPaciente": "Crear paciente",
+   "buscar": "Buscar",
+   "cancelar3": "Cancelar",
+   "vincularCuenta": "Vincular cuenta"
   },
   "inteligenciaHubView": {
    "sesionesConsecutivas": "sesiones consecutivas",
@@ -2207,7 +2224,8 @@
    "neuropsicologiaYTerapiasSanti": "Neuropsicología y Terapias SANTI",
    "seleccionarPaciente": "— Seleccionar paciente —",
    "respuestaSinFormatoElModelo": "⚠ Respuesta sin formato (el modelo no devolvió JSON válido):",
-   "6AgentesIaPrediccionesPatrones": "6 agentes IA · Predicciones · Patrones · Objetivos · Reportes"
+   "6AgentesIaPrediccionesPatrones": "6 agentes IA · Predicciones · Patrones · Objetivos · Reportes",
+   "seleccionaPaciente": "Selecciona Paciente"
   },
   "page": {
    "evaluacionInicial": "Evaluación Inicial",
@@ -2260,7 +2278,26 @@
    "contrasenaActualizada": "Contraseña actualizada",
    "minimo6Caracteres3": "Mínimo 6 caracteres",
    "lasContrasenasNoCoinciden3": "Las contraseñas no coinciden",
-   "contrasenaActualizada2": "Contraseña actualizada"
+   "contrasenaActualizada2": "Contraseña actualizada",
+   "elCentroAlcanzoElNumero3": "El centro alcanzó el número máximo de cuentas de familias disponibles.",
+   "verNotificaciones": "Ver Notificaciones",
+   "cancelar": "Cancelar",
+   "nuevaContrasena": "Nueva Contraseña",
+   "confirmarContrasena": "Confirmar Contraseña",
+   "cancelar2": "Cancelar",
+   "recibirasAlertasDeCitasInformes": "Recibirás alertas de citas, informes y mensajes del terapeuta",
+   "cancelar3": "Cancelar",
+   "guardarCambios": "Guardar Cambios",
+   "quienPuedeAcceder": "Quién puede acceder",
+   "conservacionDeDatos": "Conservación de datos",
+   "acompanamientoClinicoAbaConIntelig": "Acompañamiento clínico ABA con inteligencia artificial, para seguir de cerca cada paso de su desarrollo.",
+   "olvidasteTuContrasena": "¿Olvidaste tu contraseña?",
+   "continuarConGoogle": "Continuar con Google",
+   "continuarConMicrosoft": "Continuar con Microsoft",
+   "neuropsicologiaYTerapiasSanti2": "Neuropsicología y Terapias SANTI",
+   "panelClinico": "Panel Clínico",
+   "notificaciones": "Notificaciones",
+   "citasDeHoy": "Citas de hoy"
   },
   "evaluacionesUnificadas": {
    "reporteWordGeneradoYDescargado": "Reporte Word generado y descargado",
@@ -2268,7 +2305,10 @@
    "seleccionaUnPaciente": "Selecciona un paciente",
    "formularioGuardadoCorrectamente": "Formulario guardado correctamente",
    "reporteWordDescargado": "Reporte Word descargado",
-   "formularioEnviado": "Formulario enviado"
+   "formularioEnviado": "Formulario enviado",
+   "seCalcularaConElAnalisis": "Se calculará con el análisis IA",
+   "guardar": "Guardar",
+   "guardar2": "Guardar"
   },
   "calendarView": {
    "agregarEspecialista": "+ Agregar especialista...",
@@ -2314,21 +2354,35 @@
    "pacienteDesvinculado": "Paciente desvinculado",
    "emailYContrasenaSonRequeridos": "Email y contraseña son requeridos",
    "limiteDeAlcanzadoSoloEl2": "Límite de \"{v1}\" alcanzado ({v2}/{v3}). Solo el programador puede ampliarlo.",
-   "usuarioCreado": "Usuario creado"
+   "usuarioCreado": "Usuario creado",
+   "actualizarContrasena": "Actualizar contraseña",
+   "crearUsuario": "Crear usuario",
+   "siElPacienteYaTiene": "Si el paciente ya tiene tutor asignado, será reemplazado. Para acceso de dos tutores simultáneos, creá dos cuentas de padre y vincinalas por separado.",
+   "seleccionaElPaciente": "Seleccioná el paciente",
+   "vincular": "Vincular"
   },
   "homeView": {
    "alcanzo": " alcanzó ",
-   "esUnTrabajoImportanteComo": " es un trabajo importante. ¿Cómo te has sentido esta semana?"
+   "esUnTrabajoImportanteComo": " es un trabajo importante. ¿Cómo te has sentido esta semana?",
+   "queresContarnosMasOpcional": "¿Querés contarnos más? (opcional)",
+   "aunSinSesiones": "Aún sin sesiones"
   },
   "aRIAFloatingChat": {
-   "borrarTodoElHistorialDe": "¿Borrar todo el historial de ARIA?"
+   "borrarTodoElHistorialDe": "¿Borrar todo el historial de ARIA?",
+   "asistenteClinico": "Asistente Clínico",
+   "guiaDePlataforma": "Guía de Plataforma"
   },
   "misFormularios": {
    "enviarAPadres": "Enviar a padres",
    "seleccionaUnPaciente": "Selecciona un paciente",
    "analisisIaGenerado": "Análisis IA generado",
    "seleccionaUnPaciente2": "Selecciona un paciente",
-   "formularioGuardadoCorrectamente": "Formulario guardado correctamente"
+   "formularioGuardadoCorrectamente": "Formulario guardado correctamente",
+   "seCalcularaAutomaticamenteConLa": "Se calculará automáticamente con la IA",
+   "elAnalisisFueGuardadoY": "El análisis fue guardado y está disponible en el expediente del paciente.",
+   "guardar": "Guardar",
+   "unaSolaActividadBasadaEn": "Una sola actividad basada en lo trabajado hoy en sesión.",
+   "todosLosInstrumentosDeEvaluacion": "Todos los instrumentos de evaluación clínica"
   },
   "knowledgeBaseView": {
    "ejPrincipiosDeConductaMalott": "ej: Principios de Conducta - Malott 8va Ed.",
@@ -2374,21 +2428,39 @@
    "errorEliminando": "Error eliminando",
    "tituloYContenidoSonRequeridos": "Título y contenido son requeridos",
    "instruccionGuardada": "Instrucción guardada",
-   "errorGuardando": "Error guardando"
+   "errorGuardando": "Error guardando",
+   "cerebroDeAria": "Cerebro de ARIA",
+   "guardarInstruccion": "Guardar instrucción"
   },
   "chatInterface": {
-   "grabandoHablaCercaDelMicrofono": "🔴 Grabando — habla cerca del micrófono"
+   "grabandoHablaCercaDelMicrofono": "🔴 Grabando — habla cerca del micrófono",
+   "tuAsistenteClinicoDeNeuropsicologi": "Tu asistente clínico de Neuropsicología y Terapias SANTI",
+   "enLinea": "En línea",
+   "puedoExplicarteSesionesTareasPara": "Puedo explicarte sesiones, tareas para casa y mucho más.",
+   "enLinea2": "En línea"
   },
   "evaluationsView": {
    "porFavorRespondeAlgunasPreguntas": "Por favor responde algunas preguntas antes de generar con IA.",
    "analisisIaCompletado": "¡Análisis IA completado!",
    "seleccionaUnPaciente": "Selecciona un paciente",
-   "evaluacionGuardadaExitosamenteDese": "✅ ¡Evaluación guardada exitosamente!\n\n¿Deseas generar el Reporte Word ahora?"
+   "evaluacionGuardadaExitosamenteDese": "✅ ¡Evaluación guardada exitosamente!\n\n¿Deseas generar el Reporte Word ahora?",
+   "evaluacionProfesionalEstandarizada": "Evaluación profesional estandarizada",
+   "iaAnalisis": "IA Análisis",
+   "evaluacionEnCurso": "EVALUACIÓN EN CURSO",
+   "seleccionarPaciente": "Seleccionar Paciente",
+   "atras": "Atrás"
   },
   "parentFormsView": {},
-  "storeView": {},
+  "storeView": {
+   "tuPedidoFueRegistradoNos": "Tu pedido fue registrado. Nos pondremos en contacto contigo para confirmar el pago y la entrega.",
+   "elPagoSeRealizaAl": "El pago se realiza al recoger el pedido en el centro (efectivo o yape). Para artículos digitales te enviaremos el archivo por WhatsApp tras confirmar el pago.",
+   "alConfirmarElCentroRecibira": "Al confirmar, el centro recibirá tu pedido y te contactará",
+   "catalogo": "Catálogo"
+  },
   "dashboardGraficasABA": {
-   "sinSesiones": " Sin sesiones"
+   "sinSesiones": " Sin sesiones",
+   "soloConDatos": "Solo con datos",
+   "estePacienteNoTieneProgramas": "Este paciente no tiene programas ABA. Crea uno desde la vista de Pacientes."
   },
   "documentosView": {
    "inicioSinCarpeta": "📁 Inicio (sin carpeta)",
@@ -2399,7 +2471,9 @@
    "documentoEliminado": "Documento eliminado",
    "carpetaCreada": "Carpeta creada",
    "carpetaActualizada": "Carpeta actualizada",
-   "eliminarCarpetaLosDocumentosSe": "¿Eliminar carpeta \"{v1}\"? Los documentos se moverán a Inicio."
+   "eliminarCarpetaLosDocumentosSe": "¿Eliminar carpeta \"{v1}\"? Los documentos se moverán a Inicio.",
+   "cancelar": "Cancelar",
+   "cancelar2": "Cancelar"
   },
   "fonemasPractica": {
    "posicionDeLaBoca": "Posición de la boca"
@@ -2431,7 +2505,11 @@
    "funcionDeReenvioProximamente": "Función de reenvío próximamente",
    "mensajeFijado": "Mensaje fijado",
    "mensajeDestacado": "Mensaje destacado",
-   "mensajeReportado": "Mensaje reportado"
+   "mensajeReportado": "Mensaje reportado",
+   "eligeUnEspecialistaOAdministrador": "Elige un especialista o administrador de la lista para ver su conversación",
+   "tocaParaAbrir": "Toca para abrir",
+   "notaDeVoz": "Nota de voz",
+   "enviar": "Enviar"
   },
   "especialistaHome": {
    "ultimaSesion": "Última sesión",
@@ -2447,12 +2525,15 @@
    "desconectar": "¿Desconectar {v1}?",
    "desactivarNotificacionesWhatsapp": "¿Desactivar notificaciones WhatsApp?",
    "fotoActualizada": "Foto actualizada ✅",
-   "errorAlLeerElArchivo": "Error al leer el archivo"
+   "errorAlLeerElArchivo": "Error al leer el archivo",
+   "ingresaTuNumeroConCodigo": "Ingresá tu número con código de país para recibir alertas importantes."
   },
   "secretariaCronograma": {},
   "chatFamilias": {
    "noSePudoAccederAl": "No se pudo acceder al micrófono. Verifica los permisos del navegador.",
-   "noSePudoAccederAl2": "No se pudo acceder al micrófono"
+   "noSePudoAccederAl2": "No se pudo acceder al micrófono",
+   "cancelar": "Cancelar",
+   "esteChatEsPrivadoEntre": "Este chat es privado entre tu familia y el equipo del centro."
   },
   "programasABAView": {
    "queDecirOHacerSd": "Qué decir o hacer (Sd)",
@@ -2475,23 +2556,35 @@
    "ingresaOportunidadesTotales": "Ingresa oportunidades totales",
    "sesionRegistrada": "Sesión registrada",
    "tituloAreaYObjetivoSon": "Título, área y objetivo son requeridos",
-   "programaCreado": "Programa creado"
+   "programaCreado": "Programa creado",
+   "queSetPracticaste": "¿Qué set practicaste?",
+   "marcarSinEspecificarSet": "Marcar sin especificar set",
+   "cancelar": "Cancelar",
+   "comoPracticarloEnCasa": "Cómo practicarlo en casa",
+   "elTerapeutaAunNoAgrego": "El terapeuta aún no agregó detalles de este set. Consúltale en la próxima sesión.",
+   "programasAba": "Programas ABA"
   },
   "aRIAAgentChat": {
    "borrarHistorialDelChat": "Borrar historial del chat",
-   "borrarTodoElHistorialDe": "¿Borrar todo el historial de ARIA? Esta acción no se puede deshacer."
+   "borrarTodoElHistorialDe": "¿Borrar todo el historial de ARIA? Esta acción no se puede deshacer.",
+   "ariaAsistenteClinicoIa": "ARIA — Asistente Clínico IA"
   },
   "reportGenerator": {
    "descargarDocx": "Descargar .docx",
    "eliminarReporte": "Eliminar reporte",
    "sinReportesGenerados": "Sin reportes generados",
-   "eliminarEsteReportePermanentemente": "¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer."
+   "eliminarEsteReportePermanentemente": "¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.",
+   "generaTuPrimerReporteUsando": "Genera tu primer reporte usando el botón de arriba. Quedará guardado aquí con fecha y hora.",
+   "recienGenerado": "Recién generado"
   },
   "mensajesPendientesPanel": {
    "cambiosGuardados": "Cambios guardados",
    "mensajeAprobadoYEnviadoAl": "Mensaje aprobado y enviado al padre/madre",
    "descartarEsteMensajeNoLlegara": "¿Descartar este mensaje? No llegará al padre/madre.",
-   "mensajeDescartado": "Mensaje descartado"
+   "mensajeDescartado": "Mensaje descartado",
+   "bandejaDeAprobacion": "Bandeja de Aprobación",
+   "revisaEditaYAutorizaMensajes": "Revisa, edita y autoriza mensajes antes de enviarlos a los padres",
+   "cancelar": "Cancelar"
   },
   "chatConAdmin": {
    "maximo5mb": "Máximo 5MB",
@@ -2511,37 +2604,57 @@
   },
   "resourcesView": {},
   "excelImportView": {},
-  "vADIAgentChat": {},
+  "vADIAgentChat": {
+   "vadiAsistenteClinicoIa": "VADI — Asistente Clínico IA"
+  },
   "secretariaHome": {},
   "aprobacionesEspecialista": {
-   "tuComentario": "Tu comentario:"
+   "tuComentario": "Tu comentario:",
+   "evaluacionesDeEspecialistas": "Evaluaciones de Especialistas",
+   "comentarioParaElEspecialistaOpcion": "Comentario para el especialista (opcional)"
   },
   "fonemasAdminView": {
    "laUrlDebeEmpezarCon": "La URL debe empezar con http:// o https://",
    "imagenAgregada": "Imagen agregada",
    "errorDeRed": "Error de red",
    "errorDeRed2": "Error de red",
-   "errorDeRed3": "Error de red"
+   "errorDeRed3": "Error de red",
+   "actividadDeFonemasYRepositorio": "Actividad de fonemas y repositorio de imágenes. Las imágenes que agregues aquí se muestran a las",
+   "familiasComoGaleriaPorFonema": "familias como galería por fonema. Si un fonema no tiene imágenes propias, se usa el sticker por defecto."
   },
   "sugerenciasPanel": {},
   "forestTimer": {},
-  "misCitasView": {},
+  "misCitasView": {
+   "misSesiones": "Mis sesiones",
+   "lasCitasSonProgramadasPor": "Las citas son programadas por el equipo del centro. Para cualquier cambio contáctanos directamente."
+  },
   "miAgenda": {
    "sinCitasEsteDia": "Sin citas este día",
    "sinCitasProximas": "Sin citas próximas",
    "errorConectandoGoogleCalendar": "Error conectando Google Calendar",
    "desconectarGoogleCalendar": "¿Desconectar Google Calendar?",
    "errorConectandoOutlookCalendar": "Error conectando Outlook Calendar",
-   "desconectarOutlookCalendar": "¿Desconectar Outlook Calendar?"
+   "desconectarOutlookCalendar": "¿Desconectar Outlook Calendar?",
+   "seleccionaOtroDiaDelCalendario": "Selecciona otro día del calendario"
   },
   "engagementView": {},
   "chatPadres": {
    "neuropsicologiaYTerapiasSantiSiemp": "Neuropsicología y Terapias SANTI • Siempre disponible"
   },
-  "notifWhatsAppPanel": {},
-  "analyticsDashboard": {},
+  "notifWhatsAppPanel": {
+   "ingresaTuNumeroDeWhatsapp": "Ingresá tu número de WhatsApp con el código de país para recibir alertas importantes del centro.",
+   "numeroWhatsapp": "Número WhatsApp",
+   "soloRecibirasAlertasDelCentro": "Solo recibirás alertas del centro. Tu número no se comparte con terceros."
+  },
+  "analyticsDashboard": {
+   "exportarReporteWord": "Exportar Reporte Word"
+  },
   "agendaView": {},
-  "mensajesView": {},
+  "mensajesView": {
+   "nuevo": "Nuevo",
+   "notificaciones": "Notificaciones",
+   "aquiApareceranLosReportesDe": "Aquí aparecerán los reportes de sesión, análisis y comunicados del equipo del centro."
+  },
   "localeSelector": {},
   "evaluacionInicialView": {
    "eligeAlMenosUnaTerapia": "Elige al menos una terapia"

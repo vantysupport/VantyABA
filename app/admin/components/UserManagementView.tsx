@@ -917,7 +917,7 @@ export default function UserManagementView({ rolesConfig }: {
             <button onClick={handleChangePassword} disabled={savingPassword}
               className="mt-4 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
               {savingPassword ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
-              Actualizar contraseña
+              {t('auto.userManagementView.actualizarContrasena')}
             </button>
           </div>
         </div>
@@ -959,7 +959,7 @@ export default function UserManagementView({ rolesConfig }: {
             <button onClick={handleCreateUser} disabled={creatingUser}
               className="mt-4 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
               {creatingUser ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              Crear usuario
+              {t('auto.userManagementView.crearUsuario')}
             </button>
           </div>
         </div>
@@ -979,10 +979,10 @@ export default function UserManagementView({ rolesConfig }: {
               Padre/Tutor: <strong style={{ color: 'var(--text-primary)' }}>{linkingParent.profile?.full_name || linkingParent.email}</strong>
             </p>
             <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-              Si el paciente ya tiene tutor asignado, será reemplazado. Para acceso de dos tutores simultáneos, creá dos cuentas de padre y vincinalas por separado.
+              {t('auto.userManagementView.siElPacienteYaTiene')}
             </p>
             <label className="text-xs font-bold block mb-2" style={{ color: 'var(--text-muted)' }}>
-              Seleccioná el paciente
+              {t('auto.userManagementView.seleccionaElPaciente')}
             </label>
             <select value={selectedChildId} onChange={e => setSelectedChildId(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 mb-4"
@@ -1001,7 +1001,7 @@ export default function UserManagementView({ rolesConfig }: {
               className="w-full py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-white"
               style={{ background: '#db2777' }}>
               {savingLink ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}
-              Vincular
+              {t('auto.userManagementView.vincular')}
             </button>
           </div>
         </div>

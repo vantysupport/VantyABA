@@ -163,7 +163,7 @@ function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: 
       ) : (
         <div style={{ padding:'4px 20px 16px' }}>
           <p style={{ fontSize:12,color:'var(--c-text-muted)',lineHeight:1.5,margin:'0 0 12px' }}>
-            Ingresá tu número con código de país para recibir alertas importantes.
+            {t('auto.profileView.ingresaTuNumeroConCodigo')}
           </p>
           <div style={{ display:'flex',gap:8,marginBottom:error?8:0 }}>
             <input

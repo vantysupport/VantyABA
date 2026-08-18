@@ -384,7 +384,7 @@ export default function MiAgenda({ isDark = false }: { isDark?: boolean }) {
                 </div>
                 <p className={`text-sm font-bold ${txt3}`}>{t('auto.miAgenda.sinCitasEsteDia')}</p>
                 <p className={`text-xs mt-1 ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>
-                  Selecciona otro día del calendario
+                  {t('auto.miAgenda.seleccionaOtroDiaDelCalendario')}
                 </p>
               </div>
             ) : (

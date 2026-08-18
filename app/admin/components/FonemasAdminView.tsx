@@ -97,8 +97,8 @@ export default function FonemasAdminView() {
           <Mic size={20} /> Fonemas
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Actividad de fonemas y repositorio de imágenes. Las imágenes que agregues aquí se muestran a las
-          familias como galería por fonema. Si un fonema no tiene imágenes propias, se usa el sticker por defecto.
+          {t('auto.fonemasAdminView.actividadDeFonemasYRepositorio')}
+          {t('auto.fonemasAdminView.familiasComoGaleriaPorFonema')}
         </p>
       </div>
 

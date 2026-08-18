@@ -63,6 +63,7 @@ const FASE_CFG: Record<string, { label: string; color: string }> = {
 }
 
 function WeekTracker({ programaId, childId, objetivos }: { programaId: string; childId: string; objetivos?: { id: string; numero_set: number; descripcion?: string; nombre?: string }[] }) {
+  const { t } = useI18n()
   const [practiced, setPracticed] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [showSetPicker, setShowSetPicker] = useState<string | null>(null) // fecha seleccionada para elegir set
@@ -151,7 +152,7 @@ function WeekTracker({ programaId, childId, objetivos }: { programaId: string; c
       {showSetPicker && hasObjetos && (
         <div style={{ background: 'var(--c-card)', border: '1.5px solid var(--c-border)', borderRadius: 14, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text-muted)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 0.8 }}>
-            ¿Qué set practicaste?
+            {t('auto.programasABAView.queSetPracticaste')}
           </p>
           {objetivos!.map(obj => (
             <button key={obj.id} onClick={() => toggle(showSetPicker, obj.id)}
@@ -164,11 +165,11 @@ function WeekTracker({ programaId, childId, objetivos }: { programaId: string; c
           ))}
           <button onClick={() => toggle(showSetPicker)}
             style={{ padding: '8px', borderRadius: 10, border: '1px dashed var(--c-border)', background: 'transparent', color: 'var(--c-text-muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Marcar sin especificar set
+            {t('auto.programasABAView.marcarSinEspecificarSet')}
           </button>
           <button onClick={() => setShowSetPicker(null)}
             style={{ padding: '6px', borderRadius: 10, border: 'none', background: 'transparent', color: 'var(--c-text-muted)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Cancelar
+            {t('auto.programasABAView.cancelar')}
           </button>
         </div>
       )}
@@ -329,7 +330,7 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
                             {hayClinico && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 12px', background: 'var(--c-surface)', borderRadius: 10, border: '1px solid var(--c-border)' }}>
                                 <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: 1 }}>
-                                  Cómo practicarlo en casa
+                                  {t('auto.programasABAView.comoPracticarloEnCasa')}
                                 </p>
                                 <Field icon="📍" label={t('auto.programasABAView.queDecirOHacerSd')} value={sd} />
                                 <Field icon="🤝" label="Ayudas / Prompts"        value={ayudas} />
@@ -343,7 +344,7 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(16,185,129,0.08)', borderRadius: 10, border: '1px solid rgba(16,185,129,0.15)' }}>
                                 <Lightbulb size={13} color="#059669" style={{ flexShrink: 0 }} />
                                 <p style={{ fontSize: 11, color: '#065f46', margin: 0, lineHeight: 1.5, fontWeight: 500 }}>
-                                  El terapeuta aún no agregó detalles de este set. Consúltale en la próxima sesión.
+                                  {t('auto.programasABAView.elTerapeutaAunNoAgrego')}
                                 </p>
                               </div>
                             )}
@@ -419,7 +420,7 @@ export default function ProgramasABAView({ childId, childName }: Props) {
             <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(2,132,199,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BookOpen size={18} color="#0284c7" />
             </div>
-            Programas ABA
+            {t('auto.programasABAView.programasAba')}
           </h2>
           <p style={{ fontSize: 12, color: 'var(--c-text-muted)', margin: 0, marginLeft: 44 }}>
             {activos.length} activos · {childName}

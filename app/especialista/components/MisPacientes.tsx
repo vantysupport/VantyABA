@@ -503,7 +503,7 @@ function ResumenIA({ records, paciente }: { records: any[]; paciente: any }) {
         </div>
         <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg mb-2">{t('especialista.resumenClinico')}</h3>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-sm mx-auto leading-relaxed">
-          Genera un análisis completo del paciente con perfil clínico, áreas prioritarias, plan de tratamiento personalizado y estrategias para el hogar.
+          {t('auto.misPacientes.generaUnAnalisisCompletoDel')}
         </p>
         {records.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500 italic">{t('pacientes.sinRegistros').split('para')[0]} resumen.</p>
@@ -724,7 +724,7 @@ function PatientInfoViewEspecialista({ paciente, onRefresh }: { paciente: any; o
         {!editing && (
           <button onClick={() => setEditing(true)}
             className="text-xs font-bold text-sky-600 hover:text-sky-700 px-3 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 transition-colors">
-            Editar
+            {t('auto.misPacientes.editar')}
           </button>
         )}
       </div>
@@ -750,12 +750,12 @@ function PatientInfoViewEspecialista({ paciente, onRefresh }: { paciente: any; o
           <div className="flex gap-3 pt-2">
             <button onClick={() => setEditing(false)}
               className="flex-1 py-2.5 rounded-xl text-sm font-bold border" style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}>
-              Cancelar
+              {t('auto.misPacientes.cancelar')}
             </button>
             <button onClick={handleSave} disabled={saving || !form.name.trim()}
               className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-sky-600 text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-sky-700">
               {saving ? <Loader2 size={14} className="animate-spin" /> : null}
-              Guardar
+              {t('auto.misPacientes.guardar')}
             </button>
           </div>
         </div>
@@ -1239,12 +1239,12 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
             <div className="flex gap-3 pt-1">
               <button onClick={() => setShowCrear(false)}
                 className="flex-1 py-3 rounded-xl font-bold text-sm border border-slate-200 dark:border-[#30363d] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1c2128]">
-                Cancelar
+                {t('auto.misPacientes.cancelar2')}
               </button>
               <button onClick={handleCrear} disabled={saving || !newForm.name.trim()}
                 className="flex-1 py-3 rounded-xl font-bold text-sm bg-sky-600 text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-sky-700">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                Crear paciente
+                {t('auto.misPacientes.crearPaciente')}
               </button>
             </div>
           </div>
@@ -1280,7 +1280,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
               <button onClick={buscarPadre} disabled={buscandoPadre || !emailBusqueda.trim()}
                 className="px-4 py-3 rounded-xl bg-slate-800 text-white font-bold text-sm disabled:opacity-50 flex items-center gap-2 hover:bg-slate-700">
                 {buscandoPadre ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                Buscar
+                {t('auto.misPacientes.buscar')}
               </button>
             </div>
             {parentEncontrado && (
@@ -1298,12 +1298,12 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
             <div className="flex gap-3 pt-1">
               <button onClick={() => { setShowVincular(false); setEmailBusqueda(''); setParentEncontrado(null) }}
                 className="flex-1 py-3 rounded-xl font-bold text-sm border border-slate-200 dark:border-[#30363d] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1c2128]">
-                Cancelar
+                {t('auto.misPacientes.cancelar3')}
               </button>
               <button onClick={handleVincular} disabled={!parentEncontrado || vinculando}
                 className="flex-1 py-3 rounded-xl font-bold text-sm bg-emerald-600 text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-emerald-700">
                 {vinculando ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} />}
-                Vincular cuenta
+                {t('auto.misPacientes.vincularCuenta')}
               </button>
             </div>
           </div>

@@ -486,7 +486,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
           <div className="flex gap-2 justify-end">
             <button onClick={() => { setShowNewFolder(false); setEditingFolder(null); setNewFolderName(''); setNewFolderEmoji('📁') }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold ${isDark ? 'text-slate-400 hover:bg-[#21262d]' : 'text-slate-500 hover:bg-slate-100'}`}>
-              Cancelar
+              {t('auto.documentosView.cancelar')}
             </button>
             <button onClick={editingFolder ? handleEditarCarpeta : handleCrearCarpeta}
               disabled={!newFolderName.trim()}
@@ -527,7 +527,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             </div>
             <button onClick={() => setMovingDoc(null)}
               className={`w-full py-2 rounded-xl text-xs font-bold ${isDark ? 'bg-[#21262d] text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-              Cancelar
+              {t('auto.documentosView.cancelar2')}
             </button>
           </div>
         </div>

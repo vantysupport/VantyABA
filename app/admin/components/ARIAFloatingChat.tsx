@@ -614,7 +614,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                   }`}
                 >
                   <Stethoscope size={11} />
-                  Asistente Clínico
+                  {t('auto.aRIAFloatingChat.asistenteClinico')}
                 </button>
                 <button
                   onClick={() => handleModeChange('soporte')}
@@ -625,7 +625,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                   }`}
                 >
                   <HelpCircle size={11} />
-                  Guía de Plataforma
+                  {t('auto.aRIAFloatingChat.guiaDePlataforma')}
                 </button>
               </div>
 

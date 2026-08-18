@@ -281,7 +281,7 @@ export default function LoginPage(props: PageProps) {
               <span className="lp-line" style={{ animationDelay: '.2s', color: '#7dd3fc' }}>lo mejor.</span>
             </h2>
             <p className="lp-hero-anim" style={{ color: 'rgba(255,255,255,.62)', fontSize: 17, lineHeight: 1.7, maxWidth: 400, animationDelay: '.38s' }}>
-              Acompañamiento clínico ABA con inteligencia artificial, para seguir de cerca cada paso de su desarrollo.
+              {t('auto.page.acompanamientoClinicoAbaConIntelig')}
             </p>
 
             {/* Lema de marca con acento arcoíris animado */}
@@ -347,7 +347,7 @@ export default function LoginPage(props: PageProps) {
               {!isSignUp && (
                 <button type="button" onClick={() => setShowForgotInfo(!showForgotInfo)}
                   style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 14, padding: 0, fontFamily: 'inherit', display: 'block' }}>
-                  ¿Olvidaste tu contraseña?
+                  {t('auto.page.olvidasteTuContrasena')}
                 </button>
               )}
 
@@ -397,7 +397,7 @@ export default function LoginPage(props: PageProps) {
                 <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
                 <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 6.294C4.672 4.167 6.656 3.58 9 3.58z"/>
               </svg>
-              Continuar con Google
+              {t('auto.page.continuarConGoogle')}
             </button>
 
             {/* Microsoft OAuth */}
@@ -421,7 +421,7 @@ export default function LoginPage(props: PageProps) {
                 <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
                 <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
               </svg>
-              Continuar con Microsoft
+              {t('auto.page.continuarConMicrosoft')}
             </button>
 
             <div style={{ textAlign: 'center' }}>

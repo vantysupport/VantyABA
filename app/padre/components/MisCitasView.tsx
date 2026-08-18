@@ -133,7 +133,7 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
               style={{ background: 'rgba(59,130,246,0.12)' }}>
               <Calendar className="text-sky-500" size={26}/>
             </div>
-            Mis sesiones
+            {t('auto.misCitasView.misSesiones')}
           </h2>
           <p className="text-sm font-medium mt-1 ml-1" style={{ color: V.tm }}>
             {selectedChild?.name ? `${selectedChild.name.split(' ')[0]} · ` : ''}
@@ -385,7 +385,7 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
               </div>
             </div>
             <p className="text-xs text-white/60 mb-4 leading-relaxed">
-              Las citas son programadas por el equipo del centro. Para cualquier cambio contáctanos directamente.
+              {t('auto.misCitasView.lasCitasSonProgramadasPor')}
             </p>
             <div className="flex flex-col gap-2">
               <a href="tel:+51991070734" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold"

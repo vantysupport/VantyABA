@@ -325,7 +325,7 @@ function QuestionRenderer({ question, value, onChange }: any) {
           </div>
         ) : (
           <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
-            Se calculará con el análisis IA
+            {t('auto.evaluacionesUnificadas.seCalcularaConElAnalisis')}
           </div>
         )}
       </div>
@@ -1171,7 +1171,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
                   <button onClick={handleSave} disabled={isSaving || !selectedChild}
                     className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold disabled:opacity-40 transition-all">
                     {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    Guardar
+                    {t('auto.evaluacionesUnificadas.guardar')}
                   </button>
                 )}
               </>
@@ -1182,7 +1182,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
                   <button onClick={handleSave} disabled={isSaving || !selectedChild}
                     className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold disabled:opacity-40 transition-all">
                     {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    Guardar
+                    {t('auto.evaluacionesUnificadas.guardar2')}
                   </button>
                 )}
                 <button onClick={() => setCurrentStep(s => s + 1)}

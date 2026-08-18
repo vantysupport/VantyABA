@@ -253,7 +253,7 @@ export default function ChatFamilias({ childId, childName, profile }: Props) {
             <div>
               <p style={{ fontWeight: 800, fontSize: 15, color: 'var(--c-text-primary)', margin: '0 0 6px' }}>{t("familias.escribenos")}</p>
               <p style={{ fontSize: 12, color: 'var(--c-text-muted)', maxWidth: 240, margin: 0, lineHeight: 1.6 }}>
-                Este chat es privado entre tu familia y el equipo del centro.
+                {t('auto.chatFamilias.esteChatEsPrivadoEntre')}
               </p>
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>

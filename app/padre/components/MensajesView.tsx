@@ -107,6 +107,7 @@ function AnalysisCard({ analysis }: { analysis: any }) {
 
 // ── Notification card ────────────────────────────────────────────────────────
 function NotifCard({ noti, expanded, onToggle, locale }: { noti: Notification; expanded: boolean; onToggle: () => void; locale: string }) {
+  const { t } = useI18n()
   const meta  = noti.metadata || {}
   const key   = meta.source || noti.type || 'parent_message'
   const cfg   = TYPE_CFG[key] || DEFAULT_TYPE
@@ -133,7 +134,7 @@ function NotifCard({ noti, expanded, onToggle, locale }: { noti: Notification; e
             </p>
             {isNew && (
               <span className="text-[9px] font-bold bg-sky-600 text-white px-2 py-0.5 rounded-full">
-                Nuevo
+                {t('auto.mensajesView.nuevo')}
               </span>
             )}
           </div>
@@ -217,7 +218,7 @@ export default function MensajesView({ profile }: { profile: any }) {
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "var(--c-stat-purple)", border: "1px solid var(--c-border)" }}>
               <Bell size={18} className="text-sky-600 dark:text-sky-400"/>
             </div>
-            Notificaciones
+            {t('auto.mensajesView.notificaciones')}
           </h1>
           <p className="text-xs mt-1 ml-11" style={{ color: "var(--c-text-muted)" }}>
             Reportes, análisis y comunicados del centro · {notifications.length} total
@@ -248,7 +249,7 @@ export default function MensajesView({ profile }: { profile: any }) {
           </div>
           <p className="font-bold text-slate-600 dark:text-slate-300">{t("notificaciones.sinNotificaciones")}</p>
           <p className="text-sm text-slate-400 dark:text-slate-500 max-w-xs leading-relaxed">
-            Aquí aparecerán los reportes de sesión, análisis y comunicados del equipo del centro.
+            {t('auto.mensajesView.aquiApareceranLosReportesDe')}
           </p>
         </div>
       ) : (

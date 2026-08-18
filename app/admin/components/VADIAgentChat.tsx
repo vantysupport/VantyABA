@@ -118,7 +118,7 @@ export default function VADIAgentChat({
         </div>
         <div>
           <h3 className="font-bold text-white text-sm flex items-center gap-2">
-            VADI — Asistente Clínico IA
+            {t('auto.vADIAgentChat.vadiAsistenteClinicoIa')}
             <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[9px] font-bold">BETA</span>
           </h3>
           <p className="text-sky-200 text-[10px]">

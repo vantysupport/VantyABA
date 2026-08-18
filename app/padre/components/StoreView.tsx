@@ -79,7 +79,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
             </div>
             <h3 className="text-2xl font-bold mb-2" style={{ color: "var(--c-text-primary)" }}>{t('tienda.pedidoEnviado')}</h3>
             <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--c-text-muted)" }}>
-              Tu pedido fue registrado. Nos pondremos en contacto contigo para confirmar el pago y la entrega.
+              {t('auto.storeView.tuPedidoFueRegistradoNos')}
             </p>
             <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-all">
@@ -139,7 +139,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
               <div className="rounded-xl p-4" style={{ background: "var(--c-stat-blue)", border: "1px solid var(--c-border)" }}>
                 <p className="text-xs font-bold text-sky-500 mb-1">{t('tienda.comoPaga')}</p>
                 <p className="text-xs text-sky-500 leading-relaxed">
-                  El pago se realiza al recoger el pedido en el centro (efectivo o yape). Para artículos digitales te enviaremos el archivo por WhatsApp tras confirmar el pago.
+                  {t('auto.storeView.elPagoSeRealizaAl')}
                 </p>
               </div>
             </div>
@@ -156,7 +156,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
                 {placing ? 'Enviando pedido...' : 'Confirmar pedido'}
               </button>
               <p className="text-center text-xs" style={{ color: "var(--c-text-muted)" }}>
-                Al confirmar, el centro recibirá tu pedido y te contactará
+                {t('auto.storeView.alConfirmarElCentroRecibira')}
               </p>
             </div>
           </>
@@ -319,7 +319,7 @@ export default function StoreView({ profile }: { profile: any }) {
           <div className="flex rounded-xl p-1 gap-1" style={{ background: "var(--c-surface)" }}>
             <button onClick={() => setView('catalogo')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all`} style={{ background: view === "catalogo" ? "var(--c-card)" : "transparent", color: view === "catalogo" ? "var(--c-text-primary)" : "var(--c-text-muted)" }}>
-              Catálogo
+              {t('auto.storeView.catalogo')}
             </button>
             <button onClick={() => setView('mis-pedidos')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5`} style={{ background: view === "mis-pedidos" ? "var(--c-card)" : "transparent", color: view === "mis-pedidos" ? "var(--c-text-primary)" : "var(--c-text-muted)" }}>

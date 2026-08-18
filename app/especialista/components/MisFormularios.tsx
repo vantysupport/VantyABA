@@ -150,7 +150,7 @@ function QuestionField({ q, value, onChange }: any) {
       </div>
     ) : (
       <div className="w-full px-4 py-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 text-sm text-slate-400">
-        Se calculará automáticamente con la IA
+        {t('auto.misFormularios.seCalcularaAutomaticamenteConLa')}
       </div>
     )
   }
@@ -342,7 +342,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
       <div>
         <h3 className="text-2xl font-bold text-slate-800 mb-2">{t('evaluaciones.formularioEnviado')}</h3>
         <p className="text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
-          El análisis fue guardado y está disponible en el expediente del paciente.
+          {t('auto.misFormularios.elAnalisisFueGuardadoY')}
         </p>
       </div>
       <button onClick={onBack}
@@ -439,7 +439,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
                 <button onClick={handleSave} disabled={saving || !childId}
                   className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold disabled:opacity-40 transition-all">
                   {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                  Guardar
+                  {t('auto.misFormularios.guardar')}
                 </button>
               )}
             </div>
@@ -522,7 +522,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
                 <div className="bg-sky-50 border border-sky-200 rounded-xl p-3 mb-3 flex gap-2">
                   <span className="text-sky-600 flex-shrink-0 text-xs font-bold">1</span>
                   <p className="text-xs text-sky-700 leading-relaxed">
-                    Una sola actividad basada en lo trabajado hoy en sesión.
+                    {t('auto.misFormularios.unaSolaActividadBasadaEn')}
                   </p>
                 </div>
                 <textarea
@@ -621,7 +621,7 @@ export default function MisFormularios({ userId }: { userId: string }) {
       <div>
         <h2 className="text-2xl font-bold text-slate-800">{t('especialista.formsClinicos')}</h2>
         <p className="text-sm text-slate-500 mt-1">
-          Todos los instrumentos de evaluación clínica
+          {t('auto.misFormularios.todosLosInstrumentosDeEvaluacion')}
         </p>
       </div>
 

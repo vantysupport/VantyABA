@@ -423,7 +423,7 @@ function DynamicEvaluationsView() {
                   </h3>
                   
                   <p className="text-slate-500 text-sm md:text-base max-w-xs font-medium leading-relaxed mb-4">
-                      Evaluación profesional estandarizada
+                      {t('auto.evaluationsView.evaluacionProfesionalEstandarizada')}
                   </p>
 
                   <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
@@ -431,7 +431,7 @@ function DynamicEvaluationsView() {
                         Profesional
                     </span>
                     <span className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold border border-orange-100">
-                        IA Análisis
+                        {t('auto.evaluationsView.iaAnalisis')}
                     </span>
                   </div>
                 </div>
@@ -453,7 +453,7 @@ function DynamicEvaluationsView() {
                   </div>
                   <div className="min-w-0 flex-1">
                       <p className="text-sky-300 text-[9px] md:text-[10px] font-bold truncate mb-1">
-                        EVALUACIÓN EN CURSO
+                        {t('auto.evaluationsView.evaluacionEnCurso')}
                       </p>
                       <h2 className="text-base md:text-xl lg:text-2xl font-bold truncate leading-tight">
                         {currentSection?.title}
@@ -502,7 +502,7 @@ function DynamicEvaluationsView() {
                <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border-2 border-slate-200 shadow-sm hover:shadow-md transition-all">
                    <label className="text-xs md:text-sm font-bold text-slate-500 mb-3 ml-1 flex items-center gap-2">
                      <User size={16}/>
-                     Seleccionar Paciente
+                     {t('auto.evaluationsView.seleccionarPaciente')}
                    </label>
                    <select 
                      className="w-full p-4 md:p-5 bg-slate-50 border-2 border-slate-200 rounded-xl md:rounded-2xl font-bold text-base md:text-lg text-slate-700 outline-none focus:ring-4 focus:ring-sky-100 focus:border-sky-500 transition-all" 
@@ -691,7 +691,7 @@ function DynamicEvaluationsView() {
                className="px-6 md:px-8 py-3 md:py-4 font-bold text-sm md:text-base text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
              >
                <ChevronLeft size={18}/>
-               Atrás
+               {t('auto.evaluationsView.atras')}
              </button>
              
              {currentStep < (formConfig!.length - 1) ? (

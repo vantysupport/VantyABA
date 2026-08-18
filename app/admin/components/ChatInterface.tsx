@@ -346,7 +346,7 @@ function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickS
         ¡Hola! Soy <span style={{ color: '#0284c7' }}>ARIA</span> 🤖
       </h3>
       <p className="text-sm text-slate-500 font-medium mb-1">
-        Tu asistente clínico de Neuropsicología y Terapias SANTI
+        {t('auto.chatInterface.tuAsistenteClinicoDeNeuropsicologi')}
       </p>
       <p className="text-xs text-slate-400 mb-6 leading-relaxed max-w-xs">
         {t('aria.revisadoHistorial')} <strong className="text-slate-600">{childName || 'tu hijo/a'}</strong> y estoy lista para ayudarte en lo que necesites.
@@ -569,7 +569,7 @@ function ChatInterface({ childId, childName, onNavigateToStore }: any) {
               <p className="font-bold text-slate-800 text-base">ARIA</p>
               <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                En línea
+                {t('auto.chatInterface.enLinea')}
               </span>
               {speaking && (
                 <span className="flex items-center gap-1 text-xs font-bold text-sky-600 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full"

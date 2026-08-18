@@ -115,7 +115,7 @@ export default function AprobacionesEspecialista() {
           </div>
           <div>
             <h3 style={{ color: '#f1f5f9' }} className="font-bold text-xl flex items-center gap-2">
-              Evaluaciones de Especialistas
+              {t('auto.aprobacionesEspecialista.evaluacionesDeEspecialistas')}
               {filtro === 'pending_approval' && pendientesCount > 0 && (
                 <span style={{ background: '#f59e0b', color: '#fff' }}
                   className="text-xs font-bold px-2 py-0.5 rounded-full">{pendientesCount}</span>
@@ -240,7 +240,7 @@ export default function AprobacionesEspecialista() {
                         <div>
                           <label style={{ color: '#475569' }}
                             className="block text-xs font-bold mb-2">
-                            Comentario para el especialista (opcional)
+                            {t('auto.aprobacionesEspecialista.comentarioParaElEspecialistaOpcion')}
                           </label>
                           <textarea
                             value={comentarios[sub.id] || ''}

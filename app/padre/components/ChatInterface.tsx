@@ -426,7 +426,7 @@ function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickS
       <p className="text-sm mb-1" style={{ color: "var(--c-text-muted)" }}>{t("familias.ariaSubtitulo")}</p>
       <p className="text-xs mb-6 leading-relaxed max-w-[280px]" style={{ color: "var(--c-text-muted)" }}>
         He revisado el historial de <strong className="text-slate-600 dark:text-slate-300">{childName || 'tu hijo/a'}</strong>.
-        Puedo explicarte sesiones, tareas para casa y mucho más.
+        {t('auto.chatInterface.puedoExplicarteSesionesTareasPara')}
       </p>
 
       {/* Quick actions — cleaner */}
@@ -667,7 +667,7 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
               <p className="font-bold text-sm" style={{ color: "var(--c-text-primary)" }}>ARIA</p>
               <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 px-1.5 py-0.5 rounded-full">
                 <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-                En línea
+                {t('auto.chatInterface.enLinea2')}
               </span>
               {speaking && (
                 <span className="flex items-center gap-1 text-[10px] font-bold text-sky-500 bg-sky-50 dark:bg-sky-900/20 px-1.5 py-0.5 rounded-full">

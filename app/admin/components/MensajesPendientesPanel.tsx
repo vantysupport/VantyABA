@@ -140,10 +140,10 @@ export default function MensajesPendientesPanel() {
             <div className="p-2.5 bg-amber-100 rounded-2xl">
               <ShieldCheck className="text-amber-600" size={26}/>
             </div>
-            Bandeja de Aprobación
+            {t('auto.mensajesPendientesPanel.bandejaDeAprobacion')}
           </h2>
           <p className="text-slate-400 text-sm mt-1 ml-1">
-            Revisa, edita y autoriza mensajes antes de enviarlos a los padres
+            {t('auto.mensajesPendientesPanel.revisaEditaYAutorizaMensajes')}
           </p>
         </div>
         <button onClick={loadMessages}
@@ -346,7 +346,7 @@ export default function MensajesPendientesPanel() {
                             <div className="flex gap-2">
                               <button onClick={() => setEditingId(null)}
                                 className="px-4 py-2 text-slate-500 font-bold text-sm bg-white border-2 border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
-                                Cancelar
+                                {t('auto.mensajesPendientesPanel.cancelar')}
                               </button>
                               <button onClick={() => saveEdit(msg.id)} disabled={!!isLoadingSave}
                                 className="px-4 py-2 text-sky-600 font-bold text-sm bg-sky-50 border-2 border-sky-200 rounded-xl hover:bg-sky-100 transition-all disabled:opacity-50 flex items-center gap-1.5">

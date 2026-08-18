@@ -321,7 +321,7 @@ export default function ARIAAgentChat({
             </div>
             <div>
               <h3 className="font-bold text-sm flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                ARIA — Asistente Clínico IA
+                {t('auto.aRIAAgentChat.ariaAsistenteClinicoIa')}
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
                   style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
                   BETA

@@ -2182,7 +2182,15 @@
       "eliminadoCorrectamente": "\"{v1}\" deleted successfully",
       "noSePudoEliminar": "Could not delete: {v1}",
       "wordGeneradoYGuardadoEn": "Word generated and saved to the patient's Documents",
-      "limiteDePacientesAlcanzadoSolo": "Patient limit reached ({v1}/{v2}). Only the developer can increase it."
+      "limiteDePacientesAlcanzadoSolo": "Patient limit reached ({v1}/{v2}). Only the developer can increase it.",
+      "cuentaVinculada": "Account linked",
+      "buscaPorEmailDelPadre": "Search by parent, guardian or relative email",
+      "buscar": "Search",
+      "vincular": "Link",
+      "noSeEncontraronUsuariosCon": "No users found with that email",
+      "primeroCreaLaCuentaDel": "First create the parent's account from User Management",
+      "totalDeSesionesDelPaciente": "Patient's total sessions",
+      "eliminar": "Delete"
     },
     "misPacientes": {
       "objetivoPrincipal": "Main goal",
@@ -2199,7 +2207,16 @@
       "pacienteCreadoCorrectamente": "Patient created successfully",
       "noSeEncontroNingunUsuario": "No user found with that email",
       "noSeEncontroNingunUsuario2": "No user found with that email",
-      "vinculadoA": "{v1} linked to {v2}"
+      "vinculadoA": "{v1} linked to {v2}",
+      "generaUnAnalisisCompletoDel": "Generate a complete patient analysis with clinical profile, priority areas, personalized treatment plan and home strategies.",
+      "editar": "Edit",
+      "cancelar": "Cancel",
+      "guardar": "Save",
+      "cancelar2": "Cancel",
+      "crearPaciente": "Create patient",
+      "buscar": "Search",
+      "cancelar3": "Cancel",
+      "vincularCuenta": "Link account"
     },
     "inteligenciaHubView": {
       "sesionesConsecutivas": "consecutive sessions",
@@ -2207,7 +2224,8 @@
       "neuropsicologiaYTerapiasSanti": "Neuropsicología y Terapias SANTI",
       "seleccionarPaciente": "— Select patient —",
       "respuestaSinFormatoElModelo": "⚠ Unformatted response (the model did not return valid JSON):",
-      "6AgentesIaPrediccionesPatrones": "6 AI agents · Predictions · Patterns · Goals · Reports"
+      "6AgentesIaPrediccionesPatrones": "6 AI agents · Predictions · Patterns · Goals · Reports",
+      "seleccionaPaciente": "Select Patient"
     },
     "page": {
       "evaluacionInicial": "Initial Evaluation",
@@ -2260,7 +2278,26 @@
       "contrasenaActualizada": "Password updated",
       "minimo6Caracteres3": "Minimum 6 characters",
       "lasContrasenasNoCoinciden3": "Passwords do not match",
-      "contrasenaActualizada2": "Password updated"
+      "contrasenaActualizada2": "Password updated",
+      "elCentroAlcanzoElNumero3": "The center reached the maximum number of available family accounts.",
+      "verNotificaciones": "View Notifications",
+      "cancelar": "Cancel",
+      "nuevaContrasena": "New Password",
+      "confirmarContrasena": "Confirm Password",
+      "cancelar2": "Cancel",
+      "recibirasAlertasDeCitasInformes": "You'll receive alerts for appointments, reports and messages from the therapist",
+      "cancelar3": "Cancel",
+      "guardarCambios": "Save Changes",
+      "quienPuedeAcceder": "Who can access",
+      "conservacionDeDatos": "Data retention",
+      "acompanamientoClinicoAbaConIntelig": "ABA clinical support with artificial intelligence, to closely follow every step of their development.",
+      "olvidasteTuContrasena": "Forgot your password?",
+      "continuarConGoogle": "Continue with Google",
+      "continuarConMicrosoft": "Continue with Microsoft",
+      "neuropsicologiaYTerapiasSanti2": "Neuropsicología y Terapias SANTI",
+      "panelClinico": "Clinical Panel",
+      "notificaciones": "Notifications",
+      "citasDeHoy": "Today's appointments"
     },
     "calendarView": {
       "agregarEspecialista": "+ Add specialist...",
@@ -2291,14 +2328,21 @@
     },
     "homeView": {
       "alcanzo": " achieved ",
-      "esUnTrabajoImportanteComo": " is important work. How have you felt this week?"
+      "esUnTrabajoImportanteComo": " is important work. How have you felt this week?",
+      "queresContarnosMasOpcional": "Want to tell us more? (optional)",
+      "aunSinSesiones": "No sessions yet"
     },
     "misFormularios": {
       "enviarAPadres": "Send to parents",
       "seleccionaUnPaciente": "Select a patient",
       "analisisIaGenerado": "AI analysis generated",
       "seleccionaUnPaciente2": "Select a patient",
-      "formularioGuardadoCorrectamente": "Form saved successfully"
+      "formularioGuardadoCorrectamente": "Form saved successfully",
+      "seCalcularaAutomaticamenteConLa": "It will be calculated automatically with AI",
+      "elAnalisisFueGuardadoY": "The analysis was saved and is available in the patient's record.",
+      "guardar": "Save",
+      "unaSolaActividadBasadaEn": "A single activity based on what was worked on today in session.",
+      "todosLosInstrumentosDeEvaluacion": "All clinical evaluation instruments"
     },
     "knowledgeBaseView": {
       "ejPrincipiosDeConductaMalott": "e.g.: Principles of Behavior - Malott 8th Ed.",
@@ -2344,13 +2388,21 @@
       "errorEliminando": "Error deleting",
       "tituloYContenidoSonRequeridos": "Title and content are required",
       "instruccionGuardada": "Instruction saved",
-      "errorGuardando": "Error saving"
+      "errorGuardando": "Error saving",
+      "cerebroDeAria": "ARIA's Brain",
+      "guardarInstruccion": "Save instruction"
     },
     "chatInterface": {
-      "grabandoHablaCercaDelMicrofono": "🔴 Recording — speak near the microphone"
+      "grabandoHablaCercaDelMicrofono": "🔴 Recording — speak near the microphone",
+      "tuAsistenteClinicoDeNeuropsicologi": "Your clinical assistant from Neuropsicología y Terapias SANTI",
+      "enLinea": "Online",
+      "puedoExplicarteSesionesTareasPara": "I can explain sessions, homework and much more to you.",
+      "enLinea2": "Online"
     },
     "dashboardGraficasABA": {
-      "sinSesiones": " No sessions"
+      "sinSesiones": " No sessions",
+      "soloConDatos": "Only with data",
+      "estePacienteNoTieneProgramas": "This patient has no ABA programs. Create one from the Patients view."
     },
     "documentosView": {
       "inicioSinCarpeta": "📁 Home (no folder)",
@@ -2361,7 +2413,9 @@
       "documentoEliminado": "Document deleted",
       "carpetaCreada": "Folder created",
       "carpetaActualizada": "Folder updated",
-      "eliminarCarpetaLosDocumentosSe": "Delete folder \"{v1}\"? The documents will be moved to Home."
+      "eliminarCarpetaLosDocumentosSe": "Delete folder \"{v1}\"? The documents will be moved to Home.",
+      "cancelar": "Cancel",
+      "cancelar2": "Cancel"
     },
     "fonemasPractica": {
       "posicionDeLaBoca": "Mouth position"
@@ -2393,7 +2447,8 @@
       "desconectar": "Disconnect {v1}?",
       "desactivarNotificacionesWhatsapp": "Disable WhatsApp notifications?",
       "fotoActualizada": "Photo updated ✅",
-      "errorAlLeerElArchivo": "Error reading the file"
+      "errorAlLeerElArchivo": "Error reading the file",
+      "ingresaTuNumeroConCodigo": "Enter your number with country code to receive important alerts."
     },
     "programasABAView": {
       "queDecirOHacerSd": "What to say or do (Sd)",
@@ -2416,20 +2471,31 @@
       "ingresaOportunidadesTotales": "Enter total opportunities",
       "sesionRegistrada": "Session recorded",
       "tituloAreaYObjetivoSon": "Title, area and goal are required",
-      "programaCreado": "Program created"
+      "programaCreado": "Program created",
+      "queSetPracticaste": "Which set did you practice?",
+      "marcarSinEspecificarSet": "Mark without specifying set",
+      "cancelar": "Cancel",
+      "comoPracticarloEnCasa": "How to practice it at home",
+      "elTerapeutaAunNoAgrego": "The therapist hasn't added details for this set yet. Ask them at the next session.",
+      "programasAba": "ABA Programs"
     },
     "aRIAAgentChat": {
       "borrarHistorialDelChat": "Clear chat history",
-      "borrarTodoElHistorialDe": "Clear all of ARIA's history? This action cannot be undone."
+      "borrarTodoElHistorialDe": "Clear all of ARIA's history? This action cannot be undone.",
+      "ariaAsistenteClinicoIa": "ARIA — AI Clinical Assistant"
     },
     "reportGenerator": {
       "descargarDocx": "Download .docx",
       "eliminarReporte": "Delete report",
       "sinReportesGenerados": "No reports generated",
-      "eliminarEsteReportePermanentemente": "Delete this report permanently? This action cannot be undone."
+      "eliminarEsteReportePermanentemente": "Delete this report permanently? This action cannot be undone.",
+      "generaTuPrimerReporteUsando": "Generate your first report using the button above. It will be saved here with date and time.",
+      "recienGenerado": "Just generated"
     },
     "aprobacionesEspecialista": {
-      "tuComentario": "Your comment:"
+      "tuComentario": "Your comment:",
+      "evaluacionesDeEspecialistas": "Specialist Evaluations",
+      "comentarioParaElEspecialistaOpcion": "Comment for the specialist (optional)"
     },
     "miAgenda": {
       "sinCitasEsteDia": "No appointments this day",
@@ -2437,7 +2503,8 @@
       "errorConectandoGoogleCalendar": "Error connecting Google Calendar",
       "desconectarGoogleCalendar": "Disconnect Google Calendar?",
       "errorConectandoOutlookCalendar": "Error connecting Outlook Calendar",
-      "desconectarOutlookCalendar": "Disconnect Outlook Calendar?"
+      "desconectarOutlookCalendar": "Disconnect Outlook Calendar?",
+      "seleccionaOtroDiaDelCalendario": "Select another day from the calendar"
     },
     "chatPadres": {
       "neuropsicologiaYTerapiasSantiSiemp": "Neuropsicología y Terapias SANTI • Always available"
@@ -2451,7 +2518,10 @@
       "seleccionaUnPaciente": "Select a patient",
       "formularioGuardadoCorrectamente": "Form saved successfully",
       "reporteWordDescargado": "Word report downloaded",
-      "formularioEnviado": "Form sent"
+      "formularioEnviado": "Form sent",
+      "seCalcularaConElAnalisis": "It will be calculated with the AI analysis",
+      "guardar": "Save",
+      "guardar2": "Save"
     },
     "userManagementView": {
       "noPodesCambiarElRol": "You cannot change a Director's role.",
@@ -2470,10 +2540,17 @@
       "pacienteDesvinculado": "Patient unlinked",
       "emailYContrasenaSonRequeridos": "Email and password are required",
       "limiteDeAlcanzadoSoloEl2": "Limit for \"{v1}\" reached ({v2}/{v3}). Only the developer can increase it.",
-      "usuarioCreado": "User created"
+      "usuarioCreado": "User created",
+      "actualizarContrasena": "Update password",
+      "crearUsuario": "Create user",
+      "siElPacienteYaTiene": "If the patient already has an assigned guardian, it will be replaced. For two simultaneous guardians, create two parent accounts and link them separately.",
+      "seleccionaElPaciente": "Select the patient",
+      "vincular": "Link"
     },
     "aRIAFloatingChat": {
-      "borrarTodoElHistorialDe": "Clear all of ARIA's history?"
+      "borrarTodoElHistorialDe": "Clear all of ARIA's history?",
+      "asistenteClinico": "Clinical Assistant",
+      "guiaDePlataforma": "Platform Guide"
     },
     "adminReportesFinancieros": {
       "reporteExportado": "Report exported",
@@ -2502,7 +2579,12 @@
       "porFavorRespondeAlgunasPreguntas": "Please answer some questions before generating with AI.",
       "analisisIaCompletado": "AI analysis completed!",
       "seleccionaUnPaciente": "Select a patient",
-      "evaluacionGuardadaExitosamenteDese": "✅ Evaluation saved successfully!\n\nDo you want to generate the Word report now?"
+      "evaluacionGuardadaExitosamenteDese": "✅ Evaluation saved successfully!\n\nDo you want to generate the Word report now?",
+      "evaluacionProfesionalEstandarizada": "Standardized professional evaluation",
+      "iaAnalisis": "AI Analysis",
+      "evaluacionEnCurso": "EVALUATION IN PROGRESS",
+      "seleccionarPaciente": "Select Patient",
+      "atras": "Back"
     },
     "secretariaComunicacion": {
       "elPacienteNoTieneTutor": "The patient has no linked guardian",
@@ -2560,11 +2642,17 @@
       "funcionDeReenvioProximamente": "Forward feature coming soon",
       "mensajeFijado": "Message pinned",
       "mensajeDestacado": "Message starred",
-      "mensajeReportado": "Message reported"
+      "mensajeReportado": "Message reported",
+      "eligeUnEspecialistaOAdministrador": "Choose a specialist or administrator from the list to see their conversation",
+      "tocaParaAbrir": "Tap to open",
+      "notaDeVoz": "Voice note",
+      "enviar": "Send"
     },
     "chatFamilias": {
       "noSePudoAccederAl": "Could not access the microphone. Check your browser permissions.",
-      "noSePudoAccederAl2": "Could not access the microphone"
+      "noSePudoAccederAl2": "Could not access the microphone",
+      "cancelar": "Cancel",
+      "esteChatEsPrivadoEntre": "This chat is private between your family and the center's team."
     },
     "reservasOnlinePanel": {
       "eliminarEsteLinkDeReserva": "Delete this booking link? This action cannot be undone. (Appointments already booked with it are NOT deleted.)",
@@ -2574,7 +2662,10 @@
       "cambiosGuardados": "Changes saved",
       "mensajeAprobadoYEnviadoAl": "Message approved and sent to the parent",
       "descartarEsteMensajeNoLlegara": "Discard this message? It will not reach the parent.",
-      "mensajeDescartado": "Message discarded"
+      "mensajeDescartado": "Message discarded",
+      "bandejaDeAprobacion": "Approval Inbox",
+      "revisaEditaYAutorizaMensajes": "Review, edit and authorize messages before sending them to parents",
+      "cancelar": "Cancel"
     },
     "chatConAdmin": {
       "maximo5mb": "Maximum 5MB",
@@ -2613,7 +2704,35 @@
       "imagenAgregada": "Image added",
       "errorDeRed": "Network error",
       "errorDeRed2": "Network error",
-      "errorDeRed3": "Network error"
+      "errorDeRed3": "Network error",
+      "actividadDeFonemasYRepositorio": "Phoneme activity and image repository. The images you add here are shown to the",
+      "familiasComoGaleriaPorFonema": "families as a gallery by phoneme. If a phoneme has no images of its own, the default sticker is used."
+    },
+    "storeView": {
+      "tuPedidoFueRegistradoNos": "Your order was registered. We will contact you to confirm payment and delivery.",
+      "elPagoSeRealizaAl": "Payment is made when picking up the order at the center (cash or yape). For digital items we will send you the file via WhatsApp after confirming payment.",
+      "alConfirmarElCentroRecibira": "On confirming, the center will receive your order and contact you",
+      "catalogo": "Catalog"
+    },
+    "vADIAgentChat": {
+      "vadiAsistenteClinicoIa": "VADI — AI Clinical Assistant"
+    },
+    "misCitasView": {
+      "misSesiones": "My sessions",
+      "lasCitasSonProgramadasPor": "Appointments are scheduled by the center's team. For any change contact us directly."
+    },
+    "notifWhatsAppPanel": {
+      "ingresaTuNumeroDeWhatsapp": "Enter your WhatsApp number with the country code to receive important alerts from the center.",
+      "numeroWhatsapp": "WhatsApp Number",
+      "soloRecibirasAlertasDelCentro": "You'll only receive alerts from the center. Your number is not shared with third parties."
+    },
+    "analyticsDashboard": {
+      "exportarReporteWord": "Export Word Report"
+    },
+    "mensajesView": {
+      "nuevo": "New",
+      "notificaciones": "Notifications",
+      "aquiApareceranLosReportesDe": "Here you'll see session reports, analysis and announcements from the center's team."
     }
   }
 }

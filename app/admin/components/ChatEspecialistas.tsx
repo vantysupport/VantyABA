@@ -933,7 +933,7 @@ export default function ChatEspecialistas({
               <div>
                 <p className={`font-bold text-base ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{t("admin.selecContacto")}</p>
                 <p className={`text-sm mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Elige un especialista o administrador de la lista para ver su conversación
+                  {t('auto.chatEspecialistas.eligeUnEspecialistaOAdministrador')}
                 </p>
               </div>
             </div>
@@ -1105,7 +1105,7 @@ export default function ChatEspecialistas({
                                         {msg.file_name}
                                       </p>
                                       <p className={`text-[10px] ${esMio ? 'text-sky-200' : isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                        Toca para abrir
+                                        {t('auto.chatEspecialistas.tocaParaAbrir')}
                                       </p>
                                     </div>
                                   </a>
@@ -1141,7 +1141,7 @@ export default function ChatEspecialistas({
                                         />
                                       </div>
                                       <p className={`text-[10px] mt-1 ${esMio ? 'text-sky-200' : isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                        Nota de voz
+                                        {t('auto.chatEspecialistas.notaDeVoz')}
                                       </p>
                                     </div>
                                   </div>
@@ -1222,7 +1222,7 @@ export default function ChatEspecialistas({
                     ) : (
                       <Send size={12} />
                     )}
-                    Enviar
+                    {t('auto.chatEspecialistas.enviar')}
                   </button>
                 </div>
               )}

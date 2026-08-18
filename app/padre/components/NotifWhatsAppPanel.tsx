@@ -120,12 +120,12 @@ export default function NotifWhatsAppPanel({ profile, onUpdated }: Props) {
       {step === 'idle' && (
         <div className="p-5 space-y-4">
           <p className="text-xs text-slate-500 leading-relaxed">
-            Ingresá tu número de WhatsApp con el código de país para recibir alertas importantes del centro.
+            {t('auto.notifWhatsAppPanel.ingresaTuNumeroDeWhatsapp')}
           </p>
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-500 block">
-              Número WhatsApp
+              {t('auto.notifWhatsAppPanel.numeroWhatsapp')}
             </label>
             <input
               type="tel"
@@ -156,7 +156,7 @@ export default function NotifWhatsAppPanel({ profile, onUpdated }: Props) {
           </button>
 
           <p className="text-[10px] text-slate-400 text-center leading-relaxed">
-            Solo recibirás alertas del centro. Tu número no se comparte con terceros.
+            {t('auto.notifWhatsAppPanel.soloRecibirasAlertasDelCentro')}
           </p>
         </div>
       )}

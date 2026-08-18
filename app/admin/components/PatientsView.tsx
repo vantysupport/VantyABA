@@ -169,7 +169,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
           <div className="flex items-center gap-1.5">
             <UserCheck size={13} style={{ color: 'var(--text-muted)' }} />
             <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-              Cuenta vinculada
+              {t('auto.patientsView.cuentaVinculada')}
             </p>
           </div>
           {!loadingUser && (
@@ -233,7 +233,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
                   Vincular cuenta a {nino.name}
                 </h3>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  Busca por email del padre, tutor o familiar
+                  {t('auto.patientsView.buscaPorEmailDelPadre')}
                 </p>
               </div>
               <button onClick={() => { setShowLinkModal(false); setEmailSearch(''); setSearchResults([]) }}
@@ -258,7 +258,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
               <button onClick={handleSearch} disabled={searching || !emailSearch.trim()}
                 className="px-4 py-2.5 rounded-xl text-sm font-bold bg-sky-600 text-white disabled:opacity-50 flex items-center gap-1.5">
                 {searching ? <Loader2 size={13} className="animate-spin"/> : <Search size={13}/>}
-                Buscar
+                {t('auto.patientsView.buscar')}
               </button>
             </div>
 
@@ -280,7 +280,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
                     <button onClick={() => handleLink(u)} disabled={linking}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-sky-600 text-white disabled:opacity-50 flex-shrink-0">
                       {linking ? <Loader2 size={10} className="animate-spin"/> : <Link size={10}/>}
-                      Vincular
+                      {t('auto.patientsView.vincular')}
                     </button>
                   </div>
                 ))}
@@ -290,10 +290,10 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
             {searchResults.length === 0 && emailSearch && !searching && (
               <div className="text-center py-4">
                 <p className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                  No se encontraron usuarios con ese email
+                  {t('auto.patientsView.noSeEncontraronUsuariosCon')}
                 </p>
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  Primero crea la cuenta del padre desde Gestión de Usuarios
+                  {t('auto.patientsView.primeroCreaLaCuentaDel')}
                 </p>
               </div>
             )}
@@ -502,7 +502,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
         <div className="flex items-center gap-1.5">
           <BarChart3 size={12} style={{ color: 'var(--text-muted)' }} />
           <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-            Total de sesiones del paciente
+            {t('auto.patientsView.totalDeSesionesDelPaciente')}
           </p>
         </div>
         {!editing && (
@@ -744,7 +744,7 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
               title={nino.parent_id ? 'Paciente con cuenta de padre vinculada — requiere confirmación por nombre' : 'Eliminar paciente'}
             >
               {deleting ? <Loader2 size={12} className="animate-spin"/> : <Trash2 size={12}/>}
-              Eliminar
+              {t('auto.patientsView.eliminar')}
             </button>
           </div>
 
