@@ -703,10 +703,10 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
           <Brain size={48} />
         </div>
         <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
-          Estamos revisando tu información…
+          {t('auto.evaluacionInicialView.estamosRevisandoTuInformacion')}
         </h2>
         <p className="mb-8" style={{ color: 'var(--text-muted)' }}>
-          Esto toma unos segundos. Si tarda más, vuelve en un momentito.
+          {t('auto.evaluacionInicialView.estoTomaUnosSegundosSi')}
         </p>
         <button onClick={cargar} className="px-5 py-3 rounded-xl bg-sky-600 text-white font-bold flex items-center gap-2 mx-auto">
           <Loader2 className="animate-spin" size={18} /> Verificar de nuevo
@@ -771,7 +771,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             className="flex-1 px-6 py-4 rounded-2xl font-bold text-base bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:scale-[1.01] transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {confirmando ? <Loader2 className="animate-spin" size={20} /> : <ThumbsUp size={20} />}
-            Estoy de acuerdo, continuar
+            {t('auto.evaluacionInicialView.estoyDeAcuerdoContinuar')}
           </button>
           <button
             onClick={() => setShowRechazoModal(true)}
@@ -787,7 +787,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             <div className="max-w-md w-full rounded-2xl shadow-2xl p-6" style={{ background: 'var(--card)' }} onClick={e => e.stopPropagation()}>
               <h3 className="font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{t("evalIni.cuentanosDudas")}</h3>
               <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                Nuestro equipo te contactará por WhatsApp para conversar.
+                {t('auto.evaluacionInicialView.nuestroEquipoTeContactaraPor')}
               </p>
               <textarea
                 value={motivoRechazo}
@@ -970,10 +970,10 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold leading-tight tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                      Lo que te recomendamos para {nombreCorto}
+                      {t('auto.evaluacionInicialView.loQueTeRecomendamosPara', { v1: String(nombreCorto) })}
                     </h2>
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      Basado en la información que nos diste
+                      {t('auto.evaluacionInicialView.basadoEnLaInformacionQue')}
                     </p>
                   </div>
                 </div>
@@ -1017,7 +1017,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
 
         <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
           <label className="block text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-            Mensaje al especialista (opcional)
+            {t('auto.evaluacionInicialView.mensajeAlEspecialistaOpcional')}
           </label>
           <textarea
             value={mensajeEspecialista}
@@ -1052,7 +1052,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
           className="w-full px-6 py-4 rounded-2xl font-bold bg-gradient-to-r from-sky-600 to-cyan-600 text-white shadow-xl disabled:opacity-40 flex items-center justify-center gap-2"
         >
           {enviandoSeleccion ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
-          Enviar al especialista ({terapiasElegidas.length} terapia{terapiasElegidas.length === 1 ? '' : 's'})
+          {t('auto.evaluacionInicialView.enviarAlEspecialistaTerapia', { v1: String(terapiasElegidas.length), v2: String(terapiasElegidas.length === 1 ? '' : 's') })}
         </button>
       </div>
     )
@@ -1068,7 +1068,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             <Clock size={40} />
           </div>
           <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
-            Tu solicitud está en revisión
+            {t('auto.evaluacionInicialView.tuSolicitudEstaEnRevision')}
           </h2>
           <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
             Nuestro <strong>especialista está revisando tu caso</strong>. En cuanto tengamos una respuesta personalizada para {child.name}, te la enviaremos por aquí y por WhatsApp.
@@ -1077,9 +1077,9 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             <div className="rounded-2xl p-4 mb-6 text-left" style={{ background: 'var(--muted-bg)' }}>
               <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t("evalIni.terapiasPediste")}</p>
               <ul className="space-y-1">
-                {elegidas.map(t => (
-                  <li key={t.id} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-primary)' }}>
-                    <CheckCircle2 size={14} className="text-green-500" /> {t.nombre}
+                {elegidas.map(ter => (
+                  <li key={ter.id} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-primary)' }}>
+                    <CheckCircle2 size={14} className="text-green-500" /> {ter.nombre}
                   </li>
                 ))}
               </ul>
@@ -1124,7 +1124,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             <div className="rounded-xl p-4 mb-4" style={{ background: 'var(--muted-bg)' }}>
               <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t("evalIni.terapiasSolicitadas")}</p>
               <ul className="space-y-1 text-sm" style={{ color: 'var(--text-primary)' }}>
-                {elegidas.map(t => <li key={t.id}>· {t.nombre}</li>)}
+                {elegidas.map(ter => <li key={ter.id}>· {ter.nombre}</li>)}
               </ul>
             </div>
           )}
@@ -1146,7 +1146,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
           <AlertCircle size={48} className="text-amber-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-3 text-amber-900">{t("evalIni.recibimosDudas")}</h2>
           <p className="text-amber-800 mb-5">
-            Nuestro equipo se va a comunicar contigo para conversar sobre tu caso y resolver cualquier inquietud.
+            {t('auto.evaluacionInicialView.nuestroEquipoSeVaA')}
           </p>
           <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-600 text-white font-bold">

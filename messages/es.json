@@ -2702,7 +2702,17 @@
   },
   "localeSelector": {},
   "evaluacionInicialView": {
-   "eligeAlMenosUnaTerapia": "Elige al menos una terapia"
+   "eligeAlMenosUnaTerapia": "Elige al menos una terapia",
+   "estamosRevisandoTuInformacion": "Estamos revisando tu información…",
+   "estoTomaUnosSegundosSi": "Esto toma unos segundos. Si tarda más, vuelve en un momentito.",
+   "estoyDeAcuerdoContinuar": "Estoy de acuerdo, continuar",
+   "nuestroEquipoTeContactaraPor": "Nuestro equipo te contactará por WhatsApp para conversar.",
+   "basadoEnLaInformacionQue": "Basado en la información que nos diste",
+   "mensajeAlEspecialistaOpcional": "Mensaje al especialista (opcional)",
+   "tuSolicitudEstaEnRevision": "Tu solicitud está en revisión",
+   "nuestroEquipoSeVaA": "Nuestro equipo se va a comunicar contigo para conversar sobre tu caso y resolver cualquier inquietud.",
+   "loQueTeRecomendamosPara": "Lo que te recomendamos para {v1}",
+   "enviarAlEspecialistaTerapia": "Enviar al especialista ({v1} terapia{v2})"
   },
   "adminReportesFinancieros": {
    "reporteExportado": "Reporte exportado",

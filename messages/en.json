@@ -2535,7 +2535,17 @@
       "neuropsicologiaYTerapiasSantiSiemp": "Neuropsicología y Terapias SANTI • Always available"
     },
     "evaluacionInicialView": {
-      "eligeAlMenosUnaTerapia": "Choose at least one therapy"
+      "eligeAlMenosUnaTerapia": "Choose at least one therapy",
+      "estamosRevisandoTuInformacion": "We're reviewing your information…",
+      "estoTomaUnosSegundosSi": "This takes a few seconds. If it takes longer, come back in a moment.",
+      "estoyDeAcuerdoContinuar": "I agree, continue",
+      "nuestroEquipoTeContactaraPor": "Our team will contact you via WhatsApp to talk.",
+      "basadoEnLaInformacionQue": "Based on the information you gave us",
+      "mensajeAlEspecialistaOpcional": "Message to the specialist (optional)",
+      "tuSolicitudEstaEnRevision": "Your request is under review",
+      "nuestroEquipoSeVaA": "Our team will get in touch with you to talk about your case and resolve any concerns.",
+      "loQueTeRecomendamosPara": "What we recommend for {v1}",
+      "enviarAlEspecialistaTerapia": "Send to the specialist ({v1})"
     },
     "evaluacionesUnificadas": {
       "reporteWordGeneradoYDescargado": "Word report generated and downloaded",
