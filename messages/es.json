@@ -2190,7 +2190,8 @@
    "noSeEncontraronUsuariosCon": "No se encontraron usuarios con ese email",
    "primeroCreaLaCuentaDel": "Primero crea la cuenta del padre desde Gestión de Usuarios",
    "totalDeSesionesDelPaciente": "Total de sesiones del paciente",
-   "eliminar": "Eliminar"
+   "eliminar": "Eliminar",
+   "vincularCuentaA": "Vincular cuenta a {v1}"
   },
   "misPacientes": {
    "objetivoPrincipal": "Objetivo principal",
@@ -2225,7 +2226,11 @@
    "seleccionarPaciente": "— Seleccionar paciente —",
    "respuestaSinFormatoElModelo": "⚠ Respuesta sin formato (el modelo no devolvió JSON válido):",
    "6AgentesIaPrediccionesPatrones": "6 agentes IA · Predicciones · Patrones · Objetivos · Reportes",
-   "seleccionaPaciente": "Selecciona Paciente"
+   "seleccionaPaciente": "Selecciona Paciente",
+   "sesiones": "{v1}{v2} sesiones",
+   "requierenAtencionInmediata": "Requieren Atención Inmediata ({v1})",
+   "logrosClinicos": "Logros Clínicos ({v1})",
+   "pacientesAnalizadosAlertasUrgentes": "{v1} pacientes analizados · {v2} alertas urgentes"
   },
   "page": {
    "evaluacionInicial": "Evaluación Inicial",
@@ -2297,7 +2302,12 @@
    "neuropsicologiaYTerapiasSanti2": "Neuropsicología y Terapias SANTI",
    "panelClinico": "Panel Clínico",
    "notificaciones": "Notificaciones",
-   "citasDeHoy": "Citas de hoy"
+   "citasDeHoy": "Citas de hoy",
+   "bienvenidoa": "¡Bienvenido/a, {v1}! 🎉",
+   "tienesDudasEscribenos": "¿Tienes dudas? Escríbenos:{v1}",
+   "paraEjercerCualquierDerecho": "Para ejercer cualquier derecho:{v1}",
+   "neuropsicologiaYTerapiasSanti3": "Neuropsicología y Terapias SANTI · {v1}",
+   "mensajeSinLeer": "{v1} mensaje{v2} sin leer"
   },
   "evaluacionesUnificadas": {
    "reporteWordGeneradoYDescargado": "Reporte Word generado y descargado",
@@ -2308,7 +2318,8 @@
    "formularioEnviado": "Formulario enviado",
    "seCalcularaConElAnalisis": "Se calculará con el análisis IA",
    "guardar": "Guardar",
-   "guardar2": "Guardar"
+   "guardar2": "Guardar",
+   "seccionDe": "Sección {v1} de {v2}"
   },
   "calendarView": {
    "agregarEspecialista": "+ Agregar especialista...",
@@ -2324,7 +2335,9 @@
    "citaAnadidaAGoogleCalendar": "{v1} cita{v2} añadida{v3} a Google Calendar",
    "citaAnadidaAOutlookCalendar": "{v1} cita{v2} añadida{v3} a Outlook Calendar",
    "limiteMensualDe10000Min": "Límite mensual de 10,000 min alcanzado. Se reinicia el próximo mes.",
-   "salaCreadaPadreNotificado": "Sala creada · Padre notificado"
+   "salaCreadaPadreNotificado": "Sala creada · Padre notificado",
+   "citasHoyVirtuales": "{v1} citas · {v2} hoy · {v3} virtuales",
+   "seCrearanCitasAPartir": "Se crearán {v1} citas {v2} a partir de la fecha seleccionada."
   },
   "storeManagementView": {
    "totalDelPedido": "total del pedido",
@@ -2359,7 +2372,8 @@
    "crearUsuario": "Crear usuario",
    "siElPacienteYaTiene": "Si el paciente ya tiene tutor asignado, será reemplazado. Para acceso de dos tutores simultáneos, creá dos cuentas de padre y vincinalas por separado.",
    "seleccionaElPaciente": "Seleccioná el paciente",
-   "vincular": "Vincular"
+   "vincular": "Vincular",
+   "pacientesVinculados": "Pacientes vinculados ({v1})"
   },
   "homeView": {
    "alcanzo": " alcanzó ",
@@ -2382,7 +2396,8 @@
    "elAnalisisFueGuardadoY": "El análisis fue guardado y está disponible en el expediente del paciente.",
    "guardar": "Guardar",
    "unaSolaActividadBasadaEn": "Una sola actividad basada en lo trabajado hoy en sesión.",
-   "todosLosInstrumentosDeEvaluacion": "Todos los instrumentos de evaluación clínica"
+   "todosLosInstrumentosDeEvaluacion": "Todos los instrumentos de evaluación clínica",
+   "seccionDe": "Sección {v1} de {v2}"
   },
   "knowledgeBaseView": {
    "ejPrincipiosDeConductaMalott": "ej: Principios de Conducta - Malott 8va Ed.",
@@ -2450,7 +2465,11 @@
    "seleccionarPaciente": "Seleccionar Paciente",
    "atras": "Atrás"
   },
-  "parentFormsView": {},
+  "parentFormsView": {
+   "pendientesDeCompletar": "Pendientes de completar ({v1})",
+   "completados": "Completados ({v1})",
+   "materialDisponible": "{v1} material{v2} disponible{v3}"
+  },
   "storeView": {
    "tuPedidoFueRegistradoNos": "Tu pedido fue registrado. Nos pondremos en contacto contigo para confirmar el pago y la entrega.",
    "elPagoSeRealizaAl": "El pago se realiza al recoger el pedido en el centro (efectivo o yape). Para artículos digitales te enviaremos el archivo por WhatsApp tras confirmar el pago.",
@@ -2513,7 +2532,9 @@
   },
   "especialistaHome": {
    "ultimaSesion": "Última sesión",
-   "pacientesConSesionReciente": "pacientes con sesión reciente"
+   "pacientesConSesionReciente": "pacientes con sesión reciente",
+   "sesionesHoy": "{v1} sesiones hoy",
+   "mas": "+{v1} más"
   },
   "profileView": {
    "editarPerfil": "Editar perfil",
@@ -2528,12 +2549,15 @@
    "errorAlLeerElArchivo": "Error al leer el archivo",
    "ingresaTuNumeroConCodigo": "Ingresá tu número con código de país para recibir alertas importantes."
   },
-  "secretariaCronograma": {},
+  "secretariaCronograma": {
+   "sesion": "{v1} sesión{v2}"
+  },
   "chatFamilias": {
    "noSePudoAccederAl": "No se pudo acceder al micrófono. Verifica los permisos del navegador.",
    "noSePudoAccederAl2": "No se pudo acceder al micrófono",
    "cancelar": "Cancelar",
-   "esteChatEsPrivadoEntre": "Este chat es privado entre tu familia y el equipo del centro."
+   "esteChatEsPrivadoEntre": "Este chat es privado entre tu familia y el equipo del centro.",
+   "tocaParaAbrir": "{v1} · Toca para abrir"
   },
   "programasABAView": {
    "queDecirOHacerSd": "Qué decir o hacer (Sd)",
@@ -2562,7 +2586,9 @@
    "cancelar": "Cancelar",
    "comoPracticarloEnCasa": "Cómo practicarlo en casa",
    "elTerapeutaAunNoAgrego": "El terapeuta aún no agregó detalles de este set. Consúltale en la próxima sesión.",
-   "programasAba": "Programas ABA"
+   "programasAba": "Programas ABA",
+   "practicaEstaSemana7Dias": "Práctica esta semana — {v1}/7 días",
+   "activos": "{v1} activos · {v2}"
   },
   "aRIAAgentChat": {
    "borrarHistorialDelChat": "Borrar historial del chat",
@@ -2575,7 +2601,8 @@
    "sinReportesGenerados": "Sin reportes generados",
    "eliminarEsteReportePermanentemente": "¿Eliminar este reporte permanentemente? Esta acción no se puede deshacer.",
    "generaTuPrimerReporteUsando": "Genera tu primer reporte usando el botón de arriba. Quedará guardado aquí con fecha y hora.",
-   "recienGenerado": "Recién generado"
+   "recienGenerado": "Recién generado",
+   "reporteGuardadoParaEstePaciente": "{v1} reporte{v2} guardado{v3} para este paciente y tipo de evaluación"
   },
   "mensajesPendientesPanel": {
    "cambiosGuardados": "Cambios guardados",
@@ -2607,7 +2634,9 @@
   "vADIAgentChat": {
    "vadiAsistenteClinicoIa": "VADI — Asistente Clínico IA"
   },
-  "secretariaHome": {},
+  "secretariaHome": {
+   "citasHoy": "{v1} citas hoy"
+  },
   "aprobacionesEspecialista": {
    "tuComentario": "Tu comentario:",
    "evaluacionesDeEspecialistas": "Evaluaciones de Especialistas",
@@ -2626,7 +2655,9 @@
   "forestTimer": {},
   "misCitasView": {
    "misSesiones": "Mis sesiones",
-   "lasCitasSonProgramadasPor": "Las citas son programadas por el equipo del centro. Para cualquier cambio contáctanos directamente."
+   "lasCitasSonProgramadasPor": "Las citas son programadas por el equipo del centro. Para cualquier cambio contáctanos directamente.",
+   "citasProximasRealizadas": "{v1} citas · {v2} próximas · {v3} realizadas",
+   "citas": "{v1} citas"
   },
   "miAgenda": {
    "sinCitasEsteDia": "Sin citas este día",
@@ -2635,7 +2666,10 @@
    "desconectarGoogleCalendar": "¿Desconectar Google Calendar?",
    "errorConectandoOutlookCalendar": "Error conectando Outlook Calendar",
    "desconectarOutlookCalendar": "¿Desconectar Outlook Calendar?",
-   "seleccionaOtroDiaDelCalendario": "Selecciona otro día del calendario"
+   "seleccionaOtroDiaDelCalendario": "Selecciona otro día del calendario",
+   "citasHoyVirtuales": "{v1} citas · {v2} hoy · {v3} virtuales",
+   "mas": "+{v1} más",
+   "citas": "{v1} citas"
   },
   "engagementView": {},
   "chatPadres": {
@@ -2647,13 +2681,15 @@
    "soloRecibirasAlertasDelCentro": "Solo recibirás alertas del centro. Tu número no se comparte con terceros."
   },
   "analyticsDashboard": {
-   "exportarReporteWord": "Exportar Reporte Word"
+   "exportarReporteWord": "Exportar Reporte Word",
+   "ultimoAnalisis": "Último análisis: {v1}"
   },
   "agendaView": {},
   "mensajesView": {
    "nuevo": "Nuevo",
    "notificaciones": "Notificaciones",
-   "aquiApareceranLosReportesDe": "Aquí aparecerán los reportes de sesión, análisis y comunicados del equipo del centro."
+   "aquiApareceranLosReportesDe": "Aquí aparecerán los reportes de sesión, análisis y comunicados del equipo del centro.",
+   "reportesAnalisisYComunicadosDel": "Reportes, análisis y comunicados del centro · {v1} total"
   },
   "localeSelector": {},
   "evaluacionInicialView": {

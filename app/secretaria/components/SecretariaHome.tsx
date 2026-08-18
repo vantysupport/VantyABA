@@ -219,7 +219,7 @@ export default function SecretariaHome({ onNavigate }: Props) {
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs px-2.5 py-0.5 rounded-full font-medium"
                 style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
-                {loading ? '—' : stats.hoy} citas hoy
+                {t('auto.secretariaHome.citasHoy', { v1: String(loading ? '—' : stats.hoy) })}
               </span>
               {!loading && stats.pendientes > 0 && (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"

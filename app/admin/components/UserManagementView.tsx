@@ -192,7 +192,7 @@ function PacientesVinculados({ userId, children, onUnlink }: {
   return (
     <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--card-border)' }}>
       <p className="text-[10px] font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
-        Pacientes vinculados ({hijos.length})
+        {t('auto.userManagementView.pacientesVinculados', { v1: String(hijos.length) })}
       </p>
       <div className="flex flex-wrap gap-2">
         {hijos.map((h: any) => (

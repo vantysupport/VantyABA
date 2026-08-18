@@ -1093,7 +1093,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
-                Sección {currentStep + 1} de {totalSteps}
+                {t('auto.evaluacionesUnificadas.seccionDe', { v1: String(currentStep + 1), v2: String(totalSteps) })}
               </p>
               <p className="text-xs font-bold text-sky-600">{Math.round(progress)}% completado</p>
             </div>

@@ -532,7 +532,7 @@ export default function ReportGenerator({
           <div className="flex items-center justify-center gap-2 pt-2">
             <div className={`w-2 h-2 rounded-full ${colores.dot}`} />
             <p className="text-xs text-slate-400 font-bold">
-              {reportes.length} reporte{reportes.length !== 1 ? 's' : ''} guardado{reportes.length !== 1 ? 's' : ''} para este paciente y tipo de evaluación
+              {t('auto.reportGenerator.reporteGuardadoParaEstePaciente', { v1: String(reportes.length), v2: String(reportes.length !== 1 ? 's' : ''), v3: String(reportes.length !== 1 ? 's' : '') })}
             </p>
           </div>
         )}

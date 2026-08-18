@@ -114,7 +114,7 @@ function WeekTracker({ programaId, childId, objetivos }: { programaId: string; c
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text-muted)', textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>
-        Práctica esta semana — {practiced.size}/7 días
+        {t('auto.programasABAView.practicaEstaSemana7Dias', { v1: String(practiced.size) })}
       </p>
       <div style={{ display: 'flex', gap: 6 }}>
         {weekDates.map((date, i) => {
@@ -423,7 +423,7 @@ export default function ProgramasABAView({ childId, childName }: Props) {
             {t('auto.programasABAView.programasAba')}
           </h2>
           <p style={{ fontSize: 12, color: 'var(--c-text-muted)', margin: 0, marginLeft: 44 }}>
-            {activos.length} activos · {childName}
+            {t('auto.programasABAView.activos', { v1: String(activos.length), v2: String(childName) })}
           </p>
         </div>
       </div>

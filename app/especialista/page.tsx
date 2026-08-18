@@ -334,7 +334,7 @@ export default function EspecialistaDashboard() {
                 {PAGE_TITLES[activeView] || 'Panel'}
               </h1>
               <p className={`text-[10px] hidden sm:block ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                Neuropsicología y Terapias SANTI · {t('especialista.titulo')}
+                {t('auto.page.neuropsicologiaYTerapiasSanti3', { v1: String(t('especialista.titulo')) })}
               </p>
             </div>
           </div>
@@ -376,7 +376,7 @@ export default function EspecialistaDashboard() {
                             ${isDark ? 'bg-sky-900/20 hover:bg-sky-900/30' : 'bg-sky-50 hover:bg-sky-100'}`}>
                           <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1.5 flex-shrink-0" />
                           <p className={`text-xs font-medium ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>
-                            {chatUnread} mensaje{chatUnread !== 1 ? 's' : ''} sin leer
+                            {t('auto.page.mensajeSinLeer', { v1: String(chatUnread), v2: String(chatUnread !== 1 ? 's' : '') })}
                           </p>
                         </button>
                       </div>

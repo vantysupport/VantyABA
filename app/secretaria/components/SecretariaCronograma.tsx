@@ -243,7 +243,7 @@ export default function SecretariaCronograma() {
                     ))}
                   </div>
                   <div className="flex-shrink-0 text-xs font-bold text-slate-400 self-center">
-                    {dayApts.length} sesión{dayApts.length !== 1 ? 'es' : ''}
+                    {t('auto.secretariaCronograma.sesion', { v1: String(dayApts.length), v2: String(dayApts.length !== 1 ? 'es' : '') })}
                   </div>
                 </div>
               )

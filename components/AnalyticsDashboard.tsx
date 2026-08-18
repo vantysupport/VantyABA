@@ -176,7 +176,7 @@ export default function AnalyticsDashboard({ childId, childName, onClose }: Anal
             <div className="flex items-center gap-3 text-sm">
               <Calendar className="w-4 h-4" />
               <span className="opacity-90">
-                Último análisis: {fechaAnalisis}
+                {t('auto.analyticsDashboard.ultimoAnalisis', { v1: String(fechaAnalisis) })}
               </span>
             </div>
           </div>

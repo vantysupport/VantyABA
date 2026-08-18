@@ -221,7 +221,7 @@ export default function MensajesView({ profile }: { profile: any }) {
             {t('auto.mensajesView.notificaciones')}
           </h1>
           <p className="text-xs mt-1 ml-11" style={{ color: "var(--c-text-muted)" }}>
-            Reportes, análisis y comunicados del centro · {notifications.length} total
+            {t('auto.mensajesView.reportesAnalisisYComunicadosDel', { v1: String(notifications.length) })}
           </p>
         </div>
         <div className="flex items-center gap-2">

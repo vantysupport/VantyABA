@@ -447,7 +447,7 @@ export default function ParentDashboard() {
             </div>
 
             <h1 className="text-2xl font-bold text-slate-800 mb-3">
-              ¡Bienvenido/a, {profile?.full_name?.split(' ')[0]}! 🎉
+              {t('auto.page.bienvenidoa', { v1: String(profile?.full_name?.split(' ')[0]) })}
             </h1>
             <p className="text-slate-500 text-base leading-relaxed mb-8">
               Estamos felices de tenerte en <strong className="text-sky-600">{t('auto.page.neuropsicologiaYTerapiasSanti')}</strong>.
@@ -484,7 +484,7 @@ export default function ParentDashboard() {
 
           {/* Help contact */}
           <p className="text-center text-sm text-slate-400 mt-6">
-            ¿Tienes dudas? Escríbenos:{' '}
+            {t('auto.page.tienesDudasEscribenos', { v1: String(' ') })}
             <a href="https://wa.me/51991070734" className="text-sky-600 font-bold hover:underline">
               +51 991 070 734
             </a>
@@ -1365,7 +1365,7 @@ export default function ParentDashboard() {
                                 ))}
                             </div>
                             <p className="text-[10px] mt-2.5" style={{ color: 'var(--c-text-muted)' }}>
-                                Para ejercer cualquier derecho:{' '}
+                                {t('auto.page.paraEjercerCualquierDerecho', { v1: String(' ') })}
                                 <a href="mailto:aprendizaje.santi@gmail.com" className="font-bold underline" style={{ color: '#0284c7' }}>
                                     aprendizaje.santi@gmail.com
                                 </a>

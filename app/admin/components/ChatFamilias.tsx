@@ -150,7 +150,7 @@ function MsgContent({ msg, isMe }: { msg: Msg; isMe: boolean }) {
           {msg.file_name || 'Documento'}
         </p>
         <p style={{ margin: '2px 0 0', fontSize: 10, color: isMe ? 'rgba(255,255,255,.65)' : 'var(--text-muted)' }}>
-          {formatFileSize(msg.file_size)} · Toca para abrir
+          {t('auto.chatFamilias.tocaParaAbrir', { v1: String(formatFileSize(msg.file_size)) })}
         </p>
       </div>
       <Download size={14} color={isMe ? 'rgba(255,255,255,.75)' : 'var(--text-muted,#94a3b8)'}/>

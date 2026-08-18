@@ -521,7 +521,7 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
             <div>
               <h3 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: "var(--c-text-secondary)" }}>
                 <Bell size={14} className="text-amber-500 animate-pulse"/>
-                Pendientes de completar ({pendingForms.length})
+                {t('auto.parentFormsView.pendientesDeCompletar', { v1: String(pendingForms.length) })}
               </h3>
               <div className="space-y-3">
                 {pendingForms.map(form => (
@@ -603,7 +603,7 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
             <div>
               <h3 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: "var(--c-text-secondary)" }}>
                 <CheckCircle2 size={14} className="text-emerald-500"/>
-                Completados ({completedForms.length})
+                {t('auto.parentFormsView.completados', { v1: String(completedForms.length) })}
               </h3>
               <div className="space-y-2">
                 {completedForms.map(form => (
@@ -650,7 +650,7 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
           ) : (
             <>
               <p className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                {resources.length} material{resources.length !== 1 ? 'es' : ''} disponible{resources.length !== 1 ? 's' : ''}
+                {t('auto.parentFormsView.materialDisponible', { v1: String(resources.length), v2: String(resources.length !== 1 ? 'es' : ''), v3: String(resources.length !== 1 ? 's' : '') })}
               </p>
               <div className="space-y-3">
                 {resources.map(resource => <ResourceCard key={resource.id} resource={resource}/>)}

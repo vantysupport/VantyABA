@@ -233,7 +233,7 @@ export default function MiAgenda({ isDark = false }: { isDark?: boolean }) {
             Agenda
           </h2>
           <p className={`text-sm font-medium mt-1 ml-1 ${txt3}`}>
-            {citas.length} citas · {citasDelDia.length} hoy · {citasVirtuales} virtuales
+            {t('auto.miAgenda.citasHoyVirtuales', { v1: String(citas.length), v2: String(citasDelDia.length), v3: String(citasVirtuales) })}
           </p>
         </div>
 
@@ -343,7 +343,7 @@ export default function MiAgenda({ isDark = false }: { isDark?: boolean }) {
                       })}
                       {citasDia.length > 2 && (
                         <span className={`text-[9px] font-bold px-1 ${txt3}`}>
-                          +{citasDia.length - 2} más
+                          {t('auto.miAgenda.mas', { v1: String(citasDia.length - 2) })}
                         </span>
                       )}
                     </div>
@@ -372,7 +372,7 @@ export default function MiAgenda({ isDark = false }: { isDark?: boolean }) {
               </div>
               <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0
                 ${isDark ? 'bg-[#21262d] text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                {citasDelDia.length} citas
+                {t('auto.miAgenda.citas', { v1: String(citasDelDia.length) })}
               </span>
             </div>
 

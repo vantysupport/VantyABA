@@ -549,7 +549,7 @@ function MonthlyCalendarView() {
               Agenda
             </h2>
             <p className="text-slate-400 text-sm font-medium mt-1 ml-1">
-              {apts.length} citas · {todayApts.length} hoy · {virtualApts.length} virtuales
+              {t('auto.calendarView.citasHoyVirtuales', { v1: String(apts.length), v2: String(todayApts.length), v3: String(virtualApts.length) })}
             </p>
           </div>
 
@@ -957,7 +957,7 @@ function MonthlyCalendarView() {
                         {[2,3,4,6,8,12].map(n => <option key={n} value={n}>{n} citas ({recurrencia === 'weekly' ? `${n} semanas` : `${n*2} semanas`})</option>)}
                       </select>
                       <p className="text-[10px] mt-1.5 font-medium text-sky-500">
-                        Se crearán {recurrenciaSemanas} citas {recurrencia === 'weekly' ? 'cada semana' : 'cada 2 semanas'} a partir de la fecha seleccionada.
+                        {t('auto.calendarView.seCrearanCitasAPartir', { v1: String(recurrenciaSemanas), v2: String(recurrencia === 'weekly' ? 'cada semana' : 'cada 2 semanas') })}
                       </p>
                     </div>
                   )}

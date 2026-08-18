@@ -2190,7 +2190,8 @@
       "noSeEncontraronUsuariosCon": "No users found with that email",
       "primeroCreaLaCuentaDel": "First create the parent's account from User Management",
       "totalDeSesionesDelPaciente": "Patient's total sessions",
-      "eliminar": "Delete"
+      "eliminar": "Delete",
+      "vincularCuentaA": "Link account to {v1}"
     },
     "misPacientes": {
       "objetivoPrincipal": "Main goal",
@@ -2225,7 +2226,11 @@
       "seleccionarPaciente": "— Select patient —",
       "respuestaSinFormatoElModelo": "⚠ Unformatted response (the model did not return valid JSON):",
       "6AgentesIaPrediccionesPatrones": "6 AI agents · Predictions · Patterns · Goals · Reports",
-      "seleccionaPaciente": "Select Patient"
+      "seleccionaPaciente": "Select Patient",
+      "sesiones": "{v1}{v2} sessions",
+      "requierenAtencionInmediata": "Require Immediate Attention ({v1})",
+      "logrosClinicos": "Clinical Achievements ({v1})",
+      "pacientesAnalizadosAlertasUrgentes": "{v1} patients analyzed · {v2} urgent alerts"
     },
     "page": {
       "evaluacionInicial": "Initial Evaluation",
@@ -2297,7 +2302,12 @@
       "neuropsicologiaYTerapiasSanti2": "Neuropsicología y Terapias SANTI",
       "panelClinico": "Clinical Panel",
       "notificaciones": "Notifications",
-      "citasDeHoy": "Today's appointments"
+      "citasDeHoy": "Today's appointments",
+      "bienvenidoa": "Welcome, {v1}! 🎉",
+      "tienesDudasEscribenos": "Have questions? Write to us:{v1}",
+      "paraEjercerCualquierDerecho": "To exercise any right:{v1}",
+      "neuropsicologiaYTerapiasSanti3": "Neuropsicología y Terapias SANTI · {v1}",
+      "mensajeSinLeer": "{v1} unread message{v2}"
     },
     "calendarView": {
       "agregarEspecialista": "+ Add specialist...",
@@ -2313,7 +2323,9 @@
       "citaAnadidaAGoogleCalendar": "{v1} appointment{v2} added{v3} to Google Calendar",
       "citaAnadidaAOutlookCalendar": "{v1} appointment{v2} added{v3} to Outlook Calendar",
       "limiteMensualDe10000Min": "Monthly limit of 10,000 min reached. It resets next month.",
-      "salaCreadaPadreNotificado": "Room created · Parent notified"
+      "salaCreadaPadreNotificado": "Room created · Parent notified",
+      "citasHoyVirtuales": "{v1} appointments · {v2} today · {v3} virtual",
+      "seCrearanCitasAPartir": "{v1} appointments will be created {v2} starting from the selected date."
     },
     "storeManagementView": {
       "totalDelPedido": "order total",
@@ -2342,7 +2354,8 @@
       "elAnalisisFueGuardadoY": "The analysis was saved and is available in the patient's record.",
       "guardar": "Save",
       "unaSolaActividadBasadaEn": "A single activity based on what was worked on today in session.",
-      "todosLosInstrumentosDeEvaluacion": "All clinical evaluation instruments"
+      "todosLosInstrumentosDeEvaluacion": "All clinical evaluation instruments",
+      "seccionDe": "Section {v1} of {v2}"
     },
     "knowledgeBaseView": {
       "ejPrincipiosDeConductaMalott": "e.g.: Principles of Behavior - Malott 8th Ed.",
@@ -2435,7 +2448,9 @@
     },
     "especialistaHome": {
       "ultimaSesion": "Last session",
-      "pacientesConSesionReciente": "patients with a recent session"
+      "pacientesConSesionReciente": "patients with a recent session",
+      "sesionesHoy": "{v1} sessions today",
+      "mas": "+{v1} more"
     },
     "profileView": {
       "editarPerfil": "Edit profile",
@@ -2477,7 +2492,9 @@
       "cancelar": "Cancel",
       "comoPracticarloEnCasa": "How to practice it at home",
       "elTerapeutaAunNoAgrego": "The therapist hasn't added details for this set yet. Ask them at the next session.",
-      "programasAba": "ABA Programs"
+      "programasAba": "ABA Programs",
+      "practicaEstaSemana7Dias": "Practice this week — {v1}/7 days",
+      "activos": "{v1} active · {v2}"
     },
     "aRIAAgentChat": {
       "borrarHistorialDelChat": "Clear chat history",
@@ -2490,7 +2507,8 @@
       "sinReportesGenerados": "No reports generated",
       "eliminarEsteReportePermanentemente": "Delete this report permanently? This action cannot be undone.",
       "generaTuPrimerReporteUsando": "Generate your first report using the button above. It will be saved here with date and time.",
-      "recienGenerado": "Just generated"
+      "recienGenerado": "Just generated",
+      "reporteGuardadoParaEstePaciente": "{v1} report{v2} saved{v3} for this patient and evaluation type"
     },
     "aprobacionesEspecialista": {
       "tuComentario": "Your comment:",
@@ -2504,7 +2522,10 @@
       "desconectarGoogleCalendar": "Disconnect Google Calendar?",
       "errorConectandoOutlookCalendar": "Error connecting Outlook Calendar",
       "desconectarOutlookCalendar": "Disconnect Outlook Calendar?",
-      "seleccionaOtroDiaDelCalendario": "Select another day from the calendar"
+      "seleccionaOtroDiaDelCalendario": "Select another day from the calendar",
+      "citasHoyVirtuales": "{v1} appointments · {v2} today · {v3} virtual",
+      "mas": "+{v1} more",
+      "citas": "{v1} appointments"
     },
     "chatPadres": {
       "neuropsicologiaYTerapiasSantiSiemp": "Neuropsicología y Terapias SANTI • Always available"
@@ -2521,7 +2542,8 @@
       "formularioEnviado": "Form sent",
       "seCalcularaConElAnalisis": "It will be calculated with the AI analysis",
       "guardar": "Save",
-      "guardar2": "Save"
+      "guardar2": "Save",
+      "seccionDe": "Section {v1} of {v2}"
     },
     "userManagementView": {
       "noPodesCambiarElRol": "You cannot change a Director's role.",
@@ -2545,7 +2567,8 @@
       "crearUsuario": "Create user",
       "siElPacienteYaTiene": "If the patient already has an assigned guardian, it will be replaced. For two simultaneous guardians, create two parent accounts and link them separately.",
       "seleccionaElPaciente": "Select the patient",
-      "vincular": "Link"
+      "vincular": "Link",
+      "pacientesVinculados": "Linked patients ({v1})"
     },
     "aRIAFloatingChat": {
       "borrarTodoElHistorialDe": "Clear all of ARIA's history?",
@@ -2652,7 +2675,8 @@
       "noSePudoAccederAl": "Could not access the microphone. Check your browser permissions.",
       "noSePudoAccederAl2": "Could not access the microphone",
       "cancelar": "Cancel",
-      "esteChatEsPrivadoEntre": "This chat is private between your family and the center's team."
+      "esteChatEsPrivadoEntre": "This chat is private between your family and the center's team.",
+      "tocaParaAbrir": "{v1} · Tap to open"
     },
     "reservasOnlinePanel": {
       "eliminarEsteLinkDeReserva": "Delete this booking link? This action cannot be undone. (Appointments already booked with it are NOT deleted.)",
@@ -2719,7 +2743,9 @@
     },
     "misCitasView": {
       "misSesiones": "My sessions",
-      "lasCitasSonProgramadasPor": "Appointments are scheduled by the center's team. For any change contact us directly."
+      "lasCitasSonProgramadasPor": "Appointments are scheduled by the center's team. For any change contact us directly.",
+      "citasProximasRealizadas": "{v1} appointments · {v2} upcoming · {v3} completed",
+      "citas": "{v1} appointments"
     },
     "notifWhatsAppPanel": {
       "ingresaTuNumeroDeWhatsapp": "Enter your WhatsApp number with the country code to receive important alerts from the center.",
@@ -2727,12 +2753,25 @@
       "soloRecibirasAlertasDelCentro": "You'll only receive alerts from the center. Your number is not shared with third parties."
     },
     "analyticsDashboard": {
-      "exportarReporteWord": "Export Word Report"
+      "exportarReporteWord": "Export Word Report",
+      "ultimoAnalisis": "Last analysis: {v1}"
     },
     "mensajesView": {
       "nuevo": "New",
       "notificaciones": "Notifications",
-      "aquiApareceranLosReportesDe": "Here you'll see session reports, analysis and announcements from the center's team."
+      "aquiApareceranLosReportesDe": "Here you'll see session reports, analysis and announcements from the center's team.",
+      "reportesAnalisisYComunicadosDel": "Reports, analysis and announcements from the center · {v1} total"
+    },
+    "parentFormsView": {
+      "pendientesDeCompletar": "Pending to complete ({v1})",
+      "completados": "Completed ({v1})",
+      "materialDisponible": "{v1} material{v2} available{v3}"
+    },
+    "secretariaCronograma": {
+      "sesion": "{v1} session{v2}"
+    },
+    "secretariaHome": {
+      "citasHoy": "{v1} appointments today"
     }
   }
 }

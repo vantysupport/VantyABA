@@ -229,7 +229,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs px-2.5 py-0.5 rounded-full font-medium"
                 style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
-                {stats.citasHoy} sesiones hoy
+                {t('auto.especialistaHome.sesionesHoy', { v1: String(stats.citasHoy) })}
               </span>
               {stats.pendientes > 0 && (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
@@ -358,7 +358,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
                 })}
                 {stats.totalPacientes > 5 && (
                   <button onClick={() => setActiveView('pacientes')} className="w-full text-center text-xs font-bold py-2" style={{ color: '#0284c7' }}>
-                    +{stats.totalPacientes - 5} más
+                    {t('auto.especialistaHome.mas', { v1: String(stats.totalPacientes - 5) })}
                   </button>
                 )}
               </>

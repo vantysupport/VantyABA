@@ -230,7 +230,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-                  Vincular cuenta a {nino.name}
+                  {t('auto.patientsView.vincularCuentaA', { v1: String(nino.name) })}
                 </h3>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                   {t('auto.patientsView.buscaPorEmailDelPadre')}

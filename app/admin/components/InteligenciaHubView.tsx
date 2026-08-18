@@ -244,7 +244,7 @@ function ProgramaCard({ prog, t }: { prog: any; t: any }) {
                 Tendencia: <span className={`font-bold ${prog.tendencia_slope > 0 ? 'text-emerald-400' : prog.tendencia_slope < 0 ? 'text-red-400' : ''}`}>
                   {prog.tendencia_descripcion}
                 </span>
-                {' · '}{prog.total_sesiones} sesiones
+                {t('auto.inteligenciaHubView.sesiones', { v1: String(' · '), v2: String(prog.total_sesiones) })}
               </p>
             </>
           ) : (
@@ -1353,7 +1353,7 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#c47070' }} />
                 <p className="text-[10px] font-bold" style={{ color: '#ef4444' }}>
-                  Requieren Atención Inmediata ({urgentes.length})
+                  {t('auto.inteligenciaHubView.requierenAtencionInmediata', { v1: String(urgentes.length) })}
                 </p>
               </div>
               {urgentes.map((p: any, i: number) => <PatronCard key={i} p={p} index={i} defaultOpen={i === 0} />)}
@@ -1366,7 +1366,7 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full" style={{ background: '#5a9e7a' }} />
                 <p className="text-[10px] font-bold" style={{ color: '#10b981' }}>
-                  Logros Clínicos ({positivos.length})
+                  {t('auto.inteligenciaHubView.logrosClinicos', { v1: String(positivos.length) })}
                 </p>
               </div>
               {positivos.map((p: any, i: number) => <PatronCard key={i} p={p} index={i} defaultOpen={false} />)}
@@ -1576,7 +1576,7 @@ function TabSugerencias() {
           <p className="text-xs text-orange-600">{t('hub.iaAlertaAntes')}</p>
           {meta && (
             <p className="text-[11px] text-orange-500 mt-1">
-              {meta.pacientes_analizados} pacientes analizados · {meta.urgentes} alertas urgentes
+              {t('auto.inteligenciaHubView.pacientesAnalizadosAlertasUrgentes', { v1: String(meta.pacientes_analizados), v2: String(meta.urgentes) })}
             </p>
           )}
         </div>

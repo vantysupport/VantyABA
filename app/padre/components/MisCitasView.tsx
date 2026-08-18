@@ -137,7 +137,7 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
           </h2>
           <p className="text-sm font-medium mt-1 ml-1" style={{ color: V.tm }}>
             {selectedChild?.name ? `${selectedChild.name.split(' ')[0]} · ` : ''}
-            {appointments.length} citas · {upcoming} próximas · {completed} realizadas
+            {t('auto.misCitasView.citasProximasRealizadas', { v1: String(appointments.length), v2: String(upcoming), v3: String(completed) })}
           </p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
@@ -271,7 +271,7 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
               </div>
               <span className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
                 style={{ background: V.muted, color: V.tm, border: `1px solid ${V.border}` }}>
-                {citasDelDia.length} citas
+                {t('auto.misCitasView.citas', { v1: String(citasDelDia.length) })}
               </span>
             </div>
             {citasDelDia.length === 0 ? (
