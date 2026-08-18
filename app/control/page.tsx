@@ -552,16 +552,16 @@ export default function ControlPage() {
                 </div>
                 <p className="text-xs text-slate-400 mb-4 ml-[42px]">Controla qué pestañas aparecen dentro de este módulo.</p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-                  {(section.tabs as readonly { key: string; label: string; icon: string }[]).map(t => {
-                    const isOn = features[t.key as keyof FeaturesConfig]
+                  {(section.tabs as readonly { key: string; label: string; icon: string }[]).map(tab => {
+                    const isOn = features[tab.key as keyof FeaturesConfig]
                     const disabled = !parentOn
                     return (
-                      <div key={t.key} className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors
+                      <div key={tab.key} className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors
                         ${disabled ? 'opacity-40' : ''}
                         ${isOn && !disabled ? `${c.bg} ${c.border}` : 'bg-white/[0.02] border-white/5'}`}>
-                        <span className="text-base leading-none">{t.icon}</span>
-                        <span className={`flex-1 text-sm font-semibold ${isOn && !disabled ? 'text-slate-200' : 'text-slate-500'}`}>{t.label}</span>
-                        <Toggle on={isOn} onChange={v => toggleFeature(t.key as keyof FeaturesConfig, v)} disabled={disabled} />
+                        <span className="text-base leading-none">{tab.icon}</span>
+                        <span className={`flex-1 text-sm font-semibold ${isOn && !disabled ? 'text-slate-200' : 'text-slate-500'}`}>{t('control.tab.' + tab.key)}</span>
+                        <Toggle on={isOn} onChange={v => toggleFeature(tab.key as keyof FeaturesConfig, v)} disabled={disabled} />
                       </div>
                     )
                   })}

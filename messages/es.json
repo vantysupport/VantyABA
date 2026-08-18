@@ -2906,6 +2906,35 @@
    "padre": "Padres / Tutores",
    "paciente": "Pacientes"
   },
-  "ahora": "ahora"
+  "ahora": "ahora",
+  "tab": {
+   "ninos_info": "Información del paciente",
+   "ninos_programas": "Programas ABA",
+   "ninos_evaluaciones": "Evaluaciones",
+   "ninos_eval_inicial": "Evaluación Inicial",
+   "ninos_historial": "Historial & IA",
+   "ninos_fichas": "Fichas clínicas",
+   "ninos_documentos": "Documentos",
+   "intel_predicciones": "Predicciones IA",
+   "intel_patrones": "Patrones ABA",
+   "intel_objetivos": "Objetivos IA",
+   "intel_sugerencias": "Alertas Proactivas",
+   "intel_reportes": "Reportes IA",
+   "intel_seguridad": "Seguridad",
+   "cerebro_aprender": "Aprender / Ingerir",
+   "cerebro_diagnosticos": "Diagnósticos CIE-11",
+   "cerebro_biblioteca": "Biblioteca",
+   "pagos_dashboard": "Dashboard",
+   "pagos_registros": "Registros",
+   "pagos_agrupado": "Por paciente",
+   "pagos_tarifas": "Tarifas",
+   "reportes_overview": "Ingresos",
+   "reportes_pacientes": "Por paciente",
+   "reportes_servicios": "Por servicio",
+   "recursos_recursos": "Recursos",
+   "recursos_tienda": "Tienda",
+   "recursos_terapias": "Catálogo Terapias",
+   "recursos_fonemas": "Fonemas"
+  }
  }
 }

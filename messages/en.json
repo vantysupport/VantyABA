@@ -2894,6 +2894,35 @@
       "padre": "Parents / Guardians",
       "paciente": "Patients"
     },
-    "ahora": "now"
+    "ahora": "now",
+    "tab": {
+      "ninos_info": "Patient information",
+      "ninos_programas": "ABA Programs",
+      "ninos_evaluaciones": "Evaluations",
+      "ninos_eval_inicial": "Initial Evaluation",
+      "ninos_historial": "History & AI",
+      "ninos_fichas": "Clinical records",
+      "ninos_documentos": "Documents",
+      "intel_predicciones": "AI Predictions",
+      "intel_patrones": "ABA Patterns",
+      "intel_objetivos": "AI Goals",
+      "intel_sugerencias": "Proactive Alerts",
+      "intel_reportes": "AI Reports",
+      "intel_seguridad": "Security",
+      "cerebro_aprender": "Learn / Ingest",
+      "cerebro_diagnosticos": "ICD-11 Diagnoses",
+      "cerebro_biblioteca": "Library",
+      "pagos_dashboard": "Dashboard",
+      "pagos_registros": "Records",
+      "pagos_agrupado": "By patient",
+      "pagos_tarifas": "Rates",
+      "reportes_overview": "Revenue",
+      "reportes_pacientes": "By patient",
+      "reportes_servicios": "By service",
+      "recursos_recursos": "Resources",
+      "recursos_tienda": "Store",
+      "recursos_terapias": "Therapy Catalog",
+      "recursos_fonemas": "Phonemes"
+    }
   }
 }
