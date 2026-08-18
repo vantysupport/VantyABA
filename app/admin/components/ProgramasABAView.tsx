@@ -473,7 +473,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
           <div className="w-14 h-14 dark:bg-sky-900/30 bg-sky-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
             <BarChart3 size={26} className="text-sky-300" />
           </div>
-          <p className="font-bold text-slate-500 mb-1">{busqueda ? `Sin resultados para "${busqueda}"` : (t('programas.sinProgramas') + (filtroArea !== 'todos' ? ` ${t('programas.enArea').replace('{area}', AREA_CONFIG[filtroArea]?.label || '')}` : ''))}</p>
+          <p className="font-bold text-slate-500 mb-1">{busqueda ? `Sin resultados para "${busqueda}"` : (t('programas.sinProgramas') + (filtroArea !== 'todos' ? ` ${t('programas.enArea').replace('{area}', getAreaLabel(filtroArea))}` : ''))}</p>
           <p className="text-xs" style={{color:"var(--text-muted)",opacity:0.6}}>{!busqueda && t('programas.creaElPrimero').replace('{nombre}', childName)}</p>
         </div>
       ) : (
@@ -1095,7 +1095,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                   title={t("programas.cambiarArea")}
                   className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all hover:opacity-80 ${AREA_CONFIG[localArea]?.bg || ''} ${AREA_CONFIG[localArea]?.color || ''}`}>
                   {AREA_CONFIG[localArea]?.Icon && (() => { const AI = AREA_CONFIG[localArea].Icon; return <AI size={11} /> })()}
-                  {AREA_CONFIG[localArea]?.label || localArea}
+                  {t('areaAba.' + localArea)}
                 </button>
                 {editingArea && (
                   <div className="absolute top-6 left-0 z-50 rounded-2xl shadow-xl py-1 min-w-[160px]"

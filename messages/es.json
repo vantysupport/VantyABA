@@ -2954,5 +2954,19 @@
   "sinLimite": "SIN LÍMITE",
   "sinMensaje": "(sin mensaje)",
   "sinDetalle": "(sin detalle)"
+ },
+ "areaAba": {
+  "comunicacion": "Comunicación",
+  "conducta": "Conducta",
+  "cognitivo": "Cognitivo",
+  "social": "Social",
+  "autonomia": "Autonomía",
+  "academico": "Académico",
+  "sensorial": "Sensorial",
+  "habilidades": "Habilidades",
+  "imitacion": "Imitación",
+  "lenguaje": "Lenguaje",
+  "socializacion": "Socialización",
+  "motor": "Motor"
  }
 }
