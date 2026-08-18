@@ -719,11 +719,11 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
   if (estado === 'recomendado') {
     const rec = evaluacion.recomendacion
     const mensaje = evaluacion.mensaje_amigable_padre || evaluacion.recomendacion_resumen ||
-      'Hemos revisado tu información. Te sugerimos continuar con una evaluación para conocer mejor a tu hijo/a.'
+      t('auto.evaluacionInicialView.hemosRevisado')
     const RecIcon = rec === 'neuropsicologica' ? Brain : Heart
-    const recTitulo = rec === 'psicologica' ? 'Evaluación Psicológica Emocional'
-                    : rec === 'neuropsicologica' ? 'Evaluación Neuropsicológica'
-                    : 'Evaluación Integral'
+    const recTitulo = rec === 'psicologica' ? t('auto.evaluacionInicialView.recTituloPsico')
+                    : rec === 'neuropsicologica' ? t('auto.evaluacionInicialView.recTituloNeuro')
+                    : t('auto.evaluacionInicialView.recTituloIntegral')
     const recColor = rec === 'psicologica' ? 'from-rose-500 to-rose-500' : 'from-sky-500 to-cyan-500'
 
     return (
@@ -734,7 +734,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
               <RecIcon size={26} />
             </div>
             <div>
-              <p className="text-sm font-medium opacity-80">Nuestra sugerencia para {child.name}</p>
+              <p className="text-sm font-medium opacity-80">{t('auto.evaluacionInicialView.nuestraSugerenciaPara', { v1: child.name })}</p>
               <h1 className="text-2xl font-bold tracking-tight">{recTitulo}</h1>
             </div>
           </div>
@@ -743,11 +743,11 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
 
         <div className="rounded-2xl p-5 mb-5 border" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
           <h3 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            <Star size={16} className="text-amber-500" /> ¿Qué sigue si aceptas?
+            <Star size={16} className="text-amber-500" /> {t('auto.evaluacionInicialView.queSigueSiAceptas')}
           </h3>
           <ol className="space-y-2.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <li className="flex gap-3"><span className="font-bold text-sky-600">1.</span> {t("evalIni.fichaDetallada")}</li>
-            <li className="flex gap-3"><span className="font-bold text-sky-600">2.</span> Te mostramos las terapias que podrían ayudar a {child.name}.</li>
+            <li className="flex gap-3"><span className="font-bold text-sky-600">2.</span> {t('auto.evaluacionInicialView.teMostramosTerapias', { v1: child.name })}</li>
             <li className="flex gap-3"><span className="font-bold text-sky-600">3.</span> {t("evalIni.eligesEquipo")}</li>
           </ol>
         </div>
@@ -861,6 +861,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
     const nombreCorto = (child.name || '').split(' ')[0] || child.name
 
     // Tarjeta de terapia reutilizable (recomendada o catálogo general)
+    const tCat = t
     const renderTarjeta = (t: any) => {
       const checked = terapiasElegidas.includes(t.id)
       const esRecomendada = recSet.has(t.id)
@@ -882,7 +883,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
           {esRecomendada && (
             <div className="absolute top-3.5 right-3 z-10 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white shadow-lg flex items-center gap-1"
               style={{ background: `linear-gradient(135deg, ${colorTema.accent}, ${colorTema.accentDark})` }}>
-              <Sparkles size={11} /> Recomendada
+              <Sparkles size={11} /> {tCat('auto.evaluacionInicialView.recomendada')}
             </div>
           )}
           {checked && (
@@ -913,7 +914,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
               <div className="rounded-xl p-3.5 text-sm leading-relaxed"
                 style={{ background: `${colorTema.accent}0d`, color: 'var(--text-secondary)' }}>
                 <p className="text-[13px] font-semibold mb-1 flex items-center gap-1.5" style={{ color: colorTema.accent }}>
-                  <Sparkles size={13} /> Por qué llevarla
+                  <Sparkles size={13} /> {tCat('auto.evaluacionInicialView.porQueLlevarla')}
                 </p>
                 <p>{t.por_que}</p>
               </div>
@@ -942,7 +943,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
     return (
       <div className="max-w-4xl mx-auto pb-12">
         <div className="rounded-3xl p-6 mb-6 text-white shadow-xl" style={{ background: 'linear-gradient(135deg,#0284c7,#ec4899)' }}>
-          <h1 className="text-2xl font-bold mb-2">🎉 ¡Casi terminamos!</h1>
+          <h1 className="text-2xl font-bold mb-2">{t('auto.evaluacionInicialView.casiTerminamos')}</h1>
           <p className="text-white/95">
             {recomendadas.length > 0
               ? <>{t("evalIni.revisamosCuidado")}<strong>{nombreCorto}</strong>. Más abajo verás <strong>nuestra recomendación personalizada</strong> y, debajo, <strong>todo nuestro catálogo</strong> por si quieres explorar otras opciones. Marca la(s) que te interese conocer más.</>
@@ -955,7 +956,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
           <div className="text-center py-16 rounded-2xl border" style={{ color: 'var(--text-muted)', background: 'var(--card)', borderColor: 'var(--card-border)' }}>
             <Loader2 className="animate-spin mx-auto mb-3 text-sky-500" size={32} />
             <p className="font-bold" style={{ color: 'var(--text-primary)' }}>
-              {generandoRec ? `Estamos preparando la recomendación para ${nombreCorto}…` : 'Cargando terapias…'}
+              {generandoRec ? t('auto.evaluacionInicialView.preparandoRecomendacion', { v1: nombreCorto }) : t('auto.evaluacionInicialView.cargandoTerapias')}
             </p>
             {generandoRec && <p className="text-sm mt-1">{t("evalIni.tomaSegundos")}</p>}
           </div>
@@ -1000,10 +1001,10 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold leading-tight tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                      {recomendadas.length > 0 ? 'Todo nuestro catálogo de terapias' : 'Nuestras terapias'}
+                      {recomendadas.length > 0 ? t('auto.evaluacionInicialView.todoCatalogo') : t('auto.evaluacionInicialView.nuestrasTerapias')}
                     </h2>
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {recomendadas.length > 0 ? 'Otras opciones que también ofrecemos' : 'Marca las que te interese conocer'}
+                      {recomendadas.length > 0 ? t('auto.evaluacionInicialView.otrasOpciones') : t('auto.evaluacionInicialView.marcaLasQueInterese')}
                     </p>
                   </div>
                 </div>
@@ -1071,7 +1072,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             {t('auto.evaluacionInicialView.tuSolicitudEstaEnRevision')}
           </h2>
           <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-            Nuestro <strong>especialista está revisando tu caso</strong>. En cuanto tengamos una respuesta personalizada para {child.name}, te la enviaremos por aquí y por WhatsApp.
+            {t('auto.evaluacionInicialView.enRevisionPre')}<strong>{t('auto.evaluacionInicialView.enRevisionStrong')}</strong>{t('auto.evaluacionInicialView.enRevisionMid')}{child.name}{t('auto.evaluacionInicialView.enRevisionPost')}
           </p>
           {elegidas.length > 0 && (
             <div className="rounded-2xl p-4 mb-6 text-left" style={{ background: 'var(--muted-bg)' }}>
@@ -1088,7 +1089,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
           <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-bold border-2"
             style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-            <MessageCircle size={18} /> Contactar al centro mientras tanto
+            <MessageCircle size={18} /> {t('auto.evaluacionInicialView.contactarMientrasTanto')}
           </a>
         </div>
       </div>
@@ -1107,7 +1108,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
             </div>
             <div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{t("evalIni.respuestaEspecialista")}</p>
-              <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Mensaje para {child.name}</h2>
+              <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>{t('auto.evaluacionInicialView.mensajePara', { v1: child.name })}</h2>
             </div>
           </div>
 
@@ -1178,10 +1179,10 @@ function WizardIntake({ child, seccionIdx, setSeccionIdx, respuestas, setRespues
           <h1 className="text-2xl font-bold">{t("evalIni.fichaInicialPapas")}</h1>
         </div>
         <p className="text-white/90 text-sm mb-2">
-          Documento necesario para la entrevista inicial / primera consulta de <strong>{child.name}</strong>.
+          {t('auto.evaluacionInicialView.docNecesarioPre')}<strong>{child.name}</strong>.
         </p>
         <p className="text-white/80 text-xs leading-relaxed">
-          Este cuestionario nos permite atender mejor las necesidades de tu hijo/a. Los datos son <strong>privados y confidenciales</strong> y se usan únicamente con fines clínicos.
+          {t('auto.evaluacionInicialView.cuestionarioPre')}<strong>{t('auto.evaluacionInicialView.privadosConfidenciales')}</strong>{t('auto.evaluacionInicialView.cuestionarioPost')}
         </p>
       </div>
 
@@ -1213,16 +1214,17 @@ function WizardIntake({ child, seccionIdx, setSeccionIdx, respuestas, setRespues
 }
 
 function WizardAnamnesis({ child, tipo, secciones, seccionIdx, setSeccionIdx, respuestas, setRespuestas, enviando, onEnviar }: any) {
+  const { t } = useI18n()
   const seccion = secciones[seccionIdx]
   const progreso = ((seccionIdx + 1) / secciones.length) * 100
-  const titulo = tipo === 'neuropsicologica' ? 'Ficha Neuropsicológica' : 'Ficha Psicológica Emocional'
+  const titulo = tipo === 'neuropsicologica' ? t('auto.evaluacionInicialView.fichaNeuro') : t('auto.evaluacionInicialView.fichaPsico')
 
   return (
     <div className="max-w-3xl mx-auto pb-12">
       <div className="rounded-3xl p-6 mb-6 text-white shadow-xl" style={{ background: tipo === 'neuropsicologica' ? 'linear-gradient(135deg,#0284c7,#0284c7)' : 'linear-gradient(135deg,#ec4899,#f43f5e)' }}>
         <h1 className="text-2xl font-bold mb-1">{titulo}</h1>
         <p className="text-white/90 text-sm">
-          Algunas preguntas más para entender mejor a <strong>{child.name}</strong>.
+          {t('auto.evaluacionInicialView.algunasPreguntasPre')}<strong>{child.name}</strong>.
         </p>
       </div>
 
