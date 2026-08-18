@@ -1,13 +1,18 @@
 // app/privacidad/page.tsx
 // Política de Privacidad completa de la plataforma Vanty · Centro SANTI.
+// Bilingüe (ES/EN) — el idioma se toma de la cookie `vanty_locale` que setea el middleware.
 // Diseñada para verse profesional en modo claro y modo oscuro.
+
+import { cookies } from 'next/headers'
 
 export const metadata = {
   title: 'Política de Privacidad · Vanty',
   description: 'Cómo Vanty protege los datos clínicos de las familias del Centro SANTI.',
 }
 
-const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
+type Section = { id: string; title: string; body: React.ReactNode }
+
+const SECTIONS_ES: Section[] = [
   {
     id: 'identidad',
     title: '1. Quiénes somos',
@@ -208,7 +213,233 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
   },
 ]
 
-export default function PrivacidadPage() {
+const SECTIONS_EN: Section[] = [
+  {
+    id: 'identidad',
+    title: '1. Who we are',
+    body: (
+      <>
+        <p>
+          <strong>Neuropsicología y Terapias SANTI</strong> is a center specialized in ABA, ASD and ADHD
+          childhood intervention located at Av. Brasil 2730, Pueblo Libre 15084, Lima — Peru.
+        </p>
+        <p>
+          We operate the digital platform <strong>Vanty</strong> for clinical management and communication
+          with families. This policy describes how we collect, use and protect the personal and clinical
+          data entrusted to us.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'datos',
+    title: '2. What information we collect',
+    body: (
+      <>
+        <p>We collect only the information necessary to provide our services:</p>
+        <ul>
+          <li><strong>Account data:</strong> full name, email address, phone number, optional profile photo.</li>
+          <li><strong>Patient data:</strong> name, date of birth, clinical diagnosis, session history, ABA programs and therapeutic progress.</li>
+          <li><strong>Usage data:</strong> ABA session records, clinical forms, evaluations, generated reports and responses to the monthly wellbeing check-in.</li>
+          <li><strong>Google / Microsoft data (optional):</strong> name, email and profile photo if you choose to sign in with those providers. We do not access Gmail, Drive or Outlook except Calendar — and only with your explicit authorization.</li>
+          <li><strong>Technical data:</strong> IP addresses and access logs, retained on a limited basis for security reasons.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: 'uso',
+    title: '3. How we use the information',
+    body: (
+      <>
+        <ul>
+          <li>Manage the patient's clinical history and therapeutic follow-up.</li>
+          <li>Generate progress reports for families and professionals.</li>
+          <li>Send appointment notifications, reminders and center announcements.</li>
+          <li>Enable secure communication between the family and the clinical team.</li>
+          <li>Improve the quality of clinical services and the Vanty platform.</li>
+        </ul>
+        <p><em>We never use clinical data for advertising purposes, nor do we sell it to third parties.</em></p>
+      </>
+    ),
+  },
+  {
+    id: 'compartir',
+    title: '4. Who we share the information with',
+    body: (
+      <>
+        <p>Information may be shared only with:</p>
+        <ul>
+          <li>The clinical team of Neuropsicología y Terapias SANTI directly involved in the patient's care.</li>
+          <li>Technology infrastructure providers (Supabase for the database, Vercel for hosting) under strict confidentiality policies.</li>
+          <li>Artificial intelligence providers (Anthropic, Groq) processing specific queries from the ARIA Assistant. The data sent is discarded after generating the response and is not used to train models.</li>
+          <li>Health or judicial authorities, exclusively when the law expressly requires it.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: 'seguridad',
+    title: '5. Data security',
+    body: (
+      <>
+        <p>We apply multiple layers of protection:</p>
+        <ul>
+          <li><strong>AES-256 encryption</strong> of data at rest (banking standard).</li>
+          <li><strong>TLS 1.3</strong> on all communication between your device and our servers.</li>
+          <li><strong>Row Level Security (RLS)</strong> applied to every table in the database — each account can only access the data that belongs to it.</li>
+          <li>Staff access segmented by <strong>roles</strong> (director, admin, specialist, therapist, secretary, parent).</li>
+          <li>Automatic encrypted backups with geographic redundancy.</li>
+          <li>Auditing of access to sensitive information.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: 'ia',
+    title: '6. Use of Artificial Intelligence (ARIA)',
+    body: (
+      <>
+        <p>
+          ARIA is our clinical assistant based on language models. Its operation respects the following principles:
+        </p>
+        <ul>
+          <li>Queries are processed contextually and only the minimum necessary information is sent.</li>
+          <li>Clinical data <strong>is not used to train public models</strong>.</li>
+          <li>When technically possible, data is anonymized before processing.</li>
+          <li>Analysis reports are generated from your data, but temporary drafts are discarded.</li>
+          <li>AI processing never replaces the therapist's clinical judgment.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: 'derechos',
+    title: '7. Your rights (Law 29733 · Peru)',
+    body: (
+      <>
+        <p>Under the Peruvian Personal Data Protection Law, you have the right to:</p>
+        <ul>
+          <li><strong>Access:</strong> request a copy of the personal data we hold.</li>
+          <li><strong>Rectification:</strong> correct inaccurate or outdated data.</li>
+          <li><strong>Deletion:</strong> request the removal of your account and associated data (subject to clinical retention regulations).</li>
+          <li><strong>Portability:</strong> export your information in an open, structured format.</li>
+          <li><strong>Objection:</strong> limit specific uses of your data.</li>
+          <li><strong>Information:</strong> know what data we hold, for what purpose and for how long.</li>
+        </ul>
+        <p>
+          To exercise any of these rights, write to us at{' '}
+          <a href="mailto:aprendizaje.santi@gmail.com" className="vanty-link">aprendizaje.santi@gmail.com</a>.
+          We respond within a maximum of 10 business days.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'google',
+    title: '8. Sign in with Google / Microsoft',
+    body: (
+      <>
+        <p>
+          If you sign in with Google or Microsoft, we use only your name, email address and profile photo
+          to create and manage your account. We do not access Gmail, Drive, OneDrive or any other service
+          without your explicit consent.
+        </p>
+        <p>
+          If you authorize synchronization with Google Calendar or Outlook Calendar, we access only the creation
+          and update of events related to your SANTI appointments. You can revoke this permission at any time
+          from "My Profile → Linked calendars".
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'retencion',
+    title: '9. Data retention',
+    body: (
+      <>
+        <p>
+          Clinical data is retained during the active care period and for up to <strong>5 years after</strong>{' '}
+          the last service, in accordance with Peruvian clinical records regulations. You may request early
+          deletion at any time; in that case, we will keep only the minimum records required by law.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'menores',
+    title: '10. Special protection of minors',
+    body: (
+      <>
+        <p>
+          Vanty is designed to manage minors' data with the express consent of the parent or legal guardian.
+          The minor's data is treated with the highest level of confidentiality:
+        </p>
+        <ul>
+          <li>Only the holding parent/guardian and the professionals assigned to the case have access.</li>
+          <li>The minor's data is not used to create advertising or marketing profiles.</li>
+          <li>The parent/guardian may revoke access, download the record or request deletion at any time.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: 'cambios',
+    title: '11. Changes to this policy',
+    body: (
+      <>
+        <p>
+          We may update this policy to reflect improvements in our services or regulatory changes.
+          We will notify any relevant change by email and through a prominent notice within the platform.
+          The date of the last update always appears at the top of this document.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'contacto',
+    title: '12. Contact',
+    body: (
+      <>
+        <p>For any question about this policy or about your personal data:</p>
+        <p style={{ marginTop: 8 }}>
+          <strong>Neuropsicología y Terapias SANTI</strong><br/>
+          Av. Brasil 2730, Pueblo Libre 15084 — Lima, Peru<br/>
+          📧 <a href="mailto:aprendizaje.santi@gmail.com" className="vanty-link">aprendizaje.santi@gmail.com</a><br/>
+          📱 <a href="tel:+51991070734" className="vanty-link">+51 991 070 734</a>
+        </p>
+      </>
+    ),
+  },
+]
+
+const UI = {
+  es: {
+    brand: 'Vanty · Neuropsicología y Terapias SANTI',
+    title: 'Política de Privacidad',
+    subtitle: 'Última actualización: abril 2025 · Pueblo Libre, Lima — Perú',
+    tocAria: 'Índice de contenidos',
+    toc: 'Índice',
+    rights: 'Todos los derechos reservados',
+    terms: 'Ver Términos de Servicio →',
+  },
+  en: {
+    brand: 'Vanty · Neuropsicología y Terapias SANTI',
+    title: 'Privacy Policy',
+    subtitle: 'Last updated: April 2025 · Pueblo Libre, Lima — Peru',
+    tocAria: 'Table of contents',
+    toc: 'Contents',
+    rights: 'All rights reserved',
+    terms: 'View Terms of Service →',
+  },
+}
+
+export default async function PrivacidadPage() {
+  const cookieStore = await cookies()
+  const locale = cookieStore.get('vanty_locale')?.value === 'en' ? 'en' : 'es'
+  const SECTIONS = locale === 'en' ? SECTIONS_EN : SECTIONS_ES
+  const ui = UI[locale]
+
   return (
     <div className="vanty-privacidad">
       {/* Estilos scoped — dark/light adaptativo + tipografía profesional */}
@@ -414,10 +645,10 @@ export default function PrivacidadPage() {
         <div className="vp-hero">
           <div className="vp-brand">
             <span className="vp-brand-icon">🧩</span>
-            <span>Vanty · Neuropsicología y Terapias SANTI</span>
+            <span>{ui.brand}</span>
           </div>
-          <h1 className="vp-title">Política de Privacidad</h1>
-          <p className="vp-subtitle">Última actualización: abril 2025 · Pueblo Libre, Lima — Perú</p>
+          <h1 className="vp-title">{ui.title}</h1>
+          <p className="vp-subtitle">{ui.subtitle}</p>
           <div className="vp-badges">
             <span className="vp-badge">🔑 AES-256</span>
             <span className="vp-badge">⚙️ TLS 1.3</span>
@@ -427,8 +658,8 @@ export default function PrivacidadPage() {
         </div>
 
         {/* Tabla de contenidos */}
-        <nav className="vp-toc" aria-label="Índice de contenidos">
-          <p className="vp-toc-title">Índice</p>
+        <nav className="vp-toc" aria-label={ui.tocAria}>
+          <p className="vp-toc-title">{ui.toc}</p>
           <ul className="vp-toc-list">
             {SECTIONS.map(s => (
               <li key={s.id}>
@@ -448,8 +679,8 @@ export default function PrivacidadPage() {
 
         {/* Footer */}
         <div className="vp-footer">
-          <p>© {new Date().getFullYear()} Neuropsicología y Terapias SANTI · Todos los derechos reservados</p>
-          <a href="/terminos">Ver Términos de Servicio →</a>
+          <p>© {new Date().getFullYear()} Neuropsicología y Terapias SANTI · {ui.rights}</p>
+          <a href="/terminos">{ui.terms}</a>
         </div>
       </div>
     </div>
