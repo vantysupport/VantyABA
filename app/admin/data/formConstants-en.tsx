@@ -476,3 +476,351 @@ export const ADOS2_DATA_EN = [
     ]
   }
 ]
+
+export const VINELAND3_DATA_EN = [
+  {
+    title: "1. General Information",
+    icon: <Users size={20}/>,
+    questions: [
+      { id: "fecha_eval_vineland", label: "Evaluation date", type: "date", required: true },
+      { id: "informante_vineland", label: "Informant", type: "select", options: ["Mother", "Father", "Both", "Primary caregiver", "Teacher"] },
+      { id: "forma_aplicacion", label: "Administration form", type: "select", options: ["Semi-structured interview", "Parent form", "Teacher form"] },
+    ]
+  },
+  {
+    title: "2. Communication Domain",
+    description: "Receptive, expressive and written skills",
+    icon: <MessageCircle size={20}/>,
+    questions: [
+      { id: "com_receptiva", label: "Do they understand when told 'no'?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "com_sigue_instrucciones", label: "Do they follow simple instructions?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "com_entiende_2pasos", label: "Do they follow 2-step instructions?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "com_expresiva_palabras", label: "Do they use words to ask for things?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "com_frases_completas", label: "Do they use complete sentences of 4+ words?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "com_cuenta_experiencias", label: "Do they recount experiences in detail?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "com_escrita", label: "Do they write their name?", type: "radio", options: ["Usually", "Sometimes", "Never", "N/A"] },
+      { id: "com_notas", label: "Communication observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "3. Daily Living Domain",
+    description: "Personal, domestic and community autonomy",
+    icon: <Home size={20}/>,
+    questions: [
+      { id: "vida_come_solo", label: "Do they eat alone with a spoon/fork?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "vida_bebe_vaso", label: "Do they drink from a cup without spilling?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "vida_lava_manos", label: "Do they wash their hands alone?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "vida_viste_superior", label: "Do they put on upper clothing alone?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "vida_bano", label: "Do they use the bathroom independently?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "vida_tareas_casa", label: "Do they help with simple household chores?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "vida_dinero", label: "Do they understand the concept of money?", type: "radio", options: ["Usually", "Sometimes", "Never", "N/A"] },
+      { id: "vida_notas", label: "Daily living observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "4. Socialization Domain",
+    description: "Interpersonal relationships, play and emotional management",
+    icon: <Heart size={20}/>,
+    questions: [
+      { id: "soc_sonrie_familiar", label: "Do they smile at familiar people?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "soc_muestra_afecto", label: "Do they show affection to caregivers?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "soc_juega_otros", label: "Do they play interactively with other children?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "soc_comparte", label: "Do they share toys spontaneously?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "soc_respeta_turnos", label: "Do they take turns in games?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "soc_empatia", label: "Do they show concern for others?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "soc_amistad", label: "Do they have close friends?", type: "radio", options: ["Usually", "Sometimes", "Never", "N/A"] },
+      { id: "soc_notas", label: "Socialization observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "5. Motor Skills Domain",
+    description: "Gross and fine motor skills",
+    icon: <Activity size={20}/>,
+    questions: [
+      { id: "motor_camina", label: "Do they walk without help?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "motor_corre", label: "Do they run in a coordinated way?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "motor_salta", label: "Do they jump with both feet?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "motor_pelota", label: "Do they catch a ball?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "motor_pinza", label: "Do they use a pincer grip (thumb-index)?", type: "radio", options: ["Usually", "Sometimes", "Never"] },
+      { id: "motor_dibuja", label: "Do they draw recognizable shapes?", type: "radio", options: ["Usually", "Sometimes", "Never", "N/A"] },
+      { id: "motor_notas", label: "Motor observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "6. Adaptive Behavior Analysis (AI)",
+    icon: <Sparkles size={20}/>,
+    hasIA: true,
+    questions: [
+      { id: "puntuacion_comunicacion", label: "Communication Score", type: "number", readonly: true },
+      { id: "puntuacion_vida_diaria", label: "Daily Living Score", type: "number", readonly: true },
+      { id: "puntuacion_socializacion", label: "Socialization Score", type: "number", readonly: true },
+      { id: "indice_conducta_adaptativa", label: "Overall Adaptive Behavior Index", type: "number", readonly: true },
+      { id: "analisis_vineland_ia", label: "Comprehensive AI Analysis", type: "textarea", aiGenerated: true },
+      { id: "areas_fortaleza", label: "Areas of Strength", type: "textarea", aiGenerated: true },
+      { id: "areas_prioridad", label: "Priority Intervention Areas", type: "textarea", aiGenerated: true },
+      { id: "informe_padres_vineland", label: "Report for Parents", type: "textarea", aiGenerated: true },
+    ]
+  }
+]
+
+export const WISCV_DATA_EN = [
+  {
+    title: "1. Evaluation Information",
+    icon: <Brain size={20}/>,
+    questions: [
+      { id: "fecha_eval_wisc", label: "Evaluation date", type: "date", required: true },
+      { id: "evaluador_wisc", label: "Evaluating psychologist", type: "text", required: true },
+      { id: "edad_cronologica", label: "Chronological age (years, months)", type: "text", placeholder: "E.g.: 7 years, 3 months" },
+      { id: "motivo_eval_cognitiva", label: "Reason for evaluation", type: "textarea" },
+    ]
+  },
+  {
+    title: "2. Verbal Comprehension Index (VCI)",
+    description: "Verbal reasoning, concept formation",
+    icon: <MessageCircle size={20}/>,
+    questions: [
+      { id: "icv_semejanzas", label: "Similarities - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "icv_vocabulario", label: "Vocabulary - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "icv_informacion", label: "Information - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "icv_comprension", label: "Comprehension - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "icv_total", label: "VCI Total", type: "number", readonly: true },
+      { id: "icv_percentil", label: "VCI Percentile", type: "number", readonly: true },
+      { id: "icv_notas", label: "VCI observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "3. Visual Spatial Index (VSI)",
+    description: "Spatial and visual reasoning",
+    icon: <Eye size={20}/>,
+    questions: [
+      { id: "ive_cubos", label: "Block Design - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "ive_puzles", label: "Visual Puzzles - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "ive_total", label: "VSI Total", type: "number", readonly: true },
+      { id: "ive_percentil", label: "VSI Percentile", type: "number", readonly: true },
+      { id: "ive_notas", label: "VSI observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "4. Fluid Reasoning Index (FRI)",
+    description: "Logical reasoning and problem solving",
+    icon: <Target size={20}/>,
+    questions: [
+      { id: "irf_matrices", label: "Matrix Reasoning - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "irf_balanzas", label: "Figure Weights - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "irf_aritmetica", label: "Arithmetic - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "irf_total", label: "FRI Total", type: "number", readonly: true },
+      { id: "irf_percentil", label: "FRI Percentile", type: "number", readonly: true },
+      { id: "irf_notas", label: "FRI observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "5. Working Memory Index (WMI)",
+    description: "Short-term auditory memory",
+    icon: <Brain size={20}/>,
+    questions: [
+      { id: "imt_digitos", label: "Digit Span - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "imt_imagenes", label: "Picture Span - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "imt_total", label: "WMI Total", type: "number", readonly: true },
+      { id: "imt_percentil", label: "WMI Percentile", type: "number", readonly: true },
+      { id: "imt_notas", label: "WMI observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "6. Processing Speed Index (PSI)",
+    description: "Perceptual speed and accuracy",
+    icon: <Activity size={20}/>,
+    questions: [
+      { id: "ivp_claves", label: "Coding - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "ivp_busqueda", label: "Symbol Search - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "ivp_cancelacion", label: "Cancellation - Scaled score", type: "number", min: 1, max: 19 },
+      { id: "ivp_total", label: "PSI Total", type: "number", readonly: true },
+      { id: "ivp_percentil", label: "PSI Percentile", type: "number", readonly: true },
+      { id: "ivp_notas", label: "PSI observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "7. Comprehensive Cognitive Analysis (AI)",
+    icon: <Sparkles size={20}/>,
+    hasIA: true,
+    questions: [
+      { id: "ci_total", label: "Full Scale IQ", type: "number", min: 40, max: 160, readonly: true },
+      { id: "ci_percentil", label: "Full Scale IQ Percentile", type: "number", readonly: true },
+      { id: "clasificacion_ci", label: "Descriptive Classification", type: "text", readonly: true },
+      { id: "perfil_cognitivo_ia", label: "Cognitive Profile Analysis", type: "textarea", aiGenerated: true },
+      { id: "fortalezas_debilidades", label: "Strengths and Weaknesses", type: "textarea", aiGenerated: true },
+      { id: "implicaciones_educativas", label: "Educational Implications", type: "textarea", aiGenerated: true },
+      { id: "recomendaciones_cognitivas", label: "Specific Recommendations", type: "textarea", aiGenerated: true },
+      { id: "informe_padres_wisc", label: "Report for Parents", type: "textarea", aiGenerated: true },
+    ]
+  }
+]
+
+export const BASC3_DATA_EN = [
+  {
+    title: "1. Evaluation Information",
+    icon: <Activity size={20}/>,
+    questions: [
+      { id: "fecha_eval_basc", label: "Evaluation date", type: "date", required: true },
+      { id: "informante_basc", label: "Informant", type: "select", options: ["Father", "Mother", "Both", "Teacher", "Self-report"] },
+      { id: "forma_basc", label: "Form administered", type: "select", options: ["Preschool (2-5 years)", "Children (6-11 years)", "Adolescents (12-21 years)"] },
+    ]
+  },
+  {
+    title: "2. Clinical Scales - Externalizing Problems",
+    description: "Behaviors directed outward",
+    icon: <Activity size={20}/>,
+    questions: [
+      { id: "basc_hiperactividad", label: "Hyperactivity", type: "range", min: 1, max: 5, labels: ["Never", "Rarely", "Sometimes", "Often", "Very often"] },
+      { id: "basc_agresion", label: "Aggression", type: "range", min: 1, max: 5, labels: ["Never", "Rarely", "Sometimes", "Often", "Very often"] },
+      { id: "basc_problemas_conducta", label: "Conduct problems", type: "range", min: 1, max: 5, labels: ["Never", "Rarely", "Sometimes", "Often", "Very often"] },
+      { id: "basc_notas_extern", label: "Externalizing observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "3. Clinical Scales - Internalizing Problems",
+    description: "Behaviors directed inward",
+    icon: <Heart size={20}/>,
+    questions: [
+      { id: "basc_ansiedad", label: "Anxiety", type: "range", min: 1, max: 5, labels: ["Never", "Rarely", "Sometimes", "Often", "Very often"] },
+      { id: "basc_depresion", label: "Depression", type: "range", min: 1, max: 5, labels: ["Never", "Rarely", "Sometimes", "Often", "Very often"] },
+      { id: "basc_somatizacion", label: "Somatization", type: "range", min: 1, max: 5, labels: ["Never", "Rarely", "Sometimes", "Often", "Very often"] },
+      { id: "basc_notas_intern", label: "Internalizing observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "4. Adaptive Scales",
+    description: "Positive and adaptive skills",
+    icon: <Activity size={20}/>,
+    questions: [
+      { id: "basc_habilidades_sociales", label: "Social skills", type: "range", min: 1, max: 5, labels: ["Very low", "Low", "Average", "High", "Very high"] },
+      { id: "basc_liderazgo", label: "Leadership", type: "range", min: 1, max: 5, labels: ["Very low", "Low", "Average", "High", "Very high"] },
+      { id: "basc_habilidades_estudio", label: "Study skills", type: "range", min: 1, max: 5, labels: ["Very low", "Low", "Average", "High", "Very high"] },
+      { id: "basc_adaptabilidad", label: "Adaptability", type: "range", min: 1, max: 5, labels: ["Very low", "Low", "Average", "High", "Very high"] },
+      { id: "basc_notas_adapt", label: "Adaptive observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "5. Comprehensive Behavioral Analysis (AI)",
+    icon: <Sparkles size={20}/>,
+    hasIA: true,
+    questions: [
+      { id: "indice_sintomas_conductuales", label: "Behavioral Symptoms Index", type: "number", readonly: true },
+      { id: "perfil_riesgo", label: "Risk Profile", type: "text", readonly: true },
+      { id: "analisis_basc_ia", label: "AI Behavioral Analysis", type: "textarea", aiGenerated: true },
+      { id: "areas_preocupacion", label: "Areas of Concern", type: "textarea", aiGenerated: true },
+      { id: "fortalezas_conductuales", label: "Behavioral Strengths", type: "textarea", aiGenerated: true },
+      { id: "plan_intervencion_conductual", label: "Intervention Plan", type: "textarea", aiGenerated: true },
+      { id: "informe_padres_basc", label: "Report for Parents", type: "textarea", aiGenerated: true },
+    ]
+  }
+]
+
+export const ABLLS_R_DATA_EN = [
+  {
+    title: "1. Evaluation Data",
+    icon: <BookOpen size={20}/>,
+    questions: [
+      { id: "fecha_eval_ablls", label: "Evaluation date", type: "date", required: true },
+      { id: "evaluador_ablls", label: "Evaluator", type: "text", required: true },
+      { id: "protocolo_usado", label: "Protocol used", type: "select", options: ["Full ABLLS-R", "Partial ABLLS-R (selected areas)", "ABLLS-R Follow-up"] },
+      { id: "contexto_eval", label: "Evaluation context", type: "select", options: ["Individual session", "Classroom observation", "Parent interview", "Combined"] },
+      { id: "duracion_ablls", label: "Total duration (minutes)", type: "number", min: 30, max: 240 },
+    ]
+  },
+  {
+    title: "2. Cooperation and Reinforcers",
+    description: "The child's willingness to participate and what motivates them",
+    icon: <Heart size={20}/>,
+    questions: [
+      { id: "coop_sigue_instrucciones", label: "Follows simple instructions from the adult", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "coop_permanece_tarea", label: "Stays on task without escaping", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "coop_acepta_reforzador", label: "Accepts varied reinforcers (food, toys, social)", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "coop_tolerancia_frustracion", label: "Tolerates frustration and error", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "coop_transiciones", label: "Tolerates activity changes/transitions", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "coop_notas", label: "Observations on cooperation and motivation", type: "textarea" },
+    ]
+  },
+  {
+    title: "3. Receptive Language (Comprehension)",
+    description: "Ability to understand verbal language",
+    icon: <Eye size={20}/>,
+    questions: [
+      { id: "rec_responde_nombre", label: "Responds when called by their name", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "rec_sigue_1paso", label: "Follows 1-step instructions without a gesture", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "rec_sigue_2pasos", label: "Follows 2-step instructions", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "rec_identifica_objetos", label: "Identifies objects/images by name", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "rec_identifica_acciones", label: "Identifies actions in images", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "rec_conceptos_basicos", label: "Understands basic concepts (colors, sizes, positions)", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "rec_notas", label: "Receptive language observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "4. Expressive Language",
+    description: "Verbal and non-verbal communication skills",
+    icon: <MessageCircle size={20}/>,
+    questions: [
+      { id: "exp_solicita_objetos", label: "Requests desired objects (mand)", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "exp_etiqueta_objetos", label: "Names/labels objects (tact)", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "exp_responde_preguntas", label: "Answers simple questions (What is this?)", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "exp_combina_palabras", label: "Combines 2 or more words spontaneously", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "exp_inicia_conversacion", label: "Initiates conversation or verbal interaction", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "exp_ecolalia", label: "Echolalia level (0=no echolalia, 4=predominant)", type: "range", min: 0, max: 4, labels: ["No echolalia", "Mild", "Moderate", "Marked", "Predominant"] },
+      { id: "exp_notas", label: "Expressive language observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "5. Play and Socialization Skills",
+    description: "Interaction with peers, adults and objects",
+    icon: <Users size={20}/>,
+    questions: [
+      { id: "social_juego_solo", label: "Appropriate independent play with objects", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "social_juego_paralelo", label: "Parallel play alongside other children", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "social_juego_cooperativo", label: "Cooperative and interactive play with peers", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "social_imita_pares", label: "Imitates peers' behaviors spontaneously", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "social_busca_interaccion", label: "Seeks interaction with adults and children", type: "range", min: 0, max: 4, labels: ["Never", "Rarely", "Sometimes", "Often", "Always"] },
+      { id: "social_notas", label: "Play and socialization observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "6. Functional Academic Skills",
+    description: "Pre-academics, reading, writing and basic math",
+    icon: <Award size={20}/>,
+    questions: [
+      { id: "acad_discrimina_formas", label: "Discriminates and matches shapes, colors, sizes", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "acad_secuencia_numeros", label: "Sequences and recognizes numbers 1 to 10", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "acad_reconoce_letras", label: "Recognizes letters of the alphabet", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "acad_escritura_nombre", label: "Writes or copies their name", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "acad_lectura_funcional", label: "Reads functional words or phrases", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "acad_notas", label: "Academic observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "7. Self-Care and Daily Living Skills",
+    description: "Independence in basic routines",
+    icon: <Activity size={20}/>,
+    questions: [
+      { id: "avd_alimentacion", label: "Eats independently with utensils", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "avd_bano", label: "Toilet control and bathroom use", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "avd_vestido", label: "Dresses and undresses with simple garments", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "avd_higiene", label: "Personal hygiene (hand washing, brushing)", type: "range", min: 0, max: 4, labels: ["Not achieved", "With full assistance", "With partial assistance", "Independent with errors", "Independent"] },
+      { id: "avd_notas", label: "Self-care observations", type: "textarea" },
+    ]
+  },
+  {
+    title: "8. ABLLS-R Profile Analysis (AI)",
+    icon: <Sparkles size={20}/>,
+    hasIA: true,
+    questions: [
+      { id: "puntaje_cooperacion",   label: "Cooperation Score (calculated)", type: "number", readonly: true },
+      { id: "puntaje_receptivo",     label: "Receptive Language Score (calculated)", type: "number", readonly: true },
+      { id: "puntaje_expresivo",     label: "Expressive Language Score (calculated)", type: "number", readonly: true },
+      { id: "puntaje_social",        label: "Play/Social Score (calculated)", type: "number", readonly: true },
+      { id: "puntaje_academico",     label: "Academic Score (calculated)", type: "number", readonly: true },
+      { id: "puntaje_avd",           label: "Daily Living Score (calculated)", type: "number", readonly: true },
+      { id: "nivel_habilidades",     label: "Overall skill level", type: "text", readonly: true },
+      { id: "analisis_ablls_ia",     label: "ABLLS-R Profile Analysis (AI)", type: "textarea", aiGenerated: true },
+      { id: "objetivos_prioritarios",label: "Priority Intervention Goals", type: "textarea", aiGenerated: true },
+      { id: "informe_padres_ablls",  label: "Report for Family", type: "textarea", aiGenerated: true },
+    ]
+  }
+]
