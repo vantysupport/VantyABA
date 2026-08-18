@@ -127,6 +127,19 @@ const CLINICAL_FORMS = [
 ]
 
 // Merge NeuroForms from neurodivergentForms.ts + Clinical forms
+const CLINICAL_FORMS_EN: Record<string, { title: string; subtitle: string }> = {
+  aba: { title: 'ABA Session', subtitle: 'Behavioral session record' },
+  entorno_hogar: { title: 'Home Environment', subtitle: 'Observation of the family environment' },
+  anamnesis: { title: 'Clinical History', subtitle: 'Relevant client data and family context' },
+  ados2: { title: 'ADOS-2', subtitle: 'Diagnostic results record' },
+  vineland3: { title: 'Vineland-3', subtitle: 'Adaptive behavior record' },
+  wiscv: { title: 'WISC-V', subtitle: 'Intelligence record (6-16 years)' },
+  basc3: { title: 'BASC-3', subtitle: 'Behavioral evaluation record' },
+  abllsr: { title: 'ABLLS-R', subtitle: 'Assessment of basic language and learning skills' },
+}
+function dTitle(fm: any, loc: string) { if (loc !== 'en') return fm.title; if (fm.isClinicalForm) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.title) || fm.title; return CLINICAL_FORMS_EN[fm.id]?.title || fm.title }
+function dSubtitle(fm: any, loc: string) { if (loc !== 'en') return fm.subtitle; if (fm.isClinicalForm) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.subtitle) || fm.subtitle; return CLINICAL_FORMS_EN[fm.id]?.subtitle || fm.subtitle }
+
 const ALL_UNIFIED_FORMS = [
   ...CLINICAL_FORMS,
   ...ALL_FORMS.map((f: FormDefinition) => ({ ...f, formKey: null, isClinicalForm: true })),
@@ -707,7 +720,7 @@ function SendFormModal({ form, children, onSend, onClose }: any) {
 
         <div className="bg-sky-50 rounded-xl p-4 mb-6 border border-sky-100">
           <p className="text-xs font-bold text-sky-400 mb-1">{t('evaluaciones.titulo')}</p>
-          <p className="font-bold text-sky-800">{form.title}</p>
+          <p className="font-bold text-sky-800">{dTitle(form, locale)}</p>
           <p className="text-xs text-sky-600 mt-0.5">{form.estimatedMinutes} min aprox.</p>
         </div>
 
@@ -1015,7 +1028,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
         await supabase.from('reportes_generados').insert([{
           child_id:         savedChildId,
           tipo_reporte:     reportType,
-          titulo:           `${form.title} - ${childName}`,
+          titulo:           `${dTitle(form, locale)} - ${childName}`,
           nombre_archivo:   json.fileName,
           file_data:        json.fileData,
           mime_type:        json.mimeType,
@@ -1051,7 +1064,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
         </div>
         <div className="text-center">
           <h2 className="text-2xl font-bold text-slate-800 mb-2" style={{ color: "var(--text-primary)" }}>{t('evaluaciones.formGuardado')}</h2>
-          <p className="text-slate-500 font-medium">{form.title}</p>
+          <p className="text-slate-500 font-medium">{dTitle(form, locale)}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
           <button
@@ -1117,8 +1130,8 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
                 {(() => { const FI = formIcon(form); return <FI size={13} /> })()}
                 {form.category?.toUpperCase()}
               </p>
-              <h2 className="font-bold text-xl">{form.title}</h2>
-              <p className="text-white/80 text-sm mt-0.5">{form.subtitle}</p>
+              <h2 className="font-bold text-xl">{dTitle(form, locale)}</h2>
+              <p className="text-white/80 text-sm mt-0.5">{dSubtitle(form, locale)}</p>
             </div>
             {initialChildId ? (
               <div className="bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-xl px-4 py-2.5 text-sm font-bold text-white min-w-[180px] text-center">
@@ -1232,8 +1245,8 @@ function FormCard({ form, onStart, onSend, catInfo }: any) {
               <Icon size={18} />
             </div>
             <div className="min-w-0">
-              <h3 className="font-bold text-sm leading-tight truncate" style={{ color: 'var(--text-primary)' }}>{form.title}</h3>
-              <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{form.subtitle}</p>
+              <h3 className="font-bold text-sm leading-tight truncate" style={{ color: 'var(--text-primary)' }}>{dTitle(form, locale)}</h3>
+              <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{dSubtitle(form, locale)}</p>
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
