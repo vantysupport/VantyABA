@@ -261,7 +261,7 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-bold" style={{ color: V.tm }}>
-                  {diaSeleccionado === hoy ? 'HOY' : 'DÍA SELECCIONADO'}
+                  {diaSeleccionado === hoy ? 'HOY' : t('auto.misCitasView.diaSeleccionado')}
                 </p>
                 <p className="text-sm font-bold capitalize truncate" style={{ color: V.tp }}>
                   {diaSeleccionado

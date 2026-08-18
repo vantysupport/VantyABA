@@ -2336,7 +2336,8 @@
       "productoActualizado": "Product updated",
       "productoCreado": "Product created",
       "eliminar": "Delete \"{v1}\"?",
-      "productoEliminado": "Product deleted"
+      "productoEliminado": "Product deleted",
+      "fisico": "📦 Physical"
     },
     "homeView": {
       "alcanzo": " achieved ",
@@ -2431,13 +2432,16 @@
       "cancelar2": "Cancel"
     },
     "fonemasPractica": {
-      "posicionDeLaBoca": "Mouth position"
+      "posicionDeLaBoca": "Mouth position",
+      "logrado": "Achieved!"
     },
     "dashboardHome": {
       "sinProgramasActivos": "No active programs"
     },
     "dashboardDirectora": {
-      "noHaySesionesProgramadas": "No scheduled sessions"
+      "noHaySesionesProgramadas": "No scheduled sessions",
+      "30Dias": "30 days",
+      "90Dias": "90 days"
     },
     "agendaSesiones": {
       "uuidDelTerapeuta": "Therapist UUID",
@@ -2736,7 +2740,9 @@
       "tuPedidoFueRegistradoNos": "Your order was registered. We will contact you to confirm payment and delivery.",
       "elPagoSeRealizaAl": "Payment is made when picking up the order at the center (cash or yape). For digital items we will send you the file via WhatsApp after confirming payment.",
       "alConfirmarElCentroRecibira": "On confirming, the center will receive your order and contact you",
-      "catalogo": "Catalog"
+      "catalogo": "Catalog",
+      "fisicos": "📦 Physical",
+      "fisico": "📦 Physical"
     },
     "vADIAgentChat": {
       "vadiAsistenteClinicoIa": "VADI — AI Clinical Assistant"
@@ -2745,7 +2751,8 @@
       "misSesiones": "My sessions",
       "lasCitasSonProgramadasPor": "Appointments are scheduled by the center's team. For any change contact us directly.",
       "citasProximasRealizadas": "{v1} appointments · {v2} upcoming · {v3} completed",
-      "citas": "{v1} appointments"
+      "citas": "{v1} appointments",
+      "diaSeleccionado": "SELECTED DAY"
     },
     "notifWhatsAppPanel": {
       "ingresaTuNumeroDeWhatsapp": "Enter your WhatsApp number with the country code to receive important alerts from the center.",
@@ -2772,6 +2779,9 @@
     },
     "secretariaHome": {
       "citasHoy": "{v1} appointments today"
+    },
+    "forestTimer": {
+      "7Dias": "7 days"
     }
   }
 }

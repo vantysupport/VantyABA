@@ -63,7 +63,7 @@ export default function DashboardDirectora() {
           {['7d', '30d', '90d'].map(p => (
             <button key={p} onClick={() => setPeriodo(p)}
               className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${periodo === p ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border hover:bg-blue-50'}`}>
-              {p === '7d' ? '7 días' : p === '30d' ? '30 días' : '90 días'}
+              {p === '7d' ? '7 días' : p === '30d' ? t('auto.dashboardDirectora.30Dias') : t('auto.dashboardDirectora.90Dias')}
             </button>
           ))}
         </div>

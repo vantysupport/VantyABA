@@ -349,7 +349,7 @@ export default function StoreView({ profile }: { profile: any }) {
               {['todos', 'fisico', 'digital'].map(f => (
                 <button key={f} onClick={() => setFilterTipo(f)}
                   className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${filterTipo === f ? 'bg-sky-600 text-white border-sky-600' : 'hover:border-sky-300'}`} style={filterTipo === f ? {} : { background: 'var(--c-card)', color: 'var(--c-text-muted)', borderColor: 'var(--c-border)' }}>
-                  {f === 'todos' ? 'Todo' : f === 'fisico' ? '📦 Físicos' : '📄 Digitales'}
+                  {f === 'todos' ? 'Todo' : f === 'fisico' ? t('auto.storeView.fisicos') : '📄 Digitales'}
                 </button>
               ))}
               <div className="w-px self-stretch mx-1" style={{ background: "var(--c-border)" }} />
@@ -548,7 +548,7 @@ function ProductDetail({ product: p, onClose, onAdd, inCart, justAdded }: any) {
           </button>
           <div style={{ position:'absolute', top:12, left:12, display:'flex', gap:6 }}>
             <span style={{ fontSize:10, fontWeight:800, padding:'3px 10px', borderRadius:20, color:'#fff', background: p.tipo === 'digital' ? '#0284c7' : '#475569' }}>
-              {p.tipo === 'digital' ? '📄 Digital' : '📦 Físico'}
+              {p.tipo === 'digital' ? '📄 Digital' : t('auto.storeView.fisico')}
             </span>
           </div>
         </div>

@@ -412,7 +412,7 @@ export default function FonemasPractica({ childId }: { childId: string }) {
 
         <div>
           <button className={`fon-logro ${esLogrado ? 'on' : 'off'}`} onClick={() => toggleLogrado(f.id)}>
-            <Check size={16} /> {esLogrado ? '¡Logrado!' : 'Marcar como logrado'}
+            <Check size={16} /> {esLogrado ? t('auto.fonemasPractica.logrado') : 'Marcar como logrado'}
           </button>
         </div>
 

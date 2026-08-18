@@ -2348,7 +2348,8 @@
    "productoActualizado": "Producto actualizado",
    "productoCreado": "Producto creado",
    "eliminar": "¿Eliminar \"{v1}\"?",
-   "productoEliminado": "Producto eliminado"
+   "productoEliminado": "Producto eliminado",
+   "fisico": "📦 Físico"
   },
   "userManagementView": {
    "noPodesCambiarElRol": "No podés cambiar el rol de un Director.",
@@ -2474,7 +2475,9 @@
    "tuPedidoFueRegistradoNos": "Tu pedido fue registrado. Nos pondremos en contacto contigo para confirmar el pago y la entrega.",
    "elPagoSeRealizaAl": "El pago se realiza al recoger el pedido en el centro (efectivo o yape). Para artículos digitales te enviaremos el archivo por WhatsApp tras confirmar el pago.",
    "alConfirmarElCentroRecibira": "Al confirmar, el centro recibirá tu pedido y te contactará",
-   "catalogo": "Catálogo"
+   "catalogo": "Catálogo",
+   "fisicos": "📦 Físicos",
+   "fisico": "📦 Físico"
   },
   "dashboardGraficasABA": {
    "sinSesiones": " Sin sesiones",
@@ -2495,13 +2498,16 @@
    "cancelar2": "Cancelar"
   },
   "fonemasPractica": {
-   "posicionDeLaBoca": "Posición de la boca"
+   "posicionDeLaBoca": "Posición de la boca",
+   "logrado": "¡Logrado!"
   },
   "dashboardHome": {
    "sinProgramasActivos": "Sin programas activos"
   },
   "dashboardDirectora": {
-   "noHaySesionesProgramadas": "No hay sesiones programadas"
+   "noHaySesionesProgramadas": "No hay sesiones programadas",
+   "30Dias": "30 días",
+   "90Dias": "90 días"
   },
   "agendaSesiones": {
    "uuidDelTerapeuta": "UUID del terapeuta",
@@ -2652,12 +2658,15 @@
    "familiasComoGaleriaPorFonema": "familias como galería por fonema. Si un fonema no tiene imágenes propias, se usa el sticker por defecto."
   },
   "sugerenciasPanel": {},
-  "forestTimer": {},
+  "forestTimer": {
+   "7Dias": "7 días"
+  },
   "misCitasView": {
    "misSesiones": "Mis sesiones",
    "lasCitasSonProgramadasPor": "Las citas son programadas por el equipo del centro. Para cualquier cambio contáctanos directamente.",
    "citasProximasRealizadas": "{v1} citas · {v2} próximas · {v3} realizadas",
-   "citas": "{v1} citas"
+   "citas": "{v1} citas",
+   "diaSeleccionado": "DÍA SELECCIONADO"
   },
   "miAgenda": {
    "sinCitasEsteDia": "Sin citas este día",

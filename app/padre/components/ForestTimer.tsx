@@ -352,7 +352,7 @@ export default function ForestTimer({ childId }: { childId: string }) {
             <div className="ft-filters">
               {(['hoy', 'semana', 'todo'] as const).map(f => (
                 <button key={f} className={`ft-filter ${bosqueFiltro === f ? 'on' : ''}`} onClick={() => setBosqueFiltro(f)}>
-                  {f === 'hoy' ? 'Hoy' : f === 'semana' ? '7 días' : 'Todo'}
+                  {f === 'hoy' ? 'Hoy' : f === 'semana' ? t('auto.forestTimer.7Dias') : 'Todo'}
                 </button>
               ))}
             </div>
