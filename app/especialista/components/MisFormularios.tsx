@@ -34,6 +34,20 @@ const CLINICAL_FORMS: any[] = [
   { id: 'basc3',        formKey: 'basc3',        title: 'BASC-3',                         subtitle: 'Registro de evaluación conductual',                    category: 'conductual', icon: '📈', estimatedMinutes: 10, sections: BASC3_DATA,        targetRole: 'admin', description: 'Corre en plataforma oficial BASC-3. Aquí solo registrá T-scores y escalas.', tags: ['Conductual', 'BASC', 'Emocional'], evalType: 'BASC3', externalPlatform: true },
 ]
 
+const CLINICAL_FORMS_EN: Record<string, { title: string; subtitle: string; description: string }> = {
+  anamnesis: { title: 'Clinical History', subtitle: 'Relevant client data and family context', description: 'Complete patient clinical history, family background and early development' },
+  aba: { title: 'ABA Session', subtitle: 'Behavioral session record', description: 'Structured Applied Behavior Analysis session record' },
+  entorno_hogar: { title: 'Home Environment', subtitle: 'Observation of the family environment', description: "Analysis of the family environment and its impact on the child's development" },
+  brief2: { title: 'BRIEF-2', subtitle: 'Executive Functions Assessment', description: 'Standardized professional assessment of executive functions' },
+  ados2: { title: 'ADOS-2', subtitle: 'Diagnostic results record', description: 'Runs on the official ADOS-2 platform. Here only record the results and scores.' },
+  vineland3: { title: 'Vineland-3', subtitle: 'Adaptive behavior record', description: 'Runs on the official Vineland-3 platform. Here only record composite scores and profile.' },
+  wiscv: { title: 'WISC-V', subtitle: 'Intelligence record (6-16 years)', description: 'Runs on the official WISC-V platform. Here only record IQ and percentiles.' },
+  basc3: { title: 'BASC-3', subtitle: 'Behavioral evaluation record', description: 'Runs on the official BASC-3 platform. Here only record T-scores and scales.' },
+}
+function dTitle(fm: any, loc: string) { if (loc !== 'en') return fm.title; if (fm.isSoft) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.title) || fm.title; return CLINICAL_FORMS_EN[fm.id]?.title || fm.title }
+function dSubtitle(fm: any, loc: string) { if (loc !== 'en') return fm.subtitle; if (fm.isSoft) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.subtitle) || fm.subtitle; return CLINICAL_FORMS_EN[fm.id]?.subtitle || fm.subtitle }
+function dDesc(fm: any, loc: string) { if (loc !== 'en') return fm.description; if (fm.isSoft) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.description) || fm.description; return CLINICAL_FORMS_EN[fm.id]?.description || fm.description }
+
 const ALL_SPECIALIST_FORMS = [
   ...CLINICAL_FORMS,
   ...ALL_FORMS.map(f => ({ ...f, formKey: f.id, isSoft: true })),
@@ -314,7 +328,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
 
       await supabase.from('specialist_submissions').insert([{
         specialist_id: userId, child_id: childId, tipo: 'sesion',
-        titulo: `[${form.title}]`,
+        titulo: `[${dTitle(form, locale)}]`,
         contenido: Object.entries(responses).slice(0, 6).map(([k, v]) => `${k}: ${Array.isArray(v) ? (v as string[]).join(', ') : v}`).join('\n'),
         observaciones: aiAnalysis?.analisis_clinico || aiAnalysis?.resumen_ejecutivo || '',
         recomendaciones: Array.isArray(aiAnalysis?.recomendaciones) ? (aiAnalysis.recomendaciones as string[]).join('\n') : (aiAnalysis?.recomendaciones || ''),
@@ -328,7 +342,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
         if ((childData as any)?.parent_id) {
           await fetch('/api/admin/parent-messages', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es' },
-            body: JSON.stringify({ child_id: childId, parent_id: (childData as any).parent_id, source: form.isSoft ? 'neuroforma' : 'evaluacion', source_title: `Especialista: ${form.title}`, ai_message: msgToSend, actividades_casa: actividadToSend, ai_analysis: aiAnalysis, session_data: { form_type: form.formKey || form.id, responses, specialist_id: userId } , locale: localStorage.getItem('vanty_locale') || 'es' }),
+            body: JSON.stringify({ child_id: childId, parent_id: (childData as any).parent_id, source: form.isSoft ? 'neuroforma' : 'evaluacion', source_title: `Especialista: ${dTitle(form, locale)}`, ai_message: msgToSend, actividades_casa: actividadToSend, ai_analysis: aiAnalysis, session_data: { form_type: form.formKey || form.id, responses, specialist_id: userId } , locale: localStorage.getItem('vanty_locale') || 'es' }),
           }).catch(() => {})
         }
       }
@@ -386,8 +400,8 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <p className="text-white/70 text-xs font-bold mb-1">{form.icon} {(form.category || 'clínico').toUpperCase()}</p>
-                <h2 className="font-bold text-xl">{form.title}</h2>
-                <p className="text-white/80 text-sm mt-0.5">{form.subtitle}</p>
+                <h2 className="font-bold text-xl">{dTitle(form, locale)}</h2>
+                <p className="text-white/80 text-sm mt-0.5">{dSubtitle(form, locale)}</p>
               </div>
               <select value={childId} onChange={e => setChildId(e.target.value)}
                 className="bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:bg-white/30 transition-all min-w-[180px]">
@@ -684,8 +698,8 @@ export default function MisFormularios({ userId }: { userId: string }) {
                         {form.icon || '📋'}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-sm leading-tight truncate text-slate-800">{form.title}</h3>
-                        <p className="text-[11px] truncate mt-0.5 text-slate-400">{form.subtitle}</p>
+                        <h3 className="font-bold text-sm leading-tight truncate text-slate-800">{dTitle(form, locale)}</h3>
+                        <p className="text-[11px] truncate mt-0.5 text-slate-400">{dSubtitle(form, locale)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -713,11 +727,11 @@ export default function MisFormularios({ userId }: { userId: string }) {
                   {/* External warning */}
                   {isExternal && (
                     <p className="text-xs leading-relaxed mb-3 text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">
-                      ⚠️ {form.description}
+                      ⚠️ {dDesc(form, locale)}
                     </p>
                   )}
                   {!isExternal && (
-                    <p className="text-xs leading-relaxed mb-3 line-clamp-2 text-slate-500">{form.description}</p>
+                    <p className="text-xs leading-relaxed mb-3 line-clamp-2 text-slate-500">{dDesc(form, locale)}</p>
                   )}
 
                   {/* Tags + time */}
