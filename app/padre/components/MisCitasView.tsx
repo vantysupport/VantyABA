@@ -300,7 +300,7 @@ export default function MisCitasView({ profile, selectedChild, onCancelAppointme
                               {c.children?.name && <><Baby size={9}/> {c.children.name}</>}
                             </p>
                           </div>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${s.badge}`}>{s.label}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${s.badge}`}>{t('estado.' + c.status)}</span>
                         </div>
                         {roomUrl && (c.status === 'confirmed' || c.status === 'pending') && (
                           <a href={roomUrl} target="_blank" rel="noopener noreferrer"

@@ -2783,5 +2783,23 @@
     "forestTimer": {
       "7Dias": "7 days"
     }
+  },
+  "estado": {
+    "confirmed": "Confirmed",
+    "pending": "Pending",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "pending_approval": "Pending"
+  },
+  "fase": {
+    "linea_base": "Baseline",
+    "intervencion": "Intervention",
+    "mantenimiento": "Maintenance",
+    "dominado": "Mastered ✓"
+  },
+  "mood": {
+    "bien": "Good",
+    "regular": "Fair",
+    "dificil": "Hard"
   }
 }

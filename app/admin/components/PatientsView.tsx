@@ -313,6 +313,7 @@ const MOOD_CONFIG: Record<string, { Icon: any; label: string; bg: string; border
 }
 
 function ParentWellbeingCard({ childId }: { childId: string }) {
+  const { t } = useI18n()
   const [checkins, setCheckins] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(false)
@@ -392,7 +393,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
         {(() => { const MI = cfg.Icon; return <MI size={26} style={{ color: cfg.color, flexShrink: 0 }} /> })()}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-sm font-bold" style={{ color: cfg.color }}>{cfg.label}</p>
+            <p className="text-sm font-bold" style={{ color: cfg.color }}>{t('mood.' + ultimo.mood)}</p>
             <p className="text-[10px]" style={{ color: cfg.color, opacity: 0.75 }}>{fechaUltimo}</p>
           </div>
           {ultimo.nota && (
@@ -418,7 +419,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
                 {(() => { const MI = ccfg.Icon; return <MI size={15} style={{ color: ccfg.color, flexShrink: 0 }} /> })()}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>{ccfg.label}</p>
+                    <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>{t('mood.' + c.mood)}</p>
                     <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{fecha}</p>
                   </div>
                   {c.nota && (

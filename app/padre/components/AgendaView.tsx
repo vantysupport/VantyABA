@@ -144,7 +144,7 @@ export default function AgendaView({ selectedChild, onChangeView }: { selectedCh
                         <p style={{ fontSize:12,color:'var(--c-text-muted)',margin:'0 0 4px',display:'flex',alignItems:'center',gap:4 }}><Clock size={11}/>{fmt(cita.appointment_time)}</p>
                         {cita.notes&&<p style={{ fontSize:11,color:'var(--c-text-placeholder)',margin:0,fontStyle:'italic' }}>"{cita.notes}"</p>}
                       </div>
-                      <span style={{ display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:s.bg,color:s.text,flexShrink:0 }}><Icon size={11}/>{s.label}</span>
+                      <span style={{ display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:s.bg,color:s.text,flexShrink:0 }}><Icon size={11}/>{t('estado.' + cita.status)}</span>
                     </div>
                   )
                 })}
@@ -167,7 +167,7 @@ export default function AgendaView({ selectedChild, onChangeView }: { selectedCh
                         {fecha.toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})} · {fmt(cita.appointment_time)}
                       </span>
                       <span style={{ fontSize:11,fontWeight:600,color:'var(--c-text-placeholder)' }}>{cita.service_type||'Terapia'}</span>
-                      <span style={{ fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,background:s.bg,color:s.text }}>{s.label}</span>
+                      <span style={{ fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,background:s.bg,color:s.text }}>{t('estado.' + cita.status)}</span>
                     </div>
                   )
                 })}

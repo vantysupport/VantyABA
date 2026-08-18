@@ -13,6 +13,7 @@ import { useToast } from '@/components/Toast'
 
 // ── AppointmentRow ────────────────────────────────────────────────────────────
 function AppointmentRow({ apt }: { apt: any }) {
+  const { t } = useI18n()
   const fecha = new Date(apt.appointment_date + 'T00:00:00')
   const mesCorto = fecha.toLocaleString('es', { month: 'short' }).replace('.', '').toUpperCase()
   const dia = fecha.getDate()
@@ -52,7 +53,7 @@ function AppointmentRow({ apt }: { apt: any }) {
       {/* Status dot + label */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.dot }} />
-        <span className="text-[11px] font-semibold" style={{ color: s.dot }}>{s.label}</span>
+        <span className="text-[11px] font-semibold" style={{ color: s.dot }}>{t('estado.' + apt.status)}</span>
       </div>
     </div>
   )

@@ -2795,5 +2795,23 @@
   "whatsAppQRPanel": {},
   "portalPadres": {},
   "tareasHogar": {}
+ },
+ "estado": {
+  "confirmed": "Confirmada",
+  "pending": "Pendiente",
+  "cancelled": "Cancelada",
+  "completed": "Completada",
+  "pending_approval": "Pendiente"
+ },
+ "fase": {
+  "linea_base": "Línea base",
+  "intervencion": "Intervención",
+  "mantenimiento": "Mantenimiento",
+  "dominado": "Dominado ✓"
+ },
+ "mood": {
+  "bien": "Bien",
+  "regular": "Regular",
+  "dificil": "Difícil"
  }
 }

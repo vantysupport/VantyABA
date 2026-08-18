@@ -213,7 +213,7 @@ function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
             <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: area.bg, color: area.color }}>{prog.area}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: fase.color }}>{fase.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: fase.color }}>{t('fase.' + prog.fase_actual)}</span>
             {avgPct !== null && (
               <span style={{ fontSize: 10, color: 'var(--c-text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
                 <BarChart2 size={10} /> {avgPct}% últimas sesiones
