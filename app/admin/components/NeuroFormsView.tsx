@@ -17,6 +17,7 @@ import {
   ALL_FORMS, FORM_CATEGORIES, ADMIN_FORMS, PARENT_FORMS,
   type FormDefinition, type FormCategory
 } from '../data/neurodivergentForms'
+import { ALL_FORMS_EN, FORM_CATEGORIES_EN } from '../data/neurodivergentForms-en'
 
 // ─── DYNAMIC FORM RENDERER ───────────────────────────────────────────────────
 function DynamicFormQuestion({ question, value, onChange }: any) {
@@ -350,7 +351,9 @@ export default function NeuroFormsView() {
     if (!json.error) setSentForms(json.data || [])
   }
 
-  const filteredForms = ALL_FORMS.filter(f => {
+  const FORMS = locale === 'en' ? ALL_FORMS_EN : ALL_FORMS
+  const CATS: Record<string, any> = locale === 'en' ? FORM_CATEGORIES_EN : FORM_CATEGORIES
+  const filteredForms = FORMS.filter(f => {
     const matchCat = activeCategory === 'all' || f.category === activeCategory
     const matchSearch = !searchTerm || f.title.toLowerCase().includes(searchTerm.toLowerCase()) || f.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
     return matchCat && matchSearch
@@ -737,10 +740,10 @@ export default function NeuroFormsView() {
           <div className="flex flex-wrap gap-2 mb-6">
             <button onClick={() => setActiveCategory('all')}
               className={`px-3 py-2 rounded-xl font-bold text-xs whitespace-nowrap transition-all ${activeCategory === 'all' ? 'bg-slate-800 text-white' : 'bg-white border-2 border-slate-200 text-slate-600 hover:border-slate-400'}`}>
-              🗂️ <span className="hidden sm:inline">Todos </span>({ALL_FORMS.length})
+              🗂️ <span className="hidden sm:inline">Todos </span>({FORMS.length})
             </button>
-            {Object.entries(FORM_CATEGORIES).map(([key, cat]) => {
-              const count = ALL_FORMS.filter(f => f.category === key).length
+            {Object.entries(CATS).map(([key, cat]) => {
+              const count = FORMS.filter(f => f.category === key).length
               if (count === 0) return null
               return (
                 <button key={key} onClick={() => setActiveCategory(key)}
@@ -754,7 +757,7 @@ export default function NeuroFormsView() {
           {/* Forms grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {filteredForms.map(form => {
-              const cat = FORM_CATEGORIES[form.category]
+              const cat = CATS[form.category]
               return (
                 <div key={form.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden group">
                   {/* Card header */}
