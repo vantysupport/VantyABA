@@ -406,7 +406,7 @@ export default function MiAgenda({ isDark = false }: { isDark?: boolean }) {
                         </div>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0
                           ${isDark ? col.badgeDark : col.badgeLight}`}>
-                          {STATUS_LABEL[c.status] || 'Confirmada'}
+                          {t('estado.' + c.status)}
                         </span>
                       </div>
                     )
