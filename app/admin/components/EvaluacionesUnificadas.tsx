@@ -43,6 +43,8 @@ import {
   ANAMNESIS_DATA, ABA_DATA, ENTORNO_HOGAR_DATA, BRIEF2_DATA,
   ADOS2_DATA, VINELAND3_DATA, WISCV_DATA, BASC3_DATA, ABLLS_R_DATA
 } from '../data/formConstants'
+import { ANAMNESIS_DATA_EN, ABA_DATA_EN, ENTORNO_HOGAR_DATA_EN, BRIEF2_DATA_EN, ADOS2_DATA_EN, VINELAND3_DATA_EN, WISCV_DATA_EN, BASC3_DATA_EN, ABLLS_R_DATA_EN } from '../data/formConstants-en'
+import { ALL_FORMS_EN } from '../data/neurodivergentForms-en'
 import { calcularEdadNumerica } from '../utils/helpers'
 
 // ─── CATEGORÍAS ORDENADAS POR ÁREA CLÍNICA ──────────────────────────────────
@@ -767,12 +769,12 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
   // Get sections based on form type
   const getSections = () => {
 
-    if (isClinicalForm) return form.sections
+    if (isClinicalForm) return (locale === 'en' ? (ALL_FORMS_EN.find((x: any) => x.id === form.id)?.sections || form.sections) : form.sections)
     const en = locale === 'en'
     const formDataMap: Record<string, any> = {
-      anamnesis: ANAMNESIS_DATA, aba: ABA_DATA, entorno_hogar: ENTORNO_HOGAR_DATA,
-      brief2: BRIEF2_DATA, ados2: ADOS2_DATA, vineland3: VINELAND3_DATA,
-      wiscv: WISCV_DATA, basc3: BASC3_DATA, abllsr: ABLLS_R_DATA
+      anamnesis: en?ANAMNESIS_DATA_EN:ANAMNESIS_DATA, aba: en?ABA_DATA_EN:ABA_DATA, entorno_hogar: en?ENTORNO_HOGAR_DATA_EN:ENTORNO_HOGAR_DATA,
+      brief2: en?BRIEF2_DATA_EN:BRIEF2_DATA, ados2: en?ADOS2_DATA_EN:ADOS2_DATA, vineland3: en?VINELAND3_DATA_EN:VINELAND3_DATA,
+      wiscv: en?WISCV_DATA_EN:WISCV_DATA, basc3: en?BASC3_DATA_EN:BASC3_DATA, abllsr: en?ABLLS_R_DATA_EN:ABLLS_R_DATA
     }
     return formDataMap[form.formKey] || []
   }
