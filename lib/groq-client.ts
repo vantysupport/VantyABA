@@ -7,10 +7,12 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
 // Cadena de fallback: si el modelo principal falla por rate limit,
 // se prueba automáticamente el siguiente en la lista.
+// ACTUALIZADO (ago 2026): llama-3.3-70b-versatile y llama-3.1-8b-instant
+// fueron deprecados por Groq (anuncio 17/jun/2026). Reemplazados por gpt-oss.
 export const GROQ_MODELS = {
-  SMART: 'llama-3.3-70b-versatile',   // reportes, análisis clínicos
-  FAST:  'llama-3.1-8b-instant',      // chats rápidos
-  LONG:  'llama-3.3-70b-versatile',   // contexto largo
+  SMART: 'openai/gpt-oss-120b',   // reportes, análisis clínicos
+  FAST:  'openai/gpt-oss-20b',    // chats rápidos
+  LONG:  'openai/gpt-oss-120b',   // contexto largo
   // Modelo "compound" de Groq: agente con BÚSQUEDA WEB + ejecución de código integrados.
   // Útil cuando la pregunta requiere info actualizada (research reciente, news, datos en vivo).
   // Cuesta lo mismo que un modelo normal en el plan free pero tarda un poco más.
@@ -20,12 +22,10 @@ export const GROQ_MODELS = {
 // Orden de fallback cuando se alcanza el límite de tokens/día o el contexto es muy grande
 // Modelos ordenados por TPM (tokens-per-minute) DESCENDENTE — los grandes primero
 // para que el contexto largo no choque con límites de modelos chicos.
-// Solo modelos activos en producción (mayo 2026)
+// Solo modelos activos en producción (agosto 2026)
 const FALLBACK_CHAIN = [
-  'llama-3.3-70b-versatile',   // 12000 TPM · mejor calidad — modelo principal
-  'openai/gpt-oss-120b',       // alto TPM · máxima capacidad de contexto
-  'openai/gpt-oss-20b',        // medio · GPT-OSS ligero
-  'llama-3.1-8b-instant',      // 6000 TPM · último recurso (puede fallar con contexto grande)
+  'openai/gpt-oss-120b',        // alto TPM · máxima capacidad de contexto — modelo principal
+  'openai/gpt-oss-20b',         // medio/bajo · último recurso (puede fallar con contexto grande)
 ]
 
 export interface GroqMessage {
@@ -94,6 +94,16 @@ async function tryModel(
       const err = await res.json().catch(() => ({}))
       const rawMsg: string = err?.error?.message || '413'
       console.warn(`[Groq] Payload too large en ${model}: ${rawMsg}`)
+      return { rateLimited: true, model, rawMessage: rawMsg, isPerMinute: false, retryAfterSeconds: null }
+    }
+
+    // 404 = modelo inexistente o deprecado/decommissioned en la cuenta.
+    //       Lo tratamos como "no disponible" y probamos el siguiente modelo,
+    //       en vez de tirar un error duro al usuario final.
+    if (res.status === 404) {
+      const err = await res.json().catch(() => ({}))
+      const rawMsg: string = err?.error?.message || '404'
+      console.warn(`[Groq] Modelo no disponible/decommissioned: ${model}: ${rawMsg}`)
       return { rateLimited: true, model, rawMessage: rawMsg, isPerMinute: false, retryAfterSeconds: null }
     }
 
@@ -169,11 +179,11 @@ export async function callGroq(
       }
       return result.text
     }
-    // Era rate limit / payload too large → registrar y probar el siguiente modelo
+    // Era rate limit / payload too large / modelo no disponible → registrar y probar el siguiente modelo
     rateLimitHits.push(result)
   }
 
-  // Todos los modelos chocaron con límite. Determinar si es por-minuto (se resuelve solo)
+  // Todos los modelos fallaron. Determinar si es por-minuto (se resuelve solo)
   // o diario (se resetea a medianoche UTC) para dar el mensaje correcto al programador y al usuario.
   const allPerMinute = rateLimitHits.length > 0 && rateLimitHits.every(h => h.isPerMinute)
   const bestRetry = rateLimitHits.reduce<number | null>((min, h) => {
@@ -185,7 +195,7 @@ export async function callGroq(
   const detail = rateLimitHits.map(h => `${h.model}: ${h.rawMessage || '(sin detalle)'}`).join('\n')
   const summary = allPerMinute
     ? `Groq: límite por minuto (TPM/RPM) alcanzado en todos los modelos${bestRetry ? ` — se libera en ~${bestRetry}s` : ''}`
-    : 'Groq: límite diario (TPD/RPD) agotado en todos los modelos — se restablece a medianoche (hora UTC)'
+    : 'Groq: límite diario (TPD/RPD) agotado, modelo no disponible, o ambos, en todos los modelos de la cadena'
 
   await logServerError(summary, detail, 'groq')
 
