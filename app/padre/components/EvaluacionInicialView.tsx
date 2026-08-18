@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n-context'
+import { SECCIONES_INTAKE_EN, SECCIONES_PSICO_EN, SECCIONES_NEURO_EN } from './evaluacion-inicial-en'
 import {
   ClipboardCheck, Sparkles, Loader2, CheckCircle2, Brain, Heart,
   ChevronRight, ChevronLeft, Send, Clock, X, MessageCircle, Image as ImageIcon,
@@ -30,22 +31,22 @@ const TERAPIA_COLORES: Record<string, { gradient: string; accent: string; accent
   slate:    { gradient: 'from-slate-600 to-slate-700',     accent: '#64748b', accentDark: '#94a3b8' },
 }
 
-type ColumnaTabla = { id: string; label: string; type?: 'text' | 'number' | 'date'; placeholder?: string; options?: string[] }
+export type ColumnaTabla = { id: string; label: string; type?: 'text' | 'number' | 'date'; placeholder?: string; options?: string[] }
 
-type Pregunta =
+export type Pregunta =
   | { id: string; type: 'text' | 'textarea' | 'number'; label: string; placeholder?: string; required?: boolean }
   | { id: string; type: 'select' | 'radio'; label: string; options: string[]; required?: boolean }
   | { id: string; type: 'checkbox'; label: string; options: string[] }
   | { id: string; type: 'date'; label: string; required?: boolean }
   | { id: string; type: 'tabla_dinamica'; label: string; columns: ColumnaTabla[]; addLabel?: string; minRows?: number; required?: boolean }
 
-type Seccion = { titulo: string; descripcion?: string; icono: string; preguntas: Pregunta[] }
+export type Seccion = { titulo: string; descripcion?: string; icono: string; preguntas: Pregunta[] }
 
 // ─── Primera ficha: INTAKE — "Ficha inicial para papás" ────────────────
 // Estructura oficial SANTI: secciones que cubren datos del menor, padres,
 // motivo de consulta, historia escolar, diagnósticos, terapias previas,
 // dinámica familiar e información final / marketing.
-const SECCIONES_INTAKE: Seccion[] = [
+const SECCIONES_INTAKE_ES: Seccion[] = [
   {
     titulo: 'Datos generales del menor', icono: '🧒',
     descripcion: 'Información básica del niño/a a evaluar.',
@@ -119,7 +120,7 @@ const SECCIONES_INTAKE: Seccion[] = [
 
 // ─── Segunda ficha: ANAMNESIS PSICOLÓGICA / EMOCIONAL ───────────────────
 // Estructura oficial SANTI — 7 secciones (I a VII).
-const SECCIONES_PSICO: Seccion[] = [
+const SECCIONES_PSICO_ES: Seccion[] = [
   // ─── I. Datos Generales y Familiares ───────────────────────────────────
   {
     titulo: 'I. Datos generales', icono: '🧒',
@@ -296,7 +297,7 @@ const SECCIONES_PSICO: Seccion[] = [
 // ─── Segunda ficha: ANAMNESIS NEUROPSICOLÓGICA ──────────────────────────
 // Estructura oficial SANTI — 11 secciones (I a XI).
 // Las tablas dinámicas permiten al padre/madre agregar varias filas (familiares, accidentes, etc.).
-const SECCIONES_NEURO: Seccion[] = [
+const SECCIONES_NEURO_ES: Seccion[] = [
   // ─── I. Datos Familiares ───────────────────────────────────────────────
   {
     titulo: 'I. Datos familiares', icono: '👨‍👩‍👧',
@@ -566,7 +567,7 @@ function RazonRecomendacion({ texto }: { texto: string }) {
 
 // ═════════════════════════════════════════════════════════════════════════
 export default function EvaluacionInicialView({ child, profile }: Props) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [loading, setLoading] = useState(true)
   const [evaluacion, setEvaluacion] = useState<any>(null)
   const [terapias, setTerapias] = useState<any[]>([])
@@ -820,7 +821,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
 
   // ═══ FASE 4: 2ª ANAMNESIS ══════════════════════════════════════════════
   if (estado === 'confirmado') {
-    const secciones = evaluacion.recomendacion === 'neuropsicologica' ? SECCIONES_NEURO : SECCIONES_PSICO
+    const secciones = evaluacion.recomendacion === 'neuropsicologica' ? (locale === 'en' ? SECCIONES_NEURO_EN : SECCIONES_NEURO_ES) : (locale === 'en' ? SECCIONES_PSICO_EN : SECCIONES_PSICO_ES)
     return <WizardAnamnesis
       child={child}
       tipo={evaluacion.recomendacion}
@@ -1164,7 +1165,8 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
 // ═════════════════════════════════════════════════════════════════════════
 
 function WizardIntake({ child, seccionIdx, setSeccionIdx, respuestas, setRespuestas, enviando, analizando, onEnviar }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const SECCIONES_INTAKE = locale === 'en' ? SECCIONES_INTAKE_EN : SECCIONES_INTAKE_ES
   const seccion = SECCIONES_INTAKE[seccionIdx]
   const progreso = ((seccionIdx + 1) / SECCIONES_INTAKE.length) * 100
 
@@ -1264,7 +1266,7 @@ function BarraProgreso({ paso, total, progreso }: { paso: number; total: number;
 }
 
 function NavWizard({ idx, total, onPrev, onNext, onSubmit, enviando, textoEnviando }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const last = idx === total - 1
   return (
     <div className="flex items-center justify-between mt-6 pt-6 border-t" style={{ borderColor: 'var(--card-border)' }}>
