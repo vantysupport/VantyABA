@@ -34,8 +34,10 @@ function ParentFormRenderer({ form, onSubmit, onClose }: { form: any; onSubmit: 
       import('@/app/admin/data/neurodivergentForms'),
       import('@/app/admin/data/neurodivergentForms-en'),
       import('@/app/admin/data/newFormConstants'),
+      import('@/app/admin/data/newFormConstants-en'),
       import('@/app/admin/data/formConstants'),
-    ]).then(([neuroMod, neuroEnMod, newMod, formMod]) => {
+      import('@/app/admin/data/formConstants-en'),
+    ]).then(([neuroMod, neuroEnMod, newMod, newEnMod, formMod, formEnMod]) => {
       // 1. Buscar en neurodivergentForms
       const found = (locale === 'en' ? neuroEnMod.ALL_FORMS_EN : neuroMod.ALL_FORMS).find((f: any) => f.id === form.form_type)
       if (found) { setFormDef(found); return }
@@ -43,24 +45,24 @@ function ParentFormRenderer({ form, onSubmit, onClose }: { form: any; onSubmit: 
       // 2. Buscar en newFormConstants
       const newFormsMap: Record<string, any> = {
         objetivo_iep: {
-          id: 'objetivo_iep', title: 'Objetivo IEP', icon: '🎯',
-          color: 'from-sky-600 to-cyan-600', description: 'Plan de educación individualizado',
-          sections: newMod.OBJETIVO_IEP_DATA,
+          id: 'objetivo_iep', title: locale === 'en' ? 'IEP Goal' : 'Objetivo IEP', icon: '🎯',
+          color: 'from-sky-600 to-cyan-600', description: locale === 'en' ? 'Individualized education plan' : 'Plan de educación individualizado',
+          sections: (locale === 'en' ? newEnMod.OBJETIVO_IEP_DATA_EN : newMod.OBJETIVO_IEP_DATA),
         },
         nota_sesion: {
-          id: 'nota_sesion', title: 'Nota de Sesión', icon: '📋',
-          color: 'from-emerald-600 to-teal-600', description: 'Registro de sesión clínica',
-          sections: newMod.NOTA_SESION_DATA,
+          id: 'nota_sesion', title: locale === 'en' ? 'Session Note' : 'Nota de Sesión', icon: '📋',
+          color: 'from-emerald-600 to-teal-600', description: locale === 'en' ? 'Clinical session record' : 'Registro de sesión clínica',
+          sections: (locale === 'en' ? newEnMod.NOTA_SESION_DATA_EN : newMod.NOTA_SESION_DATA),
         },
         informe_mensual: {
-          id: 'informe_mensual', title: 'Informe Mensual de Progreso', icon: '📊',
-          color: 'from-sky-600 to-cyan-600', description: 'Evaluación mensual del progreso',
-          sections: newMod.INFORME_MENSUAL_DATA,
+          id: 'informe_mensual', title: locale === 'en' ? 'Monthly Progress Report' : 'Informe Mensual de Progreso', icon: '📊',
+          color: 'from-sky-600 to-cyan-600', description: locale === 'en' ? 'Monthly progress assessment' : 'Evaluación mensual del progreso',
+          sections: (locale === 'en' ? newEnMod.INFORME_MENSUAL_DATA_EN : newMod.INFORME_MENSUAL_DATA),
         },
         registro_conductual: {
-          id: 'registro_conductual', title: 'Registro Conductual ABC', icon: '📝',
-          color: 'from-orange-600 to-red-600', description: 'Análisis funcional de conducta',
-          sections: newMod.REGISTRO_CONDUCTUAL_ABC_DATA,
+          id: 'registro_conductual', title: locale === 'en' ? 'ABC Behavior Record' : 'Registro Conductual ABC', icon: '📝',
+          color: 'from-orange-600 to-red-600', description: locale === 'en' ? 'Functional behavior analysis' : 'Análisis funcional de conducta',
+          sections: (locale === 'en' ? newEnMod.REGISTRO_CONDUCTUAL_ABC_DATA_EN : newMod.REGISTRO_CONDUCTUAL_ABC_DATA),
         },
       }
       const foundNew = newFormsMap[form.form_type]
@@ -69,44 +71,44 @@ function ParentFormRenderer({ form, onSubmit, onClose }: { form: any; onSubmit: 
       // 3. Buscar en formConstants (anamnesis, aba, entorno_hogar, evaluaciones clínicas)
       const formConstantsMap: Record<string, any> = {
         anamnesis: {
-          id: 'anamnesis', title: 'Historia Clínica', icon: '📋',
-          color: 'from-sky-600 to-cyan-600', description: 'Anamnesis e historia del desarrollo',
-          sections: formMod.ANAMNESIS_DATA,
+          id: 'anamnesis', title: locale === 'en' ? 'Clinical History' : 'Historia Clínica', icon: '📋',
+          color: 'from-sky-600 to-cyan-600', description: locale === 'en' ? 'Anamnesis and developmental history' : 'Anamnesis e historia del desarrollo',
+          sections: (locale === 'en' ? formEnMod.ANAMNESIS_DATA_EN : formMod.ANAMNESIS_DATA),
         },
         aba: {
-          id: 'aba', title: 'Sesión ABA', icon: '🧠',
-          color: 'from-sky-600 to-cyan-600', description: 'Registro de sesión de terapia ABA',
-          sections: formMod.ABA_DATA,
+          id: 'aba', title: locale === 'en' ? 'ABA Session' : 'Sesión ABA', icon: '🧠',
+          color: 'from-sky-600 to-cyan-600', description: locale === 'en' ? 'ABA therapy session record' : 'Registro de sesión de terapia ABA',
+          sections: (locale === 'en' ? formEnMod.ABA_DATA_EN : formMod.ABA_DATA),
         },
         entorno_hogar: {
-          id: 'entorno_hogar', title: 'Evaluación del Entorno del Hogar', icon: '🏠',
-          color: 'from-green-600 to-emerald-600', description: 'Evaluación del ambiente familiar',
-          sections: formMod.ENTORNO_HOGAR_DATA,
+          id: 'entorno_hogar', title: locale === 'en' ? 'Home Environment Assessment' : 'Evaluación del Entorno del Hogar', icon: '🏠',
+          color: 'from-green-600 to-emerald-600', description: locale === 'en' ? 'Assessment of the family environment' : 'Evaluación del ambiente familiar',
+          sections: (locale === 'en' ? formEnMod.ENTORNO_HOGAR_DATA_EN : formMod.ENTORNO_HOGAR_DATA),
         },
         brief2: {
-          id: 'brief2', title: 'Evaluación BRIEF-2', icon: '🔬',
-          color: 'from-sky-500 to-sky-700', description: 'Funciones ejecutivas',
-          sections: formMod.BRIEF2_DATA,
+          id: 'brief2', title: locale === 'en' ? 'BRIEF-2 Assessment' : 'Evaluación BRIEF-2', icon: '🔬',
+          color: 'from-sky-500 to-sky-700', description: locale === 'en' ? 'Executive functions' : 'Funciones ejecutivas',
+          sections: (locale === 'en' ? formEnMod.BRIEF2_DATA_EN : formMod.BRIEF2_DATA),
         },
         ados2: {
-          id: 'ados2', title: 'Evaluación ADOS-2', icon: '🔍',
-          color: 'from-teal-500 to-teal-700', description: 'Diagnóstico del autismo',
-          sections: formMod.ADOS2_DATA,
+          id: 'ados2', title: locale === 'en' ? 'ADOS-2 Assessment' : 'Evaluación ADOS-2', icon: '🔍',
+          color: 'from-teal-500 to-teal-700', description: locale === 'en' ? 'Autism diagnosis' : 'Diagnóstico del autismo',
+          sections: (locale === 'en' ? formEnMod.ADOS2_DATA_EN : formMod.ADOS2_DATA),
         },
         vineland3: {
-          id: 'vineland3', title: 'Evaluación Vineland-3', icon: '📈',
-          color: 'from-emerald-500 to-emerald-700', description: 'Conducta adaptativa',
-          sections: formMod.VINELAND3_DATA,
+          id: 'vineland3', title: locale === 'en' ? 'Vineland-3 Assessment' : 'Evaluación Vineland-3', icon: '📈',
+          color: 'from-emerald-500 to-emerald-700', description: locale === 'en' ? 'Adaptive behavior' : 'Conducta adaptativa',
+          sections: (locale === 'en' ? formEnMod.VINELAND3_DATA_EN : formMod.VINELAND3_DATA),
         },
         wiscv: {
-          id: 'wiscv', title: 'Evaluación WISC-V', icon: '🧩',
-          color: 'from-sky-500 to-sky-700', description: 'Escala de inteligencia',
-          sections: formMod.WISCV_DATA,
+          id: 'wiscv', title: locale === 'en' ? 'WISC-V Assessment' : 'Evaluación WISC-V', icon: '🧩',
+          color: 'from-sky-500 to-sky-700', description: locale === 'en' ? 'Intelligence scale' : 'Escala de inteligencia',
+          sections: (locale === 'en' ? formEnMod.WISCV_DATA_EN : formMod.WISCV_DATA),
         },
         basc3: {
-          id: 'basc3', title: 'Evaluación BASC-3', icon: '📊',
-          color: 'from-rose-500 to-rose-700', description: 'Sistema conductual',
-          sections: formMod.BASC3_DATA,
+          id: 'basc3', title: locale === 'en' ? 'BASC-3 Assessment' : 'Evaluación BASC-3', icon: '📊',
+          color: 'from-rose-500 to-rose-700', description: locale === 'en' ? 'Behavioral system' : 'Sistema conductual',
+          sections: (locale === 'en' ? formEnMod.BASC3_DATA_EN : formMod.BASC3_DATA),
         },
       }
       const foundConst = formConstantsMap[form.form_type]
