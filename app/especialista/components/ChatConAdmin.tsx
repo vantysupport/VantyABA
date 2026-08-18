@@ -84,6 +84,7 @@ function Avatar({ name, avatarUrl, size = 'md', online = false }: { name: string
 
 // ─── AvatarUpload ─────────────────────────────────────────────────────────────
 function AvatarUpload({ userId, currentUrl, name, onUpdate }: { userId: string; currentUrl?: string | null; name: string; onUpdate: (url: string) => void }) {
+  const { t } = useI18n()
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

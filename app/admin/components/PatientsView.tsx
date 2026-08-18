@@ -959,6 +959,7 @@ function FichasTab({ childId, childName, currentRole }: {
 function RellenarFichaConWord({ childId, childName, isDark }: {
   childId: string; childName: string; isDark: boolean
 }) {
+  const { t } = useI18n()
   const toast = useToast()
 
   const handleSaved = async (responseId: string) => {

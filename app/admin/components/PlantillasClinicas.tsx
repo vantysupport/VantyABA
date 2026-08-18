@@ -103,9 +103,9 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
   useEffect(() => { load() }, [load])
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm(t('auto.plantillasClinicas.eliminarEstaFichaEstaAccion'))) return
+    if (!confirm(tr('auto.plantillasClinicas.eliminarEstaFichaEstaAccion'))) return
     await supabase.from('clinical_templates').delete().eq('id', id)
-    toast.success(t('auto.plantillasClinicas.fichaEliminada'))
+    toast.success(tr('auto.plantillasClinicas.fichaEliminada'))
     load()
   }
 

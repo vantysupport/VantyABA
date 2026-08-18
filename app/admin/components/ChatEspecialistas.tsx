@@ -102,6 +102,7 @@ function AvatarUpload({
   name: string
   onUpdate: (url: string) => void
 }) {
+  const { t } = useI18n()
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 

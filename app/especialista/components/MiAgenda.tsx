@@ -11,6 +11,7 @@ import { useToast } from '@/components/Toast'
 
 /* ── Google Calendar mini ──────────────────────────────────────────────── */
 function GoogleCalendarMini({ userId, isDark }: { userId: string; isDark: boolean }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [status,     setStatus]     = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [busy,       setBusy]       = useState(false)
@@ -74,6 +75,7 @@ function GoogleCalendarMini({ userId, isDark }: { userId: string; isDark: boolea
 
 /* ── Microsoft mini ─────────────────────────────────────────────────────── */
 function MicrosoftCalendarMini({ userId, isDark }: { userId: string; isDark: boolean }) {
+  const { t } = useI18n()
   const toast = useToast()
   const [status,     setStatus]     = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [busy,       setBusy]       = useState(false)

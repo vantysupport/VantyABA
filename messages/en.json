@@ -2173,13 +2173,33 @@
   "auto": {
     "patientsView": {
       "correoejemplocom": "email@example.com",
-      "sesionesTotales": "total sessions"
+      "sesionesTotales": "total sessions",
+      "vinculadoA": "{v1} linked to {v2}",
+      "pacienteDesvinculadoDeLaCuenta": "Patient unlinked from the account",
+      "ingresaUnNumeroValido0": "Enter a valid number (0 or greater)",
+      "contadorActualizado": "✓ Counter updated",
+      "elNombreNoCoincideEliminacion": "The name does not match. Deletion cancelled.",
+      "eliminadoCorrectamente": "\"{v1}\" deleted successfully",
+      "noSePudoEliminar": "Could not delete: {v1}",
+      "wordGeneradoYGuardadoEn": "Word generated and saved to the patient's Documents",
+      "limiteDePacientesAlcanzadoSolo": "Patient limit reached ({v1}/{v2}). Only the developer can increase it."
     },
     "misPacientes": {
       "objetivoPrincipal": "Main goal",
       "derivadoPor": "Referred by",
       "mensajeAPadres": "Message to parents",
-      "espacioFisico": "Physical space"
+      "espacioFisico": "Physical space",
+      "noSeEncontroElId": "Record ID not found",
+      "reporteWordDescargado": "Word report downloaded",
+      "noSeEncontroElId2": "Record ID not found",
+      "historiaClinicaDescargada": "Clinical history downloaded",
+      "pacienteActualizado": "Patient updated",
+      "wordGeneradoYGuardadoEn": "Word generated and saved to the patient's Documents",
+      "elNombreEsRequerido": "Name is required",
+      "pacienteCreadoCorrectamente": "Patient created successfully",
+      "noSeEncontroNingunUsuario": "No user found with that email",
+      "noSeEncontroNingunUsuario2": "No user found with that email",
+      "vinculadoA": "{v1} linked to {v2}"
     },
     "inteligenciaHubView": {
       "sesionesConsecutivas": "consecutive sessions",
@@ -2219,20 +2239,66 @@
       "paciente": "Patient: ",
       "elegiUnDiaDisponibleEn": "Choose an available day (in green) to see the time slots.",
       "conCitaMarcada": " Booked appointment",
-      "iniciandoSesion": "Signing in…"
+      "iniciandoSesion": "Signing in…",
+      "seguroQueDeseasCancelarEsta": "Are you sure you want to cancel this appointment? If you need to change the time, contact the center.",
+      "elCentroAlcanzoElNumero": "The center reached the maximum number of family accounts. Contact the center to enable your access.",
+      "errorNoSeEncontroTu": "Error: Your profile was not found",
+      "elNombreEsObligatorio": "Name is required",
+      "laFechaDeNacimientoEs": "Date of birth is required",
+      "elCentroAlcanzoElNumero2": "The center reached the maximum number of family accounts. Contact the center to enable your access.",
+      "noSePudoCrearEl": "Could not create the record. Check the permissions in Supabase.",
+      "lasContrasenasNoCoinciden": "Passwords do not match",
+      "laContrasenaDebeTenerAl": "The password must be at least 6 characters",
+      "errorDeRed": "Network error.",
+      "errorDeRed2": "Network error.",
+      "errorDeRed3": "Network error.",
+      "errorDeRed4": "Network error.",
+      "borrarTodosLosErrores": "Clear all errors?",
+      "errorAlCerrarSesion": "Error logging out",
+      "minimo6Caracteres2": "Minimum 6 characters",
+      "lasContrasenasNoCoinciden2": "Passwords do not match",
+      "contrasenaActualizada": "Password updated",
+      "minimo6Caracteres3": "Minimum 6 characters",
+      "lasContrasenasNoCoinciden3": "Passwords do not match",
+      "contrasenaActualizada2": "Password updated"
     },
     "calendarView": {
-      "agregarEspecialista": "+ Add specialist..."
+      "agregarEspecialista": "+ Add specialist...",
+      "sesionFinalizadaCitaMovidaAl": "Session finished · Appointment moved to history",
+      "fechaYHoraSonRequeridas": "Date and time are required",
+      "horarioActualizadoSincronizadoEn": "Schedule updated · Synced in: {v1}",
+      "horarioActualizado": "Schedule updated",
+      "eliminarEstaCita": "Delete this appointment?",
+      "citaEliminada": "Appointment deleted",
+      "seleccionaUnPaciente": "Select a patient",
+      "seleccionaParticipantes": "Select participants",
+      "elEspecialistaNoTieneGoogle": "The specialist has neither Google nor Outlook Calendar connected. The appointment was saved successfully.",
+      "citaAnadidaAGoogleCalendar": "{v1} appointment{v2} added{v3} to Google Calendar",
+      "citaAnadidaAOutlookCalendar": "{v1} appointment{v2} added{v3} to Outlook Calendar",
+      "limiteMensualDe10000Min": "Monthly limit of 10,000 min reached. It resets next month.",
+      "salaCreadaPadreNotificado": "Room created · Parent notified"
     },
     "storeManagementView": {
-      "totalDelPedido": "order total"
+      "totalDelPedido": "order total",
+      "soloImagenes": "Images only",
+      "maximo5mb": "Maximum 5MB",
+      "elNombreEsObligatorio": "Name is required",
+      "precioInvalido": "Invalid price",
+      "productoActualizado": "Product updated",
+      "productoCreado": "Product created",
+      "eliminar": "Delete \"{v1}\"?",
+      "productoEliminado": "Product deleted"
     },
     "homeView": {
       "alcanzo": " achieved ",
       "esUnTrabajoImportanteComo": " is important work. How have you felt this week?"
     },
     "misFormularios": {
-      "enviarAPadres": "Send to parents"
+      "enviarAPadres": "Send to parents",
+      "seleccionaUnPaciente": "Select a patient",
+      "analisisIaGenerado": "AI analysis generated",
+      "seleccionaUnPaciente2": "Select a patient",
+      "formularioGuardadoCorrectamente": "Form saved successfully"
     },
     "knowledgeBaseView": {
       "ejPrincipiosDeConductaMalott": "e.g.: Principles of Behavior - Malott 8th Ed.",
@@ -2248,7 +2314,37 @@
       "nuevaInstruccion": "+ New instruction",
       "estiloDeComunicacion": "Communication style",
       "terminologia": "Terminology",
-      "reglaClinica": "Clinical rule"
+      "reglaClinica": "Clinical rule",
+      "estoCargaraElProtocoloAbllsr": "This will load the full ABLLS-R protocol (25 sections, 545 items) into the AI Brain. It replaces any previous version. Continue?",
+      "abllsrCargadoItemsIndexadosEn": "ABLLS-R loaded: {v1} items indexed into the AI Brain",
+      "noHayArchivosMdtxtEn": "There are no .md/.txt files in the knowledge-seed folder of the code",
+      "conocimientoDelCodigoCargadoArchiv": "Code knowledge loaded: {v1} file(s), {v2} chunks",
+      "errorCargandoDocumentos": "Error loading documents",
+      "escribePalabrasClave": "Type keywords",
+      "ingresaUnaUrl": "Enter a URL",
+      "fragmentosAprendidosDeLaUrl": "{v1} chunks learned from the URL",
+      "sinResultadosPruebaOtroTitulo": "No results. Try another title.",
+      "elTituloEsRequerido": "Title is required",
+      "seleccionaUnArchivo": "Select a file",
+      "ingresaUnaUrlValida": "Enter a valid URL",
+      "seleccionaUnLibro": "Select a book",
+      "fragmentosIndexadosCorrectamente": "{v1} chunks indexed successfully",
+      "eliminarEsteDocumento": "Delete this document?",
+      "documentoEliminado": "Document deleted",
+      "errorCargandoDocumentos2": "Error loading documents",
+      "elTituloEsRequerido2": "Title is required",
+      "seleccionaUnArchivo2": "Select a file",
+      "ingresaUnaUrlValida2": "Enter a valid URL",
+      "pegaElContenidoDelDocumento": "Paste the document content",
+      "laUrlNoEsValida": "The URL is not valid. Example: https://drive.google.com/...",
+      "archivoMuyGrandeMbMax": "File too large ({v1}MB). Max: 100MB. Use URL mode instead.",
+      "recibidoIndexandoEnBackground": "✅ \"{v1}\" received — indexing in the background",
+      "eliminarDeLaBaseDe": "Delete \"{v1}\" from the knowledge base?",
+      "documentoEliminado2": "Document deleted",
+      "errorEliminando": "Error deleting",
+      "tituloYContenidoSonRequeridos": "Title and content are required",
+      "instruccionGuardada": "Instruction saved",
+      "errorGuardando": "Error saving"
     },
     "chatInterface": {
       "grabandoHablaCercaDelMicrofono": "🔴 Recording — speak near the microphone"
@@ -2257,7 +2353,15 @@
       "sinSesiones": " No sessions"
     },
     "documentosView": {
-      "inicioSinCarpeta": "📁 Home (no folder)"
+      "inicioSinCarpeta": "📁 Home (no folder)",
+      "seleccionaAlMenosUnArchivo": "Select at least one file",
+      "noSePudoSubirNingun": "No file could be uploaded. Try again.",
+      "nombreActualizado": "Name updated",
+      "eliminar": "Delete \"{v1}\"?",
+      "documentoEliminado": "Document deleted",
+      "carpetaCreada": "Folder created",
+      "carpetaActualizada": "Folder updated",
+      "eliminarCarpetaLosDocumentosSe": "Delete folder \"{v1}\"? The documents will be moved to Home."
     },
     "fonemasPractica": {
       "posicionDeLaBoca": "Mouth position"
@@ -2269,7 +2373,8 @@
       "noHaySesionesProgramadas": "No scheduled sessions"
     },
     "agendaSesiones": {
-      "uuidDelTerapeuta": "Therapist UUID"
+      "uuidDelTerapeuta": "Therapist UUID",
+      "linkCopiado": "Link copied ✅"
     },
     "aIReportView": {
       "seleccionarPaciente": "🔍 Select Patient..."
@@ -2282,29 +2387,233 @@
       "editarPerfil": "Edit profile",
       "cambiarContrasena": "Change password",
       "centroDeAyuda": "Help center",
-      "cerrarSesion": "Log out"
+      "cerrarSesion": "Log out",
+      "errorAlConectar": "Error connecting {v1}",
+      "errorIniciandoConexion": "Error starting connection",
+      "desconectar": "Disconnect {v1}?",
+      "desactivarNotificacionesWhatsapp": "Disable WhatsApp notifications?",
+      "fotoActualizada": "Photo updated ✅",
+      "errorAlLeerElArchivo": "Error reading the file"
     },
     "programasABAView": {
       "queDecirOHacerSd": "What to say or do (Sd)",
-      "generalizacion": "Generalization"
+      "generalizacion": "Generalization",
+      "errorCargandoProgramas": "Error loading programs",
+      "documentoDescargado": "Document downloaded",
+      "guiaDescargada": "Guide downloaded",
+      "actualizado": "Updated",
+      "tituloActualizado": "Title updated",
+      "objetivoActualizado": "Goal updated",
+      "eliminarElProgramaYTodas": "Delete the program \"{v1}\" and all its sessions? This action cannot be undone.",
+      "setActualizado": "Set updated",
+      "eliminarElSetEstoTambien": "Delete Set {v1} (\"{v2}\")? This will also delete the sessions recorded for this set. This action cannot be undone.",
+      "setEliminado": "Set deleted",
+      "setAgregado": "Set added",
+      "eliminarEstaSesion": "Delete this session?",
+      "sesionEliminada": "Session deleted",
+      "fechaActualizada": "Date updated",
+      "porcentajeActualizado": "Percentage updated",
+      "ingresaOportunidadesTotales": "Enter total opportunities",
+      "sesionRegistrada": "Session recorded",
+      "tituloAreaYObjetivoSon": "Title, area and goal are required",
+      "programaCreado": "Program created"
     },
     "aRIAAgentChat": {
-      "borrarHistorialDelChat": "Clear chat history"
+      "borrarHistorialDelChat": "Clear chat history",
+      "borrarTodoElHistorialDe": "Clear all of ARIA's history? This action cannot be undone."
     },
     "reportGenerator": {
       "descargarDocx": "Download .docx",
       "eliminarReporte": "Delete report",
-      "sinReportesGenerados": "No reports generated"
+      "sinReportesGenerados": "No reports generated",
+      "eliminarEsteReportePermanentemente": "Delete this report permanently? This action cannot be undone."
     },
     "aprobacionesEspecialista": {
       "tuComentario": "Your comment:"
     },
     "miAgenda": {
       "sinCitasEsteDia": "No appointments this day",
-      "sinCitasProximas": "No upcoming appointments"
+      "sinCitasProximas": "No upcoming appointments",
+      "errorConectandoGoogleCalendar": "Error connecting Google Calendar",
+      "desconectarGoogleCalendar": "Disconnect Google Calendar?",
+      "errorConectandoOutlookCalendar": "Error connecting Outlook Calendar",
+      "desconectarOutlookCalendar": "Disconnect Outlook Calendar?"
     },
     "chatPadres": {
       "neuropsicologiaYTerapiasSantiSiemp": "Neuropsicología y Terapias SANTI • Always available"
+    },
+    "evaluacionInicialView": {
+      "eligeAlMenosUnaTerapia": "Choose at least one therapy"
+    },
+    "evaluacionesUnificadas": {
+      "reporteWordGeneradoYDescargado": "Word report generated and downloaded",
+      "analisisIaGenerado": "AI analysis generated",
+      "seleccionaUnPaciente": "Select a patient",
+      "formularioGuardadoCorrectamente": "Form saved successfully",
+      "reporteWordDescargado": "Word report downloaded",
+      "formularioEnviado": "Form sent"
+    },
+    "userManagementView": {
+      "noPodesCambiarElRol": "You cannot change a Director's role.",
+      "noPodesCambiarteElRol": "You cannot change your own role.",
+      "limiteDeAlcanzadoSoloEl": "Limit for \"{v1}\" reached ({v2}/{v3}). Only the developer can increase it.",
+      "rolActualizado": "Role updated → {v1}",
+      "noPuedesEliminarTuPropia": "You cannot delete your own account.",
+      "usuarioEliminado": "User deleted",
+      "noPodesDesactivarAUn": "You cannot deactivate a Director.",
+      "minimo6Caracteres": "Minimum 6 characters",
+      "lasContrasenasNoCoinciden": "Passwords do not match",
+      "contrasenaActualizada": "Password updated",
+      "especialidadActualizada": "Specialty updated",
+      "emailEnviadoA": "Email sent to {v1}",
+      "vinculadoA": "{v1} linked to {v2}",
+      "pacienteDesvinculado": "Patient unlinked",
+      "emailYContrasenaSonRequeridos": "Email and password are required",
+      "limiteDeAlcanzadoSoloEl2": "Limit for \"{v1}\" reached ({v2}/{v3}). Only the developer can increase it.",
+      "usuarioCreado": "User created"
+    },
+    "aRIAFloatingChat": {
+      "borrarTodoElHistorialDe": "Clear all of ARIA's history?"
+    },
+    "adminReportesFinancieros": {
+      "reporteExportado": "Report exported",
+      "errorGenerandoReporte": "Error generating report",
+      "error": "Error",
+      "excelDeExportado": "{v1} Excel exported"
+    },
+    "catalogoTerapiasView": {
+      "nombreObligatorio": "Name required",
+      "eliminarEstaTerapiaDelCatalogo": "Delete this therapy from the catalog?"
+    },
+    "configuracionView": {
+      "perfilActualizadoCorrectamente": "Profile updated successfully",
+      "noEstasLogueado": "You are not logged in",
+      "fotoActualizada": "Photo updated",
+      "ingresaLaNuevaContrasena": "Enter the new password",
+      "minimo8Caracteres": "Minimum 8 characters",
+      "lasContrasenasNoCoinciden": "Passwords do not match",
+      "contrasenaActualizada": "Password updated!"
+    },
+    "misEvaluaciones": {
+      "completaLosCamposRequeridos": "Complete the required fields",
+      "enviadoParaAprobacion": "Sent for approval!"
+    },
+    "evaluationsView": {
+      "porFavorRespondeAlgunasPreguntas": "Please answer some questions before generating with AI.",
+      "analisisIaCompletado": "AI analysis completed!",
+      "seleccionaUnPaciente": "Select a patient",
+      "evaluacionGuardadaExitosamenteDese": "✅ Evaluation saved successfully!\n\nDo you want to generate the Word report now?"
+    },
+    "secretariaComunicacion": {
+      "elPacienteNoTieneTutor": "The patient has no linked guardian",
+      "laFamiliaNoTieneContacto": "The family has no registered contact",
+      "escribeUnMensaje": "Write a message",
+      "noHayFamiliasConCitas": "There are no families with appointments",
+      "enviadoAFamilias": "Sent to {v1}/{v2} families"
+    },
+    "plantillasClinicas": {
+      "eliminarEstaFichaEstaAccion": "Delete this record? This action cannot be undone.",
+      "fichaEliminada": "Record deleted",
+      "elNombreEsObligatorio": "Name is required",
+      "fichaActualizada": "Record updated",
+      "fichaCreada": "Record created"
+    },
+    "miPerfil": {
+      "errorIniciandoConexion": "Error starting connection",
+      "desconectarGoogleCalendar": "Disconnect Google Calendar?",
+      "errorIniciandoConexion2": "Error starting connection",
+      "desconectarOutlookCalendar": "Disconnect Outlook Calendar?",
+      "perfilActualizadoCorrectamente": "Profile updated successfully",
+      "fotoActualizada": "Photo updated",
+      "ingresaLaNuevaContrasena": "Enter the new password",
+      "minimo8Caracteres": "Minimum 8 characters",
+      "lasContrasenasNoCoinciden": "Passwords do not match",
+      "contrasenaActualizada": "Password updated!"
+    },
+    "neuroFormsView": {
+      "seleccionaUnPaciente": "Select a patient",
+      "analisisGenerado": "Analysis generated",
+      "seleccionaUnPaciente2": "Select a patient",
+      "formularioGuardadoCorrectamente": "Form saved successfully",
+      "estePacienteNoTieneUn": "This patient does not have a linked parent. Go to Patients and link a parent first.",
+      "formularioEnviadoCorrectamente": "Form sent successfully",
+      "reporteWordDescargado": "Word report downloaded"
+    },
+    "evaluacionInicialAdmin": {
+      "informeGeneradoDisponibleEnLa": "Report generated: {v1}\nAvailable in the patient's \"History & AI\" tab.",
+      "escribeUnaRespuesta": "Write an answer"
+    },
+    "secretariaReportes": {
+      "reporteExportado": "Report exported"
+    },
+    "chatEspecialistas": {
+      "maximo5mbParaLaFoto": "Maximum 5MB for the profile photo",
+      "errorAlCargarEspecialistas": "Error loading specialists",
+      "errorAlCargarMensajes": "Error loading messages",
+      "errorAlEnviar": "Error sending",
+      "maximo10mb": "Maximum 10MB",
+      "archivoEnviado": "File sent",
+      "errorAlSubir": "Error uploading: {v1}",
+      "noSePudoAccederAl": "Could not access the microphone",
+      "audioEnviado": "Audio sent",
+      "copiado": "Copied",
+      "funcionDeReenvioProximamente": "Forward feature coming soon",
+      "mensajeFijado": "Message pinned",
+      "mensajeDestacado": "Message starred",
+      "mensajeReportado": "Message reported"
+    },
+    "chatFamilias": {
+      "noSePudoAccederAl": "Could not access the microphone. Check your browser permissions.",
+      "noSePudoAccederAl2": "Could not access the microphone"
+    },
+    "reservasOnlinePanel": {
+      "eliminarEsteLinkDeReserva": "Delete this booking link? This action cannot be undone. (Appointments already booked with it are NOT deleted.)",
+      "linkEliminado": "Link deleted"
+    },
+    "mensajesPendientesPanel": {
+      "cambiosGuardados": "Changes saved",
+      "mensajeAprobadoYEnviadoAl": "Message approved and sent to the parent",
+      "descartarEsteMensajeNoLlegara": "Discard this message? It will not reach the parent.",
+      "mensajeDescartado": "Message discarded"
+    },
+    "chatConAdmin": {
+      "maximo5mb": "Maximum 5MB",
+      "errorAlCargarContactos": "Error loading contacts",
+      "errorAlCargarMensajes": "Error loading messages",
+      "errorAlEnviar": "Error sending",
+      "maximo10mb": "Maximum 10MB",
+      "archivoEnviado": "File sent",
+      "errorAlSubir": "Error uploading: {v1}",
+      "noSePudoAccederAl": "Could not access the microphone",
+      "audioEnviado": "Audio sent",
+      "errorAlEnviarAudio": "Error sending audio: {v1}",
+      "copiado": "Copied",
+      "reenviarProximamente": "Forward coming soon",
+      "fijarProximamente": "Pin coming soon",
+      "destacarProximamente": "Star coming soon"
+    },
+    "secretariaPerfil": {
+      "perfilActualizado": "Profile updated",
+      "fotoActualizada": "Photo updated",
+      "ingresaLaNuevaContrasena": "Enter the new password",
+      "minimo8Caracteres": "Minimum 8 characters",
+      "lasContrasenasNoCoinciden": "Passwords do not match",
+      "contrasenaActualizada": "Password updated!"
+    },
+    "resourcesManagementView": {
+      "elTituloEsObligatorio": "Title is required",
+      "seleccionaUnPaciente": "Select a patient",
+      "recursoActualizadoCorrectamente": "Resource updated successfully",
+      "recursoCompartidoCorrectamente": "Resource shared successfully",
+      "eliminarEsteRecurso": "Delete this resource?",
+      "recursoEliminado": "Resource deleted"
+    },
+    "fonemasAdminView": {
+      "laUrlDebeEmpezarCon": "The URL must start with http:// or https://",
+      "imagenAgregada": "Image added",
+      "errorDeRed": "Network error",
+      "errorDeRed2": "Network error",
+      "errorDeRed3": "Network error"
     }
   }
 }

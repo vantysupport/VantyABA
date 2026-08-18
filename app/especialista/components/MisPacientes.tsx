@@ -783,6 +783,7 @@ function PatientInfoViewEspecialista({ paciente, onRefresh }: { paciente: any; o
 
 // ── FichasTabEspecialista — dos sub-tabs: gestionar + rellenar ─────────────────
 function FichasTabEspecialista({ childId, childName }: { childId: string; childName: string }) {
+  const { t } = useI18n()
   const { isDark } = useTheme()
   const toast = useToast()
   const [subTab, setSubTab] = useState<'plantillas' | 'rellenar'>('rellenar')
