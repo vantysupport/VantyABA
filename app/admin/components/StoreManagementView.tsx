@@ -522,7 +522,7 @@ export default function StoreManagementView() {
                     ? cfg ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm` : 'bg-sky-600 text-white border-sky-600'
                     : isDark ? 'bg-[#0d1117] text-slate-400 border-[#30363d] hover:border-[#4a5568]' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
                   {cfg && <span className={`w-2 h-2 rounded-full ${cfg.dot}`}/>}
-                  {e==='todos' ? 'Todos' : cfg?.label}
+                  {e==='todos' ? t('pedido.todos') : t('pedido.' + e)}
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${active ? 'bg-black/10' : isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>{count}</span>
                 </button>
               )
@@ -553,7 +553,7 @@ export default function StoreManagementView() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
                           <p className={`font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{order.parent_name||'Padre/Madre'}</p>
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${cfg.bg} ${cfg.text} ${cfg.border}`}>{cfg.label}</span>
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${cfg.bg} ${cfg.text} ${cfg.border}`}>{t('pedido.' + order.estado)}</span>
                         </div>
                         <div className={`flex items-center gap-3 text-[11px] flex-wrap font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                           {order.parent_phone && <span className="flex items-center gap-1"><Phone size={10}/>{order.parent_phone}</span>}

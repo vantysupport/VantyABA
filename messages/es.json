@@ -2813,5 +2813,28 @@
   "bien": "Bien",
   "regular": "Regular",
   "dificil": "Difícil"
+ },
+ "aprobacion": {
+  "pending_approval": "Pendiente",
+  "approved": "Aprobado",
+  "rejected": "Rechazado",
+  "todas": "Todas"
+ },
+ "pedido": {
+  "pendiente": "Pendiente",
+  "confirmado": "Confirmado",
+  "listo": "Listo",
+  "entregado": "Entregado",
+  "cancelado": "Cancelado",
+  "todos": "Todos"
+ },
+ "recurso": {
+  "video": "Video",
+  "pdf": "PDF",
+  "link": "Enlace",
+  "image": "Imagen",
+  "document": "Material",
+  "audio": "Audio",
+  "abrir": "Abrir"
  }
 }

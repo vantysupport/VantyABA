@@ -281,7 +281,7 @@ export default function ResourcesView({ profile }: Props) {
             <button onClick={()=>setFilterType('all')} style={{ padding:'6px 12px',borderRadius:20,border:`1.5px solid ${filterType==='all'?'#0284c7':'var(--c-border)'}`,fontSize:12,fontWeight:700,cursor:'pointer',background:filterType==='all'?'#0284c7':'var(--c-card)',color:filterType==='all'?'var(--c-card)':'var(--c-text-muted)' }}>{t("common.todos")}</button>
             {Object.entries(TYPE_CFG).map(([key,cfg])=>(
               <button key={key} onClick={()=>setFilterType(key)} style={{ padding:'6px 12px',borderRadius:20,border:`1.5px solid ${filterType===key?cfg.border:'var(--c-border)'}`,fontSize:12,fontWeight:700,cursor:'pointer',background:filterType===key?cfg.bg:'var(--c-card)',color:filterType===key?cfg.color:'var(--c-text-muted)',display:'flex',alignItems:'center',gap:4 }}>
-                <cfg.icon size={12}/>{cfg.label}
+                <cfg.icon size={12}/>{t('recurso.' + key)}
               </button>
             ))}
           </div>
@@ -308,7 +308,7 @@ export default function ResourcesView({ profile }: Props) {
                         {isPersonal&&<span style={{ fontSize:9,fontWeight:800,padding:'2px 6px',background:'var(--c-stat-purple)',color:'#0284c7',border:'1px solid var(--c-border)',borderRadius:20,display:'flex',alignItems:'center',gap:3,flexShrink:0 }}><Bell size={8}/>{t("ui.for_you")}</span>}
                       </div>
                       {r.description&&<p style={{ fontSize:12,color:'var(--c-text-placeholder)',margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{r.description}</p>}
-                      <span style={{ fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`,display:'inline-block',marginTop:4 }}>{cfg.label}</span>
+                      <span style={{ fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,background:cfg.bg,color:cfg.color,border:`1px solid ${cfg.border}`,display:'inline-block',marginTop:4 }}>{t('recurso.' + r.resource_type)}</span>
                     </div>
                     <ExternalLink size={16} color="var(--c-text-placeholder)" style={{ flexShrink:0 }}/>
                   </div>
@@ -326,7 +326,7 @@ export default function ResourcesView({ profile }: Props) {
                   <div style={{ background:`linear-gradient(135deg,#0284c7,#0369a1)`,padding:'20px 24px',color:'#ffffff',display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12 }}>
                     <div style={{ display:'flex',alignItems:'center',gap:12 }}>
                       <div style={{ padding:10,background:'rgba(255,255,255,.2)',borderRadius:14 }}><Icon size={20}/></div>
-                      <div><p style={{ color:'rgba(255,255,255,.7)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,margin:'0 0 2px' }}>{cfg.label}</p><h3 style={{ fontWeight:900,fontSize:17,margin:0,lineHeight:1.2 }}>{selectedRes.title}</h3></div>
+                      <div><p style={{ color:'rgba(255,255,255,.7)',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1,margin:'0 0 2px' }}>{t('recurso.' + selectedRes.resource_type)}</p><h3 style={{ fontWeight:900,fontSize:17,margin:0,lineHeight:1.2 }}>{selectedRes.title}</h3></div>
                     </div>
                     <button onClick={()=>setSelectedRes(null)} style={{ padding:8,background:'rgba(255,255,255,.2)',border:'none',borderRadius:12,cursor:'pointer',flexShrink:0 }}><X size={18} color="var(--c-card)"/></button>
                   </div>
@@ -334,7 +334,7 @@ export default function ResourcesView({ profile }: Props) {
                     {selectedRes.description&&<p style={{ fontSize:13,color:'var(--c-text-muted)',lineHeight:1.6,background:'var(--c-surface)',borderRadius:16,padding:'14px 16px',margin:0 }}>{selectedRes.description}</p>}
                     {selectedRes.tags?.length>0&&<div style={{ display:'flex',flexWrap:'wrap',gap:6 }}>{selectedRes.tags.map(tg=><span key={tg} style={{ padding:'4px 12px',background:'var(--c-stat-purple)',color:'#0284c7',fontSize:12,fontWeight:700,borderRadius:20,border:'1px solid var(--c-border)' }}>{tg}</span>)}</div>}
                     {selectedRes.resource_type==='video'&&isYouTube(selectedRes.url)&&<div style={{ aspectRatio:'16/9',background:'var(--c-border-light)',borderRadius:16,overflow:'hidden' }}><iframe width="100%" height="100%" src={getEmbedUrl(selectedRes.url)} title={selectedRes.title} frameBorder="0" allowFullScreen/></div>}
-                    <a href={selectedRes.url} target="_blank" rel="noopener noreferrer" style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'14px',background:'linear-gradient(135deg,#0284c7,#0369a1)',color:'#ffffff',borderRadius:16,fontWeight:800,fontSize:14,textDecoration:'none' }}><ExternalLink size={16}/>Abrir {cfg.label}</a>
+                    <a href={selectedRes.url} target="_blank" rel="noopener noreferrer" style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'14px',background:'linear-gradient(135deg,#0284c7,#0369a1)',color:'#ffffff',borderRadius:16,fontWeight:800,fontSize:14,textDecoration:'none' }}><ExternalLink size={16}/>{t('recurso.abrir')} {t('recurso.' + selectedRes.resource_type)}</a>
                   </div>
                 </div>
               </div>
@@ -439,7 +439,7 @@ export default function ResourcesView({ profile }: Props) {
                 return (
                   <div key={order.id} style={{ background:'var(--c-card)',borderRadius:20,border:`1.5px solid ${cfg.border}`,padding:'16px',boxShadow:'0 2px 12px rgba(0,0,0,.04)' }}>
                     <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10 }}>
-                      <span style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:cfg.bg,color:cfg.color }}><Icon size={12}/>{cfg.label}</span>
+                      <span style={{ display:'inline-flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:700,background:cfg.bg,color:cfg.color }}><Icon size={12}/>{t('pedido.' + order.estado)}</span>
                       <span style={{ fontSize:11,color:'var(--c-text-placeholder)' }}>{new Date(order.created_at).toLocaleDateString('es',{day:'2-digit',month:'short'})}</span>
                     </div>
                     {order.store_order_items?.map((item:any,i:number)=>(

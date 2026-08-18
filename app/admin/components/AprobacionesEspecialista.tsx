@@ -157,7 +157,7 @@ export default function AprobacionesEspecialista() {
                 color: isActive ? (cfg?.color || '#06b6d4') : '#475569',
               }}
               className="text-xs font-bold px-3 py-1.5 rounded-full transition-all">
-              {f === 'all' ? 'Todas' : STATUS_CFG[f].label}
+              {f === 'all' ? t('aprobacion.todas') : t('aprobacion.' + f)}
             </button>
           )
         })}
@@ -207,7 +207,7 @@ export default function AprobacionesEspecialista() {
                       </div>
                       <span style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
                         className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0">
-                        {cfg.label}
+                        {t('aprobacion.' + sub.status)}
                       </span>
                     </div>
                     <p style={{ color: '#334155' }} className="text-xs mt-1">
