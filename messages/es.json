@@ -2836,5 +2836,37 @@
   "document": "Material",
   "audio": "Audio",
   "abrir": "Abrir"
+ },
+ "control": {
+  "modulo": {
+   "agenda": "Agenda / Calendario",
+   "ninos": "Pacientes",
+   "inteligencia": "Inteligencia Hub (IA)",
+   "cerebro": "Cerebro (Base Conocimiento)",
+   "pagos": "Pagos y Facturación",
+   "reportes_financieros": "Reportes Financieros",
+   "recursos_adicionales": "Recursos Adicionales",
+   "chat_especialistas": "Chat del Equipo"
+  },
+  "rol": {
+   "jefe": "Director / Jefe",
+   "especialista": "Especialista",
+   "secretaria": "Secretaria(o)",
+   "padre": "Padre / Tutor"
+  },
+  "rolDesc": {
+   "jefe": "Acceso total — no se puede desactivar",
+   "especialista": "Terapeuta / Clínico",
+   "secretaria": "Apoyo administrativo",
+   "padre": "Portal de familias"
+  },
+  "limite": {
+   "admin": "Admins / Directores",
+   "especialista": "Especialistas",
+   "secretaria": "Secretarias",
+   "padre": "Padres / Tutores",
+   "paciente": "Pacientes"
+  },
+  "ahora": "ahora"
  }
 }

@@ -480,7 +480,7 @@ export default function ControlPage() {
                   <div key={m.key} className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors
                     ${isOn ? 'bg-sky-500/5 border-sky-400/20' : 'bg-white/[0.02] border-white/5'}`}>
                     <span className="text-lg leading-none">{m.icon}</span>
-                    <span className={`flex-1 text-sm font-semibold ${isOn ? 'text-slate-200' : 'text-slate-500'}`}>{m.label}</span>
+                    <span className={`flex-1 text-sm font-semibold ${isOn ? 'text-slate-200' : 'text-slate-500'}`}>{t('control.modulo.' + m.key)}</span>
                     <Toggle on={isOn} onChange={v => toggleFeature(m.key as keyof FeaturesConfig, v)} />
                   </div>
                 )
@@ -589,8 +589,8 @@ export default function ControlPage() {
                     ${isOn ? 'bg-emerald-500/5 border-emerald-400/20' : 'bg-white/[0.02] border-white/5'}`}>
                     <RIcon size={15} className={`mt-0.5 shrink-0 ${isOn ? 'text-emerald-400' : 'text-slate-600'}`} />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold ${isOn ? 'text-slate-200' : 'text-slate-500'}`}>{r.label}</p>
-                      <p className="text-[11px] text-slate-500 leading-tight">{r.desc}</p>
+                      <p className={`text-sm font-bold ${isOn ? 'text-slate-200' : 'text-slate-500'}`}>{t('control.rol.' + r.key)}</p>
+                      <p className="text-[11px] text-slate-500 leading-tight">{t('control.rolDesc.' + r.key)}</p>
                     </div>
                     <Toggle on={isOn} onChange={v => toggleRole(r.key as keyof RolesConfig, v)} disabled={r.locked} />
                   </div>
@@ -612,7 +612,7 @@ export default function ControlPage() {
                 const lim = parseInt(limits[f.key] || '0', 10) || 0
                 return (
                   <div key={f.key} className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
-                    <p className="text-[11px] font-semibold text-slate-400 leading-tight">{f.label}</p>
+                    <p className="text-[11px] font-semibold text-slate-400 leading-tight">{t('control.limite.' + f.key)}</p>
                     <p className="mt-1.5 text-2xl font-black text-white">{actual}{lim > 0 && <span className="text-sm text-slate-500 font-bold"> / {lim}</span>}</p>
                     <p className={`text-[10px] ${lim > 0 && actual >= lim ? 'text-rose-400' : 'text-slate-500'}`}>{lim > 0 ? (actual >= lim ? 'límite alcanzado' : 'dentro del límite') : 'sin tope'}</p>
                   </div>
@@ -711,8 +711,8 @@ export default function ControlPage() {
               {LIMIT_FIELDS.map(f => (
                 <label key={f.key} className="flex items-center justify-between gap-3 text-sm rounded-xl bg-white/[0.02] border border-white/5 px-3 py-2.5">
                   <span className="flex items-center gap-2 min-w-0">
-                    <span className="text-slate-300 font-semibold truncate">{f.label}</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400 shrink-0">{counts[f.key] ?? 0} ahora</span>
+                    <span className="text-slate-300 font-semibold truncate">{t('control.limite.' + f.key)}</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400 shrink-0">{counts[f.key] ?? 0} {t('control.ahora')}</span>
                   </span>
                   <input type="number" min={0} value={limits[f.key] ?? ''} onChange={e => setLimits(s => ({ ...s, [f.key]: e.target.value.replace(/[^0-9]/g, '') }))} placeholder="∞" className="ctl-input w-20 text-sm rounded-lg px-2 py-1.5 text-right font-mono shrink-0" />
                 </label>

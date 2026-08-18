@@ -2824,5 +2824,37 @@
     "document": "Material",
     "audio": "Audio",
     "abrir": "Open"
+  },
+  "control": {
+    "modulo": {
+      "agenda": "Schedule / Calendar",
+      "ninos": "Patients",
+      "inteligencia": "Intelligence Hub (AI)",
+      "cerebro": "Brain (Knowledge Base)",
+      "pagos": "Payments & Billing",
+      "reportes_financieros": "Financial Reports",
+      "recursos_adicionales": "Additional Resources",
+      "chat_especialistas": "Team Chat"
+    },
+    "rol": {
+      "jefe": "Director / Manager",
+      "especialista": "Specialist",
+      "secretaria": "Secretary",
+      "padre": "Parent / Guardian"
+    },
+    "rolDesc": {
+      "jefe": "Full access — cannot be disabled",
+      "especialista": "Therapist / Clinician",
+      "secretaria": "Administrative support",
+      "padre": "Family portal"
+    },
+    "limite": {
+      "admin": "Admins / Directors",
+      "especialista": "Specialists",
+      "secretaria": "Secretaries",
+      "padre": "Parents / Guardians",
+      "paciente": "Patients"
+    },
+    "ahora": "now"
   }
 }
