@@ -14,11 +14,14 @@ import {
   ANAMNESIS_DATA, ABA_DATA, ENTORNO_HOGAR_DATA, BRIEF2_DATA,
   ADOS2_DATA, VINELAND3_DATA, WISCV_DATA, BASC3_DATA
 } from '@/app/admin/data/formConstants'
+import { ANAMNESIS_DATA_EN, ABA_DATA_EN, ENTORNO_HOGAR_DATA_EN, BRIEF2_DATA_EN, ADOS2_DATA_EN, VINELAND3_DATA_EN, WISCV_DATA_EN, BASC3_DATA_EN } from '@/app/admin/data/formConstants-en'
 import { calcularEdadNumerica } from '@/app/admin/utils/helpers'
 
 
 
 // ─── FORMULARIOS CLÍNICOS PROFESIONALES ─────────────────────────────────────
+const SECTIONS_EN: Record<string, any> = { anamnesis: ANAMNESIS_DATA_EN, aba: ABA_DATA_EN, entorno_hogar: ENTORNO_HOGAR_DATA_EN, brief2: BRIEF2_DATA_EN, ados2: ADOS2_DATA_EN, vineland3: VINELAND3_DATA_EN, wiscv: WISCV_DATA_EN, basc3: BASC3_DATA_EN }
+
 const CLINICAL_FORMS: any[] = [
   { id: 'anamnesis',    formKey: 'anamnesis',    title: 'Historia Clínica',               subtitle: 'Datos relevantes del cliente y contexto familiar',    category: 'clinico',    icon: '📋', estimatedMinutes: 30, sections: ANAMNESIS_DATA,    targetRole: 'admin', description: 'Historia clínica completa del paciente, antecedentes familiares y desarrollo temprano', tags: ['Historia', 'Inicial', 'Completo'] },
   { id: 'aba',          formKey: 'aba',          title: 'Sesión ABA',                     subtitle: 'Registro de sesión conductual',                        category: 'conductual', icon: '🎯', estimatedMinutes: 15, sections: ABA_DATA,          targetRole: 'admin', description: 'Registro estructurado de sesión de Análisis Conductual Aplicado', tags: ['ABA', 'Sesión', 'Conductual'] },
@@ -37,7 +40,7 @@ const ALL_SPECIALIST_FORMS = [
 
 // ─── QUESTION RENDERER ───────────────────────────────────────────────────────
 function QuestionField({ q, value, onChange }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const base = "w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
 
   if (q.type === 'select' || q.type === 'frequency') return (
@@ -165,7 +168,7 @@ function QuestionField({ q, value, onChange }: any) {
 
 // ─── FORM FILL VIEW ──────────────────────────────────────────────────────────
 function FormFillView({ form, children, onBack, userId, toast }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [step, setStep] = useState(0)
   const [responses, setResponses] = useState<Record<string, any>>({})
   const [childId, setChildId] = useState('')
@@ -176,7 +179,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
   const [editedActividades, setEditedActividades] = useState('')
   const [done, setDone] = useState(false)
 
-  const sections = form.sections || []
+  const sections = (locale === 'en' ? (SECTIONS_EN[form.formKey] || form.sections) : form.sections) || []
   const total = sections.length
   const section = sections[step]
   const progress = total > 0 ? ((step + 1) / total) * 100 : 0
@@ -591,7 +594,7 @@ const TABS = [
 ]
 
 export default function MisFormularios({ userId }: { userId: string }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const toast = useToast()
   const [children, setChildren] = useState<any[]>([])
   const [search, setSearch] = useState('')

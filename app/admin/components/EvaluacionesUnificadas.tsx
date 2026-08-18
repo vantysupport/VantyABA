@@ -132,7 +132,7 @@ const ALL_UNIFIED_FORMS = [
 
 // ─── QUESTION RENDERER ───────────────────────────────────────────────────────
 function QuestionRenderer({ question, value, onChange }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const freq = ['Nunca', 'Raramente', 'A veces', 'Frecuentemente', 'Casi siempre', 'Siempre']
 
   if (question.type === 'frequency' || question.type === 'radio') {
@@ -361,7 +361,7 @@ function toArray(val: any): string[] {
 
 // ─── AI ANALYSIS DISPLAY ─────────────────────────────────────────────────────
 function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableActividades, onEditActividades }: { analysis: any; editableMessage?: string; onEditMessage?: (v: string) => void; editableActividades?: string; onEditActividades?: (v: string) => void }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   if (!analysis) return null
   const alertColors: Record<string, string> = {
@@ -678,7 +678,7 @@ function HistorialFormCard({ sf, onReportGenerated }: { sf: any; onReportGenerat
 }
 
 function SendFormModal({ form, children, onSend, onClose }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [childId, setChildId] = useState('')
   const [message, setMessage] = useState('')
@@ -746,7 +746,7 @@ function SendFormModal({ form, children, onSend, onClose }: any) {
 
 // ─── FORM FILL VIEW ─────────────────────────────────────────────────────────
 function FormFillView({ form: formProp, children, onBack, toast, initialChildId, initialChildName }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   // Formulario traducido en vivo cuando el idioma es inglés (con caché).
   const form = useTranslatedForm(formProp) || formProp
 
@@ -768,6 +768,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
   const getSections = () => {
 
     if (isClinicalForm) return form.sections
+    const en = locale === 'en'
     const formDataMap: Record<string, any> = {
       anamnesis: ANAMNESIS_DATA, aba: ABA_DATA, entorno_hogar: ENTORNO_HOGAR_DATA,
       brief2: BRIEF2_DATA, ados2: ADOS2_DATA, vineland3: VINELAND3_DATA,
@@ -1207,7 +1208,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
 
 // ─── FORM CARD ───────────────────────────────────────────────────────────────
 function FormCard({ form, onStart, onSend, catInfo }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const isExternal = (form as any).externalPlatform
   const isPro = form.formKey
   const isParent = form.targetRole === 'parent' || form.targetRole === 'both'

@@ -16,6 +16,7 @@ import {
   ANAMNESIS_DATA, ABA_DATA, ENTORNO_HOGAR_DATA, BRIEF2_DATA,
   ADOS2_DATA, VINELAND3_DATA, WISCV_DATA, BASC3_DATA
 } from '../data/formConstants'
+import { ANAMNESIS_DATA_EN, ABA_DATA_EN, ENTORNO_HOGAR_DATA_EN, BRIEF2_DATA_EN, ADOS2_DATA_EN, VINELAND3_DATA_EN, WISCV_DATA_EN, BASC3_DATA_EN } from '../data/formConstants-en'
 
 function DynamicEvaluationsView() {
   const { t, locale } = useI18n()
@@ -33,14 +34,14 @@ function DynamicEvaluationsView() {
     supabase.from('children').select('id, name').then(({ data }: { data: any[] | null }) => data && setListaNinos(data));
   }, []);
 
-  const formConfig = activeForm === 'anamnesis' ? ANAMNESIS_DATA : 
-                      activeForm === 'aba' ? ABA_DATA : 
-                      activeForm === 'entorno_hogar' ? ENTORNO_HOGAR_DATA :
-                      activeForm === 'brief2' ? BRIEF2_DATA :
-                      activeForm === 'ados2' ? ADOS2_DATA :
-                      activeForm === 'vineland3' ? VINELAND3_DATA :
-                      activeForm === 'wiscv' ? WISCV_DATA :
-                      activeForm === 'basc3' ? BASC3_DATA : null;
+  const formConfig = activeForm === 'anamnesis' ? (locale==='en'?ANAMNESIS_DATA_EN:ANAMNESIS_DATA) : 
+                      activeForm === 'aba' ? (locale==='en'?ABA_DATA_EN:ABA_DATA) : 
+                      activeForm === 'entorno_hogar' ? (locale==='en'?ENTORNO_HOGAR_DATA_EN:ENTORNO_HOGAR_DATA) :
+                      activeForm === 'brief2' ? (locale==='en'?BRIEF2_DATA_EN:BRIEF2_DATA) :
+                      activeForm === 'ados2' ? (locale==='en'?ADOS2_DATA_EN:ADOS2_DATA) :
+                      activeForm === 'vineland3' ? (locale==='en'?VINELAND3_DATA_EN:VINELAND3_DATA) :
+                      activeForm === 'wiscv' ? (locale==='en'?WISCV_DATA_EN:WISCV_DATA) :
+                      activeForm === 'basc3' ? (locale==='en'?BASC3_DATA_EN:BASC3_DATA) : null;
   const currentSection = formConfig ? formConfig[currentStep] : null;
   const totalSteps = formConfig ? formConfig.length : 0;
   const progress = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 0;
