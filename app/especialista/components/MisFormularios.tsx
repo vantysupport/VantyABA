@@ -15,6 +15,7 @@ import {
   ADOS2_DATA, VINELAND3_DATA, WISCV_DATA, BASC3_DATA
 } from '@/app/admin/data/formConstants'
 import { ANAMNESIS_DATA_EN, ABA_DATA_EN, ENTORNO_HOGAR_DATA_EN, BRIEF2_DATA_EN, ADOS2_DATA_EN, VINELAND3_DATA_EN, WISCV_DATA_EN, BASC3_DATA_EN } from '@/app/admin/data/formConstants-en'
+import { ALL_FORMS_EN } from '@/app/admin/data/neurodivergentForms-en'
 import { calcularEdadNumerica } from '@/app/admin/utils/helpers'
 
 
@@ -179,7 +180,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
   const [editedActividades, setEditedActividades] = useState('')
   const [done, setDone] = useState(false)
 
-  const sections = (locale === 'en' ? (SECTIONS_EN[form.formKey] || form.sections) : form.sections) || []
+  const sections = (locale === 'en' ? (SECTIONS_EN[form.formKey] || (ALL_FORMS_EN.find((x: any) => x.id === form.id)?.sections) || form.sections) : form.sections) || []
   const total = sections.length
   const section = sections[step]
   const progress = total > 0 ? ((step + 1) / total) * 100 : 0

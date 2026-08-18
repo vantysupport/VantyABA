@@ -32,11 +32,12 @@ function ParentFormRenderer({ form, onSubmit, onClose }: { form: any; onSubmit: 
   useEffect(() => {
     Promise.all([
       import('@/app/admin/data/neurodivergentForms'),
+      import('@/app/admin/data/neurodivergentForms-en'),
       import('@/app/admin/data/newFormConstants'),
       import('@/app/admin/data/formConstants'),
-    ]).then(([neuroMod, newMod, formMod]) => {
+    ]).then(([neuroMod, neuroEnMod, newMod, formMod]) => {
       // 1. Buscar en neurodivergentForms
-      const found = neuroMod.ALL_FORMS.find((f: any) => f.id === form.form_type)
+      const found = (locale === 'en' ? neuroEnMod.ALL_FORMS_EN : neuroMod.ALL_FORMS).find((f: any) => f.id === form.form_type)
       if (found) { setFormDef(found); return }
 
       // 2. Buscar en newFormConstants
