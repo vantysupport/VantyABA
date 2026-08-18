@@ -2935,6 +2935,24 @@
    "recursos_tienda": "Tienda",
    "recursos_terapias": "Catálogo Terapias",
    "recursos_fonemas": "Fonemas"
-  }
+  },
+  "activosSidebar": "activos en sidebar",
+  "pestanasActivas": "pestañas activas total",
+  "modulosSistema": "Módulos del sistema",
+  "modulosDesc": "Activa o desactiva secciones enteras de la barra lateral. Los cambios se reflejan de inmediato para todos los usuarios.",
+  "moduloActivo": "módulo activo",
+  "moduloDesactivado": "módulo desactivado",
+  "controlaTabs": "Controla qué pestañas aparecen dentro de este módulo.",
+  "rolesSistema": "Roles del sistema",
+  "afectaPanel": "afecta panel de usuarios",
+  "enVivoBase": "en vivo desde la base",
+  "limiteAlcanzado": "límite alcanzado",
+  "dentroLimite": "dentro del límite",
+  "sinTope": "sin tope",
+  "phMensajeUsuarios": "Mensaje para los usuarios (opcional).",
+  "limiteActivo": "LÍMITE ACTIVO",
+  "sinLimite": "SIN LÍMITE",
+  "sinMensaje": "(sin mensaje)",
+  "sinDetalle": "(sin detalle)"
  }
 }

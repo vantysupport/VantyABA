@@ -445,7 +445,7 @@ export default function ControlPage() {
                 <Puzzle size={15} className="text-sky-400" />
               </div>
               <p className="mt-2 text-2xl font-black text-white">{activeModules}<span className="text-sm text-slate-500 font-bold"> / {MAIN_MODULES.length}</span></p>
-              <p className="text-[11px] text-slate-500">activos en sidebar</p>
+              <p className="text-[11px] text-slate-500">{t('control.activosSidebar')}</p>
             </div>
             <div className="ctl-card p-4">
               <div className="flex items-center justify-between">
@@ -453,7 +453,7 @@ export default function ControlPage() {
                 <Layers size={15} className="text-violet-400" />
               </div>
               <p className="mt-2 text-2xl font-black text-white">{activeTabs}<span className="text-sm text-slate-500 font-bold"> / {ALL_SUB_TABS.length}</span></p>
-              <p className="text-[11px] text-slate-500">pestañas activas total</p>
+              <p className="text-[11px] text-slate-500">{t('control.pestanasActivas')}</p>
             </div>
             <div className="ctl-card p-4">
               <div className="flex items-center justify-between">
@@ -469,10 +469,10 @@ export default function ControlPage() {
           <section className="ctl-card p-5">
             <div className="flex items-center gap-2.5 mb-1">
               <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-400/20 flex items-center justify-center"><Puzzle size={15} className="text-sky-400" /></div>
-              <h2 className="font-bold text-[15px] text-white">Módulos del sistema</h2>
+              <h2 className="font-bold text-[15px] text-white">{t('control.modulosSistema')}</h2>
               <span className="ml-auto text-[10px] font-bold font-mono text-slate-500">se aplica al instante</span>
             </div>
-            <p className="text-xs text-slate-400 mb-4 ml-[42px]">Activa o desactiva secciones enteras de la barra lateral. Los cambios se reflejan de inmediato para todos los usuarios.</p>
+            <p className="text-xs text-slate-400 mb-4 ml-[42px]">{t('control.modulosDesc')}</p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               {MAIN_MODULES.map(m => {
                 const isOn = features[m.key as keyof FeaturesConfig]
@@ -547,10 +547,10 @@ export default function ControlPage() {
                   </div>
                   <h2 className="font-bold text-[15px] text-white">Pestañas: {section.parentLabel}</h2>
                   <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${parentOn ? c.badge : 'bg-white/5 border-white/10 text-slate-500'}`}>
-                    {parentOn ? 'módulo activo' : 'módulo desactivado'}
+                    {parentOn ? t('control.moduloActivo') : t('control.moduloDesactivado')}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mb-4 ml-[42px]">Controla qué pestañas aparecen dentro de este módulo.</p>
+                <p className="text-xs text-slate-400 mb-4 ml-[42px]">{t('control.controlaTabs')}</p>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
                   {(section.tabs as readonly { key: string; label: string; icon: string }[]).map(tab => {
                     const isOn = features[tab.key as keyof FeaturesConfig]
@@ -574,8 +574,8 @@ export default function ControlPage() {
           <section className="ctl-card p-5">
             <div className="flex items-center gap-2.5 mb-1">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center"><Users size={15} className="text-emerald-400" /></div>
-              <h2 className="font-bold text-[15px] text-white">Roles del sistema</h2>
-              <span className="ml-auto text-[10px] font-bold font-mono text-slate-500">afecta panel de usuarios</span>
+              <h2 className="font-bold text-[15px] text-white">{t('control.rolesSistema')}</h2>
+              <span className="ml-auto text-[10px] font-bold font-mono text-slate-500">{t('control.afectaPanel')}</span>
             </div>
             <p className="text-xs text-slate-400 mb-4 ml-[42px]">
               Define qué roles aparecen como opción al crear o editar usuarios. El rol <span className="font-mono text-sky-400">Director</span> siempre está activo.
@@ -604,7 +604,7 @@ export default function ControlPage() {
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center"><Users size={15} className="text-emerald-400" /></div>
               <h2 className="font-bold text-[15px] text-white">{t("admin.poblacionSistema")}</h2>
-              <span className="ml-auto text-[10px] font-bold font-mono text-slate-500">en vivo desde la base</span>
+              <span className="ml-auto text-[10px] font-bold font-mono text-slate-500">{t('control.enVivoBase')}</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {LIMIT_FIELDS.map(f => {
@@ -614,7 +614,7 @@ export default function ControlPage() {
                   <div key={f.key} className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
                     <p className="text-[11px] font-semibold text-slate-400 leading-tight">{t('control.limite.' + f.key)}</p>
                     <p className="mt-1.5 text-2xl font-black text-white">{actual}{lim > 0 && <span className="text-sm text-slate-500 font-bold"> / {lim}</span>}</p>
-                    <p className={`text-[10px] ${lim > 0 && actual >= lim ? 'text-rose-400' : 'text-slate-500'}`}>{lim > 0 ? (actual >= lim ? 'límite alcanzado' : 'dentro del límite') : 'sin tope'}</p>
+                    <p className={`text-[10px] ${lim > 0 && actual >= lim ? 'text-rose-400' : 'text-slate-500'}`}>{lim > 0 ? (actual >= lim ? t('control.limiteAlcanzado') : t('control.dentroLimite')) : t('control.sinTope')}</p>
                   </div>
                 )
               })}
@@ -636,7 +636,7 @@ export default function ControlPage() {
                 value={maintMsg}
                 onChange={e => setMaintMsg(e.target.value)}
                 rows={2}
-                placeholder="Mensaje para los usuarios (opcional)."
+                placeholder={t('control.phMensajeUsuarios')}
                 className="ctl-input w-full text-sm rounded-xl px-3 py-2.5 mb-3 transition-shadow"
               />
               <div className="flex flex-wrap gap-2">
@@ -660,7 +660,7 @@ export default function ControlPage() {
               <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5 mb-3">
                 <div className="flex items-center gap-2 mb-2.5">
                   <span className="text-sm font-bold text-white">{t("admin.padresFamilias")}</span>
-                  <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${aria.enabled ? 'bg-violet-500/10 border-violet-400/30 text-violet-200' : 'bg-white/5 border-white/10 text-slate-400'}`}>{aria.enabled ? 'LÍMITE ACTIVO' : 'SIN LÍMITE'}</span>
+                  <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${aria.enabled ? 'bg-violet-500/10 border-violet-400/30 text-violet-200' : 'bg-white/5 border-white/10 text-slate-400'}`}>{aria.enabled ? t('control.limiteActivo') : t('control.sinLimite')}</span>
                 </div>
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="flex flex-col gap-1">
@@ -680,7 +680,7 @@ export default function ControlPage() {
               <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3.5">
                 <div className="flex items-center gap-2 mb-2.5">
                   <span className="text-sm font-bold text-white">{t("admin.personalJefeEsp")}</span>
-                  <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${aria.staffEnabled ? 'bg-violet-500/10 border-violet-400/30 text-violet-200' : 'bg-white/5 border-white/10 text-slate-400'}`}>{aria.staffEnabled ? 'LÍMITE ACTIVO' : 'SIN LÍMITE'}</span>
+                  <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border ${aria.staffEnabled ? 'bg-violet-500/10 border-violet-400/30 text-violet-200' : 'bg-white/5 border-white/10 text-slate-400'}`}>{aria.staffEnabled ? t('control.limiteActivo') : t('control.sinLimite')}</span>
                 </div>
                 <div className="flex flex-wrap items-end gap-3">
                   <label className="flex flex-col gap-1">
@@ -768,7 +768,7 @@ export default function ControlPage() {
                       <span className="flex-1 min-w-0">
                         <span className="flex items-center gap-2 flex-wrap">
                           <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-sky-500/10 border border-sky-400/20 text-sky-300 shrink-0">{e.source || 'app'}</span>
-                          <span className="text-[13px] font-medium text-slate-200 truncate font-mono">{e.message || '(sin mensaje)'}</span>
+                          <span className="text-[13px] font-medium text-slate-200 truncate font-mono">{e.message || t('control.sinMensaje')}</span>
                         </span>
                         <span className="block text-[10px] text-slate-500 mt-1 font-mono">{new Date(e.created_at).toLocaleString('es-PE')}{e.user_email ? ` · ${e.user_email}` : ''}</span>
                       </span>
@@ -777,7 +777,7 @@ export default function ControlPage() {
                     {openErr === e.id && (
                       <div className="px-3 pb-3">
                         {e.url && <p className="text-[10px] text-slate-500 break-all mb-1.5 font-mono">URL: {e.url}</p>}
-                        <pre className="text-[11px] leading-relaxed text-emerald-300/90 whitespace-pre-wrap break-words bg-black/50 border border-white/10 rounded-lg p-3 max-h-72 overflow-auto font-mono">{e.detail || '(sin detalle)'}</pre>
+                        <pre className="text-[11px] leading-relaxed text-emerald-300/90 whitespace-pre-wrap break-words bg-black/50 border border-white/10 rounded-lg p-3 max-h-72 overflow-auto font-mono">{e.detail || t('control.sinDetalle')}</pre>
                       </div>
                     )}
                   </div>

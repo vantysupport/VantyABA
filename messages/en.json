@@ -2923,6 +2923,24 @@
       "recursos_tienda": "Store",
       "recursos_terapias": "Therapy Catalog",
       "recursos_fonemas": "Phonemes"
-    }
+    },
+    "activosSidebar": "active in sidebar",
+    "pestanasActivas": "total active tabs",
+    "modulosSistema": "System modules",
+    "modulosDesc": "Enable or disable entire sidebar sections. Changes apply immediately for all users.",
+    "moduloActivo": "module enabled",
+    "moduloDesactivado": "module disabled",
+    "controlaTabs": "Control which tabs appear within this module.",
+    "rolesSistema": "System roles",
+    "afectaPanel": "affects users panel",
+    "enVivoBase": "live from the database",
+    "limiteAlcanzado": "limit reached",
+    "dentroLimite": "within limit",
+    "sinTope": "no cap",
+    "phMensajeUsuarios": "Message for users (optional).",
+    "limiteActivo": "LIMIT ON",
+    "sinLimite": "NO LIMIT",
+    "sinMensaje": "(no message)",
+    "sinDetalle": "(no detail)"
   }
 }
