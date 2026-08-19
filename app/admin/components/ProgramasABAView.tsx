@@ -1716,13 +1716,13 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                             <div className="space-y-2">
                               {[
                                 { key: 'materiales',        label: '📚 Materiales',         placeholder: 'Materiales necesarios' },
-                                { key: 'sd_estimulo',       label: '📍 Sd',                 placeholder: 'Instrucción verbal o gesto' },
+                                { key: 'sd_estimulo',       label: t('programas.sdCorto'),                 placeholder: t('programas.phSd') },
                                 { key: 'unidad_positiva',   label: '✅ Unidad +',           placeholder: 'Respuesta correcta esperada' },
                                 { key: 'unidad_negativa',   label: '❎ Unidad -',           placeholder: 'Respuesta incorrecta / error' },
                                 { key: 'reforzadores',      label: '🤝🏼 Ayudas',            placeholder: 'Ej: Gesto + verbal' },
-                                { key: 'correction_errores',label: '📍 Corrección',         placeholder: 'Cómo se corrige el error' },
-                                { key: 'generalizacion',    label: '➡️ Generalización',    placeholder: 'Promover con la familia...' },
-                                { key: 'notas',             label: '📝 Notas',              placeholder: 'Observaciones de este set' },
+                                { key: 'correction_errores',label: t('programas.correccion'),         placeholder: t('programas.phCorrigeError') },
+                                { key: 'generalizacion',    label: t('programas.generalizacion'),    placeholder: t('programas.phGeneralizar') },
+                                { key: 'notas',             label: '📝 Notas',              placeholder: t('programas.obsSet') },
                               ].map(({ key, label, placeholder }) => (
                                 <div key={key}>
                                   <label className="block text-[11px] font-bold text-sky-400 mb-1">{label}</label>
@@ -1815,14 +1815,14 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                 className="w-full rounded-xl text-sm font-bold outline-none" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
                             </div>
                             {[
-                              { key: 'materiales',       label: '📚 Materiales',                   placeholder: 'Materiales necesarios para este set' },
-                              { key: 'sd_estimulo',      label: '📍 Sd / Estímulo discriminativo', placeholder: 'Instrucción verbal o gesto que inicia la conducta' },
+                              { key: 'materiales',       label: '📚 Materiales',                   placeholder: t('programas.materialesSetNec') },
+                              { key: 'sd_estimulo',      label: t('programas.sdEstimuloFull'), placeholder: t('programas.phSdInicia') },
                               { key: 'unidad_positiva',  label: '✅ Unidad positiva',              placeholder: 'Respuesta correcta esperada' },
                               { key: 'unidad_negativa',  label: '❎ Unidad negativa',             placeholder: 'Respuesta incorrecta / error' },
                               { key: 'reforzadores',     label: '🤝🏼 Ayudas',                      placeholder: 'Las indicadas en el set. Ej: Gesto + verbal' },
-                              { key: 'correction_errores', label: '📍 Corrección del error',         placeholder: 'Cómo se corrige si la respuesta es incorrecta' },
-                              { key: 'generalizacion',   label: '➡️ Generalización',              placeholder: 'Promover con la familia que realicen este ejercicio en casa.' },
-                              { key: 'notas',            label: '📝 Notas',                        placeholder: 'Observaciones de este set' },
+                              { key: 'correction_errores', label: t('programas.correccionFull'),         placeholder: t('programas.phCorrigeIncorrecta') },
+                              { key: 'generalizacion',   label: t('programas.generalizacion'),              placeholder: t('programas.phGeneralizarFull') },
+                              { key: 'notas',            label: '📝 Notas',                        placeholder: t('programas.obsSet') },
                             ].map(({ key, label, placeholder }) => (
                               <div key={key}>
                                 <label className="text-xs font-bold text-slate-500 block mb-1.5">{label}</label>
@@ -2691,14 +2691,14 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                   {setExpandido === i && (
                     <div className="px-3 pb-3 space-y-2 border-t border-[var(--card-border)]">
                       {([
-                        { key: 'materiales',       label: '📚 Materiales',                   placeholder: 'Materiales para este set' },
-                        { key: 'sd_estimulo',      label: '📍 Sd / Estímulo discriminativo', placeholder: 'Instrucción verbal o gesto' },
+                        { key: 'materiales',       label: '📚 Materiales',                   placeholder: t('programas.materialesSet') },
+                        { key: 'sd_estimulo',      label: t('programas.sdEstimuloFull'), placeholder: t('programas.phSd') },
                         { key: 'unidad_positiva',  label: '✅ Unidad positiva',              placeholder: 'Respuesta correcta esperada' },
                         { key: 'unidad_negativa',  label: '❎ Unidad negativa',             placeholder: 'Respuesta incorrecta / error' },
                         { key: 'reforzadores',     label: '🤝🏼 Ayudas',                      placeholder: 'Ej: Gesto + verbal' },
-                        { key: 'correction_errores', label: '📍 Corrección del error',         placeholder: 'Cómo se corrige si la respuesta es incorrecta' },
-                        { key: 'generalizacion',   label: '➡️ Generalización',              placeholder: 'Promover con la familia...' },
-                        { key: 'notas',            label: '📝 Notas',                        placeholder: 'Observaciones de este set' },
+                        { key: 'correction_errores', label: t('programas.correccionFull'),         placeholder: t('programas.phCorrigeIncorrecta') },
+                        { key: 'generalizacion',   label: t('programas.generalizacion'),              placeholder: t('programas.phGeneralizar') },
+                        { key: 'notas',            label: '📝 Notas',                        placeholder: t('programas.obsSet') },
                       ] as {key: string, label: string, placeholder: string}[]).map(({ key, label, placeholder }) => (
                         <div key={key} className="pt-2">
                           <label className="text-xs font-bold text-slate-500 block mb-1.5">{label}</label>
@@ -2743,8 +2743,8 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
             <div className="space-y-3">
               <p className="text-xs font-bold text-slate-400">{t("programas.paso3Proc")}</p>
               {[
-                { key: 'generalizacion',   label: '➡️ Generalización',               placeholder: 'Promover con la familia que realicen este ejercicio en casa.' },
-                { key: 'notas_programa',   label: '🙈 Notas',                         placeholder: 'Observaciones generales del programa...' },
+                { key: 'generalizacion',   label: t('programas.generalizacion'),               placeholder: t('programas.phGeneralizarFull') },
+                { key: 'notas_programa',   label: '🙈 Notas',                         placeholder: t('programas.phObsPrograma') },
               ].map(({ key, label, placeholder }) => (
                 <div key={key}>
                   <label className="text-xs font-bold text-slate-500 block mb-1">{label}</label>
