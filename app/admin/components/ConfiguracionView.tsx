@@ -338,9 +338,9 @@ function SeccionSeguridad() {
         <div className={`mt-4 p-4 rounded-xl border ${isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-slate-50 border-slate-100'}`}>
           <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.requisitos")}</p>
           {[
-            { label: 'Mínimo 8 caracteres', ok: form.nueva.length >= 8 },
-            { label: 'Al menos una mayúscula', ok: /[A-Z]/.test(form.nueva) },
-            { label: 'Al menos un número', ok: /[0-9]/.test(form.nueva) },
+            { label: t('ui2.minimo8'), ok: form.nueva.length >= 8 },
+            { label: t('ui2.unaMayuscula'), ok: /[A-Z]/.test(form.nueva) },
+            { label: t('ui2.unNumero'), ok: /[0-9]/.test(form.nueva) },
             { label: 'Un carácter especial (!@#$…)', ok: /[^A-Za-z0-9]/.test(form.nueva) },
           ].map(r => (
             <div key={r.label} className="flex items-center gap-2 py-0.5">

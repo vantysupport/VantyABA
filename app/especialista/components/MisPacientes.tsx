@@ -732,9 +732,9 @@ function PatientInfoViewEspecialista({ paciente, onRefresh }: { paciente: any; o
       {editing ? (
         <div className="space-y-3">
           {[
-            { key: 'name',       label: 'Nombre completo',     type: 'text', req: true },
-            { key: 'birth_date', label: 'Fecha de nacimiento', type: 'date', req: false },
-            { key: 'diagnosis',  label: 'Diagnóstico',         type: 'text', req: false },
+            { key: 'name',       label: t('ui2.nombreCompleto'),     type: 'text', req: true },
+            { key: 'birth_date', label: t('ui2.fechaNacimiento'), type: 'date', req: false },
+            { key: 'diagnosis',  label: t('ui2.diagnostico'),         type: 'text', req: false },
           ].map(f => (
             <div key={f.key}>
               <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--text-muted)' }}>
@@ -764,11 +764,11 @@ function PatientInfoViewEspecialista({ paciente, onRefresh }: { paciente: any; o
           {[
             { label: 'Nombre', value: paciente.name },
             { label: 'Edad', value: calcularEdad(paciente.birth_date) },
-            { label: 'Fecha de nacimiento', value: formatDate(paciente.birth_date) },
-            { label: 'Diagnóstico', value: paciente.diagnosis || '—' },
+            { label: t('ui2.fechaNacimiento'), value: formatDate(paciente.birth_date) },
+            { label: t('ui2.diagnostico'), value: paciente.diagnosis || '—' },
             { label: 'Tutor / Padre', value: paciente.profiles?.full_name || '—' },
             { label: 'Email tutor', value: paciente.profiles?.email || '—' },
-            { label: 'Teléfono tutor', value: paciente.profiles?.phone || '—' },
+            { label: t('ui2.telefonoTutor'), value: paciente.profiles?.phone || '—' },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-start gap-3 py-2.5 border-b" style={{ borderColor: 'var(--card-border)' }}>
               <span className="text-xs font-bold w-40 flex-shrink-0 pt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</span>
@@ -1048,10 +1048,10 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
 
   if (seleccionado) {
     const TABS_DETAIL = [
-      { id: 'info',         label: 'Información general', icon: User },
+      { id: 'info',         label: t('ui2.infoGeneral'), icon: User },
       { id: 'programas',    label: 'Programas ABA',       icon: Target },
       { id: 'evaluaciones', label: 'Evaluaciones',         icon: ClipboardList },
-      { id: 'historial',    label: 'Historial & IA',      icon: Brain },
+      { id: 'historial',    label: t('ui2.historialIA'),      icon: Brain },
       { id: 'fichas',       label: 'Fichas',              icon: FileText },
       { id: 'documentos',   label: 'Documentos',          icon: FolderOpen },
     ] as const
@@ -1221,9 +1221,9 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
             </div>
             <div className="space-y-3">
               {[
-                { key: 'name',       label: 'Nombre completo',     type: 'text', placeholder: 'Ej: María García', req: true },
-                { key: 'birth_date', label: 'Fecha de nacimiento', type: 'date', placeholder: '',                 req: false },
-                { key: 'diagnosis',  label: 'Diagnóstico',         type: 'text', placeholder: 'Ej: TEA Nivel 2', req: false },
+                { key: 'name',       label: t('ui2.nombreCompleto'),     type: 'text', placeholder: t('ui2.phEjNombre'), req: true },
+                { key: 'birth_date', label: t('ui2.fechaNacimiento'), type: 'date', placeholder: '',                 req: false },
+                { key: 'diagnosis',  label: t('ui2.diagnostico'),         type: 'text', placeholder: t('ui2.phEjTea'), req: false },
               ].map(f => (
                 <div key={f.key}>
                   <label className="block text-xs font-bold mb-1.5 text-slate-500">
