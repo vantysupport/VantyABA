@@ -2992,5 +2992,31 @@
     "minimo8": "Minimum 8 characters",
     "unaMayuscula": "At least one uppercase letter",
     "unNumero": "At least one number"
+  },
+  "misEval": {
+    "status": {
+      "pending_approval": "Under review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "todas": "All"
+    },
+    "tipo": {
+      "conducta": {
+        "label": "Behavior",
+        "desc": "ABC Analysis"
+      },
+      "progreso": {
+        "label": "Progress",
+        "desc": "Therapeutic progress"
+      },
+      "sesion": {
+        "label": "Session note",
+        "desc": "Clinical record"
+      },
+      "familia": {
+        "label": "For the family",
+        "desc": "Home guides"
+      }
+    }
   }
 }

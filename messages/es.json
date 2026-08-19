@@ -3004,5 +3004,31 @@
   "minimo8": "Mínimo 8 caracteres",
   "unaMayuscula": "Al menos una mayúscula",
   "unNumero": "Al menos un número"
+ },
+ "misEval": {
+  "status": {
+   "pending_approval": "En revisión",
+   "approved": "Aprobado",
+   "rejected": "Rechazado",
+   "todas": "Todas"
+  },
+  "tipo": {
+   "conducta": {
+    "label": "Conducta",
+    "desc": "Análisis ABC"
+   },
+   "progreso": {
+    "label": "Progreso",
+    "desc": "Avance terapéutico"
+   },
+   "sesion": {
+    "label": "Nota de sesión",
+    "desc": "Registro clínico"
+   },
+   "familia": {
+    "label": "Para familia",
+    "desc": "Guías para el hogar"
+   }
+  }
  }
 }

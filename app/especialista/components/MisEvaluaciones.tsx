@@ -52,7 +52,7 @@ const TEMPLATES: Record<string, any> = {
 
 export default function MisEvaluaciones({ userId }: { userId: string }) {
   const toast = useToast()
-  const { t } = useI18n()
+  const { t } = useI18n(); const tt = t
   const [evaluaciones, setEvaluaciones] = useState<any[]>([])
   const [ninos, setNinos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -125,7 +125,7 @@ export default function MisEvaluaciones({ userId }: { userId: string }) {
                   ? (cfg ? `${cfg.bg} ${cfg.color} ${cfg.border}` : 'bg-sky-600 text-white border-sky-600')
                   : 'bg-white text-slate-500 border-slate-200 hover:border-sky-300'
                 }`}>
-              {f === 'all' ? 'Todas' : STATUS[f].label}
+              {f === 'all' ? t('misEval.status.todas') : t('misEval.status.' + f)}
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold
                 ${isActive ? 'bg-white/30' : 'bg-slate-100 text-slate-500'}`}>
                 {counts[f]}
@@ -172,7 +172,7 @@ export default function MisEvaluaciones({ userId }: { userId: string }) {
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-xs text-slate-400">{ev.children?.name}</span>
                           {tipo && (
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tipo.color}`}>{tipo.label}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tipo.color}`}>{t('misEval.tipo.' + tipo.id + '.label')}</span>
                           )}
                           <span className="text-xs text-slate-300">
                             {new Date(ev.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
@@ -180,7 +180,7 @@ export default function MisEvaluaciones({ userId }: { userId: string }) {
                         </div>
                       </div>
                       <span className={`text-xs font-bold px-3 py-1 rounded-full flex-shrink-0 border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
-                        {cfg.label}
+                        {t('misEval.status.' + ev.status)}
                       </span>
                     </div>
                     {ev.admin_comment && (
@@ -246,8 +246,8 @@ export default function MisEvaluaciones({ userId }: { userId: string }) {
                     <button key={t.id} type="button"
                       onClick={() => setForm(f => ({ ...f, tipo: t.id }))}
                       className={`p-3 rounded-xl border-2 text-left transition-all ${form.tipo === t.id ? `${t.color} border-current` : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>
-                      <p className="text-xs font-bold">{t.label}</p>
-                      <p className="text-[10px] opacity-70">{t.desc}</p>
+                      <p className="text-xs font-bold">{tt('misEval.tipo.' + t.id + '.label')}</p>
+                      <p className="text-[10px] opacity-70">{tt('misEval.tipo.' + t.id + '.desc')}</p>
                     </button>
                   ))}
                 </div>
@@ -260,7 +260,7 @@ export default function MisEvaluaciones({ userId }: { userId: string }) {
                     }}
                     className="w-full py-2.5 border-2 border-dashed border-sky-300 text-sky-600 rounded-xl text-xs font-bold hover:bg-sky-50 transition-all flex items-center justify-center gap-2"
                   >
-                    ✨ Usar plantilla de {TIPOS.find(t => t.id === form.tipo)?.label}
+                    ✨ Usar plantilla de {tt('misEval.tipo.' + (TIPOS.find((x) => x.id === form.tipo)?.id || form.tipo) + '.label')}
                   </button>
                 )}
               </div>
@@ -283,8 +283,8 @@ export default function MisEvaluaciones({ userId }: { userId: string }) {
                     <button key={t.id} onClick={() => setForm(f => ({ ...f, tipo: t.id }))}
                       className={`text-left p-3 rounded-xl border-2 transition-all
                         ${form.tipo === t.id ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-sky-300'}`}>
-                      <p className={`text-sm font-bold ${form.tipo === t.id ? 'text-sky-700' : 'text-slate-700'}`}>{t.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{t.desc}</p>
+                      <p className={`text-sm font-bold ${form.tipo === t.id ? 'text-sky-700' : 'text-slate-700'}`}>{tt('misEval.tipo.' + t.id + '.label')}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{tt('misEval.tipo.' + t.id + '.desc')}</p>
                     </button>
                   ))}
                 </div>
