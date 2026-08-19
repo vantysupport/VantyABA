@@ -321,13 +321,13 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
     // ENCABEZADO C├üLIDO
     new Paragraph({ spacing:{before:0,after:20}, border:{bottom:{style:BorderStyle.SINGLE,size:8,color:'7C3AED',space:8}},
       children:[new TextRun({text:'­ƒîƒ  Neuropsicolog├¡a y Terapias SANTI',bold:true,size:38,font:'Arial',color:'5B21B6'}),
-                new TextRun({text:'  ┬À  Centro de Terapia ABA',size:22,font:'Arial',color:'9CA3AF'})] }),
+                new TextRun({text:(userLocale === 'en' ? '  ·  ABA Therapy Center' : '  ·  Centro de Terapia ABA'),size:22,font:'Arial',color:'9CA3AF'})] }),
     new Paragraph({ spacing:{before:180,after:60},
-      children:[new TextRun({text:`Reporte de Progreso de ${nombreCorto}`,bold:true,size:44,font:'Arial',color:'4C1D95'})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? `Progress Report for ${nombreCorto}` : `Reporte de Progreso de ${nombreCorto}`),bold:true,size:44,font:'Arial',color:'4C1D95'})] }),
     new Paragraph({ spacing:{before:0,after:20},
-      children:[new TextRun({text:'Para la familia con cari├▒o',size:24,font:'Arial',color:'7C3AED',italics:true})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? 'For the family, with love' : 'Para la familia con cariño'),size:24,font:'Arial',color:'7C3AED',italics:true})] }),
     new Paragraph({ spacing:{before:60,after:360}, shading:{fill:'F5F3FF',type:ShadingType.CLEAR},
-      children:[new TextRun({text:`Per├¡odo: ${fechaInicio} al ${fechaFin}   ┬À   ${totalSesiones} sesiones   ┬À   Emitido: ${hoy}`,size:18,font:'Arial',color:'6D28D9'})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? `Period: ${fechaInicio} to ${fechaFin}   ·   ${totalSesiones} sessions   ·   Issued: ${hoy}` : `Período: ${fechaInicio} al ${fechaFin}   ·   ${totalSesiones} sesiones   ·   Emitido: ${hoy}`),size:18,font:'Arial',color:'6D28D9'})] }),
 
     // BIENVENIDA
     h2('Querida Familia:'),
@@ -341,26 +341,26 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
         new TableCell({borders:NBDR, shading:{fill:promedioLogro>=65?'F0FDF4':promedioLogro>=45?'FFFBEB':'FFF1F2',type:ShadingType.CLEAR}, margins:{top:200,bottom:200,left:200,right:100},
           children:[
             new Paragraph({alignment:AlignmentType.CENTER, children:[new TextRun({text:`${promedioLogro}%`,bold:true,size:96,font:'Arial',color:promedioLogro>=65?'15803D':promedioLogro>=45?'B45309':'BE123C'})]}),
-            new Paragraph({alignment:AlignmentType.CENTER, spacing:{before:60}, children:[new TextRun({text:'Promedio de logro',size:22,font:'Arial',color:'64748B',bold:true})]}),
+            new Paragraph({alignment:AlignmentType.CENTER, spacing:{before:60}, children:[new TextRun({text:(userLocale === 'en' ? 'Average achievement' : 'Promedio de logro'),size:22,font:'Arial',color:'64748B',bold:true})]}),
             new Paragraph({alignment:AlignmentType.CENTER, spacing:{before:40}, children:[new TextRun({text:logroTexto,size:28,font:'Arial',color:promedioLogro>=65?'15803D':promedioLogro>=45?'B45309':'BE123C',bold:true})]}),
           ]}),
         new TableCell({borders:NBDR, shading:{fill:'F8FAFC',type:ShadingType.CLEAR}, margins:{top:100,bottom:100,left:100,right:200},
           children:[
-            new Paragraph({spacing:{before:80}, children:[new TextRun({text:'­ƒôà  Sesiones realizadas',size:18,font:'Arial',color:'475569'})]}),
-            new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:`${totalSesiones} sesiones en ${semanas} semanas`,bold:true,size:22,font:'Arial',color:'1E293B'})]}),
-            new Paragraph({spacing:{before:0}, children:[new TextRun({text:'­ƒôê  Evoluci├│n del progreso',size:18,font:'Arial',color:'475569'})]}),
+            new Paragraph({spacing:{before:80}, children:[new TextRun({text:(userLocale === 'en' ? '📅  Sessions held' : '📅  Sesiones realizadas'),size:18,font:'Arial',color:'475569'})]}),
+            new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:(userLocale === 'en' ? `${totalSesiones} sessions in ${semanas} weeks` : `${totalSesiones} sesiones en ${semanas} semanas`),bold:true,size:22,font:'Arial',color:'1E293B'})]}),
+            new Paragraph({spacing:{before:0}, children:[new TextRun({text:(userLocale === 'en' ? '📈  Progress evolution' : '📈  Evolución del progreso'),size:18,font:'Arial',color:'475569'})]}),
             new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:`${promedioInicial}% al inicio ÔåÆ ${promedioReciente}% hoy`,bold:true,size:22,font:'Arial',color:delta>=0?'15803D':'BE123C'})]}),
             ...(promedioAtencion>0?[
               new Paragraph({spacing:{before:0}, children:[new TextRun({text:'­ƒÄ»  Atenci├│n en sesi├│n',size:18,font:'Arial',color:'475569'})]}),
-              new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:`${promedioAtencion}% de atenci├│n sostenida`,bold:true,size:22,font:'Arial',color:'1E293B'})]}),
+              new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:(userLocale === 'en' ? `${promedioAtencion}% sustained attention` : `${promedioAtencion}% de atención sostenida`),bold:true,size:22,font:'Arial',color:'1E293B'})]}),
             ]:[]),
             ...(promedioTolerancia>0?[
               new Paragraph({spacing:{before:0}, children:[new TextRun({text:'­ƒÿî  Manejo emocional',size:18,font:'Arial',color:'475569'})]}),
               new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:`${promedioTolerancia}% tolerancia a la frustraci├│n`,bold:true,size:22,font:'Arial',color:'1E293B'})]}),
             ]:[]),
             ...(progDominados.length>0?[
-              new Paragraph({spacing:{before:0}, children:[new TextRun({text:'Ô£à  Logros dominados',size:18,font:'Arial',color:'15803D'})]}),
-              new Paragraph({spacing:{before:20}, children:[new TextRun({text:`${progDominados.length} habilidad${progDominados.length>1?'es':''} completada${progDominados.length>1?'s':''}`,bold:true,size:22,font:'Arial',color:'15803D'})]}),
+              new Paragraph({spacing:{before:0}, children:[new TextRun({text:(userLocale === 'en' ? '✅  Mastered achievements' : '✅  Logros dominados'),size:18,font:'Arial',color:'15803D'})]}),
+              new Paragraph({spacing:{before:20}, children:[new TextRun({text:(userLocale === 'en' ? `${progDominados.length} skill${progDominados.length>1?'s':''} completed` : `${progDominados.length} habilidad${progDominados.length>1?'es':''} completada${progDominados.length>1?'s':''}`),bold:true,size:22,font:'Arial',color:'15803D'})]}),
             ]:[]),
           ]}),
       ]}),
@@ -384,9 +384,9 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
       pp('Estas son las habilidades que estamos desarrollando con '+ nombreCorto+' en este momento:'),
       new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[3600,3360,2400], rows:[
         new TableRow({children:[
-          new TableCell({borders:BDR,shading:{fill:'4C1D95',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:'Habilidad',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-          new TableCell({borders:BDR,shading:{fill:'4C1D95',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:'├ürea de desarrollo',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-          new TableCell({borders:BDR,shading:{fill:'4C1D95',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Estado',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:'4C1D95',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Skill' : 'Habilidad'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:'4C1D95',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Development area' : 'Área de desarrollo'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:'4C1D95',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'Status' : 'Estado'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
         ]}),
         ...progArr.map((p:any,i:number)=>new TableRow({children:[
           new TableCell({borders:BDR,shading:{fill:i%2===0?'F5F3FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:p.titulo||p.nombre||'Habilidad',size:17,font:'Arial',bold:true,color:'4C1D95'})]})]  }),
@@ -424,9 +424,9 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
 
     // CIERRE
     new Paragraph({spacing:{before:400},border:{top:{style:BorderStyle.SINGLE,size:2,color:'E2E8F0',space:8}},
-      children:[new TextRun({text:'Con cari├▒o, el equipo de Neuropsicolog├¡a y Terapias SANTI',size:20,font:'Arial',color:'7C3AED',bold:true,italics:true})]}),
+      children:[new TextRun({text:(userLocale === 'en' ? 'With love, the Neuropsicología y Terapias SANTI team' : 'Con cariño, el equipo de Neuropsicología y Terapias SANTI'),size:20,font:'Arial',color:'7C3AED',bold:true,italics:true})]}),
     new Paragraph({spacing:{before:40,after:0},
-      children:[new TextRun({text:`${hoy}  ┬À  Este reporte es personal y confidencial`,size:16,font:'Arial',color:'94A3B8'})]}),
+      children:[new TextRun({text:(userLocale === 'en' ? `${hoy}  ·  This report is personal and confidential` : `${hoy}  ·  Este reporte es personal y confidencial`),size:16,font:'Arial',color:'94A3B8'})]}),
   ]
 
   const codigoDoc = generarCodigoDocumento(childId, 'padres')
@@ -679,13 +679,13 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
     // PORTADA
     new Paragraph({spacing:{before:0,after:20},border:{bottom:{style:BorderStyle.SINGLE,size:8,color:'0F172A',space:8}},
       children:[new TextRun({text:'NEUROPSICOLOG├ìA Y TERAPIAS SANTI',bold:true,size:38,font:'Arial',color:'0F172A'}),
-                new TextRun({text:'  ┬À  Centro Especializado de Terapia ABA',size:22,font:'Arial',color:'64748B'})] }),
+                new TextRun({text:(userLocale === 'en' ? '  ·  Specialized ABA Therapy Center' : '  ·  Centro Especializado de Terapia ABA'),size:22,font:'Arial',color:'64748B'})] }),
     new Paragraph({spacing:{before:180,after:60},
-      children:[new TextRun({text:'AN├üLISIS COMPARATIVO DE PER├ìODOS',bold:true,size:44,font:'Arial',color:'0F172A'})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? 'COMPARATIVE ANALYSIS OF PERIODS' : 'ANÁLISIS COMPARATIVO DE PERÍODOS'),bold:true,size:44,font:'Arial',color:'0F172A'})] }),
     new Paragraph({spacing:{before:0,after:20},
-      children:[new TextRun({text:'Con Proyecci├│n IA a 30, 90 y 180 d├¡as',bold:true,size:26,font:'Arial',color:'475569'})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? 'With AI Projection at 30, 90 and 180 days' : 'Con Proyección IA a 30, 90 y 180 días'),bold:true,size:26,font:'Arial',color:'475569'})] }),
     new Paragraph({spacing:{before:60,after:360},shading:{fill:'F1F5F9',type:ShadingType.CLEAR},
-      children:[new TextRun({text:`Doc. N┬║ ${docNum}   ┬À   Emitido: ${hoy}   ┬À   Per├¡odo analizado: ${fechaInicio} al ${fechaFin}`,size:18,font:'Arial',color:'64748B'})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? `Doc. No. ${docNum}   ·   Issued: ${hoy}   ·   Period analyzed: ${fechaInicio} to ${fechaFin}` : `Doc. Nº ${docNum}   ·   Emitido: ${hoy}   ·   Período analizado: ${fechaInicio} al ${fechaFin}`),size:18,font:'Arial',color:'64748B'})] }),
 
     // I. DATOS
     h2('I.  DATOS DEL PACIENTE Y DEL AN├üLISIS'),
@@ -705,9 +705,9 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
     pp('La siguiente tabla compara los indicadores cl├¡nicos clave entre el per├¡odo de referencia y el per├¡odo actual:'),
     new Table({width:{size:9360,type:WidthType.DXA},columnWidths:[3400,1980,1980,2000],rows:[
       new TableRow({children:[
-        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:'Indicador',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
-        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:`Per├¡odo 1 (${periodo1.length} ses.)`,bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
-        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:`Per├¡odo 2 (${periodo2.length} ses.)`,bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Indicator' : 'Indicador'),bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? `Period 1 (${periodo1.length} sess.)` : `Período 1 (${periodo1.length} ses.)`),bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? `Period 2 (${periodo2.length} sess.)` : `Período 2 (${periodo2.length} ses.)`),bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
         new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Variaci├│n',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
       ]}),
       ...([
@@ -751,14 +751,14 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
     pp('Las siguientes proyecciones se calculan mediante regresi├│n lineal de m├¡nimos cuadrados sobre el historial real de sesiones, complementado con an├ílisis de tendencia conductual:'),
     ...(total <= 5 ? [new Paragraph({spacing:{before:60,after:100},shading:{fill:'FEF3C7',type:ShadingType.CLEAR},
       border:{left:{style:BorderStyle.SINGLE,size:10,color:'D97706',space:8}},
-      children:[new TextRun({text:`ÔÜá  Nota de confianza: Con ${total} sesiones registradas, las proyecciones son estimativas. La precisi├│n mejora significativamente a partir de 10+ sesiones. Se recomienda interpretar como tendencia orientativa.`,size:17,font:'Arial',color:'92400E'})]})] : []),
+      children:[new TextRun({text:(userLocale === 'en' ? `⚠  Confidence note: With ${total} recorded sessions, the projections are estimates. Accuracy improves significantly from 10+ sessions. It is recommended to interpret them as an indicative trend.` : `⚠  Nota de confianza: Con ${total} sesiones registradas, las proyecciones son estimativas. La precisión mejora significativamente a partir de 10+ sesiones. Se recomienda interpretar como tendencia orientativa.`),size:17,font:'Arial',color:'92400E'})]})] : []),
 
     new Table({width:{size:9360,type:WidthType.DXA},columnWidths:[2000,1400,1200,3160,1600],rows:[
       new TableRow({children:[
         new TableCell({borders:BDR,shading:{fill:'1E40AF',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:'Horizonte',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
-        new TableCell({borders:BDR,shading:{fill:'1E40AF',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Logro proy.',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
-        new TableCell({borders:BDR,shading:{fill:'1E40AF',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'vs. actual',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
-        new TableCell({borders:BDR,shading:{fill:'1E40AF',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:'Interpretaci├│n cl├¡nica',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'1E40AF',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'Proj. achievement' : 'Logro proy.'),bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'1E40AF',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'vs. current' : 'vs. actual'),bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'1E40AF',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Clinical interpretation' : 'Interpretación clínica'),bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
         new TableCell({borders:BDR,shading:{fill:'1E40AF',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Confianza',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]  }),
       ]}),
       ...([
@@ -794,11 +794,11 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
     h2('VII.  ESTADO DE LOS PROGRAMAS DE INTERVENCI├ôN'),
     new Table({width:{size:9360,type:WidthType.DXA},columnWidths:[3000,1800,1760,1400,1400],rows:[
       new TableRow({children:[
-        new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:'Programa',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Program' : 'Programa'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
         new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:'├ürea',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-        new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:'Fase',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-        new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Criterio',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-        new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Estado',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Phase' : 'Fase'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'Criterion' : 'Criterio'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+        new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'Status' : 'Estado'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
       ]}),
       ...progArr.map((p:any,i:number)=>{
         const isDom=p.estado==='dominado',isAct=p.estado==='activo'||p.estado==='intervencion'
@@ -810,7 +810,7 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
           new TableCell({borders:BDR,shading:{fill:isDom?'DCFCE7':isAct?'DBEAFE':'F1F5F9',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:isDom?'Ô£ô DOMINADO':isAct?'EN CURSO':p.estado?.toUpperCase()||'N/A',bold:true,size:16,font:'Arial',color:isDom?'15803D':isAct?'1D4ED8':'475569'})]})]  }),
         ]})
       }),
-      ...(!progArr.length?[new TableRow({children:[new TableCell({borders:BDR,columnSpan:5,margins:{top:80,bottom:80,left:120,right:120},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Sin programas registrados',size:17,font:'Arial',color:'9CA3AF',italics:true})]})]})]})]:  []),
+      ...(!progArr.length?[new TableRow({children:[new TableCell({borders:BDR,columnSpan:5,margins:{top:80,bottom:80,left:120,right:120},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'No programs recorded' : 'Sin programas registrados'),size:17,font:'Arial',color:'9CA3AF',italics:true})]})]})]})]:  []),
     ]}),
 
     // VIII. RECOMENDACIONES
@@ -822,7 +822,7 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
       children:[new TextRun({text:'Nota metodol├│gica: ',bold:true,size:16,font:'Arial',color:'64748B'}),
                 new TextRun({text:confianzaNota,size:16,font:'Arial',color:'94A3B8',italics:true})]}),
     new Paragraph({spacing:{before:40,after:0},
-      children:[new TextRun({text:`Neuropsicolog├¡a y Terapias SANTI  ┬À  ${hoy}  ┬À  Documento N┬║ ${docNum}  ┬À  Uso confidencial`,size:16,font:'Arial',color:'94A3B8'})]}),
+      children:[new TextRun({text:(userLocale === 'en' ? `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Document No. ${docNum}  ·  Confidential use` : `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Documento Nº ${docNum}  ·  Uso confidencial`),size:16,font:'Arial',color:'94A3B8'})]}),
   ]
 
     const codigoDoc = generarCodigoDocumento(childId, 'comp')
@@ -967,13 +967,13 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
     // PORTADA
     new Paragraph({ spacing:{before:0,after:20}, border:{bottom:{style:BorderStyle.SINGLE,size:8,color:'1E40AF',space:8}},
       children:[new TextRun({text:'NEUROPSICOLOG├ìA Y TERAPIAS SANTI',bold:true,size:38,font:'Arial',color:'1E293B'}),
-                new TextRun({text:'  ┬À  Centro Especializado de Terapia ABA',size:22,font:'Arial',color:'64748B'})] }),
+                new TextRun({text:(userLocale === 'en' ? '  ·  Specialized ABA Therapy Center' : '  ·  Centro Especializado de Terapia ABA'),size:22,font:'Arial',color:'64748B'})] }),
     new Paragraph({ spacing:{before:180,after:60},
-      children:[new TextRun({text:'REPORTE NEUROPSICOL├ôGICO Y CL├ìNICO',bold:true,size:46,font:'Arial',color:'1E40AF'})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? 'NEUROPSYCHOLOGICAL AND CLINICAL REPORT' : 'REPORTE NEUROPSICOLÓGICO Y CLÍNICO'),bold:true,size:46,font:'Arial',color:'1E40AF'})] }),
     new Paragraph({ spacing:{before:0,after:20},
-      children:[new TextRun({text:'Para presentaci├│n ante Aseguradoras, IMSS e ISSSTE',bold:true,size:24,font:'Arial',color:'475569'})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? 'For submission to Insurers, IMSS and ISSSTE' : 'Para presentación ante Aseguradoras, IMSS e ISSSTE'),bold:true,size:24,font:'Arial',color:'475569'})] }),
     new Paragraph({ spacing:{before:80,after:360}, shading:{fill:'EFF6FF',type:ShadingType.CLEAR},
-      children:[new TextRun({text:`N┬║ ${docNum}   ┬À   Emitido: ${hoy}   ┬À   Vigencia: 6 meses   ┬À   CONFIDENCIAL`,size:18,font:'Arial',color:'64748B'})] }),
+      children:[new TextRun({text:(userLocale === 'en' ? `No. ${docNum}   ·   Issued: ${hoy}   ·   Valid for: 6 months   ·   CONFIDENTIAL` : `Nº ${docNum}   ·   Emitido: ${hoy}   ·   Vigencia: 6 meses   ·   CONFIDENCIAL`),size:18,font:'Arial',color:'64748B'})] }),
 
     // I. DATOS
     h2('I.  DATOS DE IDENTIFICACI├ôN DEL PACIENTE'),
@@ -999,9 +999,9 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
     pp('Los siguientes indicadores resultan del an├ílisis sistem├ítico de las hojas de datos ABA registradas durante el per├¡odo de tratamiento. Cada valor representa el promedio ponderado de todas las sesiones evaluadas en el per├¡odo indicado.'),
     new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[3800,1960,3600], rows:[
       new TableRow({ children:[
-        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:'Indicador cl├¡nico',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]}),
+        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Clinical indicator' : 'Indicador clínico'),bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]}),
         new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Valor',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]}),
-        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:'Interpretaci├│n cl├¡nica',bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]})
+        new TableCell({borders:BDR,shading:{fill:'0F172A',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Clinical interpretation' : 'Interpretación clínica'),bold:true,size:18,font:'Arial',color:'FFFFFF'})]})]})
       ]}),
       ...([
         ['Total de sesiones realizadas', `${totalSesiones}`, totalSesiones>=20?'Proceso terap├®utico consolidado':totalSesiones>=10?'Proceso en desarrollo activo':'Fase inicial de intervenci├│n'],
@@ -1060,11 +1060,11 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
     new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[3000,1600,1760,1400,1600],
       rows:[
         new TableRow({children:[
-          new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:'Programa / Objetivo terap├®utico',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Program / Therapeutic goal' : 'Programa / Objetivo terapéutico'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
           new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:'├ürea',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-          new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:'Fase actual',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-          new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Criterio',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-          new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Estado',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Current phase' : 'Fase actual'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'Criterion' : 'Criterio'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:'1E3A5F',type:ShadingType.CLEAR},margins:{top:90,bottom:90,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'Status' : 'Estado'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
         ]}),
         ...programasArr.map((p:any,i:number)=>{
           const isDom=p.estado==='dominado', isAct=p.estado==='activo'||p.estado==='intervencion'
@@ -1076,7 +1076,7 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
             new TableCell({borders:BDR,shading:{fill:isDom?'DCFCE7':isAct?'DBEAFE':'F1F5F9',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:isDom?'Ô£ô DOMINADO':isAct?'EN CURSO':p.estado?.toUpperCase()||'N/A',bold:true,size:16,font:'Arial',color:isDom?'15803D':isAct?'1D4ED8':'475569'})]})]  }),
           ]})
         }),
-        ...(!programasArr.length?[new TableRow({children:[new TableCell({borders:BDR,columnSpan:5,margins:{top:80,bottom:80,left:120,right:120},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Sin programas registrados en el per├¡odo actual',size:17,font:'Arial',color:'94A3B8',italics:true})]})]})]})]:  []),
+        ...(!programasArr.length?[new TableRow({children:[new TableCell({borders:BDR,columnSpan:5,margins:{top:80,bottom:80,left:120,right:120},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'No programs recorded in the current period' : 'Sin programas registrados en el período actual'),size:17,font:'Arial',color:'94A3B8',italics:true})]})]})]})]:  []),
       ]
     }),
 
@@ -1087,11 +1087,11 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
       new Table({width:{size:9360,type:WidthType.DXA},columnWidths:[1800,1500,1500,1500,3060],
         rows:[
           new TableRow({children:[
-            new TableCell({borders:BDR,shading:{fill:'334155',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:'Fecha',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-            new TableCell({borders:BDR,shading:{fill:'334155',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Logro obj.',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+            new TableCell({borders:BDR,shading:{fill:'334155',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Date' : 'Fecha'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+            new TableCell({borders:BDR,shading:{fill:'334155',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'Goal achievement' : 'Logro obj.'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
             new TableCell({borders:BDR,shading:{fill:'334155',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Atenci├│n',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
             new TableCell({borders:BDR,shading:{fill:'334155',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:'Tolerancia',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
-            new TableCell({borders:BDR,shading:{fill:'334155',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:'Observaci├│n cl├¡nica',bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
+            new TableCell({borders:BDR,shading:{fill:'334155',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Clinical observation' : 'Observación clínica'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
           ]}),
           ...historial.map((s:any,i:number)=>{
             const logro=extraerLogro(s)??0
@@ -1143,13 +1143,13 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
       kv('Vigencia','6 meses a partir de la fecha de emisi├│n'),
     ]}),
     new Paragraph({spacing:{before:600,after:80},children:[new TextRun({text:'_'.repeat(50),size:20,font:'Arial',color:'1E293B'})]}),
-    new Paragraph({spacing:{before:0,after:20},children:[new TextRun({text:'Responsable del Tratamiento ÔÇö Neuropsicolog├¡a y Terapias SANTI',bold:true,size:18,font:'Arial',color:'1E293B'})]}),
-    new Paragraph({spacing:{before:0,after:40},children:[new TextRun({text:'Terapeuta ABA Certificado / Neuropsic├│logo Cl├¡nico',size:17,font:'Arial',color:'64748B',italics:true})]}),
+    new Paragraph({spacing:{before:0,after:20},children:[new TextRun({text:(userLocale === 'en' ? 'Treatment Lead — Neuropsicología y Terapias SANTI' : 'Responsable del Tratamiento — Neuropsicología y Terapias SANTI'),bold:true,size:18,font:'Arial',color:'1E293B'})]}),
+    new Paragraph({spacing:{before:0,after:40},children:[new TextRun({text:(userLocale === 'en' ? 'Certified ABA Therapist / Clinical Neuropsychologist' : 'Terapeuta ABA Certificado / Neuropsicólogo Clínico'),size:17,font:'Arial',color:'64748B',italics:true})]}),
 
     new Paragraph({spacing:{before:320},border:{top:{style:BorderStyle.SINGLE,size:2,color:'E2E8F0',space:8}},
       shading:{fill:'FFF7ED',type:ShadingType.CLEAR},
-      children:[new TextRun({text:'ÔÜá  DOCUMENTO CONFIDENCIAL ÔÇö Uso exclusivo para tr├ímites m├®dico-legales con aseguradoras autorizadas. Prohibida su reproducci├│n parcial o total sin autorizaci├│n del centro emisor.',size:17,font:'Arial',color:'B45309',bold:true})]}),
-    new Paragraph({spacing:{before:40,after:0},children:[new TextRun({text:`Neuropsicolog├¡a y Terapias SANTI  ┬À  ${hoy}  ┬À  Documento N┬║ ${docNum}`,size:16,font:'Arial',color:'94A3B8'})]}),
+      children:[new TextRun({text:(userLocale === 'en' ? '⚠  CONFIDENTIAL DOCUMENT — For exclusive use in medical-legal procedures with authorized insurers. Partial or total reproduction is prohibited without authorization from the issuing center.' : '⚠  DOCUMENTO CONFIDENCIAL — Uso exclusivo para trámites médico-legales con aseguradoras autorizadas. Prohibida su reproducción parcial o total sin autorización del centro emisor.'),size:17,font:'Arial',color:'B45309',bold:true})]}),
+    new Paragraph({spacing:{before:40,after:0},children:[new TextRun({text:(userLocale === 'en' ? `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Document No. ${docNum}` : `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Documento Nº ${docNum}`),size:16,font:'Arial',color:'94A3B8'})]}),
   ]
 
   const codigoDoc = generarCodigoDocumento(childId, 'seg')
@@ -1773,7 +1773,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     new Paragraph({
       spacing: { before: 100, after: 120 },
       children: [new TextRun({
-        text: 'Intervención con el menor — desempeño por programa, subárea y SET',
+        text: (userLocale === 'en' ? 'Intervention with the child — performance by program, sub-area and SET' : 'Intervención con el menor — desempeño por programa, subárea y SET'),
         italics: true, bold: true, size: 19, font: 'Arial', color: '1E293B',
       })],
     }),
@@ -1808,14 +1808,14 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     sections.push(tpl.tituloSeccion('VI.  Representación Gráfica del Progreso'))
     sections.push(new Paragraph({
       spacing: { before: 100, after: 100 },
-      children: [new TextRun({ text: 'Promedio de logro por área de intervención (sesiones recientes):', size: 19, font: 'Arial', color: '475569', italics: true })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Average achievement by intervention area (recent sessions):' : 'Promedio de logro por área de intervención (sesiones recientes):'), size: 19, font: 'Arial', color: '475569', italics: true })],
     }))
     sections.push(...tpl.graficoProgresoBarra('Logro por área (%)', datosGraficoArea, { mostrarMeta: true, metaPct: 90 }))
   }
   if (datosGraficoTopProgs.length > 0) {
     sections.push(new Paragraph({
       spacing: { before: 220, after: 100 },
-      children: [new TextRun({ text: `Desempeño actual por programa (top ${datosGraficoTopProgs.length}):`, size: 19, font: 'Arial', color: '475569', italics: true })],
+      children: [new TextRun({ text: (userLocale === 'en' ? `Current performance by program (top ${datosGraficoTopProgs.length}):` : `Desempeño actual por programa (top ${datosGraficoTopProgs.length}):`), size: 19, font: 'Arial', color: '475569', italics: true })],
     }))
     sections.push(...tpl.graficoProgresoBarra('Logro por programa (%)', datosGraficoTopProgs, { mostrarMeta: true, metaPct: 90 }))
   }
@@ -1857,7 +1857,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
   sections.push(new Paragraph({
     spacing: { before: 220, after: 80 },
     children: [new TextRun({
-      text: 'Cálculos por programa (datos crudos)',
+      text: (userLocale === 'en' ? 'Calculations by program (raw data)' : 'Cálculos por programa (datos crudos)'),
       bold: true, italics: true, size: 19, font: 'Arial', color: '1E3A8A',
     })],
   }))
@@ -1891,7 +1891,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     new Paragraph({
       spacing: { before: 600, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: 'Equipo Clínico', bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
     }),
     new Paragraph({
       spacing: { before: 0, after: 0 },
@@ -1899,7 +1899,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     }),
     new Paragraph({
       spacing: { before: 80, after: 0 },
-      children: [new TextRun({ text: `${hoy}  ·  Documento confidencial de uso clínico — Nº ${docNum}`, size: 16, font: 'Arial', color: '94A3B8', italics: true })],
+      children: [new TextRun({ text: (userLocale === 'en' ? `${hoy}  ·  Confidential document for clinical use — No. ${docNum}` : `${hoy}  ·  Documento confidencial de uso clínico — Nº ${docNum}`), size: 16, font: 'Arial', color: '94A3B8', italics: true })],
     }),
   )
 
@@ -2208,11 +2208,11 @@ Cada actividad como un párrafo corto: nombre + cómo hacerla (1-2 oraciones) + 
     new Paragraph({
       spacing: { before: 320, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: 'Con cariño,', italics: true, size: 20, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'With love,' : 'Con cariño,'), italics: true, size: 20, font: 'Arial', color: '1E3A8A' })],
     }),
     new Paragraph({
       spacing: { before: 60, after: 0 },
-      children: [new TextRun({ text: 'Equipo Clínico — Neuropsicología y Terapias SANTI', bold: true, size: 19, font: 'Arial', color: '475569' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team — Neuropsicología y Terapias SANTI' : 'Equipo Clínico — Neuropsicología y Terapias SANTI'), bold: true, size: 19, font: 'Arial', color: '475569' })],
     }),
   )
 
@@ -2565,14 +2565,14 @@ Datos:
   if (recomData.ajustes_plan?.length > 0) {
     sections.push(new Paragraph({
       spacing: { before: 200, after: 80 },
-      children: [new TextRun({ text: 'Ajustes al plan actual', bold: true, size: 21, font: 'Arial', color: '1E293B' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Adjustments to the current plan' : 'Ajustes al plan actual'), bold: true, size: 21, font: 'Arial', color: '1E293B' })],
     }))
     sections.push(...tpl.items(recomData.ajustes_plan))
   }
   if (recomData.objetivos_proximos?.length > 0) {
     sections.push(new Paragraph({
       spacing: { before: 200, after: 80 },
-      children: [new TextRun({ text: 'Objetivos para el próximo período', bold: true, size: 21, font: 'Arial', color: '1E293B' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Goals for the next period' : 'Objetivos para el próximo período'), bold: true, size: 21, font: 'Arial', color: '1E293B' })],
     }))
     sections.push(...tpl.items(recomData.objetivos_proximos))
   }
@@ -2587,7 +2587,7 @@ Datos:
     new Paragraph({
       spacing: { before: 320, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: 'Equipo Clínico', bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
     }),
     new Paragraph({
       spacing: { before: 0, after: 0 },
@@ -3010,7 +3010,7 @@ async function generarReporteProgramasFamilia(
     if (p.sets.length > 0) {
       sections.push(new Paragraph({
         spacing: { before: 160, after: 40 },
-        children: [new TextRun({ text: 'Avance por nivel (set):', bold: true, size: 21, font: 'Arial', color: '475569' })],
+        children: [new TextRun({ text: (userLocale === 'en' ? 'Progress by level (set):' : 'Avance por nivel (set):'), bold: true, size: 21, font: 'Arial', color: '475569' })],
       }))
       sections.push(tpl.parrafo('Este programa se trabaja por niveles. Cada nivel (set) se enseña por separado y avanza a su propio ritmo:', '64748B'))
 
@@ -3089,7 +3089,7 @@ async function generarReporteProgramasFamilia(
     new Paragraph({
       spacing: { before: 320, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: 'Equipo Clínico', bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
     }),
     new Paragraph({
       spacing: { before: 0, after: 0 },
@@ -3285,7 +3285,7 @@ async function generarGuiaSetFamilia(
     new Paragraph({
       spacing: { before: 320, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: 'Equipo Clínico', bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
     }),
     new Paragraph({
       spacing: { before: 0, after: 0 },
