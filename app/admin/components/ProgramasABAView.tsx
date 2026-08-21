@@ -63,7 +63,7 @@ const FASE_COLORS: Record<string, string> = {
 
 export default function ProgramasABAView({ childId, childName }: { childId: string; childName: string }) {
   const toast = useToast()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const FASE_LABELS: Record<string, string> = {
     linea_base:    'Baseline',
@@ -177,8 +177,8 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
     try {
       const res = await fetch('/api/reporte-word', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ childId, tipo: 'programas' }),
+        headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+        body: JSON.stringify({ childId, tipo: 'programas', locale }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -842,7 +842,7 @@ function autoGrowTextarea(el: HTMLTextAreaElement | null) {
 }
 
 function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, tipoGrafico = 'lineas', onChangeTipoGrafico, loadingModal }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [expanded, setExpanded] = useState(false)
   const [loadingDetalle, setLoadingDetalle] = useState(false)
   const [detalle, setDetalle] = useState<any>(null)
@@ -873,8 +873,8 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
     try {
       const res = await fetch('/api/reporte-word', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'set', objetivoId }),
+        headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+        body: JSON.stringify({ tipo: 'set', objetivoId, locale }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))

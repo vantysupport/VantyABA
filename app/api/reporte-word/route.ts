@@ -2624,20 +2624,21 @@ async function generarReporteProgramasFamilia(
   childId: string,
   userLocale = 'es',
 ): Promise<{ doc: Document; fileName: string }> {
+  const L = (en: string, es: string): string => userLocale === 'en' ? en : es
 
   const { data: child } = await supabaseAdmin
     .from('children')
     .select('name, age, birth_date, diagnosis, sessions_before_platform')
     .eq('id', childId).single()
 
-  const nombre = (child as any)?.name || 'Paciente'
+  const nombre = (child as any)?.name || L('Patient', 'Paciente')
   const nombreCap = nombre.split(' ')
     .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(' ')
   const nombreCorto = nombreCap.split(' ')[0]
-  const diagnostico = (child as any)?.diagnosis || 'En evaluación'
+  const diagnostico = (child as any)?.diagnosis || L('Under evaluation', 'En evaluación')
 
-  let edadTexto = 'no registrada'
+  let edadTexto = L('not recorded', 'no registrada')
   if ((child as any)?.birth_date) {
     const nac = new Date((child as any).birth_date)
     const ahora = new Date()
@@ -2645,9 +2646,9 @@ async function generarReporteProgramasFamilia(
     const meses = ahora.getMonth() - nac.getMonth()
     const edad = (meses < 0 || (meses === 0 && ahora.getDate() < nac.getDate())) ? años - 1 : años
     const mesesAdj = meses < 0 ? meses + 12 : meses
-    edadTexto = `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
+    edadTexto = userLocale === 'en' ? `${edad} year${edad!==1?'s':''}${mesesAdj > 0 ? ` ${mesesAdj} month${mesesAdj!==1?'s':''}` : ''}` : `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
   } else if ((child as any)?.age) {
-    edadTexto = `${(child as any).age} años`
+    edadTexto = userLocale === 'en' ? `${(child as any).age} years` : `${(child as any).age} años`
   }
 
   const totalSesionesRealizadas = await contarSesionesRealizadas(childId, (child as any)?.sessions_before_platform)
@@ -2782,7 +2783,7 @@ async function generarReporteProgramasFamilia(
 
     return {
       id: p.id,
-      titulo: p.titulo || 'Programa',
+      titulo: p.titulo || L('Program', 'Programa'),
       area: (p.area || 'General').toString().trim(),
       objetivo: (p.objetivo_lp || '').toString().trim(),
       criterio: crit,
@@ -2840,11 +2841,11 @@ async function generarReporteProgramasFamilia(
     bienvenida = bRes
     cierre = cRes
   } catch { /* usar fallback */ }
-  if (!bienvenida.trim()) bienvenida = `Estimada familia de ${nombreCorto}: en este documento les compartimos un resumen claro de los programas de terapia que estamos trabajando y cómo viene avanzando. Nuestro objetivo es que puedan acompañar este proceso con tranquilidad y confianza.`
-  if (!cierre.trim()) cierre = `Agradecemos su compromiso y constancia, que son fundamentales para el progreso de ${nombreCorto}. Ante cualquier duda sobre este reporte, no duden en consultar con el especialista a cargo.`
+  if (!bienvenida.trim()) bienvenida = L(`Dear family of ${nombreCorto}: in this document we share a clear summary of the therapy programs we are working on and how ${nombreCorto} is progressing. Our goal is for you to accompany this process with peace of mind and confidence.`, `Estimada familia de ${nombreCorto}: en este documento les compartimos un resumen claro de los programas de terapia que estamos trabajando y cómo viene avanzando. Nuestro objetivo es que puedan acompañar este proceso con tranquilidad y confianza.`)
+  if (!cierre.trim()) cierre = L(`We appreciate your commitment and consistency, which are essential for ${nombreCorto}'s progress. If you have any questions about this report, please do not hesitate to consult the specialist in charge.`, `Agradecemos su compromiso y constancia, que son fundamentales para el progreso de ${nombreCorto}. Ante cualquier duda sobre este reporte, no duden en consultar con el especialista a cargo.`)
 
   const sellosVerif = await tpl.selloQRVerificacionAsync({
-    codigoDoc, fechaEmision: hoy, especialista: 'Equipo Clínico SANTI',
+    codigoDoc, fechaEmision: hoy, especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
   })
 
   const limpiar = (t: string) => t.split('\n').filter(l => l.trim()).map(l => tpl.parrafo(l.replace(/\*\*/g, '').trim()))
@@ -2852,101 +2853,101 @@ async function generarReporteProgramasFamilia(
   // ── Explicación en lenguaje simple por programa (determinística, confiable) ──
   const explicarPrograma = (p: typeof programasInfo[number]): string => {
     if (p.n_sesiones === 0) {
-      return `Este programa recién comienza. Todavía no registramos sesiones con datos, así que pronto verán aquí su avance.`
+      return L(`This program is just beginning. We have not recorded sessions with data yet, so you will soon see progress here.`, `Este programa recién comienza. Todavía no registramos sesiones con datos, así que pronto verán aquí su avance.`)
     }
     if (p.cumple) {
-      return `¡Muy buena noticia! ${nombreCorto} ya alcanzó el objetivo de este programa (la meta era ${p.criterio}% de aciertos). El equipo evaluará avanzar al siguiente nivel o reforzar lo aprendido para que se mantenga en el tiempo.`
+      return L(`Great news! ${nombreCorto} has already reached the goal of this program (the target was ${p.criterio}% accuracy). The team will assess moving to the next level or reinforcing what was learned so it lasts over time.`, `¡Muy buena noticia! ${nombreCorto} ya alcanzó el objetivo de este programa (la meta era ${p.criterio}% de aciertos). El equipo evaluará avanzar al siguiente nivel o reforzar lo aprendido para que se mantenga en el tiempo.`)
     }
     if (p.enLineaBase) {
-      return `Estamos en la etapa inicial de observación (línea base). Aquí medimos desde dónde parte ${nombreCorto} para luego diseñar el mejor plan de trabajo. Es un paso normal y necesario.`
+      return L(`We are in the initial observation stage (baseline). Here we measure ${nombreCorto}'s starting point in order to design the best work plan. This is a normal and necessary step.`, `Estamos en la etapa inicial de observación (línea base). Aquí medimos desde dónde parte ${nombreCorto} para luego diseñar el mejor plan de trabajo. Es un paso normal y necesario.`)
     }
     const reciente = p.promReciente ?? p.promedio ?? 0
     if (p.tendencia === 'sube') {
-      return `${nombreCorto} viene mejorando en este programa: su desempeño reciente está alrededor del ${reciente}% y la tendencia es de avance. Vamos por buen camino hacia la meta del ${p.criterio}%.`
+      return L(`${nombreCorto} is improving in this program: recent performance is around ${reciente}% and the trend is upward. We are on the right track toward the ${p.criterio}% goal.`, `${nombreCorto} viene mejorando en este programa: su desempeño reciente está alrededor del ${reciente}% y la tendencia es de avance. Vamos por buen camino hacia la meta del ${p.criterio}%.`)
     }
     if (p.tendencia === 'baja') {
-      return `En las últimas sesiones notamos una baja en el desempeño (alrededor del ${reciente}%). Esto puede deberse a varios factores y el equipo ya lo está revisando para ajustar la estrategia. Es parte normal del proceso.`
+      return L(`In recent sessions we noticed a drop in performance (around ${reciente}%). This may be due to several factors and the team is already reviewing it to adjust the strategy. It is a normal part of the process.`, `En las últimas sesiones notamos una baja en el desempeño (alrededor del ${reciente}%). Esto puede deberse a varios factores y el equipo ya lo está revisando para ajustar la estrategia. Es parte normal del proceso.`)
     }
-    return `${nombreCorto} se mantiene estable en este programa, con un desempeño cercano al ${reciente}%. Seguimos trabajando de forma constante para acercarnos a la meta del ${p.criterio}%.`
+    return L(`${nombreCorto} remains stable in this program, with performance close to ${reciente}%. We keep working consistently to get closer to the ${p.criterio}% goal.`, `${nombreCorto} se mantiene estable en este programa, con un desempeño cercano al ${reciente}%. Seguimos trabajando de forma constante para acercarnos a la meta del ${p.criterio}%.`)
   }
 
   const estadoTexto = (p: typeof programasInfo[number]): string => {
-    if (p.cumple) return 'Objetivo alcanzado'
-    if (p.enLineaBase) return 'Etapa inicial (línea base)'
-    if (p.n_sesiones === 0) return 'Por iniciar'
-    if (p.tendencia === 'sube') return 'Avanzando'
-    if (p.tendencia === 'baja') return 'En revisión'
-    return 'En proceso'
+    if (p.cumple) return L('Goal reached', 'Objetivo alcanzado')
+    if (p.enLineaBase) return L('Initial stage (baseline)', 'Etapa inicial (línea base)')
+    if (p.n_sesiones === 0) return L('Not started', 'Por iniciar')
+    if (p.tendencia === 'sube') return L('Advancing', 'Avanzando')
+    if (p.tendencia === 'baja') return L('Under review', 'En revisión')
+    return L('In progress', 'En proceso')
   }
 
   type SetInfo = typeof programasInfo[number]['sets'][number]
   const estadoSetTexto = (st: SetInfo): string => {
-    if (st.cumple) return 'Criterio alcanzado'
-    if (st.estadoManual === 'en_progreso') return 'En progreso'
-    if (st.n_sesiones === 0) return 'Por iniciar'
-    if (st.tendencia === 'sube') return 'Avanzando'
-    if (st.tendencia === 'baja') return 'En revisión'
-    return 'En proceso'
+    if (st.cumple) return L('Criterion met', 'Criterio alcanzado')
+    if (st.estadoManual === 'en_progreso') return L('In progress', 'En progreso')
+    if (st.n_sesiones === 0) return L('Not started', 'Por iniciar')
+    if (st.tendencia === 'sube') return L('Advancing', 'Avanzando')
+    if (st.tendencia === 'baja') return L('Under review', 'En revisión')
+    return L('In progress', 'En proceso')
   }
 
   const explicarSet = (p: typeof programasInfo[number], st: SetInfo, n: number): string => {
     if (st.n_sesiones === 0 && !st.cumple) {
-      return `Este nivel todavía no se ha trabajado. Se enseñará cuando ${nombreCorto} avance lo suficiente en los niveles anteriores.`
+      return L(`This level has not been worked on yet. It will be taught once ${nombreCorto} advances enough in the previous levels.`, `Este nivel todavía no se ha trabajado. Se enseñará cuando ${nombreCorto} avance lo suficiente en los niveles anteriores.`)
     }
     if (st.cumple) {
-      return `${nombreCorto} ya alcanzó el criterio de este nivel. ¡Excelente! Está listo/a para avanzar al siguiente.`
+      return L(`${nombreCorto} has already met the criterion for this level. Excellent! Ready to move on to the next one.`, `${nombreCorto} ya alcanzó el criterio de este nivel. ¡Excelente! Está listo/a para avanzar al siguiente.`)
     }
     const reciente = st.promReciente ?? 0
     if (st.tendencia === 'sube') {
-      return `Viene mejorando en este nivel (alrededor del ${reciente}%). Vamos por buen camino hacia la meta del ${p.criterio}%.`
+      return L(`Improving at this level (around ${reciente}%). We are on the right track toward the ${p.criterio}% goal.`, `Viene mejorando en este nivel (alrededor del ${reciente}%). Vamos por buen camino hacia la meta del ${p.criterio}%.`)
     }
     if (st.tendencia === 'baja') {
-      return `En este nivel notamos una baja reciente (cerca del ${reciente}%). El equipo lo está revisando para ajustar la estrategia.`
+      return L(`We noticed a recent drop at this level (near ${reciente}%). The team is reviewing it to adjust the strategy.`, `En este nivel notamos una baja reciente (cerca del ${reciente}%). El equipo lo está revisando para ajustar la estrategia.`)
     }
-    return `Se mantiene estable en este nivel (cerca del ${reciente}%). Seguimos practicando para llegar a la meta del ${p.criterio}%.`
+    return L(`Stable at this level (near ${reciente}%). We keep practicing to reach the ${p.criterio}% goal.`, `Se mantiene estable en este nivel (cerca del ${reciente}%). Seguimos practicando para llegar a la meta del ${p.criterio}%.`)
   }
 
   // ─── Construcción del documento ───────────────────────────────────────────
   const sections: DocChild[] = [
     ...portadaInstitucional({
-      tipoInforme: 'REPORTE DE PROGRAMAS DE TERAPIA',
+      tipoInforme: L('THERAPY PROGRAMS REPORT', 'REPORTE DE PROGRAMAS DE TERAPIA'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
       diagnostico,
-      especialista: 'Equipo Clínico SANTI',
-      credenciales: 'Terapia ABA · Neuropsicología Infantil',
+      especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+      credenciales: L('ABA Therapy · Child Neuropsychology', 'Terapia ABA · Neuropsicología Infantil'),
       fechaEmision: hoy,
       periodoEval: periodoTexto,
       codigoDoc,
     }),
 
     // I. Bienvenida
-    tpl.tituloSeccion('I.  Para la familia'),
+    tpl.tituloSeccion(L('I.  For the family', 'I.  Para la familia')),
     ...limpiar(bienvenida),
 
     // II. ¿Qué es este documento? (explicación)
-    tpl.tituloSeccion('II.  ¿Qué encontrarán en este documento?'),
-    tpl.parrafo('Cada "programa" es una habilidad específica que estamos enseñando a su hijo/a (por ejemplo: comunicación, atención, autonomía o conducta). Para cada uno verán:'),
+    tpl.tituloSeccion(L('II.  What will you find in this document?', 'II.  ¿Qué encontrarán en este documento?')),
+    tpl.parrafo(L('Each "program" is a specific skill we are teaching your child (for example: communication, attention, autonomy or behavior). For each one you will see:', 'Cada "programa" es una habilidad específica que estamos enseñando a su hijo/a (por ejemplo: comunicación, atención, autonomía o conducta). Para cada uno verán:')),
     ...tpl.items([
-      'El objetivo: qué buscamos que logre.',
-      'Su avance: cómo viene desempeñándose en las sesiones, mostrado en porcentaje de aciertos.',
-      'Una explicación en palabras sencillas de qué significa ese avance.',
-      'La meta: el porcentaje que debe alcanzar de forma constante para considerar el objetivo logrado.',
+      L('The goal: what we want them to achieve.', 'El objetivo: qué buscamos que logre.'),
+      L('Their progress: how they are performing in sessions, shown as accuracy percentage.', 'Su avance: cómo viene desempeñándose en las sesiones, mostrado en porcentaje de aciertos.'),
+      L('An explanation in simple words of what that progress means.', 'Una explicación en palabras sencillas de qué significa ese avance.'),
+      L('The target: the percentage they must reach consistently for the goal to be considered achieved.', 'La meta: el porcentaje que debe alcanzar de forma constante para considerar el objetivo logrado.'),
     ]),
 
     // III. Resumen general
-    tpl.tituloSeccion('III.  Resumen general'),
+    tpl.tituloSeccion(L('III.  General summary', 'III.  Resumen general')),
     tpl.tablaDatosGenerales([
-      ['Nombre', nombreCap],
-      ['Edad', edadTexto],
-      ['Período de trabajo', periodoTexto],
-      ['Total de sesiones realizadas', String(totalSesionesRealizadas)],
-      ['Programas en total', String(programasInfo.length)],
-      ['Objetivos ya alcanzados', String(logrados.length)],
-      ['Programas en proceso', String(enProceso.length)],
-      ['Promedio general de aciertos', promedioGlobal > 0 ? `${promedioGlobal}%` : 'En recolección de datos'],
-      ['Documento N°', codigoDoc],
-      ['Fecha de emisión', hoy],
+      [L('Name', 'Nombre'), nombreCap],
+      [L('Age', 'Edad'), edadTexto],
+      [L('Work period', 'Período de trabajo'), periodoTexto],
+      [L('Total sessions held', 'Total de sesiones realizadas'), String(totalSesionesRealizadas)],
+      [L('Total programs', 'Programas en total'), String(programasInfo.length)],
+      [L('Goals already reached', 'Objetivos ya alcanzados'), String(logrados.length)],
+      [L('Programs in progress', 'Programas en proceso'), String(enProceso.length)],
+      [L('Overall accuracy average', 'Promedio general de aciertos'), promedioGlobal > 0 ? `${promedioGlobal}%` : L('Collecting data', 'En recolección de datos')],
+      [L('Document No.', 'Documento N°'), codigoDoc],
+      [L('Issue date', 'Fecha de emisión'), hoy],
     ]),
   ]
 
@@ -2961,13 +2962,13 @@ async function generarReporteProgramasFamilia(
   }
   const datosArea = Object.entries(areaMap).map(([label, vals]) => ({ label, valor: avg(vals) }))
   if (datosArea.length > 0) {
-    sections.push(tpl.tituloSeccion('IV.  Avance por área de trabajo'))
-    sections.push(tpl.parrafo(`Así viene ${nombreCorto} en cada gran área que trabajamos. La línea punteada marca la meta de dominio.`))
-    sections.push(...tpl.graficoProgresoBarra('Promedio reciente por área (%)', datosArea, { mostrarMeta: true, metaPct: 90 }))
+    sections.push(tpl.tituloSeccion(L('IV.  Progress by work area', 'IV.  Avance por área de trabajo')))
+    sections.push(tpl.parrafo(L(`This is how ${nombreCorto} is doing in each major area we work on. The dotted line marks the mastery goal.`, `Así viene ${nombreCorto} en cada gran área que trabajamos. La línea punteada marca la meta de dominio.`)))
+    sections.push(...tpl.graficoProgresoBarra(L('Recent average by area (%)', 'Promedio reciente por área (%)'), datosArea, { mostrarMeta: true, metaPct: 90 }))
   }
 
   // V. Detalle programa por programa
-  sections.push(tpl.tituloSeccion('V.  Detalle de cada programa'))
+  sections.push(tpl.tituloSeccion(L('V.  Detail of each program', 'V.  Detalle de cada programa')))
 
   // Ordenar: primero logrados, luego en proceso, luego por iniciar
   const ordenados = [
@@ -2990,12 +2991,12 @@ async function generarReporteProgramasFamilia(
 
     // Tabla de datos del programa
     const filas: [string, string][] = []
-    if (p.objetivo) filas.push(['Objetivo', p.objetivo])
-    filas.push(['Estado general', estadoTexto(p)])
-    filas.push(['Meta a alcanzar', `${p.criterio}% de aciertos de forma constante`])
-    if (p.sets.length > 0) filas.push(['Niveles (sets) del programa', String(p.sets.length)])
+    if (p.objetivo) filas.push([L('Goal', 'Objetivo'), p.objetivo])
+    filas.push([L('Overall status', 'Estado general'), estadoTexto(p)])
+    filas.push([L('Target to reach', 'Meta a alcanzar'), L(`${p.criterio}% accuracy consistently`, `${p.criterio}% de aciertos de forma constante`)])
+    if (p.sets.length > 0) filas.push([L('Program levels (sets)', 'Niveles (sets) del programa'), String(p.sets.length)])
     if (p.n_sesiones > 0) {
-      filas.push(['Sesiones registradas', String(p.n_sesiones)])
+      filas.push([L('Recorded sessions', 'Sesiones registradas'), String(p.n_sesiones)])
     }
     sections.push(tpl.tablaDatosGenerales(filas))
 
@@ -3012,7 +3013,7 @@ async function generarReporteProgramasFamilia(
         spacing: { before: 160, after: 40 },
         children: [new TextRun({ text: (userLocale === 'en' ? 'Progress by level (set):' : 'Avance por nivel (set):'), bold: true, size: 21, font: 'Arial', color: '475569' })],
       }))
-      sections.push(tpl.parrafo('Este programa se trabaja por niveles. Cada nivel (set) se enseña por separado y avanza a su propio ritmo:', '64748B'))
+      sections.push(tpl.parrafo(L('This program is worked on by levels. Each level (set) is taught separately and advances at its own pace:', 'Este programa se trabaja por niveles. Cada nivel (set) se enseña por separado y avanza a su propio ritmo:'), '64748B'))
 
       let sIdx = 0
       for (const st of p.sets) {
@@ -3022,7 +3023,7 @@ async function generarReporteProgramasFamilia(
           spacing: { before: 140, after: 20 },
           children: [
             new TextRun({ text: `   ▸ Set ${st.numero ?? sIdx}: `, bold: true, size: 20, font: 'Arial', color: '1E3A8A' }),
-            new TextRun({ text: st.nombre || `Nivel ${sIdx}`, size: 20, font: 'Arial', color: '1E293B' }),
+            new TextRun({ text: st.nombre || L(`Level ${sIdx}`, `Nivel ${sIdx}`), size: 20, font: 'Arial', color: '1E293B' }),
           ],
         }))
         // Marcador de estado del set (verde con check si alcanzó criterio)
@@ -3031,7 +3032,7 @@ async function generarReporteProgramasFamilia(
           shading: st.cumple ? { type: ShadingType.CLEAR, color: 'auto', fill: 'DCFCE7' } : undefined,
           children: [
             new TextRun({
-              text: st.cumple ? `   ✓  Criterio alcanzado` : `   ${estadoSetTexto(st)}`,
+              text: st.cumple ? L(`   ✓  Criterion met`, `   ✓  Criterio alcanzado`) : `   ${estadoSetTexto(st)}`,
               bold: true, size: 18, font: 'Arial',
               color: st.cumple ? '15803D' : '64748B',
             }),
@@ -3039,16 +3040,16 @@ async function generarReporteProgramasFamilia(
         }))
         // Datos del set
         const filasSet: [string, string][] = []
-        filasSet.push(['Estado', estadoSetTexto(st)])
+        filasSet.push([L('Status', 'Estado'), estadoSetTexto(st)])
         if (st.n_sesiones > 0) {
-          filasSet.push(['Sesiones de este nivel', String(st.n_sesiones)])
-          if (st.promReciente != null) filasSet.push(['Desempeño reciente', `${st.promReciente}%`])
+          filasSet.push([L('Sessions at this level', 'Sesiones de este nivel'), String(st.n_sesiones)])
+          if (st.promReciente != null) filasSet.push([L('Recent performance', 'Desempeño reciente'), `${st.promReciente}%`])
         }
         sections.push(tpl.tablaDatosGenerales(filasSet))
         // Mini gráfico del set (si hay ≥ 2 puntos)
         if (st.pcts.length >= 2) {
           sections.push(new Paragraph({ spacing: { before: 80, after: 30 }, children: [] }))
-          sections.push(...tpl.graficoCurvaLineal(`Set ${st.numero ?? sIdx} — Evolución de aciertos (%)`, st.pcts))
+          sections.push(...tpl.graficoCurvaLineal(L(`Set ${st.numero ?? sIdx} — Accuracy evolution (%)`, `Set ${st.numero ?? sIdx} — Evolución de aciertos (%)`), st.pcts))
         }
         // Explicación del set en lenguaje simple
         sections.push(new Paragraph({
@@ -3061,25 +3062,25 @@ async function generarReporteProgramasFamilia(
       // Sin sets definidos → gráfico general del programa
       if (p.pcts.length >= 2) {
         sections.push(new Paragraph({ spacing: { before: 120, after: 40 }, children: [] }))
-        sections.push(...tpl.graficoCurvaLineal('Evolución de aciertos (%)', p.pcts))
+        sections.push(...tpl.graficoCurvaLineal(L('Accuracy evolution (%)', 'Evolución de aciertos (%)'), p.pcts))
       }
     }
   }
 
   // VI. Glosario simple
-  sections.push(tpl.tituloSeccion('VI.  Pequeño glosario'))
+  sections.push(tpl.tituloSeccion(L('VI.  Small glossary', 'VI.  Pequeño glosario')))
   sections.push(...tpl.items([
-    'Programa: una habilidad específica que enseñamos (ej. pedir lo que necesita, esperar su turno, leer).',
-    'Nivel o set: cada programa se divide en niveles que se enseñan de a uno, del más fácil al más difícil. Por eso cada nivel avanza a su propio ritmo.',
-    'Sesión: cada encuentro de terapia donde practicamos y medimos el avance.',
-    'Porcentaje de aciertos: de cada 100 oportunidades, cuántas respondió correctamente.',
-    'Meta o criterio: el porcentaje que debe alcanzar de forma constante para dar por logrado el nivel (normalmente 90%).',
-    'Línea base: etapa inicial donde medimos el punto de partida antes de empezar a enseñar.',
-    'Nivel dominado: cuando logró la meta de forma estable en ese nivel y está listo para pasar al siguiente.',
+    L('Program: a specific skill we teach (e.g. asking for what they need, waiting their turn, reading).', 'Programa: una habilidad específica que enseñamos (ej. pedir lo que necesita, esperar su turno, leer).'),
+    L('Level or set: each program is divided into levels taught one at a time, from easiest to hardest. That is why each level advances at its own pace.', 'Nivel o set: cada programa se divide en niveles que se enseñan de a uno, del más fácil al más difícil. Por eso cada nivel avanza a su propio ritmo.'),
+    L('Session: each therapy meeting where we practice and measure progress.', 'Sesión: cada encuentro de terapia donde practicamos y medimos el avance.'),
+    L('Accuracy percentage: out of every 100 opportunities, how many were answered correctly.', 'Porcentaje de aciertos: de cada 100 oportunidades, cuántas respondió correctamente.'),
+    L('Goal or criterion: the percentage that must be reached consistently to consider the level achieved (usually 90%).', 'Meta o criterio: el porcentaje que debe alcanzar de forma constante para dar por logrado el nivel (normalmente 90%).'),
+    L('Baseline: initial stage where we measure the starting point before we begin teaching.', 'Línea base: etapa inicial donde medimos el punto de partida antes de empezar a enseñar.'),
+    L('Mastered level: when the goal was reached stably at that level and they are ready to move on.', 'Nivel dominado: cuando logró la meta de forma estable en ese nivel y está listo para pasar al siguiente.'),
   ]))
 
   // VII. Cierre
-  sections.push(tpl.tituloSeccion('VII.  Mensaje final'))
+  sections.push(tpl.tituloSeccion(L('VII.  Final message', 'VII.  Mensaje final')))
   sections.push(...limpiar(cierre))
 
   // QR + firma
@@ -3109,7 +3110,7 @@ async function generarReporteProgramasFamilia(
 
   await registrarDocumentoEmitido({
     codigoDoc, childId, tipo: 'reporte_padres',
-    tipoLabel: 'Reporte de Programas de Terapia',
+    tipoLabel: L('Therapy Programs Report', 'Reporte de Programas de Terapia'),
     pacienteNombre: nombreCap, pacienteIniciales: iniciales,
     fileName, metadata: { periodo: periodoTexto, total_programas: programasInfo.length, logrados: logrados.length },
   })
@@ -3127,6 +3128,7 @@ async function generarGuiaSetFamilia(
   objetivoId: string,
   userLocale = 'es',
 ): Promise<{ doc: Document; fileName: string }> {
+  const L = (en: string, es: string): string => userLocale === 'en' ? en : es
 
   // 1. Cargar el set + su programa + el paciente
   const { data: setObj, error: e1 } = await supabaseAdmin
@@ -3148,14 +3150,14 @@ async function generarGuiaSetFamilia(
     ? await supabaseAdmin.from('children').select('name, age, birth_date, diagnosis').eq('id', childId).maybeSingle()
     : { data: null }
 
-  const nombre = (child as any)?.name || 'el/la estudiante'
+  const nombre = (child as any)?.name || L('the student', 'el/la estudiante')
   const nombreCap = nombre.split(' ')
     .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(' ')
   const nombreCorto = nombreCap.split(' ')[0]
-  const diagnostico = (child as any)?.diagnosis || 'En evaluación'
+  const diagnostico = (child as any)?.diagnosis || L('Under evaluation', 'En evaluación')
 
-  let edadTexto = 'no registrada'
+  let edadTexto = L('not recorded', 'no registrada')
   if ((child as any)?.birth_date) {
     const nac = new Date((child as any).birth_date)
     const ahora = new Date()
@@ -3163,15 +3165,15 @@ async function generarGuiaSetFamilia(
     const meses = ahora.getMonth() - nac.getMonth()
     const edad = (meses < 0 || (meses === 0 && ahora.getDate() < nac.getDate())) ? años - 1 : años
     const mesesAdj = meses < 0 ? meses + 12 : meses
-    edadTexto = `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
+    edadTexto = userLocale === 'en' ? `${edad} year${edad!==1?'s':''}${mesesAdj > 0 ? ` ${mesesAdj} month${mesesAdj!==1?'s':''}` : ''}` : `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
   } else if ((child as any)?.age) {
-    edadTexto = `${(child as any).age} años`
+    edadTexto = userLocale === 'en' ? `${(child as any).age} years` : `${(child as any).age} años`
   }
 
   const s: any = setObj
   const prog: any = programa || {}
   const criterio = Number(prog.criterio_dominio_pct) || 90
-  const tituloPrograma = prog.titulo || 'Programa'
+  const tituloPrograma = prog.titulo || L('Program', 'Programa')
   const area = (prog.area || 'General').toString().trim()
   const numeroSet = s.numero_set != null ? `Set ${s.numero_set}` : 'Set'
   const descSet = (s.descripcion || '').toString().trim()
@@ -3187,56 +3189,56 @@ async function generarGuiaSetFamilia(
   // 2. Pasos del procedimiento → cada uno con explicación amigable
   type Paso = { icono: string; titulo: string; queSignifica: string; contenido: string }
   const pasosRaw: Paso[] = [
-    { icono: '📚', titulo: 'Qué necesitas (materiales)', queSignifica: 'Reuní estos materiales antes de empezar para que la práctica fluya sin interrupciones.', contenido: (s.materiales || '').toString().trim() },
-    { icono: '📍', titulo: 'Qué decir o mostrar (la instrucción)', queSignifica: 'Es la indicación que le das para que sepa qué tiene que hacer. Decila de forma clara y una sola vez.', contenido: (s.sd_estimulo || '').toString().trim() },
-    { icono: '✅', titulo: 'Qué respuesta buscamos (respuesta correcta)', queSignifica: 'Esto es lo que esperamos que haga. Cuando lo logre, felicitalo enseguida con entusiasmo.', contenido: (s.unidad_positiva || '').toString().trim() },
-    { icono: '❎', titulo: 'Qué no contamos como correcto', queSignifica: 'Si responde de esta manera, no es la respuesta que buscamos todavía. No lo regañes: simplemente seguí al paso de corrección.', contenido: (s.unidad_negativa || '').toString().trim() },
-    { icono: '🤝', titulo: 'Cómo ayudarlo (ayudas / apoyos)', queSignifica: 'Si le cuesta, podés darle estos apoyos. La idea es ir retirándolos de a poco para que lo haga cada vez más solo.', contenido: ayudas },
-    { icono: '🔄', titulo: 'Qué hacer si se equivoca (corrección)', queSignifica: 'Cuando no acierte, seguí estos pasos con calma y paciencia, sin frustrarte. Es parte normal del aprendizaje.', contenido: (s.correction_errores || '').toString().trim() },
-    { icono: '🏠', titulo: 'Cómo practicarlo en el día a día (generalización)', queSignifica: 'Buscá momentos naturales en casa para repetir esta habilidad, así la aprende de verdad y la usa en su vida diaria.', contenido: (s.generalizacion || '').toString().trim() },
+    { icono: '📚', titulo: L('What you need (materials)', 'Qué necesitas (materiales)'), queSignifica: L('Gather these materials before starting so the practice flows without interruptions.', 'Reuní estos materiales antes de empezar para que la práctica fluya sin interrupciones.'), contenido: (s.materiales || '').toString().trim() },
+    { icono: '📍', titulo: L('What to say or show (the instruction)', 'Qué decir o mostrar (la instrucción)'), queSignifica: L('This is the cue you give so they know what to do. Say it clearly and only once.', 'Es la indicación que le das para que sepa qué tiene que hacer. Decila de forma clara y una sola vez.'), contenido: (s.sd_estimulo || '').toString().trim() },
+    { icono: '✅', titulo: L('What response we want (correct response)', 'Qué respuesta buscamos (respuesta correcta)'), queSignifica: L('This is what we expect them to do. When they succeed, praise them right away with enthusiasm.', 'Esto es lo que esperamos que haga. Cuando lo logre, felicitalo enseguida con entusiasmo.'), contenido: (s.unidad_positiva || '').toString().trim() },
+    { icono: '❎', titulo: L('What we do not count as correct', 'Qué no contamos como correcto'), queSignifica: L('If they respond this way, it is not the response we are looking for yet. Do not scold them: simply move on to the correction step.', 'Si responde de esta manera, no es la respuesta que buscamos todavía. No lo regañes: simplemente seguí al paso de corrección.'), contenido: (s.unidad_negativa || '').toString().trim() },
+    { icono: '🤝', titulo: L('How to help them (prompts / supports)', 'Cómo ayudarlo (ayudas / apoyos)'), queSignifica: L('If they struggle, you can give these supports. The idea is to gradually fade them so they do it more and more on their own.', 'Si le cuesta, podés darle estos apoyos. La idea es ir retirándolos de a poco para que lo haga cada vez más solo.'), contenido: ayudas },
+    { icono: '🔄', titulo: L('What to do if they make a mistake (correction)', 'Qué hacer si se equivoca (corrección)'), queSignifica: L('When they do not succeed, follow these steps calmly and patiently, without getting frustrated. It is a normal part of learning.', 'Cuando no acierte, seguí estos pasos con calma y paciencia, sin frustrarte. Es parte normal del aprendizaje.'), contenido: (s.correction_errores || '').toString().trim() },
+    { icono: '🏠', titulo: L('How to practice it day to day (generalization)', 'Cómo practicarlo en el día a día (generalización)'), queSignifica: L('Look for natural moments at home to repeat this skill, so they truly learn it and use it in daily life.', 'Buscá momentos naturales en casa para repetir esta habilidad, así la aprende de verdad y la usa en su vida diaria.'), contenido: (s.generalizacion || '').toString().trim() },
   ]
   const pasos = pasosRaw.filter(p => p.contenido)
 
   const sellosVerif = await tpl.selloQRVerificacionAsync({
-    codigoDoc, fechaEmision: hoy, especialista: 'Equipo Clínico SANTI',
+    codigoDoc, fechaEmision: hoy, especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
   })
 
   const sections: DocChild[] = [
     ...portadaInstitucional({
-      tipoInforme: 'GUÍA DE EJERCICIO PARA CASA',
+      tipoInforme: L('HOME EXERCISE GUIDE', 'GUÍA DE EJERCICIO PARA CASA'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
       diagnostico,
-      especialista: 'Equipo Clínico SANTI',
-      credenciales: 'Terapia ABA · Neuropsicología Infantil',
+      especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+      credenciales: L('ABA Therapy · Child Neuropsychology', 'Terapia ABA · Neuropsicología Infantil'),
       fechaEmision: hoy,
       periodoEval: tituloPrograma,
       codigoDoc,
     }),
 
     // I. Presentación
-    tpl.tituloSeccion('I.  ¿Para qué sirve esta guía?'),
-    tpl.parrafo(`Esta guía explica, paso a paso, cómo practicar en casa un ejercicio que estamos trabajando con ${nombreCorto} en terapia. Practicar en casa ayuda muchísimo a que aprenda más rápido y use lo aprendido en su día a día. No necesitas experiencia previa: solo seguí los pasos con cariño, paciencia y constancia.`),
+    tpl.tituloSeccion(L('I.  What is this guide for?', 'I.  ¿Para qué sirve esta guía?')),
+    tpl.parrafo(L(`This guide explains, step by step, how to practice at home an exercise we are working on with ${nombreCorto} in therapy. Practicing at home helps a lot for them to learn faster and use what they learn in daily life. You do not need previous experience: just follow the steps with care, patience and consistency.`, `Esta guía explica, paso a paso, cómo practicar en casa un ejercicio que estamos trabajando con ${nombreCorto} en terapia. Practicar en casa ayuda muchísimo a que aprenda más rápido y use lo aprendido en su día a día. No necesitas experiencia previa: solo seguí los pasos con cariño, paciencia y constancia.`)),
 
     // II. Datos del ejercicio
-    tpl.tituloSeccion('II.  El ejercicio de hoy'),
+    tpl.tituloSeccion(L("II.  Today's exercise", 'II.  El ejercicio de hoy')),
     tpl.tablaDatosGenerales([
-      ['Estudiante', nombreCap],
-      ['Área de trabajo', area],
-      ['Programa', tituloPrograma],
-      ['Ejercicio', `${numeroSet}${descSet ? ` — ${descSet}` : ''}`],
-      ['Meta', `Que lo logre en el ${criterio}% de las veces, de forma constante`],
+      [L('Student', 'Estudiante'), nombreCap],
+      [L('Work area', 'Área de trabajo'), area],
+      [L('Program', 'Programa'), tituloPrograma],
+      [L('Exercise', 'Ejercicio'), `${numeroSet}${descSet ? ` — ${descSet}` : ''}`],
+      [L('Goal', 'Meta'), L(`Achieve it ${criterio}% of the time, consistently`, `Que lo logre en el ${criterio}% de las veces, de forma constante`)],
     ]),
   ]
 
   if (prog.objetivo_lp) {
-    sections.push(tpl.subseccion('¿Qué queremos lograr a largo plazo?', String(prog.objetivo_lp)))
+    sections.push(tpl.subseccion(L('What do we want to achieve long-term?', '¿Qué queremos lograr a largo plazo?'), String(prog.objetivo_lp)))
   }
 
   // III. Pasos
-  sections.push(tpl.tituloSeccion('III.  Cómo hacerlo, paso a paso'))
+  sections.push(tpl.tituloSeccion(L('III.  How to do it, step by step', 'III.  Cómo hacerlo, paso a paso')))
   if (pasos.length === 0) {
-    sections.push(tpl.parrafo('Este ejercicio todavía no tiene el procedimiento detallado. Consultá con el especialista para que te explique cómo practicarlo en casa.'))
+    sections.push(tpl.parrafo(L('This exercise does not have a detailed procedure yet. Check with the specialist so they can explain how to practice it at home.', 'Este ejercicio todavía no tiene el procedimiento detallado. Consultá con el especialista para que te explique cómo practicarlo en casa.')))
   } else {
     let n = 0
     for (const paso of pasos) {
@@ -3245,7 +3247,7 @@ async function generarGuiaSetFamilia(
       sections.push(new Paragraph({
         spacing: { before: 220, after: 40 },
         children: [
-          new TextRun({ text: `${paso.icono}  Paso ${n}: ${paso.titulo}`, bold: true, size: 23, font: 'Arial', color: '1E3A8A' }),
+          new TextRun({ text: `${paso.icono}  ${L('Step', 'Paso')} ${n}: ${paso.titulo}`, bold: true, size: 23, font: 'Arial', color: '1E3A8A' }),
         ],
       }))
       // Qué significa (nota guía, en cursiva)
@@ -3264,19 +3266,19 @@ async function generarGuiaSetFamilia(
   }
 
   // IV. Consejos para la familia
-  sections.push(tpl.tituloSeccion('IV.  Consejos para que funcione mejor'))
+  sections.push(tpl.tituloSeccion(L('IV.  Tips to make it work better', 'IV.  Consejos para que funcione mejor')))
   sections.push(...tpl.items([
-    'Elegí un momento tranquilo, sin distracciones (sin TV ni celular cerca).',
-    'Practicá poco tiempo pero seguido: 5 a 10 minutos varias veces es mejor que una sesión larga.',
-    'Festejá cada logro al instante: un aplauso, un abrazo o algo que le guste lo motiva muchísimo.',
-    'Si se frustra o se cansa, hacé una pausa. Nunca lo obligues ni lo regañes por equivocarse.',
-    'La constancia es la clave: repetir el ejercicio en distintos momentos del día acelera el aprendizaje.',
-    'Anotá tus dudas y compartilas con el especialista en la próxima sesión.',
+    L('Choose a calm moment, free of distractions (no TV or phone nearby).', 'Elegí un momento tranquilo, sin distracciones (sin TV ni celular cerca).'),
+    L('Practice for short but frequent periods: 5 to 10 minutes several times is better than one long session.', 'Practicá poco tiempo pero seguido: 5 a 10 minutos varias veces es mejor que una sesión larga.'),
+    L('Celebrate every achievement instantly: applause, a hug or something they like motivates them a lot.', 'Festejá cada logro al instante: un aplauso, un abrazo o algo que le guste lo motiva muchísimo.'),
+    L('If they get frustrated or tired, take a break. Never force them or scold them for making mistakes.', 'Si se frustra o se cansa, hacé una pausa. Nunca lo obligues ni lo regañes por equivocarse.'),
+    L('Consistency is key: repeating the exercise at different times of the day speeds up learning.', 'La constancia es la clave: repetir el ejercicio en distintos momentos del día acelera el aprendizaje.'),
+    L('Write down your questions and share them with the specialist in the next session.', 'Anotá tus dudas y compartilas con el especialista en la próxima sesión.'),
   ]))
 
   // V. Cierre
-  sections.push(tpl.tituloSeccion('V.  Gracias por acompañar'))
-  sections.push(tpl.parrafo(`Tu participación en casa hace una diferencia enorme en el progreso de ${nombreCorto}. Cada pequeño paso cuenta. Ante cualquier duda sobre cómo realizar este ejercicio, el equipo está para ayudarte.`))
+  sections.push(tpl.tituloSeccion(L('V.  Thank you for your support', 'V.  Gracias por acompañar')))
+  sections.push(tpl.parrafo(L(`Your involvement at home makes a huge difference in ${nombreCorto}'s progress. Every small step counts. If you have any questions about how to do this exercise, the team is here to help you.`, `Tu participación en casa hace una diferencia enorme en el progreso de ${nombreCorto}. Cada pequeño paso cuenta. Ante cualquier duda sobre cómo realizar este ejercicio, el equipo está para ayudarte.`)))
 
   // QR + firma
   sections.push(new Paragraph({ spacing: { before: 160, after: 40 }, children: [] }))
@@ -3305,7 +3307,7 @@ async function generarGuiaSetFamilia(
 
   await registrarDocumentoEmitido({
     codigoDoc, childId: childId || undefined, tipo: 'reporte_padres',
-    tipoLabel: 'Guía de Ejercicio para Casa',
+    tipoLabel: L('Home Exercise Guide', 'Guía de Ejercicio para Casa'),
     pacienteNombre: nombreCap, pacienteIniciales: iniciales,
     fileName, metadata: { programa: tituloPrograma, set: numeroSet, objetivo_id: objetivoId },
   })
