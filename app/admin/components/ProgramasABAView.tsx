@@ -682,6 +682,7 @@ function MiniChart({ chartData, minSlots, criterio }: { chartData: any[]; minSlo
 
 // Componente para el gráfico de detalle — un solo ResponsiveContainer, sin overlay
 function DetailChart({ chartData, chartHeight, minSlots, programa, segments, mergedSegments, segColorMap, dividers, crit, faseLabel }: any) {
+  const { t } = useI18n()
   const margin = { top: 24, right: 16, bottom: 20, left: 4 }
   const YAXIS_W = 40
 
@@ -750,7 +751,7 @@ function DetailChart({ chartData, chartHeight, minSlots, programa, segments, mer
           ticks={Array.from({ length: minSlots }, (_: any, i: number) => i + 1)}
           tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
           interval={Math.max(0, Math.floor(minSlots / 10) - 1)}
-          label={{ value: 'Sesión', position: 'insideBottom', offset: -8, fontSize: 10, fill: 'var(--text-muted)' }}
+          label={{ value: t('programas.sesion'), position: 'insideBottom', offset: -8, fontSize: 10, fill: 'var(--text-muted)' }}
         />
         <YAxis
           domain={[0, 100]}
@@ -1271,7 +1272,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                   {/* Header con selector de tipo */}
                   <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                     <p className="text-xs font-bold text-slate-400">
-                      📈 Gráfica de progreso
+                      {t('programas.graficaProgreso')}
                     </p>
                     {/* Selector de tipo */}
                     <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
@@ -1397,7 +1398,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                             })}
                             <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
                               <span className="w-4 border-t-2 border-dashed border-emerald-500 inline-block" />
-                              Criterio {programa.criterio_dominio_pct}%
+                              {t('programas.criterio')} {programa.criterio_dominio_pct}%
                             </span>
                           </div>
                         </div>
@@ -1457,7 +1458,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                 ticks={Array.from({ length: minSlots }, (_, i) => i + 1)}
                                 tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                                 interval={Math.max(0, Math.floor(minSlots / 10) - 1)}
-                                label={{ value: 'Sesión', position: 'insideBottom', offset: -10, fontSize: 10, fill: 'var(--text-muted)' }} />
+                                label={{ value: t('programas.sesion'), position: 'insideBottom', offset: -10, fontSize: 10, fill: 'var(--text-muted)' }} />
                               <YAxis domain={[0, 100]} ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickFormatter={(v: any) => `${v}%`} width={40} />
                               <Tooltip
                                 formatter={(value: any) => [`${value}%`, 'Éxito']}
@@ -1582,7 +1583,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
 
               {/* Sets / Objetivos CP */}
               <div>
-                <p className="text-xs font-bold text-slate-400 mb-2">🎯 Sets / Objetivos</p>
+                <p className="text-xs font-bold text-slate-400 mb-2">{t('programas.setsObjetivos')}</p>
                 {detalle.objetivos_cp?.length > 0 && (
                   <div className="space-y-2">
                     {[...detalle.objetivos_cp].sort((a: any, b: any) => (a.numero_set ?? 0) - (b.numero_set ?? 0)).map((obj: any) => (
@@ -1715,14 +1716,14 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                           {editandoSetId === obj.id ? (
                             <div className="space-y-2">
                               {[
-                                { key: 'materiales',        label: '📚 Materiales',         placeholder: 'Materiales necesarios' },
+                                { key: 'materiales',        label: t('programas.matLabel'),         placeholder: t('programas.phMaterialesNec') },
                                 { key: 'sd_estimulo',       label: t('programas.sdCorto'),                 placeholder: t('programas.phSd') },
-                                { key: 'unidad_positiva',   label: '✅ Unidad +',           placeholder: 'Respuesta correcta esperada' },
-                                { key: 'unidad_negativa',   label: '❎ Unidad -',           placeholder: 'Respuesta incorrecta / error' },
-                                { key: 'reforzadores',      label: '🤝🏼 Ayudas',            placeholder: 'Ej: Gesto + verbal' },
+                                { key: 'unidad_positiva',   label: t('programas.unidadPosCorto'),           placeholder: t('programas.phUnidadPos') },
+                                { key: 'unidad_negativa',   label: t('programas.unidadNegCorto'),           placeholder: t('programas.phUnidadNeg') },
+                                { key: 'reforzadores',      label: t('programas.ayudas'),            placeholder: t('programas.phAyudasCorto') },
                                 { key: 'correction_errores',label: t('programas.correccion'),         placeholder: t('programas.phCorrigeError') },
                                 { key: 'generalizacion',    label: t('programas.generalizacion'),    placeholder: t('programas.phGeneralizar') },
-                                { key: 'notas',             label: '📝 Notas',              placeholder: t('programas.obsSet') },
+                                { key: 'notas',             label: t('programas.notasLabel'),              placeholder: t('programas.obsSet') },
                               ].map(({ key, label, placeholder }) => (
                                 <div key={key}>
                                   <label className="block text-[11px] font-bold text-sky-400 mb-1">{label}</label>
@@ -1741,7 +1742,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               <div className="flex gap-2 pt-1">
                                 <button onClick={() => setEditandoSetId(null)}
                                   className="flex-1 py-1.5 rounded-lg text-xs font-bold text-slate-500 border border-slate-200 hover:bg-slate-100">
-                                  Cancelar
+                                  {t('common.cancelar')}
                                 </button>
                                 <button
                                   disabled={savingEditSet}
@@ -1765,7 +1766,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                   }}
                                   className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-40 flex items-center justify-center gap-1">
                                   {savingEditSet ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
-                                  {savingEditSet ? 'Guardando...' : 'Guardar'}
+                                  {savingEditSet ? t('common.guardando') : t('common.guardar')}
                                 </button>
                               </div>
                             </div>
@@ -1781,7 +1782,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               {(obj.reforzadores || obj.ayudas) && <p><span className="font-bold">🤝🏼 Ayudas:</span> {obj.reforzadores || obj.ayudas}</p>}
                               {obj.correction_errores && <p><span className="font-bold">📍 Corrección:</span> {obj.correction_errores}</p>}
                               {obj.generalizacion && <p><span className="font-bold">➡️ Generalización:</span> {obj.generalizacion}</p>}
-                              {obj.notas && <p className="whitespace-pre-line"><span className="font-bold">📝 Notas:</span> {obj.notas}</p>}
+                              {obj.notas && <p className="whitespace-pre-line"><span className="font-bold">{t('programas.notasLabel')}:</span> {obj.notas}</p>}
                             </>
                           )}
                         </div>
@@ -1795,7 +1796,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                     onClick={() => setShowAgregarSet(true)}
                     className="mt-2 w-full py-2 border-2 border-dashed border-[var(--card-border)] rounded-xl text-xs font-bold text-slate-400 hover:border-sky-300 hover:text-sky-500 transition-all"
                   >
-                    + Agregar set
+                    {t('programas.agregarSet')}
                   </button>
 
                   {/* Modal Agregar Set */}
@@ -1804,25 +1805,25 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                       <div className="rounded-3xl bg-[var(--card)] w-full max-w-lg shadow-2xl max-h-[92vh] overflow-y-auto">
                         <div className="p-6">
                           <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-lg" style={{color:'var(--text-primary)'}}>➕ Nuevo Set</h3>
+                            <h3 className="font-bold text-lg" style={{color:'var(--text-primary)'}}>{t('programas.nuevoSet')}</h3>
                             <button onClick={() => setShowAgregarSet(false)} className="p-2 rounded-full hover:bg-[var(--muted-bg)]"><X size={18} /></button>
                           </div>
                           <div className="space-y-3">
                             <div>
-                              <label className="text-xs font-bold text-slate-500 block mb-1">📝 Descripción del set *</label>
+                              <label className="text-xs font-bold text-slate-500 block mb-1">{t('programas.descripcionSet')}</label>
                               <input value={nuevoSet.descripcion} onChange={e => setNuevoSet(s => ({...s, descripcion: e.target.value}))}
                                 placeholder={t("programas.phSetDesc")}
                                 className="w-full rounded-xl text-sm font-bold outline-none" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
                             </div>
                             {[
-                              { key: 'materiales',       label: '📚 Materiales',                   placeholder: t('programas.materialesSetNec') },
+                              { key: 'materiales',       label: t('programas.matLabel'),                   placeholder: t('programas.materialesSetNec') },
                               { key: 'sd_estimulo',      label: t('programas.sdEstimuloFull'), placeholder: t('programas.phSdInicia') },
-                              { key: 'unidad_positiva',  label: '✅ Unidad positiva',              placeholder: 'Respuesta correcta esperada' },
-                              { key: 'unidad_negativa',  label: '❎ Unidad negativa',             placeholder: 'Respuesta incorrecta / error' },
-                              { key: 'reforzadores',     label: '🤝🏼 Ayudas',                      placeholder: 'Las indicadas en el set. Ej: Gesto + verbal' },
+                              { key: 'unidad_positiva',  label: t('programas.unidadPos'),              placeholder: t('programas.phUnidadPos') },
+                              { key: 'unidad_negativa',  label: t('programas.unidadNeg'),             placeholder: t('programas.phUnidadNeg') },
+                              { key: 'reforzadores',     label: t('programas.ayudas'),                      placeholder: t('programas.phAyudasLargo') },
                               { key: 'correction_errores', label: t('programas.correccionFull'),         placeholder: t('programas.phCorrigeIncorrecta') },
                               { key: 'generalizacion',   label: t('programas.generalizacion'),              placeholder: t('programas.phGeneralizarFull') },
-                              { key: 'notas',            label: '📝 Notas',                        placeholder: t('programas.obsSet') },
+                              { key: 'notas',            label: t('programas.notasLabel'),                        placeholder: t('programas.obsSet') },
                             ].map(({ key, label, placeholder }) => (
                               <div key={key}>
                                 <label className="text-xs font-bold text-slate-500 block mb-1.5">{label}</label>
@@ -1838,7 +1839,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                           <div className="flex gap-3 mt-5">
                             <button onClick={() => setShowAgregarSet(false)}
                               className="flex-1 py-3 text-slate-500 font-bold border-2 border-slate-100 rounded-xl hover:bg-[var(--muted-bg)]">
-                              Cancelar
+                              {t('common.cancelar')}
                             </button>
                             <button disabled={!nuevoSet.descripcion.trim() || savingSet}
                               onClick={async () => {
@@ -1859,7 +1860,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               }}
                               className="flex-[2] py-3 bg-sky-600 text-white rounded-xl font-bold text-sm hover:bg-sky-700 disabled:opacity-50 flex items-center justify-center gap-2">
                               {savingSet ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                              {savingSet ? 'Guardando...' : 'Crear Set'}
+                              {savingSet ? t('common.guardando') : t('programas.crearSet')}
                             </button>
                           </div>
                         </div>
@@ -2021,7 +2022,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
               {/* Notas del programa — se capturan al crear el programa (paso 3) */}
               {detalle.notas_programa && (
                 <div>
-                  <p className="text-xs font-bold text-slate-400 mb-2">🙈 Notas</p>
+                  <p className="text-xs font-bold text-slate-400 mb-2">{t('programas.notasProg')}</p>
                   <div className="rounded-xl p-4 border border-[var(--card-border)] bg-[var(--card)] text-xs text-slate-600 dark:text-slate-300 whitespace-pre-line leading-relaxed">
                     {detalle.notas_programa}
                   </div>
@@ -2097,13 +2098,13 @@ function PracticaCasaPanel({ programaId, programaNombre, objetivos = [] }: { pro
   const adherencia = totalDias > 0 ? Math.round((totalDias / 56) * 100) : 0
 
   const adherenciaColor = adherencia >= 70 ? '#059669' : adherencia >= 40 ? '#d97706' : '#dc2626'
-  const adherenciaLabel = adherencia >= 70 ? 'Buena adherencia' : adherencia >= 40 ? 'Adherencia moderada' : 'Baja adherencia'
+  const adherenciaLabel = adherencia >= 70 ? t('programas.adhBuena') : adherencia >= 40 ? t('programas.adhModerada') : t('programas.adhBaja')
 
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
         <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
-          🏠 Práctica en casa (padre)
+          {t('programas.practicaCasa')}
         </p>
         {!loading && (
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${adherenciaColor}18`, color: adherenciaColor, border: `1px solid ${adherenciaColor}30` }}>
@@ -2119,13 +2120,13 @@ function PracticaCasaPanel({ programaId, programaNombre, objetivos = [] }: { pro
         </div>
       ) : error ? (
         <div className="rounded-2xl p-4 text-center" style={{ background: 'var(--card)', border: '1px solid #fca5a5' }}>
-          <p className="text-xs font-medium text-red-500">Error al cargar: {error}</p>
+          <p className="text-xs font-medium text-red-500">{t('programas.errorCargar')}: {error}</p>
           <p className="text-[10px] text-red-400 mt-1">Tabla: programa_practica_casa · ID: {programaId?.slice(0,8)}...</p>
         </div>
       ) : registros.length === 0 ? (
         <div className="rounded-2xl p-4 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
           <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-            El padre aún no ha registrado práctica en casa para este programa.
+            {t('programas.sinPracticaCasa')}
           </p>
         </div>
       ) : (
@@ -2499,7 +2500,7 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
             {/* Sets — reemplaza nivel de ayuda */}
             {sets.length > 0 && (
               <div>
-                <label className="text-xs font-bold text-slate-400 block mb-2">🎯 Set activo</label>
+                <label className="text-xs font-bold text-slate-400 block mb-2">{t('programas.setActivo')}</label>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {sets.map((s: any) => {
                     const setKey = s.numero_set ? `Set ${s.numero_set}` : s.descripcion
@@ -2536,7 +2537,7 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
 
             {/* Notas */}
             <div>
-              <label className="text-xs font-bold text-slate-400 block mb-1.5">📝 Notas</label>
+              <label className="text-xs font-bold text-slate-400 block mb-1.5">{t('programas.notasLabel')}</label>
               <textarea value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
                 rows={2} placeholder={t("ui.session_observations")}
                 className="w-full p-3 rounded-xl text-sm resize-none outline-none transition-all" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
@@ -2545,12 +2546,12 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
 
           <div className="flex gap-3 mt-5">
             <button onClick={onClose} className="flex-1 py-3 text-slate-400 font-bold border-2 border-slate-100 rounded-xl hover:bg-[var(--muted-bg)]">
-              Cancelar
+              {t('common.cancelar')}
             </button>
             <button onClick={handleSave} disabled={saving}
               className="flex-[2] py-3 bg-sky-600 text-white rounded-xl font-bold text-sm hover:bg-sky-700 disabled:opacity-50 flex items-center justify-center gap-2">
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {saving ? 'Guardando...' : 'Guardar Sesión'}
+              {saving ? t('common.guardando') : t('programas.guardarSesion')}
             </button>
           </div>
         </div>
@@ -2645,7 +2646,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                   className="w-full p-3 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px' }} />
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500 block mb-1.5">🎯 Objetivo a largo plazo *</label>
+                <label className="text-xs font-bold text-slate-500 block mb-1.5">{t('programas.objetivoLargoPlazo')}</label>
                 <textarea value={form.objetivo_lp} onChange={e => set('objetivo_lp', e.target.value)}
                   rows={5} placeholder={t("ui.mastery_criterion")}
                   className="w-full p-3 rounded-xl text-sm resize-y outline-none transition-all" style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)', padding: '10px 14px', minHeight: '120px' }} />
@@ -2691,14 +2692,14 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                   {setExpandido === i && (
                     <div className="px-3 pb-3 space-y-2 border-t border-[var(--card-border)]">
                       {([
-                        { key: 'materiales',       label: '📚 Materiales',                   placeholder: t('programas.materialesSet') },
+                        { key: 'materiales',       label: t('programas.matLabel'),                   placeholder: t('programas.materialesSet') },
                         { key: 'sd_estimulo',      label: t('programas.sdEstimuloFull'), placeholder: t('programas.phSd') },
-                        { key: 'unidad_positiva',  label: '✅ Unidad positiva',              placeholder: 'Respuesta correcta esperada' },
-                        { key: 'unidad_negativa',  label: '❎ Unidad negativa',             placeholder: 'Respuesta incorrecta / error' },
-                        { key: 'reforzadores',     label: '🤝🏼 Ayudas',                      placeholder: 'Ej: Gesto + verbal' },
+                        { key: 'unidad_positiva',  label: t('programas.unidadPos'),              placeholder: t('programas.phUnidadPos') },
+                        { key: 'unidad_negativa',  label: t('programas.unidadNeg'),             placeholder: t('programas.phUnidadNeg') },
+                        { key: 'reforzadores',     label: t('programas.ayudas'),                      placeholder: t('programas.phAyudasCorto') },
                         { key: 'correction_errores', label: t('programas.correccionFull'),         placeholder: t('programas.phCorrigeIncorrecta') },
                         { key: 'generalizacion',   label: t('programas.generalizacion'),              placeholder: t('programas.phGeneralizar') },
-                        { key: 'notas',            label: '📝 Notas',                        placeholder: t('programas.obsSet') },
+                        { key: 'notas',            label: t('programas.notasLabel'),                        placeholder: t('programas.obsSet') },
                       ] as {key: string, label: string, placeholder: string}[]).map(({ key, label, placeholder }) => (
                         <div key={key} className="pt-2">
                           <label className="text-xs font-bold text-slate-500 block mb-1.5">{label}</label>
@@ -2720,7 +2721,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
               ))}
               <button onClick={() => { setObjetivos([...objetivos, { descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' }]); setSetExpandido(objetivos.length) }}
                 className="w-full py-2.5 border-2 border-dashed border-[var(--card-border)] rounded-xl text-sm font-bold text-slate-400 hover:border-sky-300 hover:text-sky-500">
-                + Agregar set
+                {t('programas.agregarSet')}
               </button>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -2744,7 +2745,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
               <p className="text-xs font-bold text-slate-400">{t("programas.paso3Proc")}</p>
               {[
                 { key: 'generalizacion',   label: t('programas.generalizacion'),               placeholder: t('programas.phGeneralizarFull') },
-                { key: 'notas_programa',   label: '🙈 Notas',                         placeholder: t('programas.phObsPrograma') },
+                { key: 'notas_programa',   label: t('programas.notasProg'),                         placeholder: t('programas.phObsPrograma') },
               ].map(({ key, label, placeholder }) => (
                 <div key={key}>
                   <label className="text-xs font-bold text-slate-500 block mb-1">{label}</label>
@@ -2779,7 +2780,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
               <button onClick={handleSave} disabled={saving}
                 className="flex-[2] py-3 bg-sky-600 text-white rounded-xl font-bold text-sm hover:bg-sky-700 disabled:opacity-50 flex items-center justify-center gap-2">
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                {saving ? 'Creando...' : 'Crear Programa'}
+                {saving ? t('programas.creando') : t('programas.crearPrograma')}
               </button>
             )}
           </div>
