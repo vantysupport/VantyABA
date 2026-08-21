@@ -595,7 +595,7 @@ export interface SelloQROptions {
 //   Mantengo por retrocompatibilidad pero el ideal es usar `selloQRVerificacionAsync`
 export function selloQRVerificacion(opts: SelloQROptions): (Paragraph | Table)[] {
   const fecha = opts.fechaEmision ?? new Date().toLocaleDateString(RLDATE(), { day: '2-digit', month: 'long', year: 'numeric' })
-  const url = opts.urlValidacion ?? `https://santiterapias.com/verificar/${opts.codigoDoc}`
+  const url = opts.urlValidacion ?? `https://santiterapias.com/verificar/${opts.codigoDoc}${_reportLocale === 'en' ? '?lang=en' : ''}`
 
   return [
     new Table({
@@ -1067,7 +1067,7 @@ export const DOC_PAGE_PROPS = {
 export async function selloQRVerificacionAsync(opts: SelloQROptions): Promise<(Paragraph | Table)[]> {
   const fecha = opts.fechaEmision ?? new Date().toLocaleDateString(RLDATE(), { day: '2-digit', month: 'long', year: 'numeric' })
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://centro-santi.vanty.xyz'
-  const url = opts.urlValidacion ?? `${baseUrl}/verificar/${opts.codigoDoc}`
+  const url = opts.urlValidacion ?? `${baseUrl}/verificar/${opts.codigoDoc}${_reportLocale === 'en' ? '?lang=en' : ''}`
 
   // Generar QR como PNG buffer real
   let qrBuffer: Buffer
