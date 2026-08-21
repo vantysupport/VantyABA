@@ -64,6 +64,12 @@ export const FONT      = 'Calibri'
 export const TELEFONO  = '991 070 734'
 export const EMAIL_SANTI = 'info@santiterapias.com'
 export const DISCLAIMER = 'Este documento clínico no reemplaza un certificado médico-legal · Carece de valor médico-legal sin la firma del especialista'
+export const DISCLAIMER_EN = "This clinical document does not replace a medical-legal certificate · It has no medical-legal value without the specialist's signature"
+let _reportLocale: 'es' | 'en' = 'es'
+export function setReportLocale(l: string): void { _reportLocale = l === 'en' ? 'en' : 'es' }
+export function getReportLocale(): 'es' | 'en' { return _reportLocale }
+const RL = (en: string, es: string): string => _reportLocale === 'en' ? en : es
+const RLDATE = (): string => _reportLocale === 'en' ? 'en-US' : 'es-ES'
 
 const BD  = { style: BorderStyle.SINGLE, size: 4, color: COLOR.borde } as const
 export const BDR  = { top: BD, bottom: BD, left: BD, right: BD } as const
@@ -101,7 +107,7 @@ export interface PortadaOptions {
 }
 
 export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[] {
-  const fecha = opts.fechaEmision ?? new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fecha = opts.fechaEmision ?? new Date().toLocaleDateString(RLDATE(), { day: '2-digit', month: 'long', year: 'numeric' })
 
   // Línea decorativa superior (barra azul ancha)
   const lineaTop = new Paragraph({
@@ -124,7 +130,7 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
     spacing: { before: 0, after: 0 },
     alignment: AlignmentType.CENTER,
     children: [
-      new TextRun({ text: 'Centro Especializado en Neurodesarrollo Infantil', size: 20, font: FONT, color: COLOR.grisMed, italics: true }),
+      new TextRun({ text: RL('Specialized Center for Child Neurodevelopment', 'Centro Especializado en Neurodesarrollo Infantil'), size: 20, font: FONT, color: COLOR.grisMed, italics: true }),
     ],
   })
 
@@ -151,7 +157,7 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
       spacing: { before: 0, after: 480 },
       alignment: AlignmentType.CENTER,
       children: [
-        new TextRun({ text: `Período: ${opts.periodoEval}`, size: 22, font: FONT, color: COLOR.grisMed }),
+        new TextRun({ text: RL(`Period: ${opts.periodoEval}`, `Período: ${opts.periodoEval}`), size: 22, font: FONT, color: COLOR.grisMed }),
       ],
     }),
   ] : [new Paragraph({ spacing: { before: 0, after: 480 }, children: [new TextRun({ text: '' })] })]
@@ -167,13 +173,13 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
           borders: NBDR,
           shading: { fill: COLOR.azulDark, type: ShadingType.CLEAR },
           margins: { top: 160, bottom: 80, left: 200, right: 200 },
-          children: [new Paragraph({ children: [new TextRun({ text: 'DATOS DEL PACIENTE', bold: true, size: 17, font: FONT, color: COLOR.blanco })] })],
+          children: [new Paragraph({ children: [new TextRun({ text: RL('PATIENT DETAILS', 'DATOS DEL PACIENTE'), bold: true, size: 17, font: FONT, color: COLOR.blanco })] })],
         }),
         new TableCell({
           borders: NBDR,
           shading: { fill: COLOR.acento, type: ShadingType.CLEAR },
           margins: { top: 160, bottom: 80, left: 200, right: 200 },
-          children: [new Paragraph({ children: [new TextRun({ text: 'PROFESIONAL RESPONSABLE', bold: true, size: 17, font: FONT, color: COLOR.blanco })] })],
+          children: [new Paragraph({ children: [new TextRun({ text: RL('RESPONSIBLE PROFESSIONAL', 'PROFESIONAL RESPONSABLE'), bold: true, size: 17, font: FONT, color: COLOR.blanco })] })],
         }),
       ]}),
       // ── Filas de datos ──
@@ -183,7 +189,7 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
           shading: { fill: 'EFF6FF', type: ShadingType.CLEAR },
           margins: { top: 140, bottom: 60, left: 200, right: 120 },
           children: [
-            new Paragraph({ children: [new TextRun({ text: 'Paciente', size: 16, font: FONT, color: '64748B' })] }),
+            new Paragraph({ children: [new TextRun({ text: RL('Patient', 'Paciente'), size: 16, font: FONT, color: '64748B' })] }),
             new Paragraph({ children: [new TextRun({ text: opts.nombrePaciente, bold: true, size: 22, font: FONT, color: COLOR.azulDark })] }),
           ],
         }),
@@ -192,8 +198,8 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
           shading: { fill: 'F5F3FF', type: ShadingType.CLEAR },
           margins: { top: 140, bottom: 60, left: 200, right: 120 },
           children: [
-            new Paragraph({ children: [new TextRun({ text: 'Especialista', size: 16, font: FONT, color: '64748B' })] }),
-            new Paragraph({ children: [new TextRun({ text: opts.especialista ?? 'Equipo Clínico SANTI', bold: true, size: 22, font: FONT, color: COLOR.acento })] }),
+            new Paragraph({ children: [new TextRun({ text: RL('Specialist', 'Especialista'), size: 16, font: FONT, color: '64748B' })] }),
+            new Paragraph({ children: [new TextRun({ text: opts.especialista ?? RL('SANTI Clinical Team', 'Equipo Clínico SANTI'), bold: true, size: 22, font: FONT, color: COLOR.acento })] }),
           ],
         }),
       ]}),
@@ -203,7 +209,7 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
           shading: { fill: 'EFF6FF', type: ShadingType.CLEAR },
           margins: { top: 60, bottom: 60, left: 200, right: 120 },
           children: [
-            new Paragraph({ children: [new TextRun({ text: 'Edad', size: 16, font: FONT, color: '64748B' })] }),
+            new Paragraph({ children: [new TextRun({ text: RL('Age', 'Edad'), size: 16, font: FONT, color: '64748B' })] }),
             new Paragraph({ children: [new TextRun({ text: opts.edadPaciente ?? '—', size: 20, font: FONT, color: COLOR.grisMed })] }),
           ],
         }),
@@ -212,8 +218,8 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
           shading: { fill: 'F5F3FF', type: ShadingType.CLEAR },
           margins: { top: 60, bottom: 60, left: 200, right: 120 },
           children: [
-            new Paragraph({ children: [new TextRun({ text: 'Credenciales', size: 16, font: FONT, color: '64748B' })] }),
-            new Paragraph({ children: [new TextRun({ text: opts.credenciales ?? 'Terapeuta Clínico', size: 20, font: FONT, color: COLOR.grisMed })] }),
+            new Paragraph({ children: [new TextRun({ text: RL('Credentials', 'Credenciales'), size: 16, font: FONT, color: '64748B' })] }),
+            new Paragraph({ children: [new TextRun({ text: opts.credenciales ?? RL('Clinical Therapist', 'Terapeuta Clínico'), size: 20, font: FONT, color: COLOR.grisMed })] }),
           ],
         }),
       ]}),
@@ -223,7 +229,7 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
           shading: { fill: 'EFF6FF', type: ShadingType.CLEAR },
           margins: { top: 60, bottom: 140, left: 200, right: 120 },
           children: [
-            new Paragraph({ children: [new TextRun({ text: 'Diagnóstico', size: 16, font: FONT, color: '64748B' })] }),
+            new Paragraph({ children: [new TextRun({ text: RL('Diagnosis', 'Diagnóstico'), size: 16, font: FONT, color: '64748B' })] }),
             new Paragraph({ children: [new TextRun({ text: opts.diagnostico ?? '—', size: 20, font: FONT, color: COLOR.grisMed })] }),
           ],
         }),
@@ -232,7 +238,7 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
           shading: { fill: 'F5F3FF', type: ShadingType.CLEAR },
           margins: { top: 60, bottom: 140, left: 200, right: 120 },
           children: [
-            new Paragraph({ children: [new TextRun({ text: 'Fecha de emisión', size: 16, font: FONT, color: '64748B' })] }),
+            new Paragraph({ children: [new TextRun({ text: RL('Issue date', 'Fecha de emisión'), size: 16, font: FONT, color: '64748B' })] }),
             new Paragraph({ children: [new TextRun({ text: fecha, size: 20, font: FONT, color: COLOR.grisMed })] }),
           ],
         }),
@@ -245,7 +251,7 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
     spacing: { before: 200, after: 60 },
     alignment: AlignmentType.CENTER,
     children: [
-      new TextRun({ text: `Código de documento: `, size: 16, font: FONT, color: '94A3B8' }),
+      new TextRun({ text: RL(`Document code: `, `Código de documento: `), size: 16, font: FONT, color: '94A3B8' }),
       new TextRun({ text: opts.codigoDoc, bold: true, size: 16, font: FONT, color: COLOR.grisMed }),
     ],
   }) : new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: '' })] })
@@ -254,7 +260,7 @@ export function portadaInstitucional(opts: PortadaOptions): (Paragraph | Table)[
     spacing: { before: 0, after: 0 },
     alignment: AlignmentType.CENTER,
     children: [
-      new TextRun({ text: 'DOCUMENTO CONFIDENCIAL — Uso exclusivo del destinatario', size: 15, font: FONT, color: 'BE123C', bold: true }),
+      new TextRun({ text: RL('CONFIDENTIAL DOCUMENT — For the recipient only', 'DOCUMENTO CONFIDENCIAL — Uso exclusivo del destinatario'), size: 15, font: FONT, color: 'BE123C', bold: true }),
     ],
   })
 
@@ -303,7 +309,7 @@ export interface FirmaOptions {
 }
 
 export function firmaEspecialista(opts: FirmaOptions = {}): (Paragraph | Table)[] {
-  const fecha = opts.fecha ?? new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fecha = opts.fecha ?? new Date().toLocaleDateString(RLDATE(), { day: '2-digit', month: 'long', year: 'numeric' })
   const nombre = opts.nombre ?? 'Equipo Clínico'
   const titulo = opts.titulo ?? 'Terapeuta Clínico'
   const colegiatura = opts.colegiatura ?? ''
@@ -426,7 +432,7 @@ export function graficoProgresoBarra(titulo: string, datos: DatoGrafico[], opcio
     new TableCell({ borders: NBDR, shading: { fill: COLOR.azulDark, type: ShadingType.CLEAR }, margins: { top: 100, bottom: 100, left: 160, right: 80 }, width: { size: 2800, type: WidthType.DXA },
       children: [new Paragraph({ children: [new TextRun({ text: titulo, bold: true, size: 18, font: FONT, color: COLOR.blanco })] })] }),
     new TableCell({ borders: NBDR, shading: { fill: COLOR.azulDark, type: ShadingType.CLEAR }, margins: { top: 100, bottom: 100, left: 60, right: 60 }, width: { size: 720, type: WidthType.DXA },
-      children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Logro', bold: true, size: 17, font: FONT, color: COLOR.blanco })] })] }),
+      children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: RL('Score', 'Logro'), bold: true, size: 17, font: FONT, color: COLOR.blanco })] })] }),
     ...Array.from({ length: COLS }, (_, i) => new TableCell({
       borders: NBDR, width: { size: 187, type: WidthType.DXA },
       shading: { fill: i === Math.round((metaPct / 100) * COLS) - 1 && opciones?.mostrarMeta ? 'FEF08A' : COLOR.azulDark, type: ShadingType.CLEAR },
@@ -460,11 +466,11 @@ export function graficoProgresoBarra(titulo: string, datos: DatoGrafico[], opcio
   const leyenda = opciones?.mostrarMeta ? [new Paragraph({
     spacing: { before: 40, after: 0 },
     children: [
-      new TextRun({ text: `  Meta: ${metaPct}%  `, size: 15, font: FONT, color: 'CA8A04', bold: true }),
-      new TextRun({ text: '  ■ Logrado (≥80%)  ', size: 15, font: FONT, color: '15803D' }),
-      new TextRun({ text: '  ■ En proceso (≥60%)  ', size: 15, font: FONT, color: '2563EB' }),
-      new TextRun({ text: '  ■ En desarrollo (≥40%)  ', size: 15, font: FONT, color: 'D97706' }),
-      new TextRun({ text: '  ■ Inicial (<40%)  ', size: 15, font: FONT, color: 'DC2626' }),
+      new TextRun({ text: RL(`  Goal: ${metaPct}%  `, `  Meta: ${metaPct}%  `), size: 15, font: FONT, color: 'CA8A04', bold: true }),
+      new TextRun({ text: RL('  ■ Achieved (≥80%)  ', '  ■ Logrado (≥80%)  '), size: 15, font: FONT, color: '15803D' }),
+      new TextRun({ text: RL('  ■ In progress (≥60%)  ', '  ■ En proceso (≥60%)  '), size: 15, font: FONT, color: '2563EB' }),
+      new TextRun({ text: RL('  ■ Developing (≥40%)  ', '  ■ En desarrollo (≥40%)  '), size: 15, font: FONT, color: 'D97706' }),
+      new TextRun({ text: RL('  ■ Initial (<40%)  ', '  ■ Inicial (<40%)  '), size: 15, font: FONT, color: 'DC2626' }),
     ],
   })] : []
 
@@ -588,7 +594,7 @@ export interface SelloQROptions {
 // ─── Versión SÍNCRONA (deprecated, placeholder visual) ───────────────────────
 //   Mantengo por retrocompatibilidad pero el ideal es usar `selloQRVerificacionAsync`
 export function selloQRVerificacion(opts: SelloQROptions): (Paragraph | Table)[] {
-  const fecha = opts.fechaEmision ?? new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fecha = opts.fechaEmision ?? new Date().toLocaleDateString(RLDATE(), { day: '2-digit', month: 'long', year: 'numeric' })
   const url = opts.urlValidacion ?? `https://santiterapias.com/verificar/${opts.codigoDoc}`
 
   return [
@@ -615,13 +621,13 @@ export function selloQRVerificacion(opts: SelloQROptions): (Paragraph | Table)[]
           shading: { fill: 'EFF6FF', type: ShadingType.CLEAR },
           margins: { top: 120, bottom: 120, left: 200, right: 160 },
           children: [
-            new Paragraph({ children: [new TextRun({ text: 'DOCUMENTO VERIFICABLE — NEUROPSICOLOGÍA Y TERAPIAS SANTI', bold: true, size: 17, font: FONT, color: COLOR.azulDark })] }),
+            new Paragraph({ children: [new TextRun({ text: RL('VERIFIABLE DOCUMENT — NEUROPSICOLOGÍA Y TERAPIAS SANTI', 'DOCUMENTO VERIFICABLE — NEUROPSICOLOGÍA Y TERAPIAS SANTI'), bold: true, size: 17, font: FONT, color: COLOR.azulDark })] }),
             new Paragraph({ spacing: { before: 80 }, children: [
-              new TextRun({ text: 'Código de documento:  ', size: 16, font: FONT, color: COLOR.grisMed }),
+              new TextRun({ text: RL('Document code:  ', 'Código de documento:  '), size: 16, font: FONT, color: COLOR.grisMed }),
               new TextRun({ text: opts.codigoDoc, bold: true, size: 16, font: 'Courier New', color: COLOR.acento }),
             ]}),
             new Paragraph({ spacing: { before: 40 }, children: [
-              new TextRun({ text: 'Emitido:  ', size: 16, font: FONT, color: COLOR.grisMed }),
+              new TextRun({ text: RL('Issued:  ', 'Emitido:  '), size: 16, font: FONT, color: COLOR.grisMed }),
               new TextRun({ text: fecha, size: 16, font: FONT, color: COLOR.grisMed }),
               ...(opts.especialista ? [
                 new TextRun({ text: '   Responsable:  ', size: 16, font: FONT, color: COLOR.grisMed }),
@@ -629,7 +635,7 @@ export function selloQRVerificacion(opts: SelloQROptions): (Paragraph | Table)[]
               ] : []),
             ]}),
             new Paragraph({ spacing: { before: 40 }, children: [
-              new TextRun({ text: 'Verificar en:  ', size: 16, font: FONT, color: COLOR.grisMed }),
+              new TextRun({ text: RL('Verify at:  ', 'Verificar en:  '), size: 16, font: FONT, color: COLOR.grisMed }),
               new TextRun({ text: url, size: 15, font: FONT, color: COLOR.azulMed, italics: true }),
             ]}),
             new Paragraph({ spacing: { before: 60 }, children: [
@@ -672,7 +678,7 @@ export function piePaginaOficial(): Footer {
         border: { top: { style: BorderStyle.SINGLE, size: 4, color: COLOR.borde, space: 4 } },
         spacing: { before: 40 },
         children: [
-          new TextRun({ text: `${DISCLAIMER}  ·  Equipo Clínico SANTI  ·  ${TELEFONO}  ·  Pág. `, size: 15, font: FONT, color: '94A3B8', italics: true }),
+          new TextRun({ text: RL(`${DISCLAIMER_EN}  ·  SANTI Clinical Team  ·  ${TELEFONO}  ·  Page `, `${DISCLAIMER}  ·  Equipo Clínico SANTI  ·  ${TELEFONO}  ·  Pág. `), size: 15, font: FONT, color: '94A3B8', italics: true }),
           new TextRun({ children: [PageNumber.CURRENT], size: 15, font: FONT, color: '94A3B8' }),
           new TextRun({ text: ' / ', size: 15, font: FONT, color: '94A3B8' }),
           new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 15, font: FONT, color: '94A3B8' }),
@@ -1059,7 +1065,7 @@ export const DOC_PAGE_PROPS = {
 //   Genera un QR PNG y lo inserta como ImageRun de docx. Se puede escanear con
 //   cualquier app y abre la URL de verificación.
 export async function selloQRVerificacionAsync(opts: SelloQROptions): Promise<(Paragraph | Table)[]> {
-  const fecha = opts.fechaEmision ?? new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fecha = opts.fechaEmision ?? new Date().toLocaleDateString(RLDATE(), { day: '2-digit', month: 'long', year: 'numeric' })
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://centro-santi.vanty.xyz'
   const url = opts.urlValidacion ?? `${baseUrl}/verificar/${opts.codigoDoc}`
 
@@ -1091,8 +1097,8 @@ export async function selloQRVerificacionAsync(opts: SelloQROptions): Promise<(P
                 data: qrBuffer,
                 transformation: { width: 110, height: 110 },
                 altText: {
-                  title: 'Código QR de verificación',
-                  description: `Escanea para validar el documento ${opts.codigoDoc}`,
+                  title: RL('Verification QR code', 'Código QR de verificación'),
+                  description: RL(`Scan to validate document ${opts.codigoDoc}`, `Escanea para validar el documento ${opts.codigoDoc}`),
                   name: 'qr_verificacion',
                 },
               } as any)],
@@ -1101,7 +1107,7 @@ export async function selloQRVerificacionAsync(opts: SelloQROptions): Promise<(P
               alignment: AlignmentType.CENTER,
               spacing: { before: 60 },
               children: [new TextRun({
-                text: 'Escanear para verificar',
+                text: RL('Scan to verify', 'Escanear para verificar'),
                 size: 13, font: FONT, color: '64748B', italics: true,
               })],
             }),
@@ -1115,28 +1121,28 @@ export async function selloQRVerificacionAsync(opts: SelloQROptions): Promise<(P
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({ children: [new TextRun({
-              text: 'DOCUMENTO VERIFICABLE — NEUROPSICOLOGÍA Y TERAPIAS SANTI',
+              text: RL('VERIFIABLE DOCUMENT — NEUROPSICOLOGÍA Y TERAPIAS SANTI', 'DOCUMENTO VERIFICABLE — NEUROPSICOLOGÍA Y TERAPIAS SANTI'),
               bold: true, size: 18, font: FONT, color: COLOR.azulDark,
             })] }),
             new Paragraph({ spacing: { before: 100 }, children: [
-              new TextRun({ text: 'Código de documento:  ', size: 17, font: FONT, color: COLOR.grisMed }),
+              new TextRun({ text: RL('Document code:  ', 'Código de documento:  '), size: 17, font: FONT, color: COLOR.grisMed }),
               new TextRun({ text: opts.codigoDoc, bold: true, size: 17, font: 'Courier New', color: COLOR.acento }),
             ]}),
             new Paragraph({ spacing: { before: 40 }, children: [
-              new TextRun({ text: 'Emitido:  ', size: 17, font: FONT, color: COLOR.grisMed }),
+              new TextRun({ text: RL('Issued:  ', 'Emitido:  '), size: 17, font: FONT, color: COLOR.grisMed }),
               new TextRun({ text: fecha, size: 17, font: FONT, color: COLOR.grisMed }),
               ...(opts.especialista ? [
-                new TextRun({ text: '   ·   Responsable:  ', size: 17, font: FONT, color: COLOR.grisMed }),
+                new TextRun({ text: RL('   ·   Responsible:  ', '   ·   Responsable:  '), size: 17, font: FONT, color: COLOR.grisMed }),
                 new TextRun({ text: opts.especialista, bold: true, size: 17, font: FONT, color: COLOR.grisMed }),
               ] : []),
             ]}),
             new Paragraph({ spacing: { before: 40 }, children: [
-              new TextRun({ text: 'Verificar en:  ', size: 16, font: FONT, color: COLOR.grisMed }),
+              new TextRun({ text: RL('Verify at:  ', 'Verificar en:  '), size: 16, font: FONT, color: COLOR.grisMed }),
               new TextRun({ text: url, size: 15, font: FONT, color: COLOR.azulMed, italics: true }),
             ]}),
             new Paragraph({ spacing: { before: 80 }, children: [
               new TextRun({
-                text: 'Este documento fue generado digitalmente por el sistema SANTI. La autenticidad puede validarse escaneando el código QR o accediendo a la URL indicada. La validez legal queda condicionada a la firma manuscrita o digital del profesional responsable.',
+                text: RL('This document was digitally generated by the SANTI system. Its authenticity can be validated by scanning the QR code or accessing the indicated URL. Legal validity is subject to the handwritten or digital signature of the responsible professional.', 'Este documento fue generado digitalmente por el sistema SANTI. La autenticidad puede validarse escaneando el código QR o accediendo a la URL indicada. La validez legal queda condicionada a la firma manuscrita o digital del profesional responsable.'),
                 size: 14, font: FONT, color: '94A3B8', italics: true,
               }),
             ]}),

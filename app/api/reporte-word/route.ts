@@ -3499,6 +3499,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { childId, tipo, objetivoId } = body
     const userLocale = body.locale || req.headers.get('x-locale') || 'es'
+    tpl.setReportLocale(userLocale)
 
     let result: { doc: Document; fileName: string }
 

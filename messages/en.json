@@ -992,7 +992,8 @@
     "criterioAlcanzado": "Criterion met",
     "defaultGeneralizacion": "Encourage the family to do this exercise at home.",
     "faseCambiada": "Phase changed to {fase}",
-    "criterioToast": "🏆 Criterion met! {n} consecutive sessions at {pct}%"
+    "criterioToast": "🏆 Criterion met! {n} consecutive sessions at {pct}%",
+    "enSet2": "in"
   },
   "evaluaciones": {
     "titulo": "Evaluations and Forms",

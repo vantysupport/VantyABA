@@ -676,7 +676,8 @@
   "criterioAlcanzado": "Criterio alcanzado",
   "defaultGeneralizacion": "Promover con la familia que realicen este ejercicio en casa.",
   "faseCambiada": "Fase cambiada a {fase}",
-  "criterioToast": "🏆 ¡Criterio alcanzado! {n} sesiones consecutivas al {pct}%"
+  "criterioToast": "🏆 ¡Criterio alcanzado! {n} sesiones consecutivas al {pct}%",
+  "enSet2": "en"
  },
  "evaluaciones": {
   "titulo": "Evaluaciones y Formularios",

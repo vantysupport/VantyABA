@@ -1211,7 +1211,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                   </span>
                   {setActivo !== '__none__' && (
                     <span className="text-[10px] font-semibold ml-0.5" style={{color:"var(--text-muted)"}}>
-                      en {setActivo}
+                      {t('programas.enSet2')} {setActivo}
                     </span>
                   )}
                 </span>
