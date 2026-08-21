@@ -178,12 +178,12 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all"
                   style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5' }}>
                   {unlinking ? <Loader2 size={10} className="animate-spin"/> : <Link2Off size={10}/>}
-                  Desvincular
+                  {t('pacientes.desvincular')}
                 </button>
               : <button onClick={() => setShowLinkModal(true)}
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all"
                   style={{ background: '#dbeafe', color: '#2563eb', border: '1px solid #93c5fd' }}>
-                  <Link size={10}/> Vincular cuenta
+                  <Link size={10}/> {t('pacientes.vincularCuenta')}
                 </button>
           )}
         </div>
@@ -197,7 +197,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate" style={{ color: '#065f46' }}>
-                    {linkedUser.full_name || '(sin nombre)'}
+                    {linkedUser.full_name || t('pacientes.sinNombre')}
                   </p>
                   <p className="text-xs truncate flex items-center gap-1" style={{ color: '#059669' }}>
                     <Mail size={10}/>{linkedUser.email}
@@ -205,7 +205,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
                   style={{ background: '#d1fae5', color: '#065f46' }}>
-                  {linkedUser.role}
+                  {['padre','jefe','especialista','admin','user'].includes(linkedUser.role) ? t('pacientes.rol_'+linkedUser.role) : linkedUser.role}
                 </span>
               </div>
             : <div className="flex flex-col items-center py-3 gap-2 text-center">
@@ -215,7 +215,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
                 <div>
                   <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{t('pacientes.sinCuentaVinculada')}</p>
                   <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    Vincula una cuenta para que el padre/tutor acceda al portal
+                    {t('pacientes.vinculaCuentaAyuda')}
                   </p>
                 </div>
               </div>
@@ -313,7 +313,7 @@ const MOOD_CONFIG: Record<string, { Icon: any; label: string; bg: string; border
 }
 
 function ParentWellbeingCard({ childId }: { childId: string }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [checkins, setCheckins] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(false)
@@ -335,11 +335,11 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
         <div className="flex items-center gap-1.5 mb-2">
           <Heart size={12} style={{ color: 'var(--text-muted)' }} />
           <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-            Bienestar del padre/madre
+            {t('pacientes.bienestarPadre')}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-          <Loader2 size={12} className="animate-spin" /> Cargando...
+          <Loader2 size={12} className="animate-spin" /> {t('common.cargando')}
         </div>
       </div>
     )
@@ -351,11 +351,11 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
         <div className="flex items-center gap-1.5 mb-2">
           <Heart size={12} style={{ color: 'var(--text-muted)' }} />
           <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-            Bienestar del padre/madre
+            {t('pacientes.bienestarPadre')}
           </p>
         </div>
         <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>
-          Aún no hay chequeos de bienestar registrados. El padre/madre los recibe mensualmente desde su app.
+          {t('pacientes.sinChequeosBienestar')}
         </p>
       </div>
     )
@@ -363,7 +363,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
 
   const ultimo = checkins[0]
   const cfg = MOOD_CONFIG[ultimo.mood] || MOOD_CONFIG.regular
-  const fechaUltimo = new Date(ultimo.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  const fechaUltimo = new Date(ultimo.created_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
 
   return (
     <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
@@ -371,7 +371,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
         <div className="flex items-center gap-1.5">
           <Heart size={12} style={{ color: 'var(--text-muted)' }} />
           <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-            Bienestar del padre/madre
+            {t('pacientes.bienestarPadre')}
           </p>
         </div>
         {checkins.length > 1 && (
@@ -380,7 +380,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
             className="text-[10px] font-semibold hover:underline"
             style={{ color: 'var(--text-secondary)' }}
           >
-            {expanded ? 'Ocultar historial' : `Ver historial (${checkins.length})`}
+            {expanded ? t('pacientes.ocultarHistorial') : `${t('pacientes.verHistorial')} (${checkins.length})`}
           </button>
         )}
       </div>
@@ -409,7 +409,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
         <div className="mt-3 space-y-1.5">
           {checkins.slice(1).map((c: any) => {
             const ccfg = MOOD_CONFIG[c.mood] || MOOD_CONFIG.regular
-            const fecha = new Date(c.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+            const fecha = new Date(c.created_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
             return (
               <div
                 key={c.id}
@@ -512,7 +512,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
             className="flex items-center gap-1 text-[10px] font-semibold hover:underline"
             style={{ color: 'var(--text-secondary)' }}
           >
-            <Edit size={10}/> Ajustar previas
+            <Edit size={10}/> {t('pacientes.ajustarPrevias')}
           </button>
         )}
       </div>
@@ -529,7 +529,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg p-2.5" style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
           <p className="text-[9px] font-bold mb-0.5" style={{ color: 'var(--text-muted)' }}>
-            Previas al sistema
+            {t('pacientes.previasAlSistema')}
           </p>
           {editing ? (
             <div className="flex items-center gap-1.5 mt-1">
@@ -570,7 +570,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
         </div>
         <div className="rounded-lg p-2.5" style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
           <p className="text-[9px] font-bold mb-0.5" style={{ color: 'var(--text-muted)' }}>
-            En la plataforma
+            {t('pacientes.enLaPlataforma')}
           </p>
           <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
             {loading ? '…' : autoCount}
@@ -579,7 +579,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
       </div>
 
       <p className="text-[10px] mt-3" style={{ color: 'var(--text-muted)' }}>
-        💡 Las "previas al sistema" son sesiones que el paciente tuvo antes de empezar a usar la plataforma. Se suman a las citas completadas registradas aquí.
+        💡 {t('pacientes.previasTip')}
       </p>
     </div>
   )
@@ -1151,10 +1151,10 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
     { id:'info',         icon:<User size={14}/>,          label: t('pacientes.informacion'), short: 'Info'  },
     { id:'programas',    icon:<BarChart3 size={14}/>,     label: t('nav.programas'),          short: 'ABA'   },
     { id:'evaluaciones', icon:<ClipboardList size={14}/>, label: t('nav.evaluaciones'),       short: 'Eval.' },
-    { id:'eval-inicial', icon:<ClipboardList size={14}/>, label: 'Evaluación Inicial',        short: 'Inicial' },
-    { id:'historial',    icon:<Brain size={14}/>,         label: 'Historial & IA',            short: 'Hist.' },
-    { id:'fichas',       icon:<FileText size={14}/>,      label: 'Fichas',                    short: 'Fichas'},
-    { id:'documentos',   icon:<FolderOpen size={14}/>,    label: 'Documentos',                short: 'Docs'  },
+    { id:'eval-inicial', icon:<ClipboardList size={14}/>, label: t('pacientes.tabEvalInicial'), short: t('pacientes.tabEvalInicialShort') },
+    { id:'historial',    icon:<Brain size={14}/>,         label: t('pacientes.tabHistorial'),   short: t('pacientes.tabHistorialShort') },
+    { id:'fichas',       icon:<FileText size={14}/>,      label: t('pacientes.tabFichas'),      short: t('pacientes.tabFichas')},
+    { id:'documentos',   icon:<FolderOpen size={14}/>,    label: t('pacientes.tabDocumentos'),  short: t('pacientes.tabDocumentosShort')  },
   ]
   const TABS = ALL_TABS.filter(tb => !enabledTabs || enabledTabs[tb.id] !== false)
 
