@@ -480,7 +480,9 @@
   "msCitasSincronizadas": "{n} cita{s} sincronizadas",
   "msErrorSincronizar": "Error al sincronizar",
   "msErrorConexion": "Error iniciando conexión",
-  "grupo": "Grupo"
+  "grupo": "Grupo",
+  "repetirCita": "Repetir cita",
+  "noRepetir": "No repetir"
  },
  "programas": {
   "titulo": "Programas ABA",

@@ -760,7 +760,9 @@
     "msCitasSincronizadas": "{n} appointment{s} synced",
     "msErrorSincronizar": "Error syncing",
     "msErrorConexion": "Error starting connection",
-    "grupo": "Group"
+    "grupo": "Group",
+    "repetirCita": "Repeat appointment",
+    "noRepetir": "Don't repeat"
   },
   "aria": {
     "titulo": "ARIA Assistant",

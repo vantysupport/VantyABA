@@ -934,13 +934,13 @@ function MonthlyCalendarView() {
                 {/* Recurrencia */}
                 <div className="rounded-xl border-2 p-4" style={{ background: "var(--muted-bg)", borderColor: "var(--card-border)" }}>
                   <label className="text-xs font-bold block mb-3" style={{ color: "var(--text-muted)" }}>
-                    🔄 Repetir cita
+                    🔄 {t('agenda.repetirCita')}
                   </label>
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {([
-                      { value: 'none',      label: 'No repetir' },
+                      { value: 'none',      label: t('agenda.noRepetir') },
                       { value: 'weekly',    label: t('agenda.semanal') },
-                      { value: 'biweekly',  label: 'Quincenal' },
+                      { value: 'biweekly',  label: t('agenda.quincenal') },
                     ] as const).map(opt => (
                       <button key={opt.value} onClick={() => setRecurrencia(opt.value)}
                         className={`py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${recurrencia === opt.value ? 'border-sky-500 text-sky-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}
