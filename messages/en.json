@@ -36,7 +36,12 @@
     "citasHoy": "Today's appointments",
     "chat": "Chat",
     "repFinancieros": "Fin. Reports",
-    "evaluacionInicial": "Initial Evaluation"
+    "evaluacionInicial": "Initial Evaluation",
+    "rolJefe": "Director",
+    "rolEspecialista": "Specialist",
+    "rolUsuario": "User",
+    "sistema": "System",
+    "gestionIntegral": "Comprehensive Management"
   },
   "common": {
     "guardar": "Save",
@@ -395,7 +400,9 @@
     "requierenSeguimiento": "Require follow-up",
     "sinSesion30dInline": "no session (30d)",
     "alertasUrgentesInline": "urgent alerts",
-    "sesionesHoyMin": "sessions today"
+    "sesionesHoyMin": "sessions today",
+    "lblSinSesion": "No session",
+    "programasSinSesiones": "programs without recent sessions"
   },
   "pacientes": {
     "titulo": "Patients",

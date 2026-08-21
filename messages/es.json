@@ -36,7 +36,12 @@
   "citasHoy": "Citas de hoy",
   "chat": "Chat",
   "repFinancieros": "Rep. Financieros",
-  "evaluacionInicial": "Evaluación Inicial"
+  "evaluacionInicial": "Evaluación Inicial",
+  "rolJefe": "Jefe",
+  "rolEspecialista": "Especialista",
+  "rolUsuario": "Usuario",
+  "sistema": "Sistema",
+  "gestionIntegral": "Gestión Integral"
  },
  "common": {
   "guardar": "Guardar",
@@ -275,7 +280,9 @@
   "requierenSeguimiento": "Requieren seguimiento",
   "sinSesion30dInline": "sin sesión (30d)",
   "alertasUrgentesInline": "alertas urgentes",
-  "sesionesHoyMin": "sesiones hoy"
+  "sesionesHoyMin": "sesiones hoy",
+  "lblSinSesion": "Sin sesión",
+  "programasSinSesiones": "programas sin sesiones recientes"
  },
  "pacientes": {
   "titulo": "Pacientes",

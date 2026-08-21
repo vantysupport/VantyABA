@@ -343,7 +343,7 @@ export default function AdminDashboard() {
 
   const role = userProfile?.role || 'admin'
   const RoleIcon = ROLE_ICON[role] || User
-  const roleName = role === 'jefe' || role === 'admin' ? 'Jefe' : role === 'especialista' ? 'Especialista' : 'Usuario'
+  const roleName = role === 'jefe' || role === 'admin' ? t('nav.rolJefe') : role === 'especialista' ? t('nav.rolEspecialista') : t('nav.rolUsuario')
   const userName = userProfile?.full_name || 'Usuario'
   const userInitial = userName.charAt(0).toUpperCase()
 
@@ -409,7 +409,7 @@ export default function AdminDashboard() {
 
           <div className={`pt-4 mt-2 border-t ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
             <p className={`text-[10px] font-bold px-3 mb-2 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-              Sistema
+              {t('nav.sistema')}
             </p>
             {SECONDARY_NAV.filter((item: any) => !item.hidden && (!item.roles || item.roles.includes(role))).map(item => (
               <SidebarLink
@@ -487,7 +487,7 @@ export default function AdminDashboard() {
                 {PAGE_TITLES[currentView] || 'Panel'}
               </h1>
               <p className={`text-[10px] hidden sm:block ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                Neuropsicología y Terapias SANTI · Gestión Integral
+                Neuropsicología y Terapias SANTI · {t('nav.gestionIntegral')}
               </p>
             </div>
           </div>

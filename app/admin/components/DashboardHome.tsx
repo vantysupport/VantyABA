@@ -100,6 +100,7 @@ function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: a
     if (tipoStr.startsWith('logro_progreso')) return t('dashboard.lblProgresoConsistente')
     if (tipoStr.startsWith('logro_criterio')) return t('dashboard.lblCriterioDominado')
     if (tipoStr === 'criterio_alcanzado') return t('dashboard.lblCriterioDominado')
+    if (tipoStr.startsWith('sin_sesion')) return t('dashboard.lblSinSesion')
     return tipoStr.replace(/_[0-9a-f-]{8,}$/i, '').replace(/_/g, ' ')
   })()
 
@@ -403,7 +404,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
           return (rank[px] || 2) - (rank[py] || 2)
         })[0]
         const mensaje = grupo.length > 1
-          ? `${grupo.length} programas sin sesiones recientes. ${rep.descripcion || rep.mensaje || ''}`
+          ? `${grupo.length} ${t('dashboard.programasSinSesiones')}. ${rep.descripcion || rep.mensaje || ''}`
           : (rep.descripcion || rep.mensaje || '')
         return { ...rep, descripcion: mensaje, mensaje, _grupo: grupo.length }
       })
