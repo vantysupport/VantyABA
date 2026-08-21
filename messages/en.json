@@ -984,7 +984,15 @@
     "crearSet": "Create Set",
     "guardarSesion": "Save Session",
     "creando": "Creating...",
-    "crearPrograma": "Create Program"
+    "crearPrograma": "Create Program",
+    "registroConductual": "Behavioral record",
+    "procedimientoSet": "📌 Set procedure",
+    "procedimiento": "📌 Procedure",
+    "totales": "total",
+    "criterioAlcanzado": "Criterion met",
+    "defaultGeneralizacion": "Encourage the family to do this exercise at home.",
+    "faseCambiada": "Phase changed to {fase}",
+    "criterioToast": "🏆 Criterion met! {n} consecutive sessions at {pct}%"
   },
   "evaluaciones": {
     "titulo": "Evaluations and Forms",

@@ -668,7 +668,15 @@
   "crearSet": "Crear Set",
   "guardarSesion": "Guardar Sesión",
   "creando": "Creando...",
-  "crearPrograma": "Crear Programa"
+  "crearPrograma": "Crear Programa",
+  "registroConductual": "Registro conductual",
+  "procedimientoSet": "📌 Procedimiento del Set",
+  "procedimiento": "📌 Procedimiento",
+  "totales": "totales",
+  "criterioAlcanzado": "Criterio alcanzado",
+  "defaultGeneralizacion": "Promover con la familia que realicen este ejercicio en casa.",
+  "faseCambiada": "Fase cambiada a {fase}",
+  "criterioToast": "🏆 ¡Criterio alcanzado! {n} sesiones consecutivas al {pct}%"
  },
  "evaluaciones": {
   "titulo": "Evaluaciones y Formularios",

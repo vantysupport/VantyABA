@@ -294,7 +294,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
             <h2 className="font-bold text-lg leading-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
               {t('programas.titulo')}
             </h2>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Registro conductual · {childName}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('programas.registroConductual')} · {childName}</p>
           </div>
         </div>
 
@@ -522,7 +522,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
                 <div className="h-px flex-1" style={{ background: 'var(--card-border)' }} />
                 <span className="text-[11px] font-bold px-3 py-1 rounded-full"
                   style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
-                  ✓ Criterio alcanzado — {programasCriterioAuto.length} programa{programasCriterioAuto.length !== 1 ? 's' : ''}
+                  ✓ {t('programas.criterioAlcanzado')} — {programasCriterioAuto.length} programa{programasCriterioAuto.length !== 1 ? 's' : ''}
                 </span>
                 <div className="h-px flex-1" style={{ background: 'var(--card-border)' }} />
               </div>
@@ -858,7 +858,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
   const [editingFase, setEditingFase] = useState(false)
   const [localFase, setLocalFase] = useState(programa.fase_actual || 'intervencion')
   const [showAgregarSet, setShowAgregarSet] = useState(false)
-  const [nuevoSet, setNuevoSet] = useState({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' })
+  const [nuevoSet, setNuevoSet] = useState({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: t('programas.defaultGeneralizacion'), notas: '' })
   const [savingSet, setSavingSet] = useState(false)
   const [setExpandidoId, setSetExpandidoId] = useState<string | null>(null)
   const [editandoSetId, setEditandoSetId] = useState<string | null>(null)
@@ -1096,7 +1096,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                   title={t("programas.cambiarArea")}
                   className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all hover:opacity-80 ${AREA_CONFIG[localArea]?.bg || ''} ${AREA_CONFIG[localArea]?.color || ''}`}>
                   {AREA_CONFIG[localArea]?.Icon && (() => { const AI = AREA_CONFIG[localArea].Icon; return <AI size={11} /> })()}
-                  {t('areaAba.' + localArea)}
+                  {(() => { const _k = 'areaAba.' + localArea; const _v = t(_k); return _v === _k ? localArea : _v })()}
                 </button>
                 {editingArea && (
                   <div className="absolute top-6 left-0 z-50 rounded-2xl shadow-xl py-1 min-w-[160px]"
@@ -1134,9 +1134,9 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                     onClick={e => e.stopPropagation()}>
                     {[
                       { key: 'linea_base', label: 'Baseline' },
-                      { key: 'intervencion', label: 'Intervención' },
-                      { key: 'mantenimiento', label: 'Mantenimiento' },
-                      { key: 'dominado', label: 'Criterio alcanzado' },
+                      { key: 'intervencion', label: t('fase.intervencion') },
+                      { key: 'mantenimiento', label: t('fase.mantenimiento') },
+                      { key: 'dominado', label: t('fase.dominado') },
                     ].map(({ key, label }) => (
                       <button key={key}
                         onClick={() => {
@@ -1155,7 +1155,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
               </div>
               {criterioAlcanzado && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                  🏆 Criterio alcanzado
+                  🏆 {t('programas.criterioAlcanzado')}
                 </span>
               )}
               {unaFalta && (
@@ -1198,7 +1198,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
             <div className="flex items-center gap-4 mt-2 flex-wrap">
               {/* Total de sesiones (todos los sets) */}
               <span className="text-xs flex items-center gap-1" style={{color:"var(--text-muted)"}}>
-                <BarChart3 size={10} /> {sesiones.length} {t('programas.sesiones') || 'sesiones'} totales
+                <BarChart3 size={10} /> {sesiones.length} {t('programas.sesiones')} {t('programas.totales')}
               </span>
               {/* % e indicador SOLO del set activo (no del programa) */}
               {ultimoPct !== null && (
@@ -1691,7 +1691,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                       {setExpandidoId === obj.id && (
                         <div className="ml-2 mt-1 mb-1 rounded-xl p-3 border border-sky-100 bg-sky-50 space-y-2 text-xs text-slate-600" onClick={e => e.stopPropagation()}>
                           <div className="flex items-center justify-between mb-1">
-                            <p className="text-[10px] font-bold text-sky-400">📌 Procedimiento del Set</p>
+                            <p className="text-[10px] font-bold text-sky-400">{t('programas.procedimientoSet')}</p>
                             {editandoSetId !== obj.id && (
                               <div className="flex items-center gap-1">
                                 {/* Descargar guía de ejercicio para casa (para enviar a la familia) */}
@@ -1707,7 +1707,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                 <button
                                   onClick={() => { setEditandoSetId(obj.id); setEditSetForm({ descripcion: obj.descripcion || '', materiales: obj.materiales || '', sd_estimulo: obj.sd_estimulo || '', unidad_positiva: obj.unidad_positiva || '', unidad_negativa: obj.unidad_negativa || '', reforzadores: obj.reforzadores || obj.ayudas || '', correction_errores: obj.correction_errores || '', generalizacion: obj.generalizacion || '', notas: obj.notas || '' }) }}
                                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-sky-500 hover:bg-sky-100 transition-colors">
-                                  <Edit3 size={10} /> Editar
+                                  <Edit3 size={10} /> {t('common.editar')}
                                 </button>
                               </div>
                             )}
@@ -1775,13 +1775,13 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               {!obj.materiales && !obj.sd_estimulo && !obj.unidad_positiva && !obj.unidad_negativa && !obj.reforzadores && !obj.ayudas && !obj.correction_errores && !obj.generalizacion && !obj.notas && (
                                 <p className="text-slate-400 italic">{t("programas.sinProcedimiento")}</p>
                               )}
-                              {obj.materiales && <p><span className="font-bold">📚 Materiales:</span> {obj.materiales}</p>}
-                              {obj.sd_estimulo && <p><span className="font-bold">📍 Sd:</span> {obj.sd_estimulo}</p>}
-                              {obj.unidad_positiva && <p><span className="font-bold">✅ Unidad +:</span> {obj.unidad_positiva}</p>}
-                              {obj.unidad_negativa && <p><span className="font-bold">❎ Unidad -:</span> {obj.unidad_negativa}</p>}
-                              {(obj.reforzadores || obj.ayudas) && <p><span className="font-bold">🤝🏼 Ayudas:</span> {obj.reforzadores || obj.ayudas}</p>}
-                              {obj.correction_errores && <p><span className="font-bold">📍 Corrección:</span> {obj.correction_errores}</p>}
-                              {obj.generalizacion && <p><span className="font-bold">➡️ Generalización:</span> {obj.generalizacion}</p>}
+                              {obj.materiales && <p><span className="font-bold">{t('programas.matLabel')}:</span> {obj.materiales}</p>}
+                              {obj.sd_estimulo && <p><span className="font-bold">{t('programas.sdCorto')}:</span> {obj.sd_estimulo}</p>}
+                              {obj.unidad_positiva && <p><span className="font-bold">{t('programas.unidadPosCorto')}:</span> {obj.unidad_positiva}</p>}
+                              {obj.unidad_negativa && <p><span className="font-bold">{t('programas.unidadNegCorto')}:</span> {obj.unidad_negativa}</p>}
+                              {(obj.reforzadores || obj.ayudas) && <p><span className="font-bold">{t('programas.ayudas')}:</span> {obj.reforzadores || obj.ayudas}</p>}
+                              {obj.correction_errores && <p><span className="font-bold">{t('programas.correccion')}:</span> {obj.correction_errores}</p>}
+                              {obj.generalizacion && <p><span className="font-bold">{t('programas.generalizacion')}:</span> {obj.generalizacion}</p>}
                               {obj.notas && <p className="whitespace-pre-line"><span className="font-bold">{t('programas.notasLabel')}:</span> {obj.notas}</p>}
                             </>
                           )}
@@ -1854,7 +1854,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                   if (json.error) { toast.error(json.error); return }
                                   toast.success(t('auto.programasABAView.setAgregado'))
                                   setShowAgregarSet(false)
-                                  setNuevoSet({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' })
+                                  setNuevoSet({ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: t('programas.defaultGeneralizacion'), notas: '' })
                                   fetchDetalle()
                                 } finally { setSavingSet(false) }
                               }}
@@ -1983,11 +1983,11 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                           if (json.error) { toast.error(json.error); return }
                           const labelMap: Record<string, string> = {
                             linea_base: 'Baseline',
-                            intervencion: 'Intervención',
-                            mantenimiento: 'Mantenimiento',
-                            dominado: 'Criterio alcanzado',
+                            intervencion: t('fase.intervencion'),
+                            mantenimiento: t('fase.mantenimiento'),
+                            dominado: t('fase.dominado'),
                           }
-                          toast.success(`Fase cambiada a ${labelMap[nuevaFase] || nuevaFase}`)
+                          toast.success(t('programas.faseCambiada', { fase: labelMap[nuevaFase] || nuevaFase }))
                           setDetalle((prev: any) => {
                             const base = prev ?? programa
                             return {
@@ -2007,12 +2007,12 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
               {/* Detalles del procedimiento */}
               {(detalle.sd_estimulo || detalle.unidad_positiva || detalle.unidad_negativa || detalle.reforzadores || detalle.materiales || detalle.correction_errores) && (
                 <div>
-                  <p className="text-xs font-bold text-slate-400 mb-2">📌 Procedimiento</p>
+                  <p className="text-xs font-bold text-slate-400 mb-2">{t('programas.procedimiento')}</p>
                   <div className="rounded-xl p-4 border border-[var(--card-border)] bg-[var(--card)] space-y-2 text-xs text-slate-600 dark:text-slate-300">
-                    {detalle.sd_estimulo && <p><span className="font-bold">📍 Sd:</span> {detalle.sd_estimulo}</p>}
-                    {detalle.unidad_positiva && <p><span className="font-bold">✅ Unidad +:</span> {detalle.unidad_positiva}</p>}
-                    {detalle.unidad_negativa && <p><span className="font-bold">❎ Unidad -:</span> {detalle.unidad_negativa}</p>}
-                    {(detalle.reforzadores || detalle.ayudas) && <p><span className="font-bold">🤝🏼 Ayudas:</span> {detalle.reforzadores || detalle.ayudas}</p>}
+                    {detalle.sd_estimulo && <p><span className="font-bold">{t('programas.sdCorto')}:</span> {detalle.sd_estimulo}</p>}
+                    {detalle.unidad_positiva && <p><span className="font-bold">{t('programas.unidadPosCorto')}:</span> {detalle.unidad_positiva}</p>}
+                    {detalle.unidad_negativa && <p><span className="font-bold">{t('programas.unidadNegCorto')}:</span> {detalle.unidad_negativa}</p>}
+                    {(detalle.reforzadores || detalle.ayudas) && <p><span className="font-bold">{t('programas.ayudas')}:</span> {detalle.reforzadores || detalle.ayudas}</p>}
                     {detalle.correction_errores && <p><span className="font-bold">{t('programas.correccion')}</span> {detalle.correction_errores}</p>}
                     {detalle.reforzadores && <p><span className="font-bold">{t("programas.reforzadoresColon")}</span> {detalle.reforzadores}</p>}
                     {detalle.materiales && <p><span className="font-bold">{t("programas.materialesColon")}</span> {detalle.materiales}</p>}
@@ -2183,9 +2183,9 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
   const [editingFase, setEditingFase] = useState(false)
   const fasesDisponibles: { value: string; label: string }[] = [
     { value: 'linea_base',    label: 'Baseline' },
-    { value: 'intervencion',  label: 'Intervención' },
-    { value: 'mantenimiento', label: 'Mantenimiento' },
-    { value: 'dominado',      label: 'Criterio alcanzado' },
+    { value: 'intervencion',  label: t('fase.intervencion') },
+    { value: 'mantenimiento', label: t('fase.mantenimiento') },
+    { value: 'dominado',      label: t('fase.dominado') },
   ]
   const availableSets: string[] = [...(programa.objetivos_cp || [])].sort((a: any, b: any) => (a.numero_set ?? 0) - (b.numero_set ?? 0)).map((o: any) =>
     o.numero_set ? `Set ${o.numero_set}` : o.descripcion
@@ -2338,9 +2338,9 @@ function FaseTag({ fase, small }: { fase: string; small?: boolean }) {
   const { t } = useI18n()
   const labels: Record<string, { label: string; border: string; color: string }> = {
     linea_base:    { label: 'Baseline',                         border: '#94a3b8', color: '#64748b' },
-    intervencion:  { label: 'Intervención',                     border: '#4a6eaa', color: '#4a6eaa' },
+    intervencion:  { label: t('fase.intervencion'),                     border: '#4a6eaa', color: '#4a6eaa' },
     mantenimiento: { label: t('programas.mantenimiento'),       border: '#3a8a60', color: '#3a8a60' },
-    dominado:      { label: 'Criterio alcanzado',               border: '#3a8a60', color: '#3a8a60' },
+    dominado:      { label: t('fase.dominado'),               border: '#3a8a60', color: '#3a8a60' },
   }
   const cfg = labels[fase] || { label: fase, border: '#94a3b8', color: '#64748b' }
   return (
@@ -2384,7 +2384,7 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
   let criterioMsg = null
   if (pct) {
     if (meetsThisSession && recentAtCrit >= critSesiones - 1) {
-      criterioMsg = { type: 'success', msg: `🏆 ¡Criterio alcanzado! ${critSesiones} sesiones consecutivas al ${crit}%` }
+      criterioMsg = { type: 'success', msg: t('programas.criterioToast', { n: String(critSesiones), pct: String(crit) }) }
     } else if (meetsThisSession && critSesiones > 1) {
       const remaining = critSesiones - 1 - recentAtCrit
       if (remaining === 1) criterioMsg = { type: 'close', msg: `⚡ ¡Vas muy bien! Falta 1 sesión más al ${crit}% para dominar` }
@@ -2569,12 +2569,12 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
   const [form, setForm] = useState({
     titulo: '', area: '', area_tags: [] as string[], objetivo_lp: '',
     sd_estimulo: '', correction_errores: '', reforzadores: '', materiales: '',
-    unidad_positiva: '', unidad_negativa: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.',
+    unidad_positiva: '', unidad_negativa: '', generalizacion: t('programas.defaultGeneralizacion'),
     total_unidades: '10u.', notas_programa: '', drive_url: '',
     tipo_medicion: 'porcentaje', criterio_dominio_pct: 90, criterio_sesiones_consecutivas: 2,
     fase_actual: 'intervencion',
   })
-  const [objetivos, setObjetivos] = useState([{ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' }])
+  const [objetivos, setObjetivos] = useState([{ descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: t('programas.defaultGeneralizacion'), notas: '' }])
   const [setExpandido, setSetExpandido] = useState<number | null>(0)
 
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
@@ -2719,7 +2719,7 @@ function CrearProgramaModal({ childId, onClose, onCreated }: any) {
                   )}
                 </div>
               ))}
-              <button onClick={() => { setObjetivos([...objetivos, { descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: 'Promover con la familia que realicen este ejercicio en casa.', notas: '' }]); setSetExpandido(objetivos.length) }}
+              <button onClick={() => { setObjetivos([...objetivos, { descripcion: '', materiales: '', sd_estimulo: '', unidad_positiva: '', unidad_negativa: '', reforzadores: '', correction_errores: '', generalizacion: t('programas.defaultGeneralizacion'), notas: '' }]); setSetExpandido(objetivos.length) }}
                 className="w-full py-2.5 border-2 border-dashed border-[var(--card-border)] rounded-xl text-sm font-bold text-slate-400 hover:border-sky-300 hover:text-sky-500">
                 {t('programas.agregarSet')}
               </button>
