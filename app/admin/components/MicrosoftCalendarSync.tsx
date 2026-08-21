@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { useI18n } from '@/lib/i18n-context'
 import { Check, Loader2, RefreshCw } from 'lucide-react'
 
 const MSIcon = ({ size = 14 }: { size?: number }) => (
@@ -16,6 +17,7 @@ const MSIcon = ({ size = 14 }: { size?: number }) => (
 
 export default function MicrosoftCalendarSync() {
   const toast = useToast()
+  const { t } = useI18n()
   const [status,     setStatus]     = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [userId,     setUserId]     = useState<string | null>(null)
   const [syncing,    setSyncing]    = useState(false)
@@ -53,14 +55,14 @@ export default function MicrosoftCalendarSync() {
       const res  = await fetch(`/api/microsoft-calendar?action=auth-url&userId=${userId}`)
       const data = await res.json()
       if (data.url) window.location.href = data.url
-    } catch { toast.error('Error iniciando conexión'); setConnecting(false) }
+    } catch { toast.error(t('agenda.msErrorConexion')); setConnecting(false) }
   }
 
   const handleDisconnect = async () => {
-    if (!userId || !confirm('¿Desconectar Outlook Calendar?')) return
+    if (!userId || !confirm(t('agenda.msDesconectarConfirm'))) return
     await fetch(`/api/microsoft-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected')
-    toast.success('Outlook Calendar desconectado')
+    toast.success(t('agenda.msDesconectado'))
   }
 
   const handleSync = async () => {
@@ -73,8 +75,8 @@ export default function MicrosoftCalendarSync() {
         body: JSON.stringify({ action: 'sync-all', userId }),
       })
       const data = await res.json()
-      if (data.ok) toast.success(`${data.synced} cita${data.synced !== 1 ? 's' : ''} sincronizadas`)
-      else toast.error(data.error || 'Error al sincronizar')
+      if (data.ok) toast.success(t('agenda.msCitasSincronizadas', { n: String(data.synced), s: data.synced !== 1 ? 's' : '' }))
+      else toast.error(data.error || t('agenda.msErrorSincronizar'))
     } catch (e: any) { toast.error('Error: ' + e.message) }
     finally { setSyncing(false) }
   }
@@ -91,7 +93,7 @@ export default function MicrosoftCalendarSync() {
           dark:bg-[#21262d] dark:border-[#30363d] dark:text-slate-300 dark:hover:bg-[#30363d]"
       >
         {connecting ? <Loader2 size={14} className="animate-spin text-sky-500" /> : <MSIcon />}
-        {connecting ? 'Conectando...' : 'Conectar Outlook'}
+        {connecting ? t('agenda.msConectando') : t('agenda.msConectar')}
       </button>
     )
   }
@@ -101,7 +103,7 @@ export default function MicrosoftCalendarSync() {
       {/* Estado conectado */}
       <button
         onClick={handleDisconnect}
-        title="Click para desconectar"
+        title={t('agenda.msClickDesconectar')}
         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all
           bg-sky-50 text-sky-700 border border-sky-200
           hover:bg-red-50 hover:text-red-600 hover:border-red-200
@@ -114,7 +116,7 @@ export default function MicrosoftCalendarSync() {
       <button
         onClick={handleSync}
         disabled={syncing}
-        title="Sincronizar con Outlook"
+        title={t('agenda.msSincronizar')}
         className="p-2 rounded-xl border transition-all disabled:opacity-50
           border-slate-200 text-slate-400 hover:text-sky-600 hover:border-sky-300 hover:bg-sky-50
           dark:border-[#30363d] dark:text-slate-500 dark:hover:text-sky-400 dark:hover:border-sky-700 dark:hover:bg-sky-900/20"

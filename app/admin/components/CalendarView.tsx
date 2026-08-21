@@ -120,7 +120,7 @@ function MonthlyCalendarView() {
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null)
   const [tipoSesion, setTipoSesion] = useState<'individual'|'grupal'>('individual')
   const [modalidadCita, setModalidadCita] = useState<'presencial'|'virtual'>('presencial')
-  const [newApt, setNewApt] = useState({ child_id:'', date:'', time:'09:00', service:'Terapia ABA', notes:'', group_name:'', status:'confirmed', specialist_id:'' })
+  const [newApt, setNewApt] = useState({ child_id:'', date:'', time:'09:00', service:locale==='en'?'ABA Therapy':'Terapia ABA', notes:'', group_name:'', status:'confirmed', specialist_id:'' })
   const [especialistas, setEspecialistas] = useState<any[]>([])
   const [recurrencia, setRecurrencia] = useState<'none'|'weekly'|'biweekly'>('none')
   const [showReservas, setShowReservas] = useState(false)
@@ -333,8 +333,8 @@ function MonthlyCalendarView() {
             time:              newApt.time,
             childId:           childIdParaCalendario,
             patientName:       tipoSesion === 'grupal'
-              ? (newApt.group_name || 'Grupo')
-              : ninos.find((n: any) => n.id === newApt.child_id)?.name || 'Paciente',
+              ? (newApt.group_name || t('agenda.grupo'))
+              : ninos.find((n: any) => n.id === newApt.child_id)?.name || t('agenda.paciente'),
             serviceType:       newApt.service,
             notes:             newApt.notes,
             modality:          modalidadCita,
@@ -473,7 +473,7 @@ function MonthlyCalendarView() {
 
   const resetForm = () => {
     setShow(false); setTipoSesion('individual'); setModalidadCita('presencial'); setRecurrencia('none'); setRecurrenciaSemanas(4)
-    setNewApt({ child_id:'', date:new Date().toISOString().split('T')[0], time:'09:00', service:'Terapia ABA', notes:'', group_name:'', status:'confirmed', specialist_id:'' })
+    setNewApt({ child_id:'', date:new Date().toISOString().split('T')[0], time:'09:00', service:locale==='en'?'ABA Therapy':'Terapia ABA', notes:'', group_name:'', status:'confirmed', specialist_id:'' })
     setSelectedParticipants([])
   }
 
@@ -546,7 +546,7 @@ function MonthlyCalendarView() {
               <div className="p-2.5 rounded-2xl flex-shrink-0" style={{ background: "rgba(37,99,235,0.15)" }}>
                 <Calendar className="text-sky-500" size={28}/>
               </div>
-              Agenda
+              {t('agenda.tituloPagina')}
             </h2>
             <p className="text-slate-400 text-sm font-medium mt-1 ml-1">
               {t('auto.calendarView.citasHoyVirtuales', { v1: String(apts.length), v2: String(todayApts.length), v3: String(virtualApts.length) })}
@@ -563,7 +563,7 @@ function MonthlyCalendarView() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm
                 border-2 border-sky-500 text-sky-600 hover:bg-sky-50 transition-all whitespace-nowrap"
             >
-              <CalendarClock size={16}/> Reservas online
+              <CalendarClock size={16}/> {t('agenda.reservasOnline')}
             </button>
             <button
               onClick={() => setShow(true)}
@@ -579,10 +579,10 @@ function MonthlyCalendarView() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {[
-            {label:'Total',       value:apts.length,        color:'#0284c7', Icon:Calendar},
-            {label:'Hoy',         value:todayApts.length,   color:'#10b981', Icon:Clock},
-            {label:'Esta semana', value:weekApts.length,    color:'#06b6d4', Icon:Calendar},
-            {label:'Virtuales',   value:virtualApts.length, color:'#0ea5e9', Icon:Video},
+            {label:t('agenda.kpiTotal'),     value:apts.length,        color:'#0284c7', Icon:Calendar},
+            {label:t('agenda.kpiHoy'),       value:todayApts.length,   color:'#10b981', Icon:Clock},
+            {label:t('agenda.kpiSemana'),    value:weekApts.length,    color:'#06b6d4', Icon:Calendar},
+            {label:t('agenda.kpiVirtuales'), value:virtualApts.length, color:'#0ea5e9', Icon:Video},
           ].map(({label,value,color,Icon}) => (
             <div key={label} className="group rounded-2xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
               style={{ background: `linear-gradient(157deg, ${color}0d 0%, var(--card) 46%)`, border: "1px solid var(--card-border)", boxShadow: 'var(--shadow-sm)' }}>
@@ -608,7 +608,7 @@ function MonthlyCalendarView() {
               <button onClick={() => currentMonth && setCurrentMonth(new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1))} className="p-2 rounded-xl hover:bg-slate-100"><ChevronRight size={20}/></button>
             </div>
             <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--card-border)" }}>
-              {['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d => <div key={d} className="py-3 text-center text-xs font-bold text-slate-400">{d}</div>)}
+              {(locale==='en' ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] : ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']).map(d => <div key={d} className="py-3 text-center text-xs font-bold text-slate-400">{d}</div>)}
             </div>
             <div className="grid grid-cols-7">
               {Array.from({length:firstDay}).map((_,i) => <div key={`e${i}`} className="min-h-[56px] sm:min-h-[80px] border-b border-r border-slate-50 bg-slate-50/30"/>)}
@@ -659,7 +659,7 @@ function MonthlyCalendarView() {
             {/* Lista citas */}
             <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}>
               <div className="p-4 border-b" style={{ borderColor: "var(--card-border)" }}>
-                <p className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>Citas ({filteredApts.length})</p>
+                <p className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>{t('agenda.citasLista')} ({filteredApts.length})</p>
               </div>
               <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-50">
                 {isLoading ? (
@@ -685,7 +685,7 @@ function MonthlyCalendarView() {
                             }
                             {a.is_group && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100 uppercase">{t("ui.grupal")}</span>}
                           </div>
-                          <p className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>{a.children?.name||'Paciente'}</p>
+                          <p className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>{a.children?.name||t('agenda.paciente')}</p>
                           <p className="text-xs font-medium mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{a.service_type}</p>
                           {a.specialist?.full_name && (
                             <p className="text-[11px] font-semibold mt-0.5 flex items-center gap-1 truncate" style={{ color: '#0284c7' }}>
@@ -830,8 +830,8 @@ function MonthlyCalendarView() {
                   <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('agenda.modalidad')}</label>
                   <div className="grid grid-cols-2 gap-3">
                     {([
-                      {value:'presencial',icon:<MapPin size={16}/>,label:'Presencial',active:'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-200'},
-                      {value:'virtual',   icon:<Video size={16}/>, label:'Virtual 📹', active:'bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-200'},
+                      {value:'presencial',icon:<MapPin size={16}/>,label:t('agenda.presencial'),active:'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-200'},
+                      {value:'virtual',   icon:<Video size={16}/>, label:t('agenda.virtualEmoji'), active:'bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-200'},
                     ] as const).map(opt => (
                       <button key={opt.value} onClick={()=>setModalidadCita(opt.value)}
                         className={`p-4 rounded-2xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${modalidadCita===opt.value?opt.active:'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
@@ -884,7 +884,7 @@ function MonthlyCalendarView() {
                   <input type="text" className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.service} onChange={e=>setNewApt(p=>({...p,service:e.target.value}))} placeholder={t("agenda.phServicio")} />
                 </div>
                 <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t("agenda.especialistaAsignado")} <span style={{color:'var(--text-muted)',fontWeight:400,fontSize:10}}>(puedes elegir varios)</span></label>
+                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t("agenda.especialistaAsignado")} <span style={{color:'var(--text-muted)',fontWeight:400,fontSize:10}}>{t('agenda.puedesElegirVarios')}</span></label>
                   <div className="flex flex-wrap gap-2 p-3 rounded-xl min-h-[52px]" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)" }}>
                     {newApt.specialist_id && newApt.specialist_id.split(',').filter(Boolean).map(sid => {
                       const esp = especialistas.find(e => e.id === sid)
@@ -968,7 +968,7 @@ function MonthlyCalendarView() {
                   <button onClick={handleSave} disabled={isSaving}
                     className={`flex-[2] py-4 rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-white ${modalidadCita==='virtual'?'bg-gradient-to-r from-sky-600 to-cyan-600 shadow-sky-200':tipoSesion==='grupal'?'bg-gradient-to-r from-sky-600 to-cyan-600 shadow-sky-200':'bg-gradient-to-r from-sky-600 to-cyan-600 shadow-sky-200'}`}>
                     {isSaving?<Loader2 size={18} className="animate-spin"/>:modalidadCita==='virtual'?<Video size={18}/>:<Plus size={18}/>}
-                    {isSaving?'Guardando...':modalidadCita==='virtual'?'Agendar Virtual':tipoSesion==='grupal'?'Agendar Grupo':'Confirmar Cita'}
+                    {isSaving?t('agenda.guardando'):modalidadCita==='virtual'?t('agenda.agendarVirtual'):tipoSesion==='grupal'?t('agenda.agendarGrupo'):t('agenda.confirmarCita')}
                   </button>
                 </div>
               </div>
