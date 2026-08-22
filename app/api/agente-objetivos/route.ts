@@ -11,6 +11,9 @@ import { buildAIContext } from '@/lib/ai-context-builder'
 
 // i18n: responder en el idioma del usuario
 function getLangInstruction(locale: string): string {
+  if (String(locale || '').toLowerCase().startsWith('en')) {
+    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish. Keep clinical protocol codes (e.g. ABLLS-R F24) as they are, but translate their descriptions to English.'
+  }
   return ''
 }
 

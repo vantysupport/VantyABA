@@ -326,6 +326,9 @@ Al citar diagnósticos, SIEMPRE incluye el código CIE-11 y DSM-5 cuando corresp
 // ── Clase principal del Agente ────────────────────────────────────────────────
 
 function getLangInstruction(locale: string): string {
+  if (String(locale || '').toLowerCase().startsWith('en')) {
+    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish. Keep clinical protocol codes (e.g. ABLLS-R F24) as they are, but translate their descriptions to English.'
+  }
   return ''
 }
 

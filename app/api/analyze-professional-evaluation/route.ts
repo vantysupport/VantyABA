@@ -24,13 +24,18 @@ interface EvaluationRequest {
 
 // i18n: responder en el idioma del usuario
 function getLangInstruction(locale: string): string {
+  if (String(locale || '').toLowerCase().startsWith('en')) {
+    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish. Keep clinical protocol codes (e.g. ABLLS-R F24) as they are, but translate their descriptions to English.'
+  }
   return ''
 }
+let _evalLocale = 'es'
 
 export async function POST(req: Request) {
   try {
     const body: EvaluationRequest = await req.json();
     const { evaluationType, responses, childName, childAge, childId } = body;
+    _evalLocale = (body as any).locale || req.headers.get('x-locale') || 'es';
 
 
     // Contexto completo: RAG + historial + instrucciones del centro
@@ -193,7 +198,7 @@ async function analyzeBRIEF2(responses: any, childName: string, childAge: number
     }
   `;
 
-  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt, { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
+  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt + getLangInstruction(_evalLocale), { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
 
   if (!result) throw new Error("La IA no generó respuesta"); const parsed = parseGeminiJSON(result, "análisis");
 
@@ -274,7 +279,7 @@ async function analyzeADOS2(responses: any, childName: string, childAge: number,
     }
   `;
 
-  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt, { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
+  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt + getLangInstruction(_evalLocale), { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
 
   if (!result) throw new Error("La IA no generó respuesta"); const parsed = parseGeminiJSON(result, "análisis");
 
@@ -363,7 +368,7 @@ async function analyzeVineland3(responses: any, childName: string, childAge: num
     }
   `;
 
-  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt, { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
+  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt + getLangInstruction(_evalLocale), { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
 
   if (!result) throw new Error("La IA no generó respuesta"); const parsed = parseGeminiJSON(result, "análisis");
 
@@ -436,7 +441,7 @@ async function analyzeWISCV(responses: any, childName: string, childAge: number,
     }
   `;
 
-  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt, { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
+  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt + getLangInstruction(_evalLocale), { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
 
   if (!result) throw new Error("La IA no generó respuesta"); const parsed = parseGeminiJSON(result, "análisis");
 
@@ -532,7 +537,7 @@ async function analyzeBASC3(responses: any, childName: string, childAge: number,
     }
   `;
 
-  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt, { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
+  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt + getLangInstruction(_evalLocale), { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 });
 
   if (!result) throw new Error("La IA no generó respuesta"); const parsed = parseGeminiJSON(result, "análisis");
 
@@ -616,7 +621,7 @@ async function analyzeABLLSR(responses: any, childName: string, childAge: number
     }
   `
 
-  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt, { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2500 })
+  const result = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt + getLangInstruction(_evalLocale), { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2500 })
 
   if (!result) throw new Error("La IA no generó respuesta")
   const parsed = parseGeminiJSON(result, "análisis ABLLS-R")
