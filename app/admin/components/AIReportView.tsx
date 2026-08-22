@@ -139,7 +139,7 @@ function AIReportView({ onChildSelect, initialChildId }: { onChildSelect?: (chil
   const [mobileTab, setMobileTab] = useState<'chat' | 'history' | 'reports' | 'graficas'>('chat')
   
   const [messages, setMessages] = useState<any[]>([
-      { role: 'ai', text: 'Hola 👋. Selecciona un paciente para iniciar el análisis clínico.' }
+      { role: 'ai', text: locale === 'en' ? 'Hi 👋. Select a patient to start the clinical analysis.' : 'Hola 👋. Selecciona un paciente para iniciar el análisis clínico.' }
   ])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
@@ -180,7 +180,7 @@ function AIReportView({ onChildSelect, initialChildId }: { onChildSelect?: (chil
     }
     setHistoryData({ anamnesis: null, aba: [], entorno: [] }) 
     
-    setMessages([{ role: 'ai', text: 'Cargando historial del paciente...' }])
+    setMessages([{ role: 'ai', text: locale === 'en' ? 'Loading patient history...' : 'Cargando historial del paciente...' }])
     
     console.log('🔍 Buscando datos para child_id:', childId)
     
@@ -348,7 +348,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
   const totalEvaluaciones = [resolvedBrief2, resolvedAdos2, resolvedVineland, resolvedWiscv, resolvedBasc3].filter(Boolean).length;
   const totalFormularios = (filteredFormResponses.length || 0) + (parentFormsCompleted?.length || 0)
   const parentFormsText = (parentFormsCompleted || []).length > 0
-    ? `\n📨 **Formularios de Padres (${parentFormsCompleted!.length}):**\n${parentFormsCompleted!.slice(0,5).map((f: any) => `  • ${f.form_title || f.form_type} (${f.completed_at ? new Date(f.completed_at).toLocaleDateString(toBCP47(locale)) : 'Sin fecha'})`).join('\n')}`
+    ? `\n📨 **${locale === 'en' ? 'Parent Forms' : 'Formularios de Padres'} (${parentFormsCompleted!.length}):**\n${parentFormsCompleted!.slice(0,5).map((f: any) => `  • ${f.form_title || f.form_type} (${f.completed_at ? new Date(f.completed_at).toLocaleDateString(toBCP47(locale)) : (locale === 'en' ? 'No date' : 'Sin fecha')})`).join('\n')}`
     : '';
   
   // Añadir alertas si faltan datos críticos
@@ -361,7 +361,9 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
       
      setMessages([{
     role: 'ai',
-    text: `✅ Historial completo de **${nombre}** cargado.\n\n📊 **Evaluaciones Profesionales:** ${totalEvaluaciones}/5\n• ${resolvedBrief2 ? "✅" : "❌"} BRIEF-2\n• ${resolvedAdos2 ? "✅" : "❌"} ADOS-2\n• ${resolvedVineland ? "✅" : "❌"} Vineland-3\n• ${resolvedWiscv ? "✅" : "❌"} WISC-V\n• ${resolvedBasc3 ? "✅" : "❌"} BASC-3\n\n📋 **Sesiones ABA:** ${totalSesionesAba}${sesionesDataAba.length > 0 ? ` _(${sesionesDataAba.length} registros en programas)_` : ''}${(aba?.length || 0) > 0 && sesionesDataAba.length > 0 ? ` + ${aba?.length || 0} en registro legacy` : ''}\n🏠 **Visitas Hogar:** ${entorno?.length || 0}\n📝 **NeuroFormas / Formularios:** ${totalFormularios}${totalFormularios > 0 ? `\n${[...(filteredFormResponses), ...(parentFormsCompleted||[])].slice(0,8).map((f: any) => `  • ${f.form_title || f.form_type} (${new Date(f.completed_at || f.created_at).toLocaleDateString(toBCP47(locale))})`).join('\n')}` : ''}${!anamnesis ? '\n\n⚠️ Falta Anamnesis Inicial' : ''}${(!entorno || entorno.length === 0) ? '\n⚠️ Falta Visita Domiciliaria' : ''}\n\n¿Qué deseas analizar?`
+    text: locale === 'en'
+      ? `✅ Complete history of **${nombre}** loaded.\n\n📊 **Professional Evaluations:** ${totalEvaluaciones}/5\n• ${resolvedBrief2 ? "✅" : "❌"} BRIEF-2\n• ${resolvedAdos2 ? "✅" : "❌"} ADOS-2\n• ${resolvedVineland ? "✅" : "❌"} Vineland-3\n• ${resolvedWiscv ? "✅" : "❌"} WISC-V\n• ${resolvedBasc3 ? "✅" : "❌"} BASC-3\n\n📋 **ABA Sessions:** ${totalSesionesAba}${sesionesDataAba.length > 0 ? ` _(${sesionesDataAba.length} records in programs)_` : ''}${(aba?.length || 0) > 0 && sesionesDataAba.length > 0 ? ` + ${aba?.length || 0} in legacy record` : ''}\n🏠 **Home Visits:** ${entorno?.length || 0}\n📝 **NeuroForms / Forms:** ${totalFormularios}${totalFormularios > 0 ? `\n${[...(filteredFormResponses), ...(parentFormsCompleted||[])].slice(0,8).map((f: any) => `  • ${f.form_title || f.form_type} (${new Date(f.completed_at || f.created_at).toLocaleDateString(toBCP47(locale))})`).join('\n')}` : ''}${!anamnesis ? '\n\n⚠️ Missing Initial Anamnesis' : ''}${(!entorno || entorno.length === 0) ? '\n⚠️ Missing Home Visit' : ''}\n\nWhat would you like to analyze?`
+      : `✅ Historial completo de **${nombre}** cargado.\n\n📊 **Evaluaciones Profesionales:** ${totalEvaluaciones}/5\n• ${resolvedBrief2 ? "✅" : "❌"} BRIEF-2\n• ${resolvedAdos2 ? "✅" : "❌"} ADOS-2\n• ${resolvedVineland ? "✅" : "❌"} Vineland-3\n• ${resolvedWiscv ? "✅" : "❌"} WISC-V\n• ${resolvedBasc3 ? "✅" : "❌"} BASC-3\n\n📋 **Sesiones ABA:** ${totalSesionesAba}${sesionesDataAba.length > 0 ? ` _(${sesionesDataAba.length} registros en programas)_` : ''}${(aba?.length || 0) > 0 && sesionesDataAba.length > 0 ? ` + ${aba?.length || 0} en registro legacy` : ''}\n🏠 **Visitas Hogar:** ${entorno?.length || 0}\n📝 **NeuroFormas / Formularios:** ${totalFormularios}${totalFormularios > 0 ? `\n${[...(filteredFormResponses), ...(parentFormsCompleted||[])].slice(0,8).map((f: any) => `  • ${f.form_title || f.form_type} (${new Date(f.completed_at || f.created_at).toLocaleDateString(toBCP47(locale))})`).join('\n')}` : ''}${!anamnesis ? '\n\n⚠️ Falta Anamnesis Inicial' : ''}${(!entorno || entorno.length === 0) ? '\n⚠️ Falta Visita Domiciliaria' : ''}\n\n¿Qué deseas analizar?`
   }])
 
     // Cargar todos los reportes Word del paciente
@@ -392,7 +394,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
       setMessages(prev => [...prev, { role: 'ai', text: data.text }])
       speak(data.text)
     } catch {
-      setMessages(prev => [...prev, { role: 'ai', text: '❌ Error de conexión.' }])
+      setMessages(prev => [...prev, { role: 'ai', text: locale === 'en' ? '❌ Connection error.' : '❌ Error de conexión.' }])
     } finally {
       setTyping(false)
     }
@@ -438,7 +440,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
             title={t('ui.ai_assistant')}
             icon={<Sparkles size={17}/>}
             accent="#0284c7"
-            badge={<span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"/>{speaking ? 'Hablando' : 'Activa'}</span>}
+            badge={<span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"/>{speaking ? (locale === 'en' ? 'Speaking' : 'Hablando') : (locale === 'en' ? 'Active' : 'Activa')}</span>}
             defaultOpen={true}
           >
             {/* Chat header */}
@@ -446,7 +448,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
               <button onClick={toggleVoice} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
                 style={{ background: voiceEnabled ? 'rgba(134,239,172,0.15)' : 'var(--muted-bg)', color: voiceEnabled ? '#86efac' : 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
                 {voiceEnabled ? <Volume2 size={13}/> : <VolumeX size={13}/>}
-                {voiceEnabled ? 'Voz ON' : 'Voz OFF'}
+                {voiceEnabled ? (locale === 'en' ? 'Voice ON' : 'Voz ON') : (locale === 'en' ? 'Voice OFF' : 'Voz OFF')}
               </button>
             </div>
 
@@ -527,7 +529,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
             title={t('ui.clinical_record')}
             icon={<History size={17}/>}
             accent="#f59e0b"
-            badge={<span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)' }}>{(historyData.totalSesionesAba ?? historyData.aba.length) + historyData.entorno.length} registros</span>}
+            badge={<span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)' }}>{(historyData.totalSesionesAba ?? historyData.aba.length) + historyData.entorno.length} {locale === 'en' ? 'records' : 'registros'}</span>}
             defaultOpen={false}
           >
             <div className="p-4 space-y-3" style={{ background: 'var(--background)' }}>
@@ -577,7 +579,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
                           <span className="text-[9px] font-bold uppercase opacity-60">{new Date(sesion.fecha_sesion).toLocaleString('default', { month: 'short' })}</span>
                           <span className="text-lg font-bold leading-none">{new Date(sesion.fecha_sesion).getDate() + 1}</span>
                         </div>
-                        <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{d.conducta || 'Sesión ABA'}</p>
+                        <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{d.conducta || (locale === 'en' ? 'ABA Session' : 'Sesión ABA')}</p>
                       </div>
                       <ChevronDown size={18} className={`transition-transform ${isExpanded ? 'rotate-180 text-sky-400' : ''}`} style={{ color: isExpanded ? undefined : 'var(--text-muted)' }}/>
                     </div>
@@ -622,7 +624,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
                         <div className="min-w-0">
                           <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{ses._programaTitulo}</p>
                           <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                            {ses.set ? `Set ${ses.set} · ` : ''}{ses.fase || 'Sesión'}
+                            {ses.set ? `Set ${ses.set} · ` : ''}{ses.fase || (locale === 'en' ? 'Session' : 'Sesión')}
                           </p>
                         </div>
                       </div>
@@ -832,7 +834,7 @@ function ReporteHistorialCard({ reporte }: { reporte: any; key?: any }) {
         .eq('id', reporte.id)
         .maybeSingle()
       if (error) throw error
-      if (!data) throw new Error('Reporte no encontrado')
+      if (!data) throw new Error(locale === 'en' ? 'Report not found' : 'Reporte no encontrado')
       const byteChars = atob(data.file_data)
       const bytes = new Uint8Array(byteChars.length)
       for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i)
