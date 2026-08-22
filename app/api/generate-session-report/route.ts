@@ -168,7 +168,7 @@ Responde SOLAMENTE con JSON válido (sin texto adicional, sin backticks, sin com
   "razon_sugerencia": null
 }`;
 
-    const response = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', context, { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 2000 })
+    const response = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', context + getLangInstruction(userLocale), { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 2000 })
 
     // Sanitizar JSON: eliminar caracteres de control que Groq a veces incluye
     const safeJson = (response || '{}')

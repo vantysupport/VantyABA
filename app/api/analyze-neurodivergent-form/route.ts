@@ -87,7 +87,7 @@ Responde SOLO con JSON:
   "fuentes_clinicas": ["fuente citada si aplica"]
 }`
 
-    const rawText = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt, { model: GROQ_MODELS.SMART, temperature: 0.5, maxTokens: 2500 })
+    const rawText = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', prompt + getLangInstruction(userLocale), { model: GROQ_MODELS.SMART, temperature: 0.5, maxTokens: 2500 })
     const parsedResult = parseAIJson(rawText, {
       analisis_clinico: rawText,
       mensaje_padres: `El análisis de ${ctx.childName} está completo.`,
