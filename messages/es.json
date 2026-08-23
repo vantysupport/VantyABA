@@ -5,7 +5,7 @@
   "pacientes": "Pacientes",
   "programas": "Programas ABA",
   "evaluaciones": "Evaluaciones",
-  "historial": "Historial & IA",
+  "historial": "Historial",
   "aria": "ARIA Agente",
   "hub": "Análisis Predictivo",
   "cerebro": "Cerebro IA",
@@ -362,7 +362,7 @@
   "edadAnios": "Edad (años)",
   "tabEvalInicial": "Evaluación Inicial",
   "tabEvalInicialShort": "Inicial",
-  "tabHistorial": "Historial & IA",
+  "tabHistorial": "Historial",
   "tabHistorialShort": "Hist.",
   "tabFichas": "Fichas",
   "tabDocumentos": "Documentos",
@@ -2907,7 +2907,7 @@
    "reporteWordDescargado": "Reporte Word descargado"
   },
   "evaluacionInicialAdmin": {
-   "informeGeneradoDisponibleEnLa": "Informe generado: {v1}\nDisponible en la pestaña \"Historial & IA\" del paciente.",
+   "informeGeneradoDisponibleEnLa": "Informe generado: {v1}\nDisponible en la pestaña \"Historial\" del paciente.",
    "escribeUnaRespuesta": "Escribe una respuesta"
   },
   "secretariaReportes": {
@@ -3080,7 +3080,7 @@
   "telefonoTutor": "Teléfono tutor",
   "fichaAutoGen": "Ficha clínica generada automáticamente",
   "infoGeneral": "Información general",
-  "historialIA": "Historial & IA",
+  "historialIA": "Historial",
   "phEjNombre": "Ej: María García",
   "phEjTea": "Ej: TEA Nivel 2",
   "enRevision": "En revisión",

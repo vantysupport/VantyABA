@@ -64,7 +64,7 @@ const PATIENT_TABS = [
   { key: 'ninos_programas', label: 'Programas ABA', icon: '📈' },
   { key: 'ninos_evaluaciones', label: 'Evaluaciones', icon: '📋' },
   { key: 'ninos_eval_inicial', label: 'Evaluación Inicial', icon: '🔍' },
-  { key: 'ninos_historial', label: 'Historial & IA', icon: '🤖' },
+  { key: 'ninos_historial', label: 'Historial', icon: '🤖' },
   { key: 'ninos_fichas', label: 'Fichas clínicas', icon: '📄' },
   { key: 'ninos_documentos', label: 'Documentos', icon: '📁' },
 ] as const

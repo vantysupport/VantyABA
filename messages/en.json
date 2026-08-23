@@ -5,7 +5,7 @@
     "pacientes": "Patients",
     "programas": "ABA Programs",
     "evaluaciones": "Evaluations",
-    "historial": "History & AI",
+    "historial": "History",
     "aria": "ARIA Agent",
     "hub": "Predictive Analysis",
     "cerebro": "AI Brain",
@@ -482,7 +482,7 @@
     "edadAnios": "Age (years)",
     "tabEvalInicial": "Initial Evaluation",
     "tabEvalInicialShort": "Initial",
-    "tabHistorial": "History & AI",
+    "tabHistorial": "History",
     "tabHistorialShort": "Hist.",
     "tabFichas": "Records",
     "tabDocumentos": "Documents",
@@ -2792,7 +2792,7 @@
       "reporteWordDescargado": "Word report downloaded"
     },
     "evaluacionInicialAdmin": {
-      "informeGeneradoDisponibleEnLa": "Report generated: {v1}\nAvailable in the patient's \"History & AI\" tab.",
+      "informeGeneradoDisponibleEnLa": "Report generated: {v1}\nAvailable in the patient's \"History\" tab.",
       "escribeUnaRespuesta": "Write an answer"
     },
     "secretariaReportes": {
@@ -3068,7 +3068,7 @@
     "telefonoTutor": "Guardian phone",
     "fichaAutoGen": "Clinical record generated automatically",
     "infoGeneral": "General information",
-    "historialIA": "History & AI",
+    "historialIA": "History",
     "phEjNombre": "E.g.: María García",
     "phEjTea": "E.g.: ASD Level 2",
     "enRevision": "Under review",

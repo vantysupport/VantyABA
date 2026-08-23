@@ -434,95 +434,6 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
       {selectedChild ? (
         <div className="flex flex-col gap-3">
 
-          {/* ══ SECCIÓN 1: ASISTENTE IA (siempre visible, arriba) ══ */}
-          <AccordionSection
-            id="chat"
-            title={t('ui.ai_assistant')}
-            icon={<Sparkles size={17}/>}
-            accent="#0284c7"
-            badge={<span className="text-[9px] px-2 py-0.5 rounded-full font-bold bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"/>{speaking ? (locale === 'en' ? 'Speaking' : 'Hablando') : (locale === 'en' ? 'Active' : 'Activa')}</span>}
-            defaultOpen={true}
-          >
-            {/* Chat header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b" style={{ borderColor: 'var(--card-border)' }}>
-              <button onClick={toggleVoice} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
-                style={{ background: voiceEnabled ? 'rgba(134,239,172,0.15)' : 'var(--muted-bg)', color: voiceEnabled ? '#86efac' : 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
-                {voiceEnabled ? <Volume2 size={13}/> : <VolumeX size={13}/>}
-                {voiceEnabled ? (locale === 'en' ? 'Voice ON' : 'Voz ON') : (locale === 'en' ? 'Voice OFF' : 'Voz OFF')}
-              </button>
-            </div>
-
-            {listening && (
-              <div className="mx-4 mt-3 rounded-xl px-3 py-2.5 flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
-                <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shrink-0 animate-pulse">
-                  <Mic size={11} className="text-white"/>
-                </div>
-                <p className="text-xs font-bold text-red-400 flex-1">{t("admin.escuchandoHabla")}</p>
-                <button onClick={stopListening} className="p-1 rounded-lg" style={{ background: 'rgba(239,68,68,0.2)' }}>
-                  <StopCircle size={13} className="text-red-400"/>
-                </button>
-              </div>
-            )}
-
-            <div className="overflow-y-auto p-4 space-y-3" style={{ maxHeight: '360px', background: 'var(--background)' }} ref={chatContainerRef}>
-              {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                  <div className="max-w-[88%] p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm"
-                    style={m.role === 'user'
-                      ? { background: 'linear-gradient(135deg,#0284c7,#0369a1)', color: '#fff', borderRadius: '1.2rem 1.2rem 0.2rem 1.2rem' }
-                      : { background: 'var(--muted-bg)', border: '1px solid var(--card-border)', color: 'var(--text-primary)', borderRadius: '0.2rem 1.2rem 1.2rem 1.2rem' }
-                    }>
-                    {m.role === 'ai' ? (
-                      <p className="font-medium whitespace-pre-wrap" dangerouslySetInnerHTML={{
-                        // Escapamos primero (anti-XSS) y SOLO después aplicamos negritas/saltos seguros.
-                        __html: m.text
-                          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                          .replace(/\*\*(.*?)\*\*/g, '<b class="font-bold">$1</b>').replace(/\n/g, '<br/>')
-                      }}/>
-                    ) : m.text}
-                  </div>
-                </div>
-              ))}
-              {typing && (
-                <div className="flex justify-start">
-                  <div className="px-4 py-2.5 rounded-2xl flex items-center gap-2" style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
-                    <Loader2 className="animate-spin text-sky-500" size={14}/>
-                    <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{t('common.analizando')}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-3 flex gap-2 border-t" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
-              <input
-                className="flex-1 border rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-sky-500 transition-all"
-                style={{ background: listening ? 'rgba(239,68,68,0.05)' : 'var(--input-bg)', borderColor: listening ? '#fca5a5' : 'var(--input-border)', color: 'var(--text-primary)' }}
-                placeholder={listening ? t('aria.escuchando') : t('aria.preguntaSobre')}
-                value={input} onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !listening && sendMessage()}
-                disabled={listening}
-              />
-              {micSupported && (
-                <button onClick={handleMicClick} disabled={typing}
-                  className="p-3 rounded-xl transition-all disabled:opacity-40"
-                  style={{ background: listening ? 'linear-gradient(135deg,#ef4444,#dc2626)' : 'var(--muted-bg)', boxShadow: listening ? '0 4px 14px rgba(239,68,68,.3)' : 'none' }}>
-                  {listening ? <MicOff size={16} className="text-white"/> : <Mic size={16} style={{ color: 'var(--text-muted)' }}/>}
-                </button>
-              )}
-              {speaking ? (
-                <button onClick={stopSpeaking} className="p-3 rounded-xl text-white" style={{ background: 'linear-gradient(135deg,#0284c7,#0369a1)' }}>
-                  <StopCircle size={16}/>
-                </button>
-              ) : (
-                <button onClick={sendMessage} disabled={!input.trim() || listening}
-                  className="p-3 rounded-xl text-white transition-all disabled:opacity-40 hover:brightness-110"
-                  style={{ background: 'linear-gradient(135deg,#0284c7,#0369a1)', boxShadow: '0 4px 14px rgba(2,132,199,.3)' }}>
-                  <Send size={16}/>
-                </button>
-              )}
-            </div>
-          </AccordionSection>
-
           {/* ══ SECCIÓN 2: REGISTRO CLÍNICO (cerrado por defecto) ══ */}
           <AccordionSection
             id="historial"
@@ -725,18 +636,6 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
             </div>
           </AccordionSection>
 
-          {/* ══ SECCIÓN 5: GRÁFICAS ABA (cerrado por defecto) ══ */}
-          <AccordionSection
-            id="graficas"
-            title={t('ui.graficasABA')}
-            icon={<BarChart3 size={17}/>}
-            accent="#10b981"
-            defaultOpen={true}
-          >
-            <div className="p-4" style={{ background: 'var(--background)' }}>
-              <ProgresoGraficas childId={selectedChild} modoParent={false} />
-            </div>
-          </AccordionSection>
 
         </div>
       ) : (
