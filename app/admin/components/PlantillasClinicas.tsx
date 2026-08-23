@@ -53,21 +53,21 @@ interface TemplateResponse {
 }
 
 const FIELD_TYPES = [
-  { id: 'text',     label: 'Texto corto' },
-  { id: 'textarea', label: 'Texto largo' },
-  { id: 'select',   label: 'Lista' },
-  { id: 'radio',    label: 'Opción única' },
-  { id: 'date',     label: 'Fecha' },
-  { id: 'number',   label: 'Número' },
-  { id: 'checkbox', label: 'Casilla' },
+  { id: 'text',     label: 'Texto corto', labelEn: 'Short text' },
+  { id: 'textarea', label: 'Texto largo', labelEn: 'Long text' },
+  { id: 'select',   label: 'Lista', labelEn: 'Dropdown' },
+  { id: 'radio',    label: 'Opción única', labelEn: 'Single choice' },
+  { id: 'date',     label: 'Fecha', labelEn: 'Date' },
+  { id: 'number',   label: 'Número', labelEn: 'Number' },
+  { id: 'checkbox', label: 'Casilla', labelEn: 'Checkbox' },
 ]
 
 const CATEGORIES = [
-  { id: 'historia_clinica',   label: 'Historia Clínica' },
-  { id: 'motivo_consulta',    label: 'Motivo de Consulta' },
-  { id: 'seguimiento',        label: 'Seguimiento' },
-  { id: 'evaluacion_inicial', label: 'Evaluación Inicial' },
-  { id: 'otro',               label: 'Otro' },
+  { id: 'historia_clinica',   label: 'Historia Clínica', labelEn: 'Clinical History' },
+  { id: 'motivo_consulta',    label: 'Motivo de Consulta', labelEn: 'Reason for Consultation' },
+  { id: 'seguimiento',        label: 'Seguimiento', labelEn: 'Follow-up' },
+  { id: 'evaluacion_inicial', label: 'Evaluación Inicial', labelEn: 'Initial Evaluation' },
+  { id: 'otro',               label: 'Otro', labelEn: 'Other' },
 ]
 
 function uid() { return `f_${Date.now()}_${Math.random().toString(36).slice(2, 7)}` }
@@ -76,7 +76,7 @@ function uid() { return `f_${Date.now()}_${Math.random().toString(36).slice(2, 7
 // GESTOR DE PLANTILLAS — para Admin/Jefe
 // ══════════════════════════════════════════════════════════════════════════════
 export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
-  const { t: tr } = useI18n()
+  const { t: tr, locale } = useI18n()
   const { isDark: isDarkCtx } = useTheme()
   const isDark = isDarkProp ?? isDarkCtx
   const toast = useToast()
@@ -112,7 +112,7 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
   const toggleActive = async (t: Template) => {
     await supabase.from('clinical_templates').update({ is_active: !t.is_active }).eq('id', t.id)
     setTemplates(prev => prev.map(tp => tp.id === t.id ? { ...tp, is_active: !tp.is_active } : tp))
-    toast.success(t.is_active ? 'Ficha desactivada' : 'Ficha activada')
+    toast.success(t.is_active ? (locale === 'en' ? 'Form deactivated' : 'Ficha desactivada') : (locale === 'en' ? 'Form activated' : 'Ficha activada'))
   }
 
   if (view === 'create' || view === 'edit') {
@@ -132,13 +132,13 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
         <div>
           <h3 className={`font-bold text-base flex items-center gap-2 ${cc.txt1}`}>
             <LayoutTemplate size={18} className="text-sky-500" />
-            Fichas Clínicas
+            {locale === 'en' ? 'Clinical Forms' : 'Fichas Clínicas'}
           </h3>
           <p className={`text-xs mt-0.5 ${cc.txt3}`}>{tr("admin.creaGestionaModelos")}</p>
         </div>
         <button onClick={() => { setEditing(null); setView('create') }}
           className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm">
-          <Plus size={14} /> Nueva ficha
+          <Plus size={14} /> {locale === 'en' ? 'New form' : 'Nueva ficha'}
         </button>
       </div>
 
@@ -167,16 +167,16 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
                     <p className={`font-bold text-sm ${cc.txt1}`}>{t.name}</p>
                     {t.is_default && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700">{tr("admin.sistema")}</span>}
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${t.is_active ? 'bg-emerald-100 text-emerald-700' : isDark ? 'bg-[#21262d] text-slate-500' : 'bg-slate-100 text-slate-400'}`}>
-                      {t.is_active ? '● Activa' : '○ Inactiva'}
+                      {t.is_active ? (locale === 'en' ? '● Active' : '● Activa') : (locale === 'en' ? '○ Inactive' : '○ Inactiva')}
                     </span>
                     <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isDark ? 'bg-[#21262d] text-slate-500' : 'bg-slate-100 text-slate-500'}`}>
-                      {CATEGORIES.find(c => c.id === t.category)?.label}
+                      {(() => { const _c = CATEGORIES.find(c => c.id === t.category); return _c ? (locale === 'en' ? _c.labelEn : _c.label) : t.category })()}
                     </span>
                   </div>
                   {t.description && <p className={`text-xs mt-0.5 ${cc.txt3}`}>{t.description}</p>}
                   <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                    {t.fields?.length || 0} campo{(t.fields?.length || 0) !== 1 ? 's' : ''}
-                    {t.sections?.length ? ` · ${t.sections.length} sección${t.sections.length !== 1 ? 'es' : ''}` : ''}
+                    {t.fields?.length || 0} {locale === 'en' ? ((t.fields?.length || 0) !== 1 ? 'fields' : 'field') : ('campo' + ((t.fields?.length || 0) !== 1 ? 's' : ''))}
+                    {t.sections?.length ? ` · ${t.sections.length} ${locale === 'en' ? (t.sections.length !== 1 ? 'sections' : 'section') : ('secci' + (t.sections.length !== 1 ? 'ones' : 'ón'))}` : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -210,7 +210,7 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
 function FormBuilder({ isDark, template, onSave, onCancel }: {
   isDark: boolean; template?: Template; onSave: () => void; onCancel: () => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const toast = useToast()
   const [name, setName]         = useState(template?.name || '')
   const [desc, setDesc]         = useState(template?.description || '')
@@ -231,7 +231,7 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
   }
   const inputCls = `w-full px-3 py-2.5 rounded-xl text-sm border-2 outline-none transition-all ${cc.input}`
 
-  const addSection = () => setSections(prev => [...prev, { id: uid(), title: 'Nueva sección', description: '' }])
+  const addSection = () => setSections(prev => [...prev, { id: uid(), title: locale === 'en' ? 'New section' : 'Nueva sección', description: '' }])
   const updateSection = (id: string, patch: Partial<Section>) => setSections(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
   const removeSection = (id: string) => { setSections(prev => prev.filter(s => s.id !== id)); setFields(prev => prev.map(f => f.section === id ? { ...f, section: undefined } : f)) }
   const addField = (sectionId?: string) => setFields(prev => [...prev, { id: uid(), label: '', type: 'text', required: false, placeholder: '', section: sectionId }])
@@ -246,7 +246,7 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
   const handleSave = async () => {
     if (!name.trim()) { toast.error(t('auto.plantillasClinicas.elNombreEsObligatorio')); return }
     const valid = fields.filter(f => f.label.trim())
-    if (valid.length === 0) { toast.error('Agrega al menos un campo'); return }
+    if (valid.length === 0) { toast.error(locale === 'en' ? 'Add at least one field' : 'Agrega al menos un campo'); return }
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -278,17 +278,17 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
           <ArrowLeft size={16} className={cc.txt3} />
         </button>
         <div className="flex-1">
-          <p className={`font-bold text-base ${cc.txt1}`}>{template ? 'Editar ficha' : 'Nueva ficha clínica'}</p>
+          <p className={`font-bold text-base ${cc.txt1}`}>{template ? (locale === 'en' ? 'Edit form' : 'Editar ficha') : (locale === 'en' ? 'New clinical form' : 'Nueva ficha clínica')}</p>
           <p className={`text-xs ${cc.txt3}`}>{t("admin.disenaFormulario")}</p>
         </div>
         <button onClick={() => setPreview(true)}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${isDark ? 'border-[#30363d] text-slate-400 hover:bg-[#21262d]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-          <Eye size={13} /> Vista previa
+          <Eye size={13} /> {locale === 'en' ? 'Preview' : 'Vista previa'}
         </button>
         <button onClick={handleSave} disabled={saving}
           className="flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl disabled:opacity-50">
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-          {saving ? 'Guardando...' : 'Guardar ficha'}
+          {saving ? (locale === 'en' ? 'Saving...' : 'Guardando...') : (locale === 'en' ? 'Save form' : 'Guardar ficha')}
         </button>
       </div>
 
@@ -306,7 +306,7 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
           <div>
             <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>{t("common.categoria")}</label>
             <select value={category} onChange={e => setCategory(e.target.value)} className={`${inputCls} cursor-pointer`}>
-              {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+              {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{locale === 'en' ? cat.labelEn : cat.label}</option>)}
             </select>
           </div>
         </div>
@@ -317,7 +317,7 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
         <div className={`px-5 py-3 border-b flex items-center justify-between ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
           <p className={`text-xs font-bold ${cc.txt3}`}>{t("admin.camposGenerales")}</p>
           <button onClick={() => addField()} className="flex items-center gap-1 text-xs font-bold text-sky-500 hover:text-sky-400">
-            <Plus size={13} /> Añadir campo
+            <Plus size={13} /> {locale === 'en' ? 'Add field' : 'Añadir campo'}
           </button>
         </div>
         <div className="p-4 space-y-2">
@@ -374,7 +374,7 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
       <button onClick={addSection}
         className={`w-full py-3 rounded-2xl border-2 border-dashed text-xs font-bold transition-all
           ${isDark ? 'border-[#30363d] text-slate-500 hover:border-sky-700 hover:text-sky-400' : 'border-slate-200 text-slate-400 hover:border-sky-300 hover:text-sky-500'}`}>
-        + Agregar sección
+        {locale === 'en' ? '+ Add section' : '+ Agregar sección'}
       </button>
     </div>
   )
@@ -386,7 +386,7 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
   onChange: (p: Partial<Field>) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const cc = {
     border: isDark ? 'border-[#30363d]' : 'border-slate-200',
     bg:     isDark ? 'bg-[#0d1117]'     : 'bg-slate-50',
@@ -412,7 +412,7 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
           })
         }}
           className={`px-2 py-2 rounded-lg text-xs font-bold border-2 outline-none cursor-pointer ${isDark ? 'bg-[#161b22] border-[#21262d] text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
-          {FIELD_TYPES.map(ft => <option key={ft.id} value={ft.id}>{ft.label}</option>)}
+          {FIELD_TYPES.map(ft => <option key={ft.id} value={ft.id}>{locale === 'en' ? ft.labelEn : ft.label}</option>)}
         </select>
         <label className="flex items-center gap-1 cursor-pointer flex-shrink-0" title={t("admin.campoObligatorio")}>
           <input type="checkbox" checked={field.required} onChange={e => onChange({ required: e.target.checked })} className="rounded accent-sky-500" />
@@ -452,7 +452,7 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
                       onChange({ options: newOpts })
                     }
                   }}
-                  placeholder={`Opción ${idx + 1}`}
+                  placeholder={locale === 'en' ? `Option ${idx + 1}` : `Opción ${idx + 1}`}
                   className={`flex-1 px-2.5 py-1.5 rounded-lg text-xs border-2 outline-none focus:border-sky-400 transition-all ${cc.input}`}
                   autoFocus={idx === (field.options || []).length - 1 && opt === ''}
                 />
@@ -483,7 +483,7 @@ function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }
 function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
   name: string; desc: string; sections: Section[]; fields: Field[]; isDark: boolean; onBack: () => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const cc = {
     card:  isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200',
     txt1:  isDark ? 'text-slate-100' : 'text-slate-800',
@@ -493,7 +493,7 @@ function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
   const renderField = (f: Field) => (
     <div key={f.id}>
       <label className={`block text-xs font-bold mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-        {f.label || '(Sin nombre)'} {f.required && <span className="text-red-400">*</span>}
+        {f.label || (locale === 'en' ? '(No name)' : '(Sin nombre)')} {f.required && <span className="text-red-400">*</span>}
       </label>
       {f.type === 'textarea' && <textarea rows={3} disabled placeholder={f.placeholder} className={`w-full px-3 py-2 rounded-xl text-sm border-2 resize-none opacity-70 ${cc.input}`} />}
       {f.type === 'text' && <input type="text" disabled placeholder={f.placeholder} className={`w-full px-3 py-2 rounded-xl text-sm border-2 opacity-70 ${cc.input}`} />}
@@ -531,7 +531,7 @@ function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
       </div>
       <div className={`${cc.card} border rounded-2xl p-6 space-y-5`}>
         <div className={`pb-4 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-          <p className={`font-bold text-lg ${cc.txt1}`}>{name || '(Sin nombre)'}</p>
+          <p className={`font-bold text-lg ${cc.txt1}`}>{name || (locale === 'en' ? '(No name)' : '(Sin nombre)')}</p>
           {desc && <p className={`text-sm mt-1 ${cc.txt3}`}>{desc}</p>}
         </div>
         {fields.filter(f => !f.section).length > 0 && (
@@ -560,7 +560,7 @@ export function RellenarFicha({
 }: {
   childId: string; childName: string; isDark?: boolean; onSaved?: (responseId: string) => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { isDark: isDarkCtx } = useTheme()
   const isDark = isDarkProp ?? isDarkCtx
   const toast = useToast()
@@ -592,17 +592,13 @@ export function RellenarFicha({
   }, [])
 
   const roleLabel = (r?: string) => {
-    const map: Record<string, string> = {
-      jefe: 'Director(a)',
-      admin: 'Administrador(a)',
-      especialista: 'Especialista',
-      terapeuta: 'Terapeuta',
-      secretaria: 'Secretaría',
-    }
-    return map[r || ''] || r || 'Profesional'
+    const map: Record<string, string> = locale === 'en'
+      ? { jefe: 'Director', admin: 'Administrator', especialista: 'Specialist', terapeuta: 'Therapist', secretaria: 'Front desk' }
+      : { jefe: 'Director(a)', admin: 'Administrador(a)', especialista: 'Especialista', terapeuta: 'Terapeuta', secretaria: 'Secretaría' }
+    return map[r || ''] || r || (locale === 'en' ? 'Professional' : 'Profesional')
   }
 
-  const fechaHoyFmt = new Date().toLocaleDateString('es-PE', {
+  const fechaHoyFmt = new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
@@ -645,7 +641,7 @@ export function RellenarFicha({
         responses: answers, notes: notes.trim() || null,
       }).select('id').single()
       if (error) throw error
-      toast.success('Ficha guardada')
+      toast.success(locale === 'en' ? 'Form saved' : 'Ficha guardada')
       setAnswers({}); setNotes(''); setSelected(null)
       if (inserted?.id) onSaved?.(inserted.id)
       loadData()
@@ -695,14 +691,14 @@ export function RellenarFicha({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className={`font-bold text-base flex items-center gap-2 ${cc.txt1}`}>
-            <FileText size={16} className="text-sky-500" /> Fichas Clínicas
+            <FileText size={16} className="text-sky-500" /> {locale === 'en' ? 'Clinical Forms' : 'Fichas Clínicas'}
           </h3>
-          <p className={`text-xs mt-0.5 ${cc.txt3}`}>{selected ? selected.name : `Fichas de ${childName}`}</p>
+          <p className={`text-xs mt-0.5 ${cc.txt3}`}>{selected ? selected.name : (locale === 'en' ? `Forms of ${childName}` : `Fichas de ${childName}`)}</p>
         </div>
         {!selected && (
           <button onClick={() => setShowHistory(!showHistory)}
             className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all ${isDark ? 'border-[#30363d] text-slate-400 hover:bg-[#21262d]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-            {showHistory ? 'Nueva ficha' : `Historial (${responses.length})`}
+            {showHistory ? (locale === 'en' ? 'New form' : 'Nueva ficha') : (locale === 'en' ? `History (${responses.length})` : `Historial (${responses.length})`)}
           </button>
         )}
         {selected && (
@@ -746,7 +742,7 @@ export function RellenarFicha({
                     <p className={`font-bold text-sm ${cc.txt1}`}>{t.name}</p>
                     {t.description && <p className={`text-xs mt-0.5 ${cc.txt3} line-clamp-2`}>{t.description}</p>}
                     <p className={`text-[10px] mt-1 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                      {t.fields?.length || 0} campos{t.sections?.length ? ` · ${t.sections.length} secciones` : ''}
+                      {t.fields?.length || 0} {locale === 'en' ? 'fields' : 'campos'}{t.sections?.length ? ` · ${t.sections.length} ${locale === 'en' ? 'sections' : 'secciones'}` : ''}
                     </p>
                   </div>
                 </div>
@@ -788,7 +784,7 @@ export function RellenarFicha({
               </div>
             </div>
             <p className={`text-[10px] mt-3 italic ${cc.txt3}`}>
-              Estos campos se registran automáticamente al guardar la ficha.
+              {locale === 'en' ? 'These fields are recorded automatically when saving the form.' : 'Estos campos se registran automáticamente al guardar la ficha.'}
             </p>
           </div>
 
@@ -813,7 +809,7 @@ export function RellenarFicha({
           <button onClick={handleSave} disabled={saving}
             className="w-full py-3 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {saving ? 'Guardando...' : 'Guardar ficha'}
+            {saving ? (locale === 'en' ? 'Saving...' : 'Guardando...') : (locale === 'en' ? 'Save form' : 'Guardar ficha')}
           </button>
         </div>
       )}
@@ -823,7 +819,7 @@ export function RellenarFicha({
 
 // ── Response Card ─────────────────────────────────────────────────────────────
 function ResponseCard({ response, isDark }: { response: TemplateResponse; isDark: boolean }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [open, setOpen]           = useState(false)
   const [downloading, setDownloading] = useState(false)
   const template = (response as any).clinical_templates
@@ -838,7 +834,7 @@ function ResponseCard({ response, isDark }: { response: TemplateResponse; isDark
     setDownloading(true)
     try {
       const res = await fetch('/api/reporte-ficha-clinica', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ responseId: response.id }) })
-      if (!res.ok) throw new Error('Error generando documento')
+      if (!res.ok) throw new Error(locale === 'en' ? 'Error generating document' : 'Error generando documento')
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a'); a.href = url; a.download = `Ficha_${template?.name || 'Clinica'}.docx`; a.click()

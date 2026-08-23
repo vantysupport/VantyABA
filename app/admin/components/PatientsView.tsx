@@ -920,6 +920,7 @@ function FichasTab({ childId, childName, currentRole }: {
   childId: string; childName: string; currentRole: string
 }) {
   const { isDark } = useTheme()
+  const { locale } = useI18n()
   const [subTab, setSubTab] = useState<'plantillas' | 'rellenar'>('rellenar')
   const canManage = ['jefe', 'admin', 'especialista'].includes(currentRole)
 
@@ -937,12 +938,12 @@ function FichasTab({ childId, childName, currentRole }: {
           {canManage && (
             <button onClick={() => setSubTab('plantillas')}
               className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'plantillas' ? cc.active : cc.inactive}`}>
-              <Settings size={15} /> Gestionar fichas
+              <Settings size={15} /> {locale === 'en' ? 'Manage forms' : 'Gestionar fichas'}
             </button>
           )}
           <button onClick={() => setSubTab('rellenar')}
             className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'rellenar' ? cc.active : cc.inactive}`}>
-            <ClipboardList size={15} /> Fichas del paciente
+            <ClipboardList size={15} /> {locale === 'en' ? 'Patient forms' : 'Fichas del paciente'}
           </button>
         </div>
       </div>
