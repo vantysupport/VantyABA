@@ -131,15 +131,17 @@ export default function ARIAAgentChat({
     try {
       window.speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(text)
-      u.lang = 'es-ES'; u.rate = 1; u.pitch = 1.05
-      const es = window.speechSynthesis.getVoices().find(v => v.lang?.toLowerCase().startsWith('es'))
-      if (es) u.voice = es
+      const isEn = String(locale || '').toLowerCase().startsWith('en')
+      u.lang = isEn ? 'en-US' : 'es-ES'; u.rate = 1; u.pitch = 1.05
+      const pref = isEn ? 'en' : 'es'
+      const match = window.speechSynthesis.getVoices().find(v => v.lang?.toLowerCase().startsWith(pref))
+      if (match) u.voice = match
       u.onstart = () => setSpeaking(true)
       u.onend   = () => setSpeaking(false)
       u.onerror = () => setSpeaking(false)
       window.speechSynthesis.speak(u)
     } catch { setSpeaking(false) }
-  }, [])
+  }, [locale])
 
   // Voz neuronal de ARIA — generada al momento, sin guardar nada.
   // Se divide el texto en frases y se reproduce la primera apenas está lista,
@@ -157,7 +159,7 @@ export default function ARIAAgentChat({
       const res = await fetch('/api/elevenlabs-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: seg }),
+        body: JSON.stringify({ text: seg, locale }),
       })
       if (!res.ok) throw new Error('tts')
       const blob = await res.blob()
@@ -191,7 +193,7 @@ export default function ARIAAgentChat({
     } finally {
       if (myToken === speakTokenRef.current) setSpeaking(false)
     }
-  }, [stopSpeaking, speakBrowser])
+  }, [stopSpeaking, speakBrowser, locale])
 
   const toggleVoice = useCallback(() => {
     setVoiceEnabled(v => { if (v) stopSpeaking(); return !v })

@@ -9,10 +9,14 @@ import { synthesizeEdgeTTS } from '@/lib/edge-tts'
 export const runtime = 'nodejs'
 
 const DEFAULT_VOICE = process.env.EDGE_TTS_VOICE || 'es-PE-CamilaNeural'
+const EN_VOICE = process.env.EDGE_TTS_VOICE_EN || 'en-US-AriaNeural'
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, language, voice } = await req.json()
+    const { text, language, voice, locale } = await req.json()
+    // La voz define el idioma con el que se leen números y símbolos.
+    // En inglés usamos una voz en inglés; por defecto, la voz en español.
+    const isEn = String(locale || language || '').toLowerCase().startsWith('en')
 
     if (!text?.trim()) {
       return NextResponse.json({ error: 'Texto requerido' }, { status: 400 })
@@ -39,12 +43,12 @@ export async function POST(req: NextRequest) {
     const lang = typeof language === 'string' && language.includes('-') ? language : undefined
 
     const audio = await synthesizeEdgeTTS(clean, {
-      voice: voice || DEFAULT_VOICE,
-      lang,
+      voice: voice || (isEn ? EN_VOICE : DEFAULT_VOICE),
+      lang: lang || (isEn ? 'en-US' : undefined),
     })
 
     if (!audio || audio.length === 0) {
-      await logServerError('Edge TTS audio vacío', `voz: ${voice || DEFAULT_VOICE}`, 'api:tts')
+      await logServerError('Edge TTS audio vacío', `voz: ${voice || (isEn ? EN_VOICE : DEFAULT_VOICE)}`, 'api:tts')
       return NextResponse.json({ error: 'No se pudo generar el audio. Intenta de nuevo.' }, { status: 502 })
     }
 

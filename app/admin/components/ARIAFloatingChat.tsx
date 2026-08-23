@@ -221,15 +221,17 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
     try {
       window.speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(text)
-      u.lang = 'es-ES'; u.rate = 1; u.pitch = 1.05
-      const es = window.speechSynthesis.getVoices().find(v => v.lang?.toLowerCase().startsWith('es'))
-      if (es) u.voice = es
+      const isEn = String(locale || '').toLowerCase().startsWith('en')
+      u.lang = isEn ? 'en-US' : 'es-ES'; u.rate = 1; u.pitch = 1.05
+      const pref = isEn ? 'en' : 'es'
+      const match = window.speechSynthesis.getVoices().find(v => v.lang?.toLowerCase().startsWith(pref))
+      if (match) u.voice = match
       u.onstart = () => setSpeaking(true)
       u.onend   = () => setSpeaking(false)
       u.onerror = () => setSpeaking(false)
       window.speechSynthesis.speak(u)
     } catch { setSpeaking(false) }
-  }, [])
+  }, [locale])
 
   // Voz neuronal de ARIA — generada al momento, sin guardar nada
   const speak = useCallback(async (text: string) => {
@@ -242,7 +244,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
       const res = await fetch('/api/elevenlabs-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: limpio }),
+        body: JSON.stringify({ text: limpio, locale }),
       })
       if (!res.ok) throw new Error('tts')
       const blob = await res.blob()
@@ -256,7 +258,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
     } catch {
       if (myToken === speakTokenRef.current) speakBrowser(limpio)
     }
-  }, [stopSpeaking, speakBrowser])
+  }, [stopSpeaking, speakBrowser, locale])
 
   const toggleVoice = useCallback(() => {
     setVoiceEnabled(v => { if (v) stopSpeaking(); return !v })
