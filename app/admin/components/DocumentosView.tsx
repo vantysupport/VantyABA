@@ -55,14 +55,14 @@ interface FolderState {
 const EMOJIS_FOLDER = ['📁','📂','🗂️','📋','📌','🗒️','🔖','📎','🏷️','💼','🗃️','📦']
 
 const CATEGORIES = [
-  { id: 'all',           label: 'Todos',           emoji: '📁' },
-  { id: 'tarea',         label: 'Tarea',            emoji: '📝' },
-  { id: 'informe',       label: 'Informe',          emoji: '📄' },
-  { id: 'evaluacion',    label: 'Evaluación',       emoji: '🔬' },
-  { id: 'consentimiento',label: 'Consentimiento',   emoji: '✍️' },
-  { id: 'foto',          label: 'Foto / imagen',    emoji: '🖼️' },
-  { id: 'general',       label: 'General',          emoji: '📂' },
-  { id: 'otro',          label: 'Otro',             emoji: '📎' },
+  { id: 'all',           label: 'Todos',           labelEn: 'All',            emoji: '📁' },
+  { id: 'tarea',         label: 'Tarea',            labelEn: 'Task',           emoji: '📝' },
+  { id: 'informe',       label: 'Informe',          labelEn: 'Report',         emoji: '📄' },
+  { id: 'evaluacion',    label: 'Evaluación',       labelEn: 'Evaluation',     emoji: '🔬' },
+  { id: 'consentimiento',label: 'Consentimiento',   labelEn: 'Consent',        emoji: '✍️' },
+  { id: 'foto',          label: 'Foto / imagen',    labelEn: 'Photo / image',  emoji: '🖼️' },
+  { id: 'general',       label: 'General',          labelEn: 'General',        emoji: '📂' },
+  { id: 'otro',          label: 'Otro',             labelEn: 'Other',          emoji: '📎' },
 ]
 
 const FILE_ICONS: Record<string, string> = {
@@ -84,8 +84,8 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })
+function formatDate(iso: string, locale?: string): string {
+  return new Date(iso).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function useFolderState(childId: string) {
@@ -151,7 +151,7 @@ interface DocumentosViewProps {
 }
 
 export default function DocumentosView({ childId, childName, currentRole, isDark = false }: DocumentosViewProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const toast = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -209,7 +209,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
       if (error) throw error
       setDocs(data || [])
     } catch (e: any) {
-      toast.error('Error cargando documentos: ' + e.message)
+      toast.error((locale === 'en' ? 'Error loading documents: ' : 'Error cargando documentos: ') + e.message)
     } finally {
       setLoading(false)
     }
@@ -292,8 +292,10 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
       }
 
       if (uploaded > 0 && fallidos.length === 0) {
-        const destino = uploadFolder ? (fs.carpetas.find(c => c.id === uploadFolder)?.name || 'la carpeta') : 'Inicio'
-        toast.success(`${uploaded} documento${uploaded > 1 ? 's subidos' : ' subido'} en "${destino}"`)
+        const destino = uploadFolder ? (fs.carpetas.find(c => c.id === uploadFolder)?.name || (locale === 'en' ? 'the folder' : 'la carpeta')) : (locale === 'en' ? 'Home' : 'Inicio')
+        toast.success(locale === 'en'
+          ? `${uploaded} document${uploaded > 1 ? 's' : ''} uploaded to "${destino}"`
+          : `${uploaded} documento${uploaded > 1 ? 's subidos' : ' subido'} en "${destino}"`)
       } else if (uploaded > 0 && fallidos.length > 0) {
         toast.warning(`Se subieron ${uploaded}, pero fallaron ${fallidos.length}: ${fallidos.join(', ')}`)
       } else {
@@ -405,10 +407,10 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
         <div>
           <h3 className={`font-bold text-base ${txt1}`}>
             <FolderOpen size={16} className="inline mr-2 text-sky-500" />
-            Documentos
+            {locale === 'en' ? 'Documents' : 'Documentos'}
           </h3>
           <p className={`text-xs mt-0.5 ${txt3}`}>
-            {isPadre ? 'Documentos compartidos de tu hijo/a' : `Archivos y documentos de ${childName}`}
+            {isPadre ? (locale === 'en' ? "Documents shared for your child" : 'Documentos compartidos de tu hijo/a') : (locale === 'en' ? `Files and documents of ${childName}` : `Archivos y documentos de ${childName}`)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -416,13 +418,13 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             <button onClick={() => setShowNewFolder(true)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border
                 ${isDark ? 'bg-[#21262d] border-[#30363d] text-slate-300 hover:bg-[#30363d]' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'}`}>
-              <FolderPlus size={14} /> Nueva carpeta
+              <FolderPlus size={14} /> {locale === 'en' ? 'New folder' : 'Nueva carpeta'}
             </button>
           )}
           {canUpload && (
             <button onClick={() => { setUploadFolder(currentFolder); setShowUpload(!showUpload) }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white transition-all shadow-sm">
-              <Plus size={14} /> Subir documento
+              <Plus size={14} /> {locale === 'en' ? 'Upload document' : 'Subir documento'}
             </button>
           )}
         </div>
@@ -435,7 +437,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             ${currentFolder === null
               ? 'bg-sky-600 text-white'
               : isDark ? 'text-slate-400 hover:bg-[#21262d]' : 'text-slate-500 hover:bg-slate-100'}`}>
-          <Home size={11} /> Inicio
+          <Home size={11} /> {locale === 'en' ? 'Home' : 'Inicio'}
         </button>
         {breadcrumb.map((crumb, i) => (
           <span key={crumb.id} className="flex items-center gap-1">
@@ -454,7 +456,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
       {/* New Folder modal */}
       {(showNewFolder || editingFolder) && (
         <div className={`${card} border rounded-2xl p-4 space-y-3`}>
-          <p className={`text-sm font-bold ${txt1}`}>{editingFolder ? 'Editar carpeta' : 'Nueva carpeta'}</p>
+          <p className={`text-sm font-bold ${txt1}`}>{editingFolder ? (locale === 'en' ? 'Edit folder' : 'Editar carpeta') : (locale === 'en' ? 'New folder' : 'Nueva carpeta')}</p>
           <div className="flex gap-2">
             {/* Emoji picker */}
             <div className="relative">
@@ -491,7 +493,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             <button onClick={editingFolder ? handleEditarCarpeta : handleCrearCarpeta}
               disabled={!newFolderName.trim()}
               className="px-4 py-1.5 rounded-lg text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white disabled:opacity-40">
-              {editingFolder ? 'Guardar' : 'Crear'}
+              {editingFolder ? (locale === 'en' ? 'Save' : 'Guardar') : (locale === 'en' ? 'Create' : 'Crear')}
             </button>
           </div>
         </div>
@@ -507,12 +509,12 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
             <p className={`text-xs truncate ${txt3}`}>{movingDoc.file_name}</p>
             <div className="space-y-1 max-h-60 overflow-y-auto">
               {/* Root option */}
-              <button onClick={() => { moverDoc(movingDoc.id, null); setMovingDoc(null); toast.success('Movido a Inicio') }}
+              <button onClick={() => { moverDoc(movingDoc.id, null); setMovingDoc(null); toast.success(locale === 'en' ? 'Moved to Home' : 'Movido a Inicio') }}
                 className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-left transition-colors
                   ${fs.docFolder[movingDoc.id] === null
                     ? 'bg-sky-600 text-white'
                     : isDark ? 'hover:bg-[#21262d] text-slate-300' : 'hover:bg-slate-100 text-slate-700'}`}>
-                <Home size={14} /> Inicio (raíz)
+                <Home size={14} /> {locale === 'en' ? 'Home (root)' : 'Inicio (raíz)'}
               </button>
               {fs.carpetas.map(c => (
                 <button key={c.id} onClick={() => { moverDoc(movingDoc.id, c.id); setMovingDoc(null); toast.success(`Movido a ${c.name}`) }}
@@ -566,7 +568,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
                 : isDark ? 'border-[#30363d] hover:border-sky-700 hover:bg-sky-900/10' : 'border-slate-200 hover:border-sky-300 hover:bg-sky-50'}`}>
             <Upload size={28} className={`mx-auto mb-2 ${isDragging ? 'text-sky-500' : txt3}`} />
             <p className={`text-sm font-bold ${txt1}`}>
-              {isDragging ? 'Suelta los archivos aquí' : 'Arrastra archivos o haz clic para seleccionar'}
+              {isDragging ? (locale === 'en' ? 'Drop the files here' : 'Suelta los archivos aquí') : (locale === 'en' ? 'Drag files or click to select' : 'Arrastra archivos o haz clic para seleccionar')}
             </p>
             <p className={`text-xs mt-1 ${txt3}`}>{t("admin.formatosArchivo")}</p>
           </div>
@@ -595,7 +597,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all
                     ${newCat === c.id ? 'bg-sky-600 text-white'
                       : isDark ? 'bg-[#21262d] text-slate-400 hover:bg-[#30363d]' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                  {c.emoji} {c.label}
+                  {c.emoji} {locale === 'en' ? c.labelEn : c.label}
                 </button>
               ))}
             </div>
@@ -623,7 +625,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
           <button onClick={handleUpload} disabled={uploading || selectedFiles.length === 0}
             className="w-full py-3 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all">
             {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-            {uploading ? 'Subiendo...' : selectedFiles.length > 0 ? `Subir ${selectedFiles.length} archivo${selectedFiles.length > 1 ? 's' : ''}` : 'Subir documento'}
+            {uploading ? (locale === 'en' ? 'Uploading...' : 'Subiendo...') : selectedFiles.length > 0 ? (locale === 'en' ? `Upload ${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''}` : `Subir ${selectedFiles.length} archivo${selectedFiles.length > 1 ? 's' : ''}`) : (locale === 'en' ? 'Upload document' : 'Subir documento')}
           </button>
         </div>
       )}
@@ -639,7 +641,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
           </div>
           <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
             className={`px-3 py-2 rounded-xl text-sm border-2 outline-none ${isDark ? 'bg-[#0d1117] border-[#30363d] text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
-            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.emoji} {locale === 'en' ? c.labelEn : c.label}</option>)}
           </select>
         </div>
       )}
@@ -651,10 +653,10 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
         <div className={`${card} border rounded-2xl p-10 text-center`}>
           <FolderOpen size={36} className={`mx-auto mb-3 ${txt3}`} />
           <p className={`font-bold text-sm ${txt3}`}>
-            {currentFolder ? 'Carpeta vacía' : 'Sin documentos aún'}
+            {currentFolder ? (locale === 'en' ? 'Empty folder' : 'Carpeta vacía') : (locale === 'en' ? 'No documents yet' : 'Sin documentos aún')}
           </p>
           <p className={`text-xs mt-1 ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>
-            {canUpload ? 'Sube documentos o crea subcarpetas para organizar' : ''}
+            {canUpload ? (locale === 'en' ? 'Upload documents or create subfolders to organize' : 'Sube documentos o crea subcarpetas para organizar') : ''}
           </p>
         </div>
       ) : (
@@ -728,7 +730,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
                 <div className="flex items-center gap-2 flex-wrap mt-1">
                   <span className="text-[9px] font-bold px-2 py-0.5 rounded-full capitalize"
                     style={{ background: 'rgba(2,132,199,0.1)', color: '#0369a1' }}>
-                    {doc.category}
+                    {(() => { const _c = CATEGORIES.find(c => c.id === doc.category); return _c ? (locale === 'en' ? _c.labelEn : _c.label) : doc.category })()}
                   </span>
                   {!doc.visible_to_parent && !isPadre && (
                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
@@ -739,7 +741,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
                 </div>
                 {doc.description && <p className={`text-xs mt-0.5 truncate ${txt3}`}>{doc.description}</p>}
                 <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                  {doc.uploader_name} · {formatDate(doc.created_at)} · {formatSize(doc.file_size)}
+                  {doc.uploader_name} · {formatDate(doc.created_at, locale)} · {formatSize(doc.file_size)}
                 </p>
               </div>
               <div className="flex items-center gap-0.5 flex-shrink-0 w-full sm:w-auto justify-end opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
@@ -760,7 +762,7 @@ export default function DocumentosView({ childId, childName, currentRole, isDark
                   <button onClick={() => toggleVisibility(doc)}
                     className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}
                       ${doc.visible_to_parent ? 'text-emerald-500' : txt3}`}
-                    title={doc.visible_to_parent ? 'Ocultar a familia' : 'Mostrar a familia'}>
+                    title={doc.visible_to_parent ? (locale === 'en' ? 'Hide from family' : 'Ocultar a familia') : (locale === 'en' ? 'Show to family' : 'Mostrar a familia')}>
                     {doc.visible_to_parent ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
                 )}
