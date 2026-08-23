@@ -65,10 +65,14 @@ export default function ARIAAgentChat({
   const welcomeMsg = useCallback((): Message => ({
     role: 'assistant',
     content: childId
-      ? `¡Hola! 👋 Soy **ARIA**. Estoy revisando el expediente de **${childName || 'tu paciente'}** y tengo acceso a todo su historial, programas ABA, objetivos terapéuticos y evaluaciones previas.\n\n¿En qué te puedo ayudar hoy?`
-      : `¡Hola! 👋 Soy **ARIA**, tu asistente clínica.\n\nEstoy entrenada en ABA, neuropsicología y educación especial.\n\n¿En qué puedo ayudarte hoy? 🧠`,
+      ? (locale === 'en'
+          ? `Hi! 👋 I'm **ARIA**. I'm reviewing **${childName || 'your patient'}**'s record and I have access to their full history, ABA programs, therapeutic goals and previous evaluations.\n\nHow can I help you today?`
+          : `¡Hola! 👋 Soy **ARIA**. Estoy revisando el expediente de **${childName || 'tu paciente'}** y tengo acceso a todo su historial, programas ABA, objetivos terapéuticos y evaluaciones previas.\n\n¿En qué te puedo ayudar hoy?`)
+      : (locale === 'en'
+          ? `Hi! 👋 I'm **ARIA**, your clinical assistant.\n\nI'm trained in ABA, neuropsychology and special education.\n\nHow can I help you today? 🧠`
+          : `¡Hola! 👋 Soy **ARIA**, tu asistente clínica.\n\nEstoy entrenada en ABA, neuropsicología y educación especial.\n\n¿En qué puedo ayudarte hoy? 🧠`),
     timestamp: new Date().toISOString(),
-  }), [childId, childName])
+  }), [childId, childName, locale])
 
   // Estado inicial — restaura desde localStorage si existe
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -90,11 +94,19 @@ export default function ARIAAgentChat({
       return localStorage.getItem(`aria_agent_conv_${userId}${childId ? '_' + childId : ''}`)
     } catch { return null }
   })
-  const [sugerencias] = useState([
-    childId ? `¿Cómo va el progreso general de ${childName || 'este paciente'}?` : '¿Cuáles son los mejores reforzadores para TEA no verbal?',
-    '¿Cómo aplicar extinción de escape en sesión?',
-    childId ? `¿Qué programas recomiendas para ${childName || 'este paciente'}?` : '¿Cómo manejar un dilema ético en terapia?',
-  ])
+  const [sugerencias] = useState(
+    locale === 'en'
+      ? [
+          childId ? `How is ${childName || 'this patient'}'s overall progress?` : 'What are the best reinforcers for non-verbal ASD?',
+          'How do I apply escape extinction in a session?',
+          childId ? `What programs do you recommend for ${childName || 'this patient'}?` : 'How do I handle an ethical dilemma in therapy?',
+        ]
+      : [
+          childId ? `¿Cómo va el progreso general de ${childName || 'este paciente'}?` : '¿Cuáles son los mejores reforzadores para TEA no verbal?',
+          '¿Cómo aplicar extinción de escape en sesión?',
+          childId ? `¿Qué programas recomiendas para ${childName || 'este paciente'}?` : '¿Cómo manejar un dilema ético en terapia?',
+        ]
+  )
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const prevKeyRef = useRef<string>(STORAGE_KEY)
@@ -372,7 +384,7 @@ export default function ARIAAgentChat({
           style={{ background: 'var(--background)', borderTop: '1px solid var(--card-border)' }}
         >
           <p className="text-[10px] font-bold mb-2 mt-3" style={{ color: 'var(--text-muted)' }}>
-            Preguntas sugeridas
+            {locale === 'en' ? 'Suggested questions' : 'Preguntas sugeridas'}
           </p>
           <div className="flex flex-wrap gap-2">
             {sugerencias.map((s, i) => (
@@ -402,7 +414,11 @@ export default function ARIAAgentChat({
         }}
       >
         <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-          {messages.length > 1 ? `${messages.length - 1} mensaje${messages.length > 2 ? 's' : ''} guardado${messages.length > 2 ? 's' : ''}` : 'Conversación nueva'}
+          {messages.length > 1
+            ? (locale === 'en'
+                ? `${messages.length - 1} saved message${messages.length > 2 ? 's' : ''}`
+                : `${messages.length - 1} mensaje${messages.length > 2 ? 's' : ''} guardado${messages.length > 2 ? 's' : ''}`)
+            : (locale === 'en' ? 'New conversation' : 'Conversación nueva')}
         </span>
         <div className="flex items-center gap-1.5">
           <button
@@ -413,10 +429,10 @@ export default function ARIAAgentChat({
               color: voiceEnabled ? '#16a34a' : 'var(--text-muted)',
               border: `1px solid ${voiceEnabled ? 'rgba(22,163,74,0.35)' : 'var(--card-border)'}`,
             }}
-            title={voiceEnabled ? 'Desactivar voz de ARIA' : 'Activar voz de ARIA'}
+            title={voiceEnabled ? (locale === 'en' ? "Disable ARIA's voice" : 'Desactivar voz de ARIA') : (locale === 'en' ? "Enable ARIA's voice" : 'Activar voz de ARIA')}
           >
             {voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
-            {speaking ? 'Hablando…' : voiceEnabled ? 'Voz ON' : 'Voz OFF'}
+            {speaking ? (locale === 'en' ? 'Speaking…' : 'Hablando…') : voiceEnabled ? (locale === 'en' ? 'Voice ON' : 'Voz ON') : (locale === 'en' ? 'Voice OFF' : 'Voz OFF')}
           </button>
           <button
             onClick={() => { if (window.confirm(t('auto.aRIAAgentChat.borrarTodoElHistorialDe'))) clearHistory() }}
@@ -424,7 +440,7 @@ export default function ARIAAgentChat({
             title={t('auto.aRIAAgentChat.borrarHistorialDelChat')}
           >
             <Trash2 size={12} />
-            Borrar chat
+            {locale === 'en' ? 'Clear chat' : 'Borrar chat'}
           </button>
         </div>
       </div>
@@ -470,7 +486,9 @@ function MessageBubble({ message }: { message: Message; key?: any }) {
   const isUser = message.role === 'user'
 
   const formatContent = (text: string) => {
-    return text.split('\n').map((line, i, arr) => {
+    // Red de seguridad: convertir <br> literales a saltos de línea reales (el modelo a veces los emite)
+    const normalized = text.replace(/<br\s*\/?>/gi, '\n')
+    return normalized.split('\n').map((line, i, arr) => {
       const parts = line.split(/\*\*(.*?)\*\*/g)
       return (
         <span key={i}>

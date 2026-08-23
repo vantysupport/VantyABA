@@ -145,7 +145,7 @@ export default function AdminDashboard() {
   const router = useRouter()
   const toast = useToast()
   const { isDark } = useTheme()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   // ── Features & Roles from control API ──────────────────────────────────────
   const [features, setFeatures] = useState<FeaturesConfig>(DEFAULT_FEATURES)
@@ -716,15 +716,15 @@ export default function AdminDashboard() {
                 </p>
                 <div className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"/>
-                  <p className="text-sky-200 text-[10px] font-medium">{(currentView === 'ninos' && activeChild) ? `Caso: ${activeChild.name}` : 'Asistente Clínico · Activa'}</p>
+                  <p className="text-sky-200 text-[10px] font-medium">{(currentView === 'ninos' && activeChild) ? `${locale === 'en' ? 'Case' : 'Caso'}: ${activeChild.name}` : (locale === 'en' ? 'Clinical Assistant · Active' : 'Asistente Clínico · Activa')}</p>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={() => setAriaMinimized(m => !m)} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaMinimized ? 'Restaurar' : 'Minimizar'}>
+              <button onClick={() => setAriaMinimized(m => !m)} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaMinimized ? (locale === 'en' ? 'Restore' : 'Restaurar') : (locale === 'en' ? 'Minimize' : 'Minimizar')}>
                 <Minus size={15} className="text-white"/>
               </button>
-              <button onClick={() => { setAriaExpanded(x => !x); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaExpanded ? 'Reducir' : 'Ampliar'}>
+              <button onClick={() => { setAriaExpanded(x => !x); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaExpanded ? (locale === 'en' ? 'Shrink' : 'Reducir') : (locale === 'en' ? 'Expand' : 'Ampliar')}>
                 {ariaExpanded ? <Minimize2 size={15} className="text-white"/> : <Maximize2 size={15} className="text-white"/>}
               </button>
               <button onClick={() => { setAriaOpen(false); setAriaExpanded(false); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={t("common.cerrar")}>
