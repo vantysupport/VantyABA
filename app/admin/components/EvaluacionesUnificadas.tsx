@@ -848,10 +848,18 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
           endpoint = '/api/generate-home-environment-report'
           payload = { ...responses, childName, childAge, diagnosis, childId: selectedChild }
         } else if (form.formKey === 'aba') {
-          if (responses.antecedente && responses.conducta && responses.consecuencia) {
-            endpoint = '/api/generate-session-report'
-            payload = { ...responses, childName, childAge, childId: selectedChild }
+          // El análisis de sesión ABA necesita el registro ABC. Sin él, el endpoint
+          // genérico devuelve claves que NO mapean a los campos del formulario ABA
+          // (avances_observados, areas_dificultad, patron_aprendizaje…), por eso "no genera nada".
+          if (!responses.antecedente && !responses.conducta && !responses.consecuencia) {
+            toast.error(locale === 'en'
+              ? 'To generate the ABA session analysis, first fill the ABC record (Antecedent, Behavior, Consequence) in the "ABC Record" section.'
+              : 'Para generar el análisis de la sesión ABA, primero completa el registro ABC (Antecedente, Conducta, Consecuencia) en la sección "Registro ABC".')
+            setIsAnalyzing(false)
+            return
           }
+          endpoint = '/api/generate-session-report'
+          payload = { ...responses, childName, childAge, childId: selectedChild }
         } else if (['brief2', 'ados2', 'vineland3', 'wiscv', 'basc3', 'abllsr'].includes(form.formKey)) {
           endpoint = '/api/analyze-professional-evaluation'
           payload = { evaluationType: form.formKey.toLowerCase(), childName, childAge, childId: selectedChild, responses }
