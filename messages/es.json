@@ -382,7 +382,14 @@
   "rol_user": "Usuario",
   "bienestarPadre": "Bienestar del padre/madre",
   "sinChequeosBienestar": "Aún no hay chequeos de bienestar registrados. El padre/madre los recibe mensualmente desde su app.",
-  "ocultarHistorial": "Ocultar historial"
+  "ocultarHistorial": "Ocultar historial",
+  "resumenIA": "Resumen clínico IA",
+  "resumenGenerar": "Generar con IA",
+  "resumenRegenerar": "Regenerar",
+  "resumenGenerando": "Generando...",
+  "resumenGenerado": "Resumen generado",
+  "resumenGuardado": "Resumen guardado",
+  "resumenVacio": "Aún no hay resumen. Genéralo con IA a partir de todo el expediente, o escríbelo manualmente."
  },
  "agenda": {
   "titulo": "Agenda y Citas",

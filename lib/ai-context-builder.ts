@@ -14,6 +14,19 @@ function getAdmin() {
   )
 }
 
+// ── Resumen clínico persistente del paciente (children.ai_summary) ────────────
+// Se genera/actualiza en /api/patient-ai-summary. Usarlo como base compacta
+// evita reenviar toda la historia cruda en cada consulta (ahorro de tokens).
+async function getPatientSummary(childId: string): Promise<string> {
+  try {
+    const db = getAdmin()
+    const { data } = await db.from('children').select('ai_summary').eq('id', childId).maybeSingle()
+    return (data as { ai_summary?: string } | null)?.ai_summary?.trim() || ''
+  } catch {
+    return ''  // columna no migrada aún o error → fail open (sin resumen)
+  }
+}
+
 // ── Búsqueda en Cerebro IA ────────────────────────────────────────────────────
 // Estrategia: embeddings reales (HF/Gemini) → vector search → keyword fallback
 // FIX: antes llamaba al RPC con `query_text` (firma incorrecta) → caía al
@@ -130,7 +143,7 @@ export async function buildAIContext(
   searchQuery?:       string
 ): Promise<AIContextResult> {
 
-  const [childHistory, knowledgeCtx, centroCtx] = await Promise.all([
+  const [childHistory, knowledgeCtx, centroCtx, aiSummary] = await Promise.all([
     childId
       ? getChildHistory(childId, childNameFallback, childAgeFallback)
       : Promise.resolve({
@@ -141,9 +154,20 @@ export async function buildAIContext(
         }),
     searchQuery ? searchCerebroIA(searchQuery) : Promise.resolve(''),
     getCentroContext(),
+    childId ? getPatientSummary(childId) : Promise.resolve(''),
   ])
 
-  const fullContext = [centroCtx, knowledgeCtx, childHistory.historialTexto]
+  // Si el paciente ya tiene un RESUMEN CLÍNICO persistente, lo usamos como base
+  // compacta y RECORTAMOS la historia cruda para no gastar tantos tokens.
+  // Sin resumen, se envía la historia completa como antes.
+  const resumenBloque = aiSummary
+    ? `RESUMEN CLÍNICO DEL PACIENTE (base — ya sintetiza el expediente, priorízalo):\n${aiSummary}\n`
+    : ''
+  const historialParaContexto = aiSummary
+    ? (childHistory.historialTexto || '').slice(0, 3500)   // con resumen: solo lo reciente/complementario
+    : childHistory.historialTexto
+
+  const fullContext = [centroCtx, resumenBloque, knowledgeCtx, historialParaContexto]
     .filter(Boolean).join('\n')
 
   return {

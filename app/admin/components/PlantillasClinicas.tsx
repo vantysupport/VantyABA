@@ -642,6 +642,15 @@ export function RellenarFicha({
       }).select('id').single()
       if (error) throw error
       toast.success(locale === 'en' ? 'Form saved' : 'Ficha guardada')
+      // Actualizar el resumen clínico persistente del paciente de forma incremental.
+      try {
+        const nuevo = `${locale === 'en' ? 'New clinical form' : 'Nueva ficha clínica'} (${new Date().toLocaleDateString('es-PE')}): ${selected.name}\n${JSON.stringify(answers).slice(0, 1500)}${notes.trim() ? `\nNotas: ${notes.trim()}` : ''}`
+        fetch('/api/patient-ai-summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+          body: JSON.stringify({ childId, action: 'update', newContent: nuevo, locale }),
+        }).catch(() => {})
+      } catch { /* no crítico */ }
       setAnswers({}); setNotes(''); setSelected(null)
       if (inserted?.id) onSaved?.(inserted.id)
       loadData()

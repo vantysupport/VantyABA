@@ -982,6 +982,28 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
       setShowSuccessScreen(true)
       toast.success(t('auto.evaluacionesUnificadas.formularioGuardadoCorrectamente'))
 
+      // Actualizar el RESUMEN CLÍNICO persistente del paciente de forma incremental
+      // (barato: la IA solo lee el resumen actual + este registro nuevo, no todo el expediente).
+      try {
+        const a: any = aiAnalysis || {}
+        const nuevo = [
+          `Nuevo registro (${new Date().toLocaleDateString('es-PE')}): ${form.title}`,
+          a.avances_observados && `Avances: ${a.avances_observados}`,
+          a.areas_dificultad && `Áreas de dificultad: ${a.areas_dificultad}`,
+          a.patron_aprendizaje && `Patrón de aprendizaje: ${a.patron_aprendizaje}`,
+          a.analisis_clinico && `Análisis: ${a.analisis_clinico}`,
+          a.recomendaciones_equipo && `Recomendaciones: ${Array.isArray(a.recomendaciones_equipo) ? a.recomendaciones_equipo.join('; ') : a.recomendaciones_equipo}`,
+          (!a.avances_observados && !a.analisis_clinico) && `Datos: ${JSON.stringify(responses).slice(0, 1500)}`,
+        ].filter(Boolean).join('\n')
+        if (nuevo && selectedChild) {
+          fetch('/api/patient-ai-summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+            body: JSON.stringify({ childId: selectedChild, action: 'update', newContent: nuevo, locale }),
+          }).catch(() => {})   // fire-and-forget: no bloquea el guardado
+        }
+      } catch { /* no crítico */ }
+
       // Queue AI-generated parent message for admin approval (if it exists)
       if (aiAnalysis?.mensaje_padres) {
         const { data: child } = await supabase.from('children').select('parent_id').eq('id', selectedChild).single()

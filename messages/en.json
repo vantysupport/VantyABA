@@ -502,7 +502,14 @@
     "rol_user": "User",
     "bienestarPadre": "Parent wellbeing",
     "sinChequeosBienestar": "No wellbeing check-ins recorded yet. The parent receives them monthly from their app.",
-    "ocultarHistorial": "Hide history"
+    "ocultarHistorial": "Hide history",
+    "resumenIA": "AI Clinical Summary",
+    "resumenGenerar": "Generate with AI",
+    "resumenRegenerar": "Regenerate",
+    "resumenGenerando": "Generating...",
+    "resumenGenerado": "Summary generated",
+    "resumenGuardado": "Summary saved",
+    "resumenVacio": "No summary yet. Generate it with AI from the full record, or write it manually."
   },
   "perfil": {
     "titulo": "My Profile",

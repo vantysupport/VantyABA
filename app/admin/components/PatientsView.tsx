@@ -9,7 +9,7 @@ import {
   ArrowLeft, Baby, BarChart3, Brain, Calendar, Check, ChevronRight,
   ClipboardList, Edit, Link, Link2Off, Loader2, Mail, Plus, Save,
   Search, Stethoscope, User, UserCheck, Users, X,
-  FolderOpen, FileText, Heart, Trash2, Settings, Smile, Meh, Frown
+  FolderOpen, FileText, Heart, Trash2, Settings, Smile, Meh, Frown, Sparkles
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { getControlStatus } from '@/lib/control'
@@ -586,6 +586,116 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
 }
 
 // ── Tab Info del paciente ──────────────────────────────────────────────────
+// ── Resumen clínico IA (persistente, editable) ────────────────────────────────
+function PatientAISummaryCard({ childId }: { childId: string }) {
+  const { t, locale } = useI18n()
+  const toast = useToast()
+  const [summary, setSummary]   = useState('')
+  const [updatedAt, setUpdated] = useState<string | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [busy, setBusy]         = useState(false)   // generando/actualizando IA
+  const [editing, setEditing]   = useState(false)
+  const [draft, setDraft]       = useState('')
+  const [saving, setSaving]     = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    fetch(`/api/patient-ai-summary?childId=${childId}`)
+      .then(r => r.json())
+      .then(d => { if (alive) { setSummary(d.summary || ''); setUpdated(d.updatedAt || null) } })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false) })
+    return () => { alive = false }
+  }, [childId])
+
+  const generar = async () => {
+    setBusy(true)
+    try {
+      const res = await fetch('/api/patient-ai-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+        body: JSON.stringify({ childId, action: 'generate', locale }),
+      })
+      const d = await res.json()
+      if (!res.ok || d.error) throw new Error(d.error || `Error ${res.status}`)
+      setSummary(d.summary || ''); setUpdated(new Date().toISOString()); setEditing(false)
+      toast.success(t('pacientes.resumenGenerado'))
+    } catch (e: any) {
+      toast.error((locale === 'en' ? 'Error: ' : 'Error: ') + (e.message || ''))
+    } finally { setBusy(false) }
+  }
+
+  const guardarEdicion = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/patient-ai-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+        body: JSON.stringify({ childId, action: 'save', summary: draft }),
+      })
+      const d = await res.json()
+      if (!res.ok || d.error) throw new Error(d.error || `Error ${res.status}`)
+      setSummary(draft); setUpdated(new Date().toISOString()); setEditing(false)
+      toast.success(t('pacientes.resumenGuardado'))
+    } catch (e: any) {
+      toast.error((locale === 'en' ? 'Error: ' : 'Error: ') + (e.message || ''))
+    } finally { setSaving(false) }
+  }
+
+  const fecha = updatedAt
+    ? new Date(updatedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+    : null
+
+  return (
+    <div className="rounded-2xl p-4 md:col-span-2" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <Sparkles size={14} style={{ color: '#7c3aed' }} />
+          <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>{t('pacientes.resumenIA')}</p>
+          {fecha && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>· {fecha}</span>}
+        </div>
+        <div className="flex items-center gap-1.5">
+          {!editing && (
+            <button onClick={() => { setDraft(summary); setEditing(true) }} disabled={busy || loading}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-500 border border-slate-200 hover:bg-slate-100 disabled:opacity-50">
+              <Edit size={11} /> {t('common.editar')}
+            </button>
+          )}
+          <button onClick={generar} disabled={busy || loading || saving}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white disabled:opacity-50"
+            style={{ background: 'linear-gradient(to right, #7c3aed, #2563eb)' }}>
+            {busy ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+            {busy ? t('pacientes.resumenGenerando') : (summary ? t('pacientes.resumenRegenerar') : t('pacientes.resumenGenerar'))}
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-3"><Loader2 size={13} className="animate-spin" style={{ color: 'var(--text-muted)' }} /><span className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('common.cargando')}</span></div>
+      ) : editing ? (
+        <div className="space-y-2">
+          <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={10}
+            className="w-full rounded-xl text-sm leading-relaxed p-3 outline-none focus:border-sky-400"
+            style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)' }} />
+          <div className="flex gap-2">
+            <button onClick={guardarEdicion} disabled={saving}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white disabled:opacity-50">
+              {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} {t('common.guardar')}
+            </button>
+            <button onClick={() => setEditing(false)} disabled={saving}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 border border-slate-200 hover:bg-slate-100">{t('common.cancelar')}</button>
+          </div>
+        </div>
+      ) : summary ? (
+        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{summary}</p>
+      ) : (
+        <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.resumenVacio')}</p>
+      )}
+    </div>
+  )
+}
+
 function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () => void; onDeleted?: () => void }) {
   const { t, locale } = useI18n()
   const toast = useToast()
@@ -803,6 +913,9 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
               : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.sinNotas')}</p>
             }
           </InfoCard>
+
+          {/* ── Resumen clínico IA (persistente, editable) ── */}
+          <PatientAISummaryCard childId={nino.id} />
 
           {/* ── Contador de sesiones (auto + previas manuales) ── */}
           <SessionCounterCard nino={nino} onSaved={onSaved} />
