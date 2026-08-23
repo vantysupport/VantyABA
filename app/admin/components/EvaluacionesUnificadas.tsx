@@ -625,7 +625,7 @@ function HistorialFormCard({ sf, onReportGenerated }: { sf: any; onReportGenerat
       }])
       if (insertError) {
         console.error('❌ Error guardando reporte en BD:', insertError)
-        toast.error('Reporte descargado pero no se pudo guardar en historial: ' + insertError.message)
+        toast.error((locale === 'en' ? 'Report downloaded but could not be saved to history: ' : 'Reporte descargado pero no se pudo guardar en historial: ') + insertError.message)
       }
 
       // Auto-download
@@ -643,7 +643,7 @@ function HistorialFormCard({ sf, onReportGenerated }: { sf: any; onReportGenerat
       onReportGenerated()
     } catch (err: any) {
       console.error('Error generando reporte:', err)
-      toast.error('Error al generar reporte: ' + (err.message || 'Intenta de nuevo'))
+      toast.error((locale === 'en' ? 'Error generating report: ' : 'Error al generar reporte: ') + (err.message || (locale === 'en' ? 'Try again' : 'Intenta de nuevo')))
     } finally {
       setGenerating(false)
     }
@@ -905,10 +905,13 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
       }
       toast.success(t('auto.evaluacionesUnificadas.analisisIaGenerado'))
     } catch (err: any) {
-      const isQuota = err.message?.includes('Cuota') || err.message?.includes('429') || err.message?.includes('RESOURCE_EXHAUSTED')
-      toast.error(isQuota 
-        ? '⏳ Cuota de IA agotada. Espera 1-2 minutos e intenta nuevamente.' 
-        : 'Error en análisis: ' + err.message
+      const m = String(err.message || '')
+      const isQuota = /Cuota|429|RESOURCE_EXHAUSTED|límite|limit|solicitada|exhaust/i.test(m)
+      toast.error(isQuota
+        ? (locale === 'en'
+            ? '⏳ ARIA reached its AI usage limit. The evaluation analysis sends a large request (full clinical context), so it hits the daily limit sooner than the chat. Try again in a few minutes or tomorrow.'
+            : '⏳ ARIA alcanzó su límite de uso de IA. El análisis de evaluación envía una solicitud grande (todo el contexto clínico), por eso llega al tope diario antes que el chat. Intenta en unos minutos o mañana.')
+        : (locale === 'en' ? 'Analysis error: ' : 'Error en análisis: ') + err.message
       )
     } finally {
       setIsAnalyzing(false)
@@ -917,7 +920,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
 
   const handleSave = async () => {
     if (!selectedChild) { toast.error(t('auto.evaluacionesUnificadas.seleccionaUnPaciente')); return }
-    if (answeredCount < 2) { toast.error('Responde al menos 2 preguntas'); return }
+    if (answeredCount < 2) { toast.error(locale === 'en' ? 'Answer at least 2 questions' : 'Responde al menos 2 preguntas'); return }
     setIsSaving(true)
     try {
       const table = isClinicalForm ? 'form_responses' : (
@@ -993,7 +996,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
       }
       // No llamamos onBack() aquí - la pantalla de éxito permite al usuario descargar el reporte
     } catch (err: any) {
-      toast.error('Error al guardar: ' + err.message)
+      toast.error((locale === 'en' ? 'Error saving: ' : 'Error al guardar: ') + err.message)
     } finally {
       setIsSaving(false)
     }
@@ -1051,7 +1054,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
 
         toast.success(t('auto.evaluacionesUnificadas.reporteWordDescargado'))
       } catch (err: any) {
-        toast.error('Error generando reporte: ' + (err.message || 'Intenta de nuevo'))
+        toast.error((locale === 'en' ? 'Error generating report: ' : 'Error generando reporte: ') + (err.message || (locale === 'en' ? 'Try again' : 'Intenta de nuevo')))
       } finally {
         setIsGeneratingReport(false)
       }
@@ -1171,7 +1174,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4">
           <button onClick={() => setCurrentStep(s => s - 1)} disabled={currentStep === 0}
             className="flex items-center gap-2 px-4 sm:px-6 py-3 border-2 border-slate-200 text-slate-600 rounded-xl font-bold hover:border-sky-300 disabled:opacity-40 transition-all" style={{ background: "var(--card)" }}>
-            <ChevronLeft size={18} /> Anterior
+            <ChevronLeft size={18} /> {locale === 'en' ? 'Previous' : 'Anterior'}
           </button>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -1181,7 +1184,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
                 <button onClick={handleAnalyzeWithAI} disabled={isAnalyzing || answeredCount < 3}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl font-bold disabled:opacity-40 transition-all shadow-lg shadow-sky-200 hover:opacity-90">
                   {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                  {isAnalyzing ? 'Analizando...' : 'Analizar con IA'}
+                  {isAnalyzing ? (locale === 'en' ? 'Analyzing...' : 'Analizando...') : (locale === 'en' ? 'Analyze with AI' : 'Analizar con IA')}
                 </button>
                 {currentStep === totalSteps - 1 && (
                   <button onClick={handleSave} disabled={isSaving || !selectedChild}
@@ -1203,7 +1206,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
                 )}
                 <button onClick={() => setCurrentStep(s => s + 1)}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-sky-200 hover:opacity-90">
-                  Siguiente <ChevronRight size={18} />
+                  {locale === 'en' ? 'Next' : 'Siguiente'} <ChevronRight size={18} />
                 </button>
               </>
             )}
@@ -1384,7 +1387,7 @@ export default function EvaluacionesUnificadas({ initialChildId, initialChildNam
       toast.success(t('auto.evaluacionesUnificadas.formularioEnviado'))
       loadData()
     } catch (err: any) {
-      toast.error('Error al enviar: ' + err.message)
+      toast.error((locale === 'en' ? 'Error sending: ' : 'Error al enviar: ') + err.message)
     }
   }
 
