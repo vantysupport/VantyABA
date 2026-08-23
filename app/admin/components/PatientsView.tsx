@@ -688,7 +688,18 @@ function PatientAISummaryCard({ childId }: { childId: string }) {
           </div>
         </div>
       ) : summary ? (
-        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{summary}</p>
+        <div className="text-sm leading-relaxed space-y-1.5" style={{ color: 'var(--text-primary)' }}>
+          {summary.replace(/<br\s*\/?>/gi, '\n').split('\n').map((raw, i) => {
+            const line = raw.trim()
+            if (!line) return null
+            // Título de sección: línea que es solo **Texto**
+            const heading = line.match(/^\*\*(.+?)\*\*:?$/)
+            if (heading) return <p key={i} className="font-bold text-[13px] mt-2" style={{ color: '#7c3aed' }}>{heading[1]}</p>
+            // Resto: negritas inline + viñeta/número conservado
+            const parts = line.split(/\*\*(.*?)\*\*/g)
+            return <p key={i}>{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}</p>
+          })}
+        </div>
       ) : (
         <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.resumenVacio')}</p>
       )}

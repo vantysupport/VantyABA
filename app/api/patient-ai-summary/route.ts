@@ -86,11 +86,23 @@ ${FORMATO}` + getLangInstruction(userLocale)
       return NextResponse.json({ summary: texto, source: 'ia_update' })
     }
 
-    // ── Generación completa: lee TODO el expediente + RAG una vez ──────────────
-    const ctx = await buildAIContext(childId, undefined, undefined, `resumen perfil clínico ${nombre} ABA TEA TDAH neurodesarrollo`)
-    const prompt = `Genera el RESUMEN CLÍNICO INTEGRAL de ${nombre} a partir de TODO su expediente (historia clínica, evaluaciones, sesiones ABA, entorno y conocimiento clínico del centro):
+    // ── Generación completa: lee el expediente + RAG una vez ──────────────────
+    // Para pacientes con MUCHOS datos el expediente completo excede el límite de
+    // tokens del modelo (429/413). Acotamos: priorizamos la historia clínica del
+    // paciente (que suele venir con lo más reciente primero) y un poco del centro,
+    // y dejamos fuera el RAG pesado. El resultado se mantiene actualizado luego con
+    // las actualizaciones incrementales.
+    const ctx = await buildAIContext(childId, undefined, undefined, '')
+    const HIST_MAX = 13000   // ~3200 tokens
+    const centro = (ctx.centroContext || '').slice(0, 1200)
+    const hist = (ctx.historialTexto || '').slice(0, HIST_MAX)
+    const truncNota = (ctx.historialTexto || '').length > HIST_MAX
+      ? '\n[…expediente extenso: se resumió a partir de los registros más recientes/relevantes]' : ''
+    const contexto = [centro, hist].filter(Boolean).join('\n\n') + truncNota
 
-${ctx.fullContext || '(Sin datos registrados todavía)'}
+    const prompt = `Genera el RESUMEN CLÍNICO INTEGRAL de ${nombre} a partir de su expediente (historia clínica, evaluaciones, sesiones ABA, entorno):
+
+${contexto || '(Sin datos registrados todavía)'}
 ${FORMATO}` + getLangInstruction(userLocale)
 
     const out = await callGroqSimple(SYSTEM, prompt, { model: GROQ_MODELS.SMART, temperature: 0.5, maxTokens: 1100 })
