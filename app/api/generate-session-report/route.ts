@@ -173,21 +173,23 @@ Responde SOLAMENTE con JSON válido (sin texto adicional, sin backticks, sin com
 
     const response = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', context + getLangInstruction(userLocale), { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 2000 })
 
-    // Sanitizar JSON: eliminar caracteres de control que Groq a veces incluye
-    const safeJson = (response || '{}')
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // control chars
-      .replace(/\n/g, '\\n')                            // literal newlines → \n
-      .replace(/\r/g, '\\r')                            // literal CR → \r
-      .replace(/\t/g, '\\t')                            // literal tab → \t
+    // Parseo robusto del JSON de la IA. NO escapamos saltos de línea globalmente
+    // (eso corrompía el JSON estructural y devolvía {} → "análisis vacío").
     let responseData: any = {}
-    try {
-      responseData = JSON.parse(safeJson)
-    } catch {
-      // Si falla, intentar extracción directa del bloque JSON
-      const match = (response || '').match(/\{[\s\S]*\}/)
-      if (match) {
-        try { responseData = JSON.parse(match[0].replace(/[\x00-\x1F\x7F]/g, ' ')) }
-        catch { responseData = { avances_observados: response || 'Error procesando respuesta' } }
+    {
+      const raw = String(response || '').trim()
+      const noFence = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
+      const intentos: string[] = [noFence]
+      const m = noFence.match(/\{[\s\S]*\}/)
+      if (m) { intentos.push(m[0]); intentos.push(m[0].replace(/[\x00-\x1F\x7F]/g, ' ')) }
+      for (const cand of intentos) {
+        try { const p = JSON.parse(cand); if (p && typeof p === 'object') { responseData = p; break } } catch { /* siguiente */ }
+      }
+      // Si no se pudo parsear NADA como JSON pero la IA sí devolvió texto,
+      // no lo perdemos: lo mostramos como avances observados (prosa).
+      if (Object.keys(responseData).length === 0 && noFence) {
+        console.warn('[generate-session-report] respuesta no-JSON, usando prosa cruda')
+        responseData = { avances_observados: noFence }
       }
     }
 
