@@ -156,10 +156,10 @@ export const ABA_DATA = [
     title: "2. Registro ABC (Análisis Conductual)",
     icon: <Activity size={20}/>,
     questions: [
-      { id: "antecedente", label: "Antecedente (A)", type: "textarea", placeholder: "¿Qué sucedió ANTES de la conducta? Contexto, actividad, personas presentes..." },
-      { id: "conducta", label: "Conducta Observada (B)", type: "textarea", placeholder: "Describe EXACTAMENTE qué hizo el niño (observable y medible)...", required: true },
-      { id: "consecuencia", label: "Consecuencia (C)", type: "textarea", placeholder: "¿Qué pasó DESPUÉS? Respuesta del terapeuta, del entorno..." },
-      { id: "funcion_estimada", label: "Función estimada de la conducta", type: "select", options: ["Acceso a Tangible", "Atención Social", "Escape/Evitación", "Sensorial/Automático", "Múltiple"] },
+      { id: "antecedente", label: "Antecedente (A)", type: "textarea", helpText: "Lo que ocurre JUSTO ANTES de la conducta y puede dispararla. Anota el contexto, la actividad en curso, quién estaba presente y qué se le pidió. Ejemplo: «Se le pidió guardar los juguetes para pasar a la mesa de trabajo».", placeholder: "¿Qué sucedió ANTES de la conducta? Contexto, actividad, personas presentes..." },
+      { id: "conducta", label: "Conducta Observada (B)", type: "textarea", helpText: "Describe SOLO lo observable y medible, sin interpretar ni suponer. Qué hizo exactamente, cuánto duró o cuántas veces ocurrió. Ejemplo: «Se tiró al piso y gritó durante 2 minutos» (evita cosas como «estaba enojado»).", placeholder: "Describe EXACTAMENTE qué hizo el niño (observable y medible)...", required: true },
+      { id: "consecuencia", label: "Consecuencia (C)", type: "textarea", helpText: "Lo que pasó INMEDIATAMENTE DESPUÉS de la conducta: cómo respondió el terapeuta, la familia o el entorno. Ejemplo: «Se retiró la demanda y se le dio un momento de descanso».", placeholder: "¿Qué pasó DESPUÉS? Respuesta del terapeuta, del entorno..." },
+      { id: "funcion_estimada", label: "Función estimada de la conducta", type: "select", helpText: "¿Para qué le sirvió la conducta al niño? · Acceso a Tangible: conseguir un objeto/actividad. · Atención Social: que le presten atención. · Escape/Evitación: librarse de una tarea o situación. · Sensorial/Automático: la estimulación en sí misma. · Múltiple: cumple más de una función.", options: ["Acceso a Tangible", "Atención Social", "Escape/Evitación", "Sensorial/Automático", "Múltiple"] },
     ]
   },
   {

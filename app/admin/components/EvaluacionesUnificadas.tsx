@@ -239,6 +239,7 @@ function QuestionRenderer({ question, value, onChange }: any) {
     return (
       <div>
         <label className="text-sm font-bold text-slate-700 block mb-2">{question.label}</label>
+        {question.helpText && <p className="text-xs text-slate-400 mb-2">{question.helpText}</p>}
         <select value={value || ''} onChange={e => onChange(e.target.value)}
           className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all">
           <option value="">{t('common.seleccionar')}</option>

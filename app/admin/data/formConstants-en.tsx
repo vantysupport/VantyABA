@@ -113,10 +113,10 @@ export const ABA_DATA_EN = [
     title: "2. ABC Record (Behavior Analysis)",
     icon: <Activity size={20}/>,
     questions: [
-      { id: "antecedente", label: "Antecedent (A)", type: "textarea", placeholder: "What happened BEFORE the behavior? Context, activity, people present..." },
-      { id: "conducta", label: "Observed Behavior (B)", type: "textarea", placeholder: "Describe EXACTLY what the child did (observable and measurable)...", required: true },
-      { id: "consecuencia", label: "Consequence (C)", type: "textarea", placeholder: "What happened AFTER? Response from the therapist, from the environment..." },
-      { id: "funcion_estimada", label: "Estimated function of the behavior", type: "select", options: ["Access to Tangible", "Social Attention", "Escape/Avoidance", "Sensory/Automatic", "Multiple"] },
+      { id: "antecedente", label: "Antecedent (A)", type: "textarea", helpText: "What happens RIGHT BEFORE the behavior and may trigger it. Note the context, the ongoing activity, who was present and what was asked. Example: \"He was asked to put the toys away to move to the work table.\"", placeholder: "What happened BEFORE the behavior? Context, activity, people present..." },
+      { id: "conducta", label: "Observed Behavior (B)", type: "textarea", helpText: "Describe ONLY what is observable and measurable, without interpreting or assuming. What exactly they did, how long or how many times. Example: \"He dropped to the floor and screamed for 2 minutes\" (avoid things like \"he was angry\").", placeholder: "Describe EXACTLY what the child did (observable and measurable)...", required: true },
+      { id: "consecuencia", label: "Consequence (C)", type: "textarea", helpText: "What happened IMMEDIATELY AFTER the behavior: how the therapist, family or environment responded. Example: \"The demand was withdrawn and he was given a break.\"", placeholder: "What happened AFTER? Response from the therapist, from the environment..." },
+      { id: "funcion_estimada", label: "Estimated function of the behavior", type: "select", helpText: "What did the behavior achieve for the child? · Access to Tangible: getting an object/activity. · Social Attention: getting noticed. · Escape/Avoidance: getting out of a task or situation. · Sensory/Automatic: the stimulation itself. · Multiple: serves more than one function.", options: ["Access to Tangible", "Social Attention", "Escape/Avoidance", "Sensory/Automatic", "Multiple"] },
     ]
   },
   {
