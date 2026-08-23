@@ -916,6 +916,17 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
             analysis.recomendaciones_equipo = join(analysis.recomendaciones)
           if (!analysis.alertas_clinicas && analysis.nivel_alerta)
             analysis.alertas_clinicas = join(analysis.indicadores_clave) || `Nivel de alerta: ${analysis.nivel_alerta}`
+
+          // Si tras todo el mapeo NINGÚN campo del ABA tiene contenido, el análisis
+          // volvió vacío (problema puntual de la IA) → avisar claro en vez de "éxito".
+          const abaKeys = ['avances_observados','areas_dificultad','observaciones_tecnicas','recomendaciones_equipo','patron_aprendizaje','alertas_clinicas','mensaje_padres']
+          const hayContenido = abaKeys.some(k => analysis[k] && String(analysis[k]).trim())
+          if (!hayContenido) {
+            console.warn('🔬 análisis ABA vacío. Respuesta cruda:', json)
+            throw new Error(locale === 'en'
+              ? 'The AI returned an empty analysis. Please try again in a moment.'
+              : 'La IA devolvió un análisis vacío. Vuelve a intentarlo en un momento.')
+          }
         }
         console.log('🔬 análisis aplicado, claves:', Object.keys(analysis))
         // También mezclar con las respuestas del formulario para que aparezcan en los campos
