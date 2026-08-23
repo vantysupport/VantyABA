@@ -848,18 +848,14 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
           endpoint = '/api/generate-home-environment-report'
           payload = { ...responses, childName, childAge, diagnosis, childId: selectedChild }
         } else if (form.formKey === 'aba') {
-          // El análisis de sesión ABA necesita el registro ABC. Sin él, el endpoint
-          // genérico devuelve claves que NO mapean a los campos del formulario ABA
-          // (avances_observados, areas_dificultad, patron_aprendizaje…), por eso "no genera nada".
-          if (!responses.antecedente && !responses.conducta && !responses.consecuencia) {
-            toast.error(locale === 'en'
-              ? 'To generate the ABA session analysis, first fill the ABC record (Antecedent, Behavior, Consequence) in the "ABC Record" section.'
-              : 'Para generar el análisis de la sesión ABA, primero completa el registro ABC (Antecedente, Conducta, Consecuencia) en la sección "Registro ABC".')
-            setIsAnalyzing(false)
-            return
+          // Con registro ABC (antecedente/conducta/consecuencia) usamos el reporte de
+          // sesión (mejor calidad, mapea directo a avances_observados/areas_dificultad/…).
+          // Sin ABC, se usa el endpoint genérico y más abajo mapeamos sus claves a los
+          // campos del formulario ABA para que SIEMPRE se llenen.
+          if (responses.antecedente || responses.conducta || responses.consecuencia) {
+            endpoint = '/api/generate-session-report'
+            payload = { ...responses, childName, childAge, childId: selectedChild }
           }
-          endpoint = '/api/generate-session-report'
-          payload = { ...responses, childName, childAge, childId: selectedChild }
         } else if (['brief2', 'ados2', 'vineland3', 'wiscv', 'basc3', 'abllsr'].includes(form.formKey)) {
           endpoint = '/api/analyze-professional-evaluation'
           payload = { evaluationType: form.formKey.toLowerCase(), childName, childAge, childId: selectedChild, responses }
@@ -905,6 +901,22 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
           if (m.severidad !== undefined)         analysis.nivel_severidad              = m.severidad
           if (m.afecto_social !== undefined)     analysis.puntuacion_total             = m.afecto_social
         }
+        // Si es la Sesión ABA y el análisis vino del endpoint genérico (claves distintas),
+        // mapear esas claves a los campos aiGenerated del formulario ABA para que se llenen.
+        if (form.formKey === 'aba') {
+          const join = (v: any) => Array.isArray(v) ? v.filter(Boolean).join(' • ') : v
+          if (!analysis.avances_observados && (analysis.areas_fortaleza || analysis.analisis_clinico))
+            analysis.avances_observados = join(analysis.areas_fortaleza) || analysis.analisis_clinico
+          if (!analysis.areas_dificultad && (analysis.areas_trabajo || analysis.areas_dificultad_ia))
+            analysis.areas_dificultad = join(analysis.areas_trabajo || analysis.areas_dificultad_ia)
+          if (!analysis.observaciones_tecnicas && analysis.analisis_clinico)
+            analysis.observaciones_tecnicas = analysis.analisis_clinico
+          if (!analysis.recomendaciones_equipo && analysis.recomendaciones)
+            analysis.recomendaciones_equipo = join(analysis.recomendaciones)
+          if (!analysis.alertas_clinicas && analysis.nivel_alerta)
+            analysis.alertas_clinicas = join(analysis.indicadores_clave) || `Nivel de alerta: ${analysis.nivel_alerta}`
+        }
+        console.log('🔬 análisis aplicado, claves:', Object.keys(analysis))
         // También mezclar con las respuestas del formulario para que aparezcan en los campos
         setResponses((prev: any) => ({ ...prev, ...analysis }))
         setAiAnalysis(analysis)
