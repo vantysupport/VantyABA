@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     const homeQuery = `entorno hogar familia ABA ambiente terapéutico ${comportamiento_observado || ''}`
     const ctx = await buildAIContext(childId, body.childName, body.childAge ? String(body.childAge) : undefined, homeQuery)
     const nombreNino = ctx.childName
-    const historialTexto = ctx.fullContext  // RAG + centro + historial
+    const historialTexto = (ctx.fullContext || '').slice(0, 12000)  // tope duro: evita exceder tokens en pacientes con mucho expediente
 
     // Validación mínima
     const hasMinimalData = comportamiento_observado || barreras_identificadas || rutina_diaria || interaccion_padres;

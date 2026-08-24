@@ -71,7 +71,7 @@ export async function POST(req: Request) {
 ACTÚA COMO: Neuropsicólogo clínico infantil supervisor y analista de conducta (IBA) con 15+ años de experiencia.
 
 CONTEXTO CLÍNICO COMPLETO (historial, protocolos del centro, conocimiento clínico):
-${aiCtx.fullContext}
+${(aiCtx.fullContext || '').slice(0, 12000)}
 
 PACIENTE: ${nombreNino}, ${edadNino} años. ⚠️ IMPORTANTE: Usa EXACTAMENTE este nombre y esta edad — son datos reales del expediente.
 

@@ -59,13 +59,14 @@ export async function POST(request: NextRequest) {
 
     const searchQuery = `${FORM_LABELS[formType] || formType} ${diagnosis || ''} evaluación ABA`
     const ctx = await buildAIContext(childId, childName, childAge ? String(childAge) : undefined, searchQuery)
+    const contextoClinico = (ctx.fullContext || '').slice(0, 12000)  // tope duro: evita exceder tokens
 
     const prompt = `Eres un neuropsicólogo clínico y analista de conducta certificado (IBA) con 15+ años de experiencia.
 
 INSTRUCCIONES ESPECIALIZADAS: ${getSpecializedInstructions(formType)}
 
 CONTEXTO CLÍNICO:
-${ctx.fullContext}
+${contextoClinico}
 
 PACIENTE: ${ctx.childName}, ${ctx.childAge}
 DIAGNÓSTICO: ${ctx.diagnosis || diagnosis || 'En evaluación'}

@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const ctx = await buildAIContext(childId, childName, childAge ? String(childAge) : undefined, evalQuery)
     const nombreNino = ctx.childName
     const edadNino = ctx.childAge ? Number(ctx.childAge) || childAge : childAge
-    const historialTexto = ctx.fullContext  // includes RAG + centro + child history
+    const historialTexto = (ctx.fullContext || '').slice(0, 12000)  // tope duro (RAG+centro+historial): evita exceder tokens en pacientes con mucho expediente
 
     // 2. Inicialización
     let analysisResult: any = {};
