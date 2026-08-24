@@ -167,7 +167,11 @@ export async function buildAIContext(
     ? (childHistory.historialTexto || '').slice(0, 3500)   // con resumen: solo lo reciente/complementario
     : childHistory.historialTexto
 
-  const fullContext = [centroCtx, resumenBloque, knowledgeCtx, historialParaContexto]
+  // Con resumen, también recortamos el RAG (Cerebro IA): el resumen ya sintetiza
+  // el cuadro clínico, así gastamos muchos menos tokens por llamada.
+  const knowledgeParaContexto = aiSummary ? (knowledgeCtx || '').slice(0, 1500) : knowledgeCtx
+
+  const fullContext = [centroCtx, resumenBloque, knowledgeParaContexto, historialParaContexto]
     .filter(Boolean).join('\n')
 
   return {

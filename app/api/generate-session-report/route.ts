@@ -56,12 +56,12 @@ export async function POST(req: Request) {
       .eq('activo', true)
       .gt('stock', 0)
       .order('destacado', { ascending: false })
-      .limit(12);
+      .limit(6);   // menos productos = menos tokens por llamada (el detalle va solo en el sugerido)
 
     const productosTexto = productos && productos.length > 0
-      ? `\nPRODUCTOS EN NUESTRA TIENDA (sugiere UNO solo si realmente ayuda a la tarea en casa):\n` +
+      ? `\nPRODUCTOS EN TIENDA (sugiere UNO solo si ayuda a la tarea en casa):\n` +
         productos.map((p, i) =>
-          `${i + 1}. ID:"${p.id}" | "${p.nombre}" | S/${p.precio_soles} | ${p.tipo} | ${p.descripcion || ''}`
+          `${i + 1}. ID:"${p.id}" | "${p.nombre}" | S/${p.precio_soles} | ${p.tipo}`
         ).join('\n')
       : '';
 
