@@ -171,7 +171,7 @@ Responde SOLAMENTE con JSON válido (sin texto adicional, sin backticks, sin com
   "razon_sugerencia": null
 }`;
 
-    const response = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', context + getLangInstruction(userLocale), { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 2000 })
+    const response = await callGroqSimple('Eres un asistente clínico especializado en ABA, TEA, TDAH y neurodesarrollo.', context + getLangInstruction(userLocale), { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 4000 })
 
     // Parseo robusto del JSON de la IA. NO escapamos saltos de línea globalmente
     // (eso corrompía el JSON estructural y devolvía {} → "análisis vacío").
@@ -179,17 +179,46 @@ Responde SOLAMENTE con JSON válido (sin texto adicional, sin backticks, sin com
     {
       const raw = String(response || '').trim()
       const noFence = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
-      const intentos: string[] = [noFence]
-      const m = noFence.match(/\{[\s\S]*\}/)
-      if (m) { intentos.push(m[0]); intentos.push(m[0].replace(/[\x00-\x1F\x7F]/g, ' ')) }
-      for (const cand of intentos) {
-        try { const p = JSON.parse(cand); if (p && typeof p === 'object') { responseData = p; break } } catch { /* siguiente */ }
+      // limpiar chars de control (saltos de línea reales dentro de strings rompen el JSON)
+      const limpio = noFence.replace(/[\x00-\x09\x0B-\x1F\x7F]/g, ' ')
+      // reparar JSON truncado por maxTokens: si abre { pero no cierra, cerrar comilla/llave
+      const repararTruncado = (s: string): string => {
+        const inicio = s.indexOf('{')
+        if (inicio < 0) return s
+        let t = s.slice(inicio)
+        const abre = (t.match(/\{/g) || []).length
+        const cierra = (t.match(/\}/g) || []).length
+        if (cierra < abre) {
+          const comillas = (t.match(/"/g) || []).length
+          if (comillas % 2 === 1) t += '"'   // cerrar string abierto
+          t = t.replace(/,\s*$/, '')           // quitar coma colgante
+          t += '}'.repeat(abre - cierra)       // cerrar objetos
+        }
+        return t
       }
-      // Si no se pudo parsear NADA como JSON pero la IA sí devolvió texto,
-      // no lo perdemos: lo mostramos como avances observados (prosa).
+      const braceMatch = noFence.match(/\{[\s\S]*\}/)
+      const intentos: string[] = [
+        noFence,
+        limpio,
+        braceMatch?.[0] || '',
+        (braceMatch?.[0] || '').replace(/[\x00-\x09\x0B-\x1F\x7F]/g, ' '),
+        repararTruncado(limpio),
+      ].filter(Boolean)
+      for (const cand of intentos) {
+        try { const p = JSON.parse(cand); if (p && typeof p === 'object' && !Array.isArray(p)) { responseData = p; break } } catch { /* siguiente */ }
+      }
+      // Último recurso: si la IA devolvió texto pero nada parseó, extraer al menos
+      // avances_observados con regex; si no, usar la prosa cruda (evita perder todo).
       if (Object.keys(responseData).length === 0 && noFence) {
-        console.warn('[generate-session-report] respuesta no-JSON, usando prosa cruda')
-        responseData = { avances_observados: noFence }
+        console.warn('[generate-session-report] respuesta no parseable, extrayendo por regex')
+        const grab = (k: string) => { const mm = limpio.match(new RegExp('"' + k + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); return mm ? mm[1].replace(/\\"/g, '"') : '' }
+        responseData = {
+          avances_observados: grab('avances_observados') || noFence,
+          areas_dificultad: grab('areas_dificultad'),
+          observaciones_tecnicas: grab('observaciones_tecnicas'),
+          recomendaciones_equipo: grab('recomendaciones_equipo'),
+          mensaje_padres: grab('mensaje_padres'),
+        }
       }
     }
 
