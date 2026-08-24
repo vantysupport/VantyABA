@@ -45,6 +45,25 @@ export async function POST(req: Request) {
     const nombreNino = aiCtx.childName
     const edadNino = aiCtx.childAge
 
+    // Enums y scaffolds SEGÚN IDIOMA: así el enum coincide con las opciones del
+    // formulario (auto-selección) y no se filtran labels en español al escribir en inglés.
+    const isEn = String(userLocale).toLowerCase().startsWith('en')
+    const patronOpts = isEn
+      ? '"Fast learning and generalization", "Gradual learning", "Requires intensive repetition", "Difficulty generalizing", "Inconsistent learning"'
+      : '"Aprendizaje rápido y generalización", "Aprendizaje gradual", "Requiere repetición intensiva", "Dificultad para generalizar", "Aprendizaje inconsistente"'
+    const coordOpts = isEn
+      ? '"Urgent", "Necessary", "Routine", "Not necessary"'
+      : '"Urgente", "Necesaria", "Rutinaria", "No necesaria"'
+    const patronEjemplo = isEn ? 'Gradual learning' : 'Aprendizaje gradual'
+    const coordEjemplo = isEn ? 'Routine' : 'Rutinaria'
+    const firma = isEn ? 'With warmth and commitment,\\nNeuropsicología y Terapias SANTI Team' : 'Con afecto y compromiso,\\nEquipo Neuropsicología y Terapias SANTI'
+    const actividadScaffold = isEn
+      ? 'Activity: [name]\\n Goal: [skill it works on]\\n How to do it:\\n 1. [step]\\n 2. [step]\\n 3. [step]\\n Frequency: [X times/week, X-X min]\\n What to observe: [what to report next session]'
+      : 'Actividad: [nombre]\\n Objetivo: [qué habilidad trabaja]\\n Cómo hacerlo:\\n 1. [paso]\\n 2. [paso]\\n 3. [paso]\\n Frecuencia: [X veces/semana, X-X min]\\n Qué observar: [qué reportar próxima sesión]'
+    const mensajeScaffold = isEn
+      ? `Dear parents of [Real name],\\n\\n[6-8 warm, informative sentences WITHOUT home activities]\\n\\n${firma}`
+      : `Estimados papás de [Nombre real],\\n\\n[6-8 oraciones cálidas e informativas SIN actividades para casa]\\n\\n${firma}`
+
     if (!conducta && !antecedente) {
       return NextResponse.json({ error: "Faltan datos del registro ABA." }, { status: 400 });
     }
@@ -110,8 +129,8 @@ ${productosTexto}
 TAREA PRINCIPAL: Genera el análisis clínico completo Y el reporte profesional para los padres, EN DOS PARTES SEPARADAS.
 
 REGLAS ESTRICTAS:
-- "patron_aprendizaje" DEBE ser EXACTAMENTE uno de: "Aprendizaje rápido y generalización", "Aprendizaje gradual", "Requiere repetición intensiva", "Dificultad para generalizar", "Aprendizaje inconsistente"
-- "coordinacion_familia" DEBE ser EXACTAMENTE uno de: "Urgente", "Necesaria", "Rutinaria", "No necesaria"
+- "patron_aprendizaje" DEBE ser EXACTAMENTE uno de: ${patronOpts}
+- "coordinacion_familia" DEBE ser EXACTAMENTE uno de: ${coordOpts}
 - "efectividad_sesion" DEBE ser número entero 1-5
 - USA el historial previo para contextualizar: menciona si hay progreso, regresión o consistencia respecto a sesiones anteriores.
 
@@ -123,18 +142,12 @@ REGLAS ESTRICTAS:
   5. Un área que seguimos trabajando y por qué importa
   6. Qué reportar en la próxima sesión
   7. Mensaje motivador para la familia
-  8. Firma "Con afecto y compromiso, Equipo Neuropsicología y Terapias SANTI"
+  8. Firma exactamente así: "${firma.replace(/\\n/g, ' ')}"
   ⚠️ PROHIBIDO incluir actividades para casa aquí.
+  ⚠️ IMPORTANTE: los ENCABEZADOS/etiquetas del texto (saludo, firma, "Activity/Goal/How to do it", etc.) deben ir en el MISMO idioma que el resto de la respuesta.
 
-- "actividades_casa": UNA SOLA actividad terapéutica para el hogar, basada exactamente en lo trabajado HOY. Formato exacto:
-  "Actividad: [Nombre descriptivo]
-   Objetivo: [qué habilidad trabaja]
-   Cómo hacerlo:
-   1. [paso]
-   2. [paso]
-   3. [paso]
-   Frecuencia: [X veces por semana, X-X minutos]
-   Qué observar: [qué reportar en próxima sesión]"
+- "actividades_casa": UNA SOLA actividad terapéutica para el hogar, basada exactamente en lo trabajado HOY. Usa EXACTAMENTE este formato (respeta el idioma de las etiquetas):
+  "${actividadScaffold.replace(/\\n/g, ' / ')}"
 
 - "destacar_positivo": exactamente 3-5 logros separados por " | "
 - "instrucciones_padres": pasos numerados de la actividad en casa (mismo contenido que actividades_casa pero como lista)
@@ -145,15 +158,15 @@ Responde SOLAMENTE con JSON válido (sin texto adicional, sin backticks, sin com
 {
   "avances_observados": "descripción clínica detallada de avances observados en sesión",
   "areas_dificultad": "descripción clínica de áreas que requieren más intervención",
-  "patron_aprendizaje": "Aprendizaje gradual",
+  "patron_aprendizaje": "${patronEjemplo}",
   "observaciones_tecnicas": "notas técnicas relevantes para el equipo terapéutico",
   "alertas_clinicas": "alertas o banderas rojas identificadas, o Sin alertas clínicas significativas",
   "recomendaciones_equipo": "recomendaciones específicas para el equipo interdisciplinario",
-  "coordinacion_familia": "Rutinaria",
-  "actividad_casa": "Actividad: [nombre]\n Objetivo: [objetivo]\n Cómo hacerlo:\n 1. [paso]\n 2. [paso]\n 3. [paso]\n Frecuencia: [frecuencia]\n Qué observar: [observación]",
+  "coordinacion_familia": "${coordEjemplo}",
+  "actividad_casa": "${actividadScaffold}",
   "instrucciones_padres": "1. [paso]\n2. [paso]\n3. [paso]",
   "objetivo_tarea": "objetivo conductual y neuropsicológico de la actividad en casa",
-  "mensaje_padres": "Estimados papás de [Nombre real],\n\n[6-8 oraciones cálidas e informativas SIN actividades para casa]\n\nCon afecto y compromiso,\nEquipo Neuropsicología y Terapias SANTI",
+  "mensaje_padres": "${mensajeScaffold}",
   "destacar_positivo": "Logro 1 | Logro 2 | Logro 3",
   "proximos_pasos": "En las próximas sesiones continuaremos...",
   "efectividad_sesion": 4,

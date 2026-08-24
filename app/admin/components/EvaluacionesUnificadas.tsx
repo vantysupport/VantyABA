@@ -917,6 +917,29 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
           if (!analysis.alertas_clinicas && analysis.nivel_alerta)
             analysis.alertas_clinicas = join(analysis.indicadores_clave) || `Nivel de alerta: ${analysis.nivel_alerta}`
 
+          // Normalizar los enums al idioma actual para que el <select>/<radio> auto-seleccione
+          // (si la IA devolvió el valor en el otro idioma, lo mapeamos a la opción del form).
+          const mapEnum = (val: any, pairs: [string, string][]) => {
+            if (!val) return val
+            const v = String(val).trim().toLowerCase()
+            for (const [es, en] of pairs) {
+              if (v === es.toLowerCase() || v === en.toLowerCase()) return locale === 'en' ? en : es
+            }
+            return val
+          }
+          const PATRON: [string, string][] = [
+            ['Aprendizaje rápido y generalización', 'Fast learning and generalization'],
+            ['Aprendizaje gradual', 'Gradual learning'],
+            ['Requiere repetición intensiva', 'Requires intensive repetition'],
+            ['Dificultad para generalizar', 'Difficulty generalizing'],
+            ['Aprendizaje inconsistente', 'Inconsistent learning'],
+          ]
+          const COORD: [string, string][] = [
+            ['Urgente', 'Urgent'], ['Necesaria', 'Necessary'], ['Rutinaria', 'Routine'], ['No necesaria', 'Not necessary'],
+          ]
+          if (analysis.patron_aprendizaje) analysis.patron_aprendizaje = mapEnum(analysis.patron_aprendizaje, PATRON)
+          if (analysis.coordinacion_familia) analysis.coordinacion_familia = mapEnum(analysis.coordinacion_familia, COORD)
+
           // Si tras todo el mapeo NINGÚN campo del ABA tiene contenido, el análisis
           // volvió vacío (problema puntual de la IA) → avisar claro en vez de "éxito".
           const abaKeys = ['avances_observados','areas_dificultad','observaciones_tecnicas','recomendaciones_equipo','patron_aprendizaje','alertas_clinicas','mensaje_padres']
