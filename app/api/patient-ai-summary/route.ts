@@ -25,11 +25,12 @@ FORMATO DEL RESUMEN (obligatorio):
 - PROHIBIDO: tablas markdown ( | col | ), etiquetas HTML (<br>), listas larguísimas. Usa viñetas "• " solo si es imprescindible.
 - No inventes datos: usa solo lo que aparezca en el contexto.`
 
-async function guardar(childId: string, summary: string, source: string) {
+async function guardar(childId: string, summary: string, source: string, lang: string) {
   await supabaseAdmin.from('children').update({
     ai_summary: summary,
     ai_summary_updated_at: new Date().toISOString(),
     ai_summary_source: source,
+    ai_summary_lang: lang === 'en' ? 'en' : 'es',
   }).eq('id', childId)
 }
 
@@ -37,11 +38,12 @@ export async function GET(req: NextRequest) {
   const childId = new URL(req.url).searchParams.get('childId')
   if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
   const { data } = await supabaseAdmin
-    .from('children').select('ai_summary, ai_summary_updated_at, ai_summary_source').eq('id', childId).maybeSingle()
+    .from('children').select('ai_summary, ai_summary_updated_at, ai_summary_source, ai_summary_lang').eq('id', childId).maybeSingle()
   return NextResponse.json({
     summary: (data as any)?.ai_summary || '',
     updatedAt: (data as any)?.ai_summary_updated_at || null,
     source: (data as any)?.ai_summary_source || null,
+    lang: (data as any)?.ai_summary_lang || null,
   })
 }
 
@@ -54,14 +56,24 @@ export async function POST(req: NextRequest) {
 
     // ── Edición manual: guardar verbatim ──────────────────────────────────────
     if (action === 'save') {
-      await guardar(childId, String(manualSummary || ''), 'manual')
-      return NextResponse.json({ summary: String(manualSummary || ''), source: 'manual' })
+      await guardar(childId, String(manualSummary || ''), 'manual', userLocale)
+      return NextResponse.json({ summary: String(manualSummary || ''), source: 'manual', lang: userLocale === 'en' ? 'en' : 'es' })
     }
 
     const { data: child } = await supabaseAdmin
       .from('children').select('name, ai_summary').eq('id', childId).maybeSingle()
     const nombre = (child as any)?.name || 'el/la paciente'
     const actual = (child as any)?.ai_summary || ''
+
+    // ── Traducir el resumen existente al idioma actual (barato, sin releer nada) ──
+    if (action === 'translate' && actual.trim()) {
+      const prompt = `Traduce el siguiente RESUMEN CLÍNICO al ${userLocale === 'en' ? 'INGLÉS' : 'ESPAÑOL'} profesional, manteniendo EXACTAMENTE el mismo formato (títulos en **negrita**, párrafos, viñetas) y el mismo contenido clínico. No agregues ni quites información, solo traduce.\n\n"""\n${actual}\n"""` + getLangInstruction(userLocale)
+      const out = await callGroqSimple(SYSTEM, prompt, { model: GROQ_MODELS.SMART, temperature: 0.2, maxTokens: 1100 })
+      const texto = (out || '').replace(/```/g, '').trim()
+      if (!texto) return NextResponse.json({ error: 'La IA no devolvió traducción' }, { status: 502 })
+      await guardar(childId, texto, 'manual', userLocale)
+      return NextResponse.json({ summary: texto, source: 'translate', lang: userLocale === 'en' ? 'en' : 'es' })
+    }
 
     // ── Actualización incremental: resumen actual + contenido nuevo ────────────
     // NO relee toda la historia → gasta pocos tokens.
@@ -82,8 +94,8 @@ ${FORMATO}` + getLangInstruction(userLocale)
       const out = await callGroqSimple(SYSTEM, prompt, { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 900 })
       const texto = (out || '').replace(/```/g, '').trim()
       if (!texto) return NextResponse.json({ error: 'La IA no devolvió resumen' }, { status: 502 })
-      await guardar(childId, texto, 'ia_update')
-      return NextResponse.json({ summary: texto, source: 'ia_update' })
+      await guardar(childId, texto, 'ia_update', userLocale)
+      return NextResponse.json({ summary: texto, source: 'ia_update', lang: userLocale === 'en' ? 'en' : 'es' })
     }
 
     // ── Generación completa: lee el expediente + RAG una vez ──────────────────
@@ -108,8 +120,8 @@ ${FORMATO}` + getLangInstruction(userLocale)
     const out = await callGroqSimple(SYSTEM, prompt, { model: GROQ_MODELS.SMART, temperature: 0.5, maxTokens: 1100 })
     const texto = (out || '').replace(/```/g, '').trim()
     if (!texto) return NextResponse.json({ error: 'La IA no devolvió resumen' }, { status: 502 })
-    await guardar(childId, texto, 'ia_full')
-    return NextResponse.json({ summary: texto, source: 'ia_full' })
+    await guardar(childId, texto, 'ia_full', userLocale)
+    return NextResponse.json({ summary: texto, source: 'ia_full', lang: userLocale === 'en' ? 'en' : 'es' })
 
   } catch (e: any) {
     if (e instanceof GroqExhaustedError) {

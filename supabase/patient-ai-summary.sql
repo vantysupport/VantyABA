@@ -10,3 +10,7 @@ ALTER TABLE children ADD COLUMN IF NOT EXISTS ai_summary_updated_at timestamptz;
 
 -- (opcional) quién/cómo se actualizó por última vez: 'ia_full' | 'ia_update' | 'manual'
 ALTER TABLE children ADD COLUMN IF NOT EXISTS ai_summary_source text;
+
+-- idioma en el que está redactado el resumen ('es' | 'en') — para ofrecer traducirlo
+-- si el usuario cambia de idioma. Es idempotente: puedes correr este archivo de nuevo.
+ALTER TABLE children ADD COLUMN IF NOT EXISTS ai_summary_lang text;

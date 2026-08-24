@@ -509,7 +509,8 @@
     "resumenGenerando": "Generating...",
     "resumenGenerado": "Summary generated",
     "resumenGuardado": "Summary saved",
-    "resumenVacio": "No summary yet. Generate it with AI from the full record, or write it manually."
+    "resumenVacio": "No summary yet. Generate it with AI from the full record, or write it manually.",
+    "resumenTraducido": "Summary translated"
   },
   "perfil": {
     "titulo": "My Profile",

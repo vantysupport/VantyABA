@@ -592,8 +592,10 @@ function PatientAISummaryCard({ childId }: { childId: string }) {
   const toast = useToast()
   const [summary, setSummary]   = useState('')
   const [updatedAt, setUpdated] = useState<string | null>(null)
+  const [lang, setLang]         = useState<string | null>(null)
   const [loading, setLoading]   = useState(true)
   const [busy, setBusy]         = useState(false)   // generando/actualizando IA
+  const [translating, setTranslating] = useState(false)
   const [editing, setEditing]   = useState(false)
   const [draft, setDraft]       = useState('')
   const [saving, setSaving]     = useState(false)
@@ -603,11 +605,28 @@ function PatientAISummaryCard({ childId }: { childId: string }) {
     setLoading(true)
     fetch(`/api/patient-ai-summary?childId=${childId}`)
       .then(r => r.json())
-      .then(d => { if (alive) { setSummary(d.summary || ''); setUpdated(d.updatedAt || null) } })
+      .then(d => { if (alive) { setSummary(d.summary || ''); setUpdated(d.updatedAt || null); setLang(d.lang || null) } })
       .catch(() => {})
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [childId])
+
+  const traducir = async () => {
+    setTranslating(true)
+    try {
+      const res = await fetch('/api/patient-ai-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+        body: JSON.stringify({ childId, action: 'translate', locale }),
+      })
+      const d = await res.json()
+      if (!res.ok || d.error) throw new Error(d.error || `Error ${res.status}`)
+      setSummary(d.summary || ''); setLang(d.lang || locale); setUpdated(new Date().toISOString())
+      toast.success(t('pacientes.resumenTraducido'))
+    } catch (e: any) {
+      toast.error((locale === 'en' ? 'Error: ' : 'Error: ') + (e.message || ''))
+    } finally { setTranslating(false) }
+  }
 
   const generar = async () => {
     setBusy(true)
@@ -619,7 +638,7 @@ function PatientAISummaryCard({ childId }: { childId: string }) {
       })
       const d = await res.json()
       if (!res.ok || d.error) throw new Error(d.error || `Error ${res.status}`)
-      setSummary(d.summary || ''); setUpdated(new Date().toISOString()); setEditing(false)
+      setSummary(d.summary || ''); setUpdated(new Date().toISOString()); setLang(d.lang || locale); setEditing(false)
       toast.success(t('pacientes.resumenGenerado'))
     } catch (e: any) {
       toast.error((locale === 'en' ? 'Error: ' : 'Error: ') + (e.message || ''))
@@ -636,7 +655,7 @@ function PatientAISummaryCard({ childId }: { childId: string }) {
       })
       const d = await res.json()
       if (!res.ok || d.error) throw new Error(d.error || `Error ${res.status}`)
-      setSummary(draft); setUpdated(new Date().toISOString()); setEditing(false)
+      setSummary(draft); setUpdated(new Date().toISOString()); setLang(locale); setEditing(false)
       toast.success(t('pacientes.resumenGuardado'))
     } catch (e: any) {
       toast.error((locale === 'en' ? 'Error: ' : 'Error: ') + (e.message || ''))
@@ -656,6 +675,14 @@ function PatientAISummaryCard({ childId }: { childId: string }) {
           {fecha && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>· {fecha}</span>}
         </div>
         <div className="flex items-center gap-1.5">
+          {!editing && summary && lang && lang !== locale && (
+            <button onClick={traducir} disabled={busy || loading || translating}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white disabled:opacity-50"
+              style={{ background: '#0ea5e9' }}>
+              {translating ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+              {locale === 'en' ? 'Translate to English' : 'Traducir al español'}
+            </button>
+          )}
           {!editing && (
             <button onClick={() => { setDraft(summary); setEditing(true) }} disabled={busy || loading}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-500 border border-slate-200 hover:bg-slate-100 disabled:opacity-50">

@@ -389,7 +389,8 @@
   "resumenGenerando": "Generando...",
   "resumenGenerado": "Resumen generado",
   "resumenGuardado": "Resumen guardado",
-  "resumenVacio": "Aún no hay resumen. Genéralo con IA a partir de todo el expediente, o escríbelo manualmente."
+  "resumenVacio": "Aún no hay resumen. Genéralo con IA a partir de todo el expediente, o escríbelo manualmente.",
+  "resumenTraducido": "Resumen traducido"
  },
  "agenda": {
   "titulo": "Agenda y Citas",
