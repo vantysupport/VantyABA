@@ -55,6 +55,7 @@ export async function POST(req: Request) {
       ? '"Urgent", "Necessary", "Routine", "Not necessary"'
       : '"Urgente", "Necesaria", "Rutinaria", "No necesaria"'
     const patronEjemplo = isEn ? 'Gradual learning' : 'Aprendizaje gradual'
+    const sinAlertas = isEn ? 'No significant clinical alerts' : 'Sin alertas clínicas significativas'
     const coordEjemplo = isEn ? 'Routine' : 'Rutinaria'
     const firma = isEn ? 'With warmth and commitment,\\nNeuropsicología y Terapias SANTI Team' : 'Con afecto y compromiso,\\nEquipo Neuropsicología y Terapias SANTI'
     const actividadScaffold = isEn
@@ -160,7 +161,7 @@ Responde SOLAMENTE con JSON válido (sin texto adicional, sin backticks, sin com
   "areas_dificultad": "descripción clínica de áreas que requieren más intervención",
   "patron_aprendizaje": "${patronEjemplo}",
   "observaciones_tecnicas": "notas técnicas relevantes para el equipo terapéutico",
-  "alertas_clinicas": "alertas o banderas rojas identificadas, o Sin alertas clínicas significativas",
+  "alertas_clinicas": "alertas o banderas rojas identificadas; si no hay, responde EXACTAMENTE: ${sinAlertas}",
   "recomendaciones_equipo": "recomendaciones específicas para el equipo interdisciplinario",
   "coordinacion_familia": "${coordEjemplo}",
   "actividad_casa": "${actividadScaffold}",

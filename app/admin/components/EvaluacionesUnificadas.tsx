@@ -939,6 +939,10 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
           ]
           if (analysis.patron_aprendizaje) analysis.patron_aprendizaje = mapEnum(analysis.patron_aprendizaje, PATRON)
           if (analysis.coordinacion_familia) analysis.coordinacion_familia = mapEnum(analysis.coordinacion_familia, COORD)
+          // "sin alertas" en el idioma correcto
+          const sa = String(analysis.alertas_clinicas || '').trim().toLowerCase()
+          if (sa === 'sin alertas clínicas significativas' || sa === 'no significant clinical alerts')
+            analysis.alertas_clinicas = locale === 'en' ? 'No significant clinical alerts' : 'Sin alertas clínicas significativas'
 
           // Si tras todo el mapeo NINGÚN campo del ABA tiene contenido, el análisis
           // volvió vacío (problema puntual de la IA) → avisar claro en vez de "éxito".
