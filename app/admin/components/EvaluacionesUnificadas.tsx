@@ -1166,12 +1166,12 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
             onClick={onBack}
             className="flex-1 flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all"
           >
-            <ChevronLeft size={18} /> Volver
+            <ChevronLeft size={18} /> {locale === 'en' ? 'Back' : 'Volver'}
           </button>
         </div>
         {aiAnalysis && (
           <p className="text-xs text-sky-600 font-bold flex items-center gap-1">
-            <Sparkles size={12} /> Análisis IA disponible — se incluirá en el reporte
+            <Sparkles size={12} /> {locale === 'en' ? 'AI analysis available — it will be included in the report' : 'Análisis IA disponible — se incluirá en el reporte'}
           </p>
         )}
       </div>
@@ -1188,7 +1188,7 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
       <div className="flex-shrink-0 border-b shadow-sm z-20" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-4">
           <button onClick={onBack} className="flex items-center gap-1.5 hover:text-sky-500 font-bold transition-all text-sm group" style={{ color: "var(--text-muted)" }}>
-            <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Volver
+            <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> {locale === "en" ? "Back" : "Volver"}
           </button>
           <div className="flex-1">
             <div className="flex items-center justify-between mb-1">

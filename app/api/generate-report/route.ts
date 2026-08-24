@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
+import { callGroqSimple, GROQ_MODELS, GroqExhaustedError } from '@/lib/groq-client'
 import { getLangInstruction, getDocLabels } from '@/lib/lang'
 import { buildAIContext } from '@/lib/ai-context-builder'
 
@@ -813,9 +813,10 @@ async function generarDocx(
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+  let userLocale = 'es'
   try {
     const body = await request.json()
-    const userLocale = body.locale || request.headers.get('x-locale') || 'es'
+    userLocale = body.locale || request.headers.get('x-locale') || 'es'
     const {
       reportType,
       childName,
@@ -853,7 +854,7 @@ export async function POST(request: NextRequest) {
     try {
       if (childId) {
         const ctx = await buildAIContext(childId, childName, childAge?.toString(), reportType)
-        contextoClinico = ctx.historialTexto
+        contextoClinico = (ctx.historialTexto || '').slice(0, 12000)  // tope duro: evita exceder tokens
 
         // Enriquecer con datos reales de sesiones ABA
         const { data: sesionesRecientes } = await supabaseAdmin
@@ -927,9 +928,12 @@ export async function POST(request: NextRequest) {
     )
 
     if (!contenido || contenido.length < 100) {
+      const isEn = String(userLocale).toLowerCase().startsWith('en')
       return NextResponse.json(
-        { error: 'No se pudo generar el contenido del reporte. Intenta de nuevo.' },
-        { status: 500 }
+        { error: isEn
+            ? 'The AI could not generate the report content (it may have reached its daily usage limit). Please try again in a few minutes or tomorrow.'
+            : 'La IA no pudo generar el contenido del reporte (puede haber alcanzado su límite de uso diario). Intenta en unos minutos o mañana.' },
+        { status: 503 }
       )
     }
 
@@ -947,8 +951,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error en /api/generate-report:', error)
+    const isEn = String(userLocale).toLowerCase().startsWith('en')
+    if (error instanceof GroqExhaustedError) {
+      return NextResponse.json({ error: error.isPerMinute
+        ? (isEn ? 'ARIA is very busy right now. Try again in a few seconds.' : 'ARIA está muy solicitada ahora. Intenta en unos segundos.')
+        : (isEn ? 'ARIA reached its daily usage limit. It will be available again tomorrow.' : 'ARIA alcanzó su límite de uso por hoy. Estará disponible nuevamente mañana.') },
+        { status: 429 })
+    }
     return NextResponse.json(
-      { error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : error.message || 'Error interno al generar el reporte' },
+      { error: process.env.NODE_ENV === "production" ? (isEn ? 'An error occurred. Please try again.' : 'Ocurrió un error. Intentá de nuevo.') : error.message || 'Error interno al generar el reporte' },
       { status: 500 }
     )
   }
