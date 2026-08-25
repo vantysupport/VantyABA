@@ -64,7 +64,10 @@ function getLangInstruction(locale: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { childId, childName } = await req.json()
+    const body = await req.json()
+    const { childId, childName } = body
+    const userLocale = body.locale || req.headers.get('x-locale') || 'es'
+    const isEn = String(userLocale).toLowerCase().startsWith('en')
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
 
     // Cargar TODOS los programas del paciente sin filtrar por estado
@@ -315,6 +318,23 @@ export async function POST(req: NextRequest) {
 
     const sesionesParaUpsert = totalSesionesAnalizadas
 
+    // Encabezados de sección SEGÚN idioma: se usan en el prompt y en el parseo
+    // (servidor + cliente). Deben coincidir exactamente con lo que la IA devuelve.
+    const H = isEn ? {
+      estado: 'CURRENT CLINICAL STATUS ASSESSMENT',
+      analisis: 'ANALYSIS BY INTERVENTION PROGRAM',
+      hipotesis: 'CLINICAL HYPOTHESIS AND VARIABLES AT PLAY',
+      indicaciones: 'PRIORITY THERAPEUTIC INDICATIONS',
+      criterios: 'PROGRESS AND MONITORING CRITERIA',
+      familia: 'SUMMARY FOR THE FAMILY',
+    } : {
+      estado: 'EVALUACIÓN DEL ESTADO CLÍNICO ACTUAL',
+      analisis: 'ANÁLISIS POR PROGRAMA DE INTERVENCIÓN',
+      hipotesis: 'HIPÓTESIS CLÍNICA Y VARIABLES EN JUEGO',
+      indicaciones: 'INDICACIONES TERAPÉUTICAS PRIORITARIAS',
+      criterios: 'CRITERIOS DE AVANCE Y MONITOREO',
+      familia: 'RESUMEN PARA FAMILIA',
+    }
     const prompt = `Eres una neuropsicóloga clínica con especialización en Análisis Aplicado de la Conducta (ABA), certificada BCBA-D con 15 años de experiencia clínica. Redactas informes de supervisión clínica de alto nivel para terapeutas ABA y equipos multidisciplinarios. Tu lenguaje es técnico, preciso y fundamentado en evidencia (Cooper, Heron & Heward; JABA; Skinner).
 
 PACIENTE: ${childName}
@@ -342,24 +362,24 @@ ${resumenParaIA.map(p => [
 
 Genera un INFORME DE SUPERVISIÓN CLÍNICA ABA con exactamente este formato:
 
-**EVALUACIÓN DEL ESTADO CLÍNICO ACTUAL**
+**${H.estado}**
 [3-4 oraciones. Descripción objetiva del estado general del proceso terapéutico fundamentado en los datos. Menciona tendencias observables, nivel de adherencia al programa y calidad del registro de datos. Usa terminología como: tasa de respuesta, discriminación de estímulos, control instruccional, línea base, criterio de dominio.]
 
-**ANÁLISIS POR PROGRAMA DE INTERVENCIÓN**
+**${H.analisis}**
 [Para cada programa con datos: analiza la curva de aprendizaje, variabilidad entre sesiones, si hay estancamiento o aceleración, e indica si el criterio de transferencia está próximo. Para programas sin sesiones: señala la necesidad crítica de iniciar el registro sistemático de datos.]
 
-**HIPÓTESIS CLÍNICA Y VARIABLES EN JUEGO**
+**${H.hipotesis}**
 [2-3 oraciones. Plantea hipótesis sobre los factores que pueden estar afectando el progreso: variables motivacionales, calidad del antecedente, eficacia del consecuente, generalización, fatiga de reforzadores, etc.]
 
-**INDICACIONES TERAPÉUTICAS PRIORITARIAS**
+**${H.indicaciones}**
 1. [Indicación clínica específica con fundamento en principios ABA — incluye qué, cómo y cuándo implementar]
 2. [Indicación clínica específica con fundamento en principios ABA]
 3. [Indicación clínica específica con fundamento en principios ABA]
 
-**CRITERIOS DE AVANCE Y MONITOREO**
+**${H.criterios}**
 [Especifica qué indicadores deben observarse en las próximas 2-4 semanas para determinar si el plan es efectivo o requiere ajuste. Menciona umbrales de decisión clínica.]
 
-**RESUMEN PARA FAMILIA**
+**${H.familia}**
 [3-4 oraciones en lenguaje simple y cálido, dirigido a los padres. Sin jerga técnica, sin siglas. Explica cómo va el niño/a en terapia, destaca algo positivo y menciona qué pueden esperar próximamente. Escribe como si hablaras directamente con la familia.]
 
 Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionales. Máximo 500 palabras.`
@@ -371,7 +391,7 @@ Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionale
         prompt + (cerebroCtx
           ? '\n\n━━━ CONTENIDO DE PROTOCOLOS (Cerebro IA — FUENTE DE VERDAD) ━━━\n' + cerebroCtx +
             '\n\nREGLA: si citás un código de protocolo (ABLLS-R, VB-MAPP, AFLS), usá SOLO códigos que aparezcan textualmente aquí arriba y copiá su objetivo/criterios TAL CUAL. Está PROHIBIDO inventar códigos o inventar qué significa un código; si no está aquí, no lo cites.'
-          : '\n\nNOTA: no hay contenido de protocolos cargado en el Cerebro IA. NO cites códigos de protocolo (ABLLS-R/VB-MAPP/AFLS) ni afirmes qué significa un código; describí los objetivos sin códigos.'),
+          : '\n\nNOTA: no hay contenido de protocolos cargado en el Cerebro IA. NO cites códigos de protocolo (ABLLS-R/VB-MAPP/AFLS) ni afirmes qué significa un código; describí los objetivos sin códigos.') + getLangInstruction(userLocale),
         { model: GROQ_MODELS.SMART, temperature: 0.25, maxTokens: 1000 }
       )
     } catch (err) {
@@ -404,7 +424,7 @@ Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionale
       // prediccion_30d: extraer sección "RESUMEN PARA FAMILIA" del análisis principal — sin segundo llamado a Groq
       let prediccion_30d: string | null = null
       if (resumen_general) {
-        const matchFamilia = resumen_general.match(/\*\*RESUMEN PARA FAMILIA\*\*\s*\n+([\s\S]+?)(?=\n\n\*\*|$)/i)
+        const matchFamilia = resumen_general.match(/\*\*(?:RESUMEN PARA FAMILIA|SUMMARY FOR THE FAMILY)\*\*\s*\n+([\s\S]+?)(?=\n\n\*\*|$)/i)
         if (matchFamilia) {
           prediccion_30d = matchFamilia[1].replace(/\*\*(.*?)\*\*/g, '$1').trim()
         } else {
