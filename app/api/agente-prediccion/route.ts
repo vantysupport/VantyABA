@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
           tendencia: null,
           criterio_logrado: false,
           sets: [],
-          mensaje: 'Sin sesiones registradas',
+          mensaje: isEn ? 'No sessions recorded' : 'Sin sesiones registradas',
         })
         continue
       }
@@ -263,14 +263,20 @@ export async function POST(req: NextRequest) {
         mediana: Math.round(mediana),
         tendencia_slope: Math.round(tendencia.slope * 10) / 10,
         tendencia_descripcion: tendencia.slope > 1
-          ? `Progreso positivo en ${setActivoNombre || 'set activo'}`
+          ? (isEn ? `Positive progress in ${setActivoNombre || 'active set'}` : `Progreso positivo en ${setActivoNombre || 'set activo'}`)
           : tendencia.slope < -1
-            ? `Tendencia negativa dentro de ${setActivoNombre || 'set activo'} ⚠️`
-            : `Estable dentro de ${setActivoNombre || 'set activo'}`,
+            ? (isEn ? `Negative trend within ${setActivoNombre || 'active set'} ⚠️` : `Tendencia negativa dentro de ${setActivoNombre || 'set activo'} ⚠️`)
+            : (isEn ? `Stable within ${setActivoNombre || 'active set'}` : `Estable dentro de ${setActivoNombre || 'set activo'}`),
         tendencia_scope: setActivoNombre || 'sin sets',   // explicita el alcance del análisis
         criterio_logrado: logrado,
         sesiones_consecutivas_sobre_criterio: sesionesConsecutivas,
-        estado_general: logrado ? 'LOGRADO ✅' : ultimoPctSet >= criterio ? 'En criterio — verificar 2 sesiones consecutivas' : ultimoPctSet >= criterio * 0.7 ? 'Cerca del criterio' : 'En progreso',
+        estado_general: logrado
+          ? (isEn ? 'ACHIEVED ✅' : 'LOGRADO ✅')
+          : ultimoPctSet >= criterio
+            ? (isEn ? 'At criterion — verify 2 consecutive sessions' : 'En criterio — verificar 2 sesiones consecutivas')
+            : ultimoPctSet >= criterio * 0.7
+              ? (isEn ? 'Near criterion' : 'Cerca del criterio')
+              : (isEn ? 'In progress' : 'En progreso'),
         sets,
       })
     }
