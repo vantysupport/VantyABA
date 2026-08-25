@@ -57,7 +57,7 @@ interface Seguridad {
 
 // ─── Helpers visuales ────────────────────────────────────────────────────────
 function ScoreRing({ score, size = 80, color }: { score: number; size?: number; color: string }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const r = size / 2 - 8
   const circ = 2 * Math.PI * r
@@ -110,7 +110,7 @@ function ProgressBar({ value, max = 100, color = 'blue' }: { value: number; max?
 
 // ─── Sparkline con Recharts ──────────────────────────────────────────────────
 function Sparkline({ data, color = '#0284c7' }: { data: number[]; color?: string }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   if (!data || data.length < 2) return <span className="text-xs text-slate-400">{t('common.sinDatos')}</span>
   const pts = data.map((v, i) => ({ i, v }))
   return (
@@ -131,7 +131,7 @@ function LineChartProgreso({ sesiones, criterio = 90, color = '#0284c7', titulo 
   color?: string
   titulo?: string
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   if (!sesiones || sesiones.length < 2) return (
     <div className="flex items-center justify-center h-24 rounded-xl border" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)' }}>
       <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('ui.few_sessions')}</p>
@@ -172,7 +172,7 @@ function LineChartProgreso({ sesiones, criterio = 90, color = '#0284c7', titulo 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROGRAMA CARD — colapsable
 // ═══════════════════════════════════════════════════════════════════════════════
-function ProgramaCard({ prog, t }: { prog: any; t: any }) {
+function ProgramaCard({ prog, t, locale }: { prog: any; t: any; locale: string }) {
   const [open, setOpen] = useState(true)
   const badge = prog.criterio_logrado
     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
@@ -201,19 +201,20 @@ function ProgramaCard({ prog, t }: { prog: any; t: any }) {
             <>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: 'Última sesión', value: `${prog.ultimo_porcentaje}%`, highlight: prog.ultimo_porcentaje >= prog.criterio_dominio, color: null },
-                  { label: 'Media', value: `${prog.media}%`, highlight: false, color: null },
+                  { key: 'last', label: locale === 'en' ? 'Last session' : 'Última sesión', value: `${prog.ultimo_porcentaje}%`, highlight: prog.ultimo_porcentaje >= prog.criterio_dominio, color: null },
+                  { key: 'avg', label: locale === 'en' ? 'Average' : 'Media', value: `${prog.media}%`, highlight: false, color: null },
                   {
-                    label: 'Tendencia',
-                    value: prog.tendencia_slope > 0 ? '▲ Creciente' : prog.tendencia_slope < 0 ? '▼ Decreciente' : '● Nula',
+                    key: 'trend',
+                    label: locale === 'en' ? 'Trend' : 'Tendencia',
+                    value: prog.tendencia_slope > 0 ? (locale === 'en' ? '▲ Increasing' : '▲ Creciente') : prog.tendencia_slope < 0 ? (locale === 'en' ? '▼ Decreasing' : '▼ Decreciente') : (locale === 'en' ? '● None' : '● Nula'),
                     highlight: false,
                     color: prog.tendencia_slope > 0 ? '#34d399' : prog.tendencia_slope < 0 ? '#f87171' : '#94a3b8',
                   },
                 ].map(m => (
-                  <div key={m.label} className="rounded-xl p-2.5 text-center border" style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)' }}>
+                  <div key={m.key} className="rounded-xl p-2.5 text-center border" style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)' }}>
                     <p className="text-[10px] mb-1" style={{ color: 'var(--text-muted)' }}>{m.label}</p>
                     <p className={`text-lg font-bold ${m.highlight ? 'text-emerald-400' : ''}`}
-                      style={m.color ? { color: m.color, fontSize: m.label === 'Tendencia' ? '11px' : undefined } : !m.highlight ? { color: 'var(--text-primary)' } : {}}>
+                      style={m.color ? { color: m.color, fontSize: m.key === 'trend' ? '11px' : undefined } : !m.highlight ? { color: 'var(--text-primary)' } : {}}>
                       {m.value}
                     </p>
                   </div>
@@ -230,9 +231,9 @@ function ProgramaCard({ prog, t }: { prog: any; t: any }) {
                         <span className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>{set.nombre}</span>
                       </div>
                       <div className="flex items-center gap-3 shrink-0 ml-2">
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>media {set.media}%</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{locale === 'en' ? 'avg' : 'media'} {set.media}%</span>
                         <span className={`text-xs font-bold ${set.criterio_logrado ? 'text-emerald-400' : 'text-amber-400'}`}>
-                          {set.criterio_logrado ? '✅ Logrado' : `${set.ultimo_pct}%`}
+                          {set.criterio_logrado ? (locale === 'en' ? '✅ Achieved' : '✅ Logrado') : `${set.ultimo_pct}%`}
                         </span>
                       </div>
                     </div>
@@ -241,7 +242,7 @@ function ProgramaCard({ prog, t }: { prog: any; t: any }) {
               )}
 
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Tendencia: <span className={`font-bold ${prog.tendencia_slope > 0 ? 'text-emerald-400' : prog.tendencia_slope < 0 ? 'text-red-400' : ''}`}>
+                {locale === 'en' ? 'Trend' : 'Tendencia'}: <span className={`font-bold ${prog.tendencia_slope > 0 ? 'text-emerald-400' : prog.tendencia_slope < 0 ? 'text-red-400' : ''}`}>
                   {prog.tendencia_descripcion}
                 </span>
                 {t('auto.inteligenciaHubView.sesiones', { v1: String(' · '), v2: String(prog.total_sesiones) })}
@@ -260,7 +261,7 @@ function ProgramaCard({ prog, t }: { prog: any; t: any }) {
 // TAB: PREDICCIONES
 // ═══════════════════════════════════════════════════════════════════════════════
 function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
-    const { t } = useI18n()
+    const { t, locale } = useI18n()
 
     const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null)
   const [prediccion, setPrediccion] = useState<Prediccion | null>(null)
@@ -350,7 +351,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
                   <p className="text-sky-200 text-xs font-bold mb-1">{t('hub.analisPorPrograma')}</p>
                   <h3 className="text-lg md:text-xl font-bold truncate">{selectedPaciente.name}</h3>
                   <p className="text-sky-200 text-sm mt-0.5">
-                    {(prediccion as any).programas_analizados || 0} programas · {(prediccion as any).total_sesiones_unificado ?? (prediccion as any).analisis_por_programa?.reduce((a: number, p: any) => a + p.total_sesiones, 0) ?? 0} sesiones totales
+                    {(prediccion as any).programas_analizados || 0} {locale === 'en' ? 'programs' : 'programas'} · {(prediccion as any).total_sesiones_unificado ?? (prediccion as any).analisis_por_programa?.reduce((a: number, p: any) => a + p.total_sesiones, 0) ?? 0} {locale === 'en' ? 'total sessions' : 'sesiones totales'}
                   </p>
                 </div>
                 <div className="bg-white/15 rounded-xl px-3 py-2 text-center flex-shrink-0">
@@ -371,7 +372,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
 
             {/* Por programa — colapsables */}
             {((prediccion as any).analisis_por_programa || []).map((prog: any) => (
-              <ProgramaCard key={prog.programa_id} prog={prog} t={t} />
+              <ProgramaCard key={prog.programa_id} prog={prog} t={t} locale={locale} />
             ))}
 
             {/* Análisis IA general */}
@@ -599,7 +600,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
                   <p className="text-sky-200 text-xs font-bold mb-1">{t('hub.analisPorPrograma')}</p>
                   <h3 className="text-lg md:text-xl font-bold truncate">{selectedPaciente.name}</h3>
                   <p className="text-sky-200 text-sm mt-0.5">
-                    {(prediccion as any).programas_analizados || 0} programas · {(prediccion as any).total_sesiones_unificado ?? (prediccion as any).analisis_por_programa?.reduce((a: number, p: any) => a + p.total_sesiones, 0) ?? 0} sesiones totales
+                    {(prediccion as any).programas_analizados || 0} {locale === 'en' ? 'programs' : 'programas'} · {(prediccion as any).total_sesiones_unificado ?? (prediccion as any).analisis_por_programa?.reduce((a: number, p: any) => a + p.total_sesiones, 0) ?? 0} {locale === 'en' ? 'total sessions' : 'sesiones totales'}
                   </p>
                 </div>
                 <div className="bg-white/15 rounded-xl px-3 py-2 text-center flex-shrink-0">
@@ -620,7 +621,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
 
             {/* Por programa — colapsables */}
             {((prediccion as any).analisis_por_programa || []).map((prog: any) => (
-              <ProgramaCard key={prog.programa_id} prog={prog} t={t} />
+              <ProgramaCard key={prog.programa_id} prog={prog} t={t} locale={locale} />
             ))}
 
             {/* Análisis IA general */}
@@ -717,7 +718,7 @@ function TabPredicciones({ pacientes }: { pacientes: Paciente[] }) {
 // TAB: SEGURIDAD
 // ═══════════════════════════════════════════════════════════════════════════════
 function TabSeguridad() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [datos, setDatos] = useState<Seguridad | null>(null)
   const [alertas, setAlertas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -848,7 +849,7 @@ function TabSeguridad() {
 // TAB: COMPETITIVIDAD
 // ═══════════════════════════════════════════════════════════════════════════════
 function TabCompetitividad() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [datos, setDatos] = useState<Benchmark | null>(null)
   const [loading, setLoading] = useState(true)
@@ -1099,7 +1100,7 @@ function getSectionCfg(text: string) {
 }
 
 function ResumenIACard({ texto }: { texto: string }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const bloques = texto
     .split(/\n(?=\*\*[A-ZÁÉÍÓÚÑ])|\n\n+/)
     .map((b: string) => b?.trim())
@@ -1220,7 +1221,7 @@ function ResumenIACard({ texto }: { texto: string }) {
 
 
 function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [selected, setSelected] = useState<Paciente | null>(null)
   const [resultado, setResultado] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -1400,7 +1401,7 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
 // TAB: OBJETIVOS ADAPTATIVOS (CAPA 1)
 // ═══════════════════════════════════════════════════════════════════════════════
 function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [selected, setSelected] = useState<Paciente | null>(null)
   const [resultado, setResultado] = useState<any>(null)
@@ -1535,7 +1536,7 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
 // TAB: ALERTAS PROACTIVAS (CAPA 4)
 // ═══════════════════════════════════════════════════════════════════════════════
 function TabSugerencias() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [insightGlobal, setInsightGlobal] = useState<string | null>(null)
@@ -1642,7 +1643,7 @@ type DocEmitido = {
 }
 
 function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [selected, setSelected] = useState<Paciente | null>(null)
   const [tipo, setTipo] = useState<'padres' | 'seguro' | 'comparativo' | 'general'>('padres')
@@ -1969,7 +1970,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
 // COMPONENTE PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function InteligenciaHubView({ enabledTabs }: { enabledTabs?: Record<string, boolean> } = {}) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [tab, setTab] = useState<Tab>('predicciones')
   const [pacientes, setPacientes] = useState<Paciente[]>([])
 
@@ -1990,10 +1991,10 @@ export default function InteligenciaHubView({ enabledTabs }: { enabledTabs?: Rec
 
   const tabs = ([
     { id: 'predicciones' as Tab, icon: Brain, label: t('hub.predicciones'), color: 'blue', featureKey: 'intel_predicciones' },
-    { id: 'patrones' as Tab, icon: Activity, label: 'Patrones ABA', color: 'violet', featureKey: 'intel_patrones' },
-    { id: 'objetivos' as Tab, icon: Target, label: 'Objetivos IA', color: 'amber', featureKey: 'intel_objetivos' },
-    { id: 'sugerencias' as Tab, icon: Sparkles, label: 'Alertas Proactivas', color: 'orange', featureKey: 'intel_sugerencias' },
-    { id: 'reportes' as Tab, icon: BookOpen, label: 'Reportes IA', color: 'teal', featureKey: 'intel_reportes' },
+    { id: 'patrones' as Tab, icon: Activity, label: t('hub.tabPatrones'), color: 'violet', featureKey: 'intel_patrones' },
+    { id: 'objetivos' as Tab, icon: Target, label: t('hub.tabObjetivos'), color: 'amber', featureKey: 'intel_objetivos' },
+    { id: 'sugerencias' as Tab, icon: Sparkles, label: t('hub.tabAlertas'), color: 'orange', featureKey: 'intel_sugerencias' },
+    { id: 'reportes' as Tab, icon: BookOpen, label: t('hub.tabReportes'), color: 'teal', featureKey: 'intel_reportes' },
   ] as const).filter(t => !enabledTabs || enabledTabs[t.featureKey] !== false)
 
   return (
@@ -2032,10 +2033,10 @@ export default function InteligenciaHubView({ enabledTabs }: { enabledTabs?: Rec
             {/* En móvil, acortar etiquetas largas */}
             <span className="hidden sm:inline">{tab_.label}</span>
             <span className="sm:hidden">
-              {tab_.label === 'Alertas Proactivas' ? 'Alertas' :
-               tab_.label === 'Patrones ABA' ? 'Patrones' :
-               tab_.label === 'Objetivos IA' ? 'Objetivos' :
-               tab_.label === 'Reportes IA' ? 'Reportes' :
+              {tab_.id === 'sugerencias' ? (locale === 'en' ? 'Alerts' : 'Alertas') :
+               tab_.id === 'patrones' ? (locale === 'en' ? 'Patterns' : 'Patrones') :
+               tab_.id === 'objetivos' ? (locale === 'en' ? 'Goals' : 'Objetivos') :
+               tab_.id === 'reportes' ? (locale === 'en' ? 'Reports' : 'Reportes') :
                tab_.label}
             </span>
           </button>

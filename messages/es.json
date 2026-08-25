@@ -867,7 +867,11 @@
   "generaAjustaObjetivos": "Genera o ajusta objetivos terapéuticos ABA automáticamente según el progreso real del paciente.",
   "ejecutar": "Ejecutar",
   "alertasProactivas": "Alertas Proactivas — CAPA 4",
-  "sinAlertasActivas": "Sin alertas activas"
+  "sinAlertasActivas": "Sin alertas activas",
+  "tabPatrones": "Patrones ABA",
+  "tabObjetivos": "Objetivos IA",
+  "tabAlertas": "Alertas Proactivas",
+  "tabReportes": "Reportes IA"
  },
  "reportes": {
   "titulo": "Reportes Clínicos",

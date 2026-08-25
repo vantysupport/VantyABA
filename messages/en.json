@@ -232,7 +232,11 @@
     "generaAjustaObjetivos": "Automatically generate or adjust ABA therapeutic goals based on the patient's real progress.",
     "ejecutar": "Run",
     "alertasProactivas": "Proactive Alerts — LAYER 4",
-    "sinAlertasActivas": "No active alerts"
+    "sinAlertasActivas": "No active alerts",
+    "tabPatrones": "ABA Patterns",
+    "tabObjetivos": "AI Goals",
+    "tabAlertas": "Proactive Alerts",
+    "tabReportes": "AI Reports"
   },
   "reportes": {
     "titulo": "Clinical Reports",
