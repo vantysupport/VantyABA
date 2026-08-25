@@ -91,6 +91,9 @@ export default async function RootLayout({
         {/* La app ya tiene su propio selector ES/EN. Evitamos que el Google Translate
             del navegador traduzca/atenúe la página (causaba el aspecto "lavado"). */}
         <meta name="google" content="notranslate" />
+        {/* La app maneja su propio claro/oscuro → el navegador NO debe forzar/invertir
+            colores (el "force dark" dejaba el login gris e ilegible). */}
+        <meta name="color-scheme" content="light dark" />
         {/*
           🚫 ANTI-FOUC (Flash of Unstyled Content)
           En caché frío (incógnito / primera visita) el navegador alcanza a pintar

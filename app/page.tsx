@@ -24,9 +24,24 @@ export default function LoginPage(props: PageProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showForgotInfo, setShowForgotInfo] = useState(false)
 
-  // ── Forzar modo claro en login — sin importar el tema guardado ──
+  // ── Forzar modo claro en login — sin importar el tema guardado NI el
+  //    "modo oscuro forzado" del navegador (que invertía la página y la dejaba gris) ──
   useEffect(() => {
-    document.documentElement.classList.remove('dark')
+    const html = document.documentElement
+    const body = document.body
+    html.classList.remove('dark')
+    // color-scheme en el <html> le dice al navegador: esta página es CLARA, no la inviertas.
+    const prevHtmlCS = html.style.colorScheme
+    const prevBodyCS = body.style.colorScheme
+    const prevBodyBg = body.style.background
+    html.style.colorScheme = 'light'
+    body.style.colorScheme = 'light'
+    body.style.background = '#eef5fb'
+    return () => {
+      html.style.colorScheme = prevHtmlCS
+      body.style.colorScheme = prevBodyCS
+      body.style.background = prevBodyBg
+    }
   }, [])
 
   // ── Aviso si fue expulsado por sesión única ──
