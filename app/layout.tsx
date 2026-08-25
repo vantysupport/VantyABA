@@ -157,12 +157,7 @@ export default async function RootLayout({
           __html: `
             (function() {
               try {
-                var p = window.location.pathname.replace(/^\/(en|es)(?=\/|$)/, '') || '/';
-                var isLogin = p === '/' || p === '/login';
-                if (isLogin) {
-                  document.documentElement.classList.remove('dark');
-                  return;
-                }
+                // El login TAMBIÉN sigue el tema (tiene su propio modo oscuro).
                 var stored = localStorage.getItem('app-theme');
                 var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 var dark = stored === 'dark' || ((stored === 'system' || !stored) && prefersDark);
