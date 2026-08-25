@@ -86,8 +86,11 @@ export default async function RootLayout({
   const cookieLocale = cookieStore.get('vanty_locale')?.value
   const initialLocale = cookieLocale === 'en' ? 'en' : 'es'
   return (
-    <html lang={initialLocale} className={`${jakarta.variable} ${poppins.variable}`} suppressHydrationWarning>
+    <html lang={initialLocale} translate="no" className={`notranslate ${jakarta.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
+        {/* La app ya tiene su propio selector ES/EN. Evitamos que el Google Translate
+            del navegador traduzca/atenúe la página (causaba el aspecto "lavado"). */}
+        <meta name="google" content="notranslate" />
         {/*
           🚫 ANTI-FOUC (Flash of Unstyled Content)
           En caché frío (incógnito / primera visita) el navegador alcanza a pintar
