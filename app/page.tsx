@@ -189,6 +189,27 @@ export default function LoginPage(props: PageProps) {
           --lpR-pill-tx: #7dd3fc;
           --lpR-logo-tx: #7dd3fc;
         }
+        /* Modo oscuro NATIVO por preferencia del SO. Esto es lo que Chrome mira para
+           decidir NO invertir la página (force-dark). Mismos tokens que .dark. */
+        @media (prefers-color-scheme: dark) {
+          .login-root {
+            --lpR-page: #0a0e14;
+            --lpR-bg: #0d1117;
+            --lpR-glow: rgba(56,189,248,.10);
+            --lpR-text: #e6edf3;
+            --lpR-text2: #9ca3af;
+            --lpR-text3: #c9d1d9;
+            --lpR-inbg: #161b22;
+            --lpR-inbd: #30363d;
+            --lpR-inbd-hover: #3f4753;
+            --lpR-ph: #6b7280;
+            --lpR-sep: #30363d;
+            --lpR-pill-bg: rgba(56,189,248,.12);
+            --lpR-pill-bd: rgba(56,189,248,.30);
+            --lpR-pill-tx: #7dd3fc;
+            --lpR-logo-tx: #7dd3fc;
+          }
+        }
         .lp-left {
           display: none;
           width: 50%;
