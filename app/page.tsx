@@ -2,6 +2,7 @@
 import React from 'react'
 
 import { useI18n } from '@/lib/i18n-context'
+import { useTheme } from '@/components/ThemeContext'
 
 import { useState, use, useEffect } from 'react'
 import Image from 'next/image'
@@ -24,25 +25,22 @@ export default function LoginPage(props: PageProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showForgotInfo, setShowForgotInfo] = useState(false)
 
-  // ── Forzar modo claro en login — sin importar el tema guardado NI el
-  //    "modo oscuro forzado" del navegador (que invertía la página y la dejaba gris) ──
+  const { isDark } = useTheme()
+
+  // ── El login SIGUE el tema de la app (claro/oscuro). Fijamos color-scheme en el
+  //    <html> según el tema para que el navegador no invierta la página por su cuenta. ──
   useEffect(() => {
     const html = document.documentElement
     const body = document.body
-    html.classList.remove('dark')
-    // color-scheme en el <html> le dice al navegador: esta página es CLARA, no la inviertas.
     const prevHtmlCS = html.style.colorScheme
     const prevBodyCS = body.style.colorScheme
-    const prevBodyBg = body.style.background
-    html.style.colorScheme = 'light'
-    body.style.colorScheme = 'light'
-    body.style.background = '#eef5fb'
+    html.style.colorScheme = isDark ? 'dark' : 'light'
+    body.style.colorScheme = isDark ? 'dark' : 'light'
     return () => {
       html.style.colorScheme = prevHtmlCS
       body.style.colorScheme = prevBodyCS
-      body.style.background = prevBodyBg
     }
-  }, [])
+  }, [isDark])
 
   // ── Aviso si fue expulsado por sesión única ──
   useEffect(() => {
@@ -155,8 +153,41 @@ export default function LoginPage(props: PageProps) {
           font-family: 'Plus Jakarta Sans', sans-serif;
           min-height: 100svh;
           display: flex;
-          background: #eef5fb;
+          background: var(--lpR-page);
           overflow-x: hidden;
+          /* Tokens del panel derecho (claro por defecto) */
+          --lpR-page: #eef5fb;
+          --lpR-bg: #fbfdff;
+          --lpR-glow: rgba(2,132,199,.06);
+          --lpR-text: #111827;
+          --lpR-text2: #6b7280;
+          --lpR-text3: #374151;
+          --lpR-inbg: #fff;
+          --lpR-inbd: #e7e6f0;
+          --lpR-inbd-hover: #d6d4e6;
+          --lpR-ph: #b6b6c6;
+          --lpR-sep: #e5e7eb;
+          --lpR-pill-bg: rgba(2,132,199,.08);
+          --lpR-pill-bd: rgba(2,132,199,.18);
+          --lpR-pill-tx: #0369a1;
+          --lpR-logo-tx: #0c4a6e;
+        }
+        .dark .login-root {
+          --lpR-page: #0a0e14;
+          --lpR-bg: #0d1117;
+          --lpR-glow: rgba(56,189,248,.10);
+          --lpR-text: #e6edf3;
+          --lpR-text2: #9ca3af;
+          --lpR-text3: #c9d1d9;
+          --lpR-inbg: #161b22;
+          --lpR-inbd: #30363d;
+          --lpR-inbd-hover: #3f4753;
+          --lpR-ph: #6b7280;
+          --lpR-sep: #30363d;
+          --lpR-pill-bg: rgba(56,189,248,.12);
+          --lpR-pill-bd: rgba(56,189,248,.30);
+          --lpR-pill-tx: #7dd3fc;
+          --lpR-logo-tx: #7dd3fc;
         }
         .lp-left {
           display: none;
@@ -234,15 +265,15 @@ export default function LoginPage(props: PageProps) {
           flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
           padding: 28px 20px 40px; position: relative; overflow: hidden;
           background:
-            radial-gradient(100% 80% at 100% 0%, rgba(2,132,199,.06) 0%, rgba(2,132,199,0) 55%),
-            #fbfdff;
+            radial-gradient(100% 80% at 100% 0%, var(--lpR-glow) 0%, rgba(2,132,199,0) 55%),
+            var(--lpR-bg);
         }
         .lp-form-box { width: 100%; max-width: 408px; position: relative; z-index: 2; }
         .lp-field { position: relative; margin-bottom: 12px; }
-        .lp-field label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 7px; }
-        .lp-field input { width: 100%; padding: 15px 16px 15px 46px; background: #fff; border: 1.5px solid #e7e6f0; border-radius: 14px; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; color: #111827; outline: none; transition: border-color .2s, box-shadow .2s; box-shadow: 0 1px 2px rgba(30,27,75,.04); }
-        .lp-field input::placeholder { color: #b6b6c6; }
-        .lp-field input:hover { border-color: #d6d4e6; }
+        .lp-field label { display: block; font-size: 13px; font-weight: 600; color: var(--lpR-text3); margin-bottom: 7px; }
+        .lp-field input { width: 100%; padding: 15px 16px 15px 46px; background: var(--lpR-inbg); border: 1.5px solid var(--lpR-inbd); border-radius: 14px; font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--lpR-text); outline: none; transition: border-color .2s, box-shadow .2s; box-shadow: 0 1px 2px rgba(30,27,75,.04); }
+        .lp-field input::placeholder { color: var(--lpR-ph); }
+        .lp-field input:hover { border-color: var(--lpR-inbd-hover); }
         .lp-field input:focus { border-color: #0284c7; box-shadow: 0 0 0 4px rgba(2,132,199,.14); }
         .lp-field .lp-icon { position: absolute; left: 15px; bottom: 16px; color: #9ca3af; pointer-events: none; }
         .lp-field .lp-eye { position: absolute; right: 14px; bottom: 15px; color: #9ca3af; cursor: pointer; background: none; border: none; padding: 0; transition: color .2s; display: flex; }
@@ -252,13 +283,13 @@ export default function LoginPage(props: PageProps) {
         .lp-btn:active:not(:disabled) { transform: translateY(0); }
         .lp-btn:disabled { opacity: .6; cursor: not-allowed; }
         .lp-error { display: flex; align-items: center; gap: 10px; background: #fef2f2; border: 1.5px solid #fca5a5; color: #dc2626; border-radius: 12px; padding: 12px 16px; font-size: 13px; margin-bottom: 14px; }
-        .lp-sep { display: flex; align-items: center; gap: 12px; margin: 28px 0 20px; color: #9ca3af; font-size: 12px; }
-        .lp-sep::before, .lp-sep::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
-        .lp-forgot { background: #eff8ff; border: 1.5px solid #bae0fd; border-radius: 13px; padding: 15px 17px; margin-bottom: 14px; }
-        .lp-forgot p { font-size: 13px; color: #075985; line-height: 1.6; margin-bottom: 11px; }
+        .lp-sep { display: flex; align-items: center; gap: 12px; margin: 28px 0 20px; color: var(--lpR-text2); font-size: 12px; }
+        .lp-sep::before, .lp-sep::after { content: ''; flex: 1; height: 1px; background: var(--lpR-sep); }
+        .lp-forgot { background: var(--lpR-pill-bg); border: 1.5px solid var(--lpR-pill-bd); border-radius: 13px; padding: 15px 17px; margin-bottom: 14px; }
+        .lp-forgot p { font-size: 13px; color: var(--lpR-text3); line-height: 1.6; margin-bottom: 11px; }
         .lp-forgot a { display: flex; align-items: center; justify-content: center; gap: 8px; background: #16a34a; color: #fff; border-radius: 10px; padding: 11px 16px; font-size: 13px; font-weight: 700; text-decoration: none; transition: background .2s; }
         .lp-forgot a:hover { background: #15803d; }
-        .lp-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(2,132,199,.08); border: 1px solid rgba(2,132,199,.18); color: #0369a1; border-radius: 99px; padding: 6px 14px; font-size: 12px; font-weight: 600; margin-bottom: 18px; }
+        .lp-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--lpR-pill-bg); border: 1px solid var(--lpR-pill-bd); color: var(--lpR-pill-tx); border-radius: 99px; padding: 6px 14px; font-size: 12px; font-weight: 600; margin-bottom: 18px; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; }
         @media(min-width:900px) { .mobile-logo { display: none !important; } }
@@ -318,8 +349,8 @@ export default function LoginPage(props: PageProps) {
             <div className="mobile-logo" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
               <Image src="/images/logo.png" alt="Logo" width={40} height={40} style={{ objectFit: 'contain', flexShrink: 0 }} />
               <div>
-                <p style={{ fontWeight: 800, color: '#0c4a6e', fontSize: 14, lineHeight: 1.2, margin: 0 }}>{t('auto.page.neuropsicologiaYTerapiasSanti')}</p>
-                <p style={{ color: '#6b7280', fontSize: 11, margin: 0 }}>{t("auth.centroTerapeutico")}</p>
+                <p style={{ fontWeight: 800, color: 'var(--lpR-logo-tx)', fontSize: 14, lineHeight: 1.2, margin: 0 }}>{t('auto.page.neuropsicologiaYTerapiasSanti')}</p>
+                <p style={{ color: 'var(--lpR-text2)', fontSize: 11, margin: 0 }}>{t("auth.centroTerapeutico")}</p>
               </div>
             </div>
 
@@ -328,10 +359,10 @@ export default function LoginPage(props: PageProps) {
               {isSignUp ? 'Crea tu cuenta gratis' : 'Plataforma clínica protegida'}
             </div>
 
-            <h1 style={{ fontSize: 'clamp(26px, 5vw, 33px)', fontWeight: 800, color: '#111827', marginBottom: 7, lineHeight: 1.12, letterSpacing: '-0.025em' }}>
+            <h1 style={{ fontSize: 'clamp(26px, 5vw, 33px)', fontWeight: 800, color: 'var(--lpR-text)', marginBottom: 7, lineHeight: 1.12, letterSpacing: '-0.025em' }}>
               {isSignUp ? 'Bienvenido al equipo' : 'Ingresa a tu cuenta'}
             </h1>
-            <p style={{ fontSize: 14.5, color: '#6b7280', marginBottom: 24 }}>
+            <p style={{ fontSize: 14.5, color: 'var(--lpR-text2)', marginBottom: 24 }}>
               {isSignUp ? 'Completa los datos para comenzar' : 'Continúa el seguimiento de tu hijo'}
             </p>
 
@@ -398,13 +429,13 @@ export default function LoginPage(props: PageProps) {
               disabled={isLoading}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: 10, padding: '13px 20px', borderRadius: 14, border: '1.5px solid #e7e6f0',
-                background: '#fff', color: '#374151', fontSize: 14, fontWeight: 600,
+                gap: 10, padding: '13px 20px', borderRadius: 14, border: '1.5px solid var(--lpR-inbd)',
+                background: 'var(--lpR-inbg)', color: 'var(--lpR-text3)', fontSize: 14, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10, transition: 'all .2s',
                 boxShadow: '0 1px 2px rgba(30,27,75,.04)',
               }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(2,132,199,.14)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#e7e6f0'; e.currentTarget.style.boxShadow = '0 1px 2px rgba(30,27,75,.04)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--lpR-inbd)'; e.currentTarget.style.boxShadow = '0 1px 2px rgba(30,27,75,.04)' }}
             >
               <svg width="18" height="18" viewBox="0 0 18 18">
                 <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
@@ -422,13 +453,13 @@ export default function LoginPage(props: PageProps) {
               disabled={isLoading}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: 10, padding: '13px 20px', borderRadius: 14, border: '1.5px solid #e7e6f0',
-                background: '#fff', color: '#374151', fontSize: 14, fontWeight: 600,
+                gap: 10, padding: '13px 20px', borderRadius: 14, border: '1.5px solid var(--lpR-inbd)',
+                background: 'var(--lpR-inbg)', color: 'var(--lpR-text3)', fontSize: 14, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12, transition: 'all .2s',
                 boxShadow: '0 1px 2px rgba(30,27,75,.04)',
               }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = '#0078d4'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,120,212,.12)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = '#e7e6f0'; e.currentTarget.style.boxShadow = '0 1px 2px rgba(30,27,75,.04)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--lpR-inbd)'; e.currentTarget.style.boxShadow = '0 1px 2px rgba(30,27,75,.04)' }}
             >
               <svg width="18" height="18" viewBox="0 0 21 21">
                 <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
@@ -440,17 +471,17 @@ export default function LoginPage(props: PageProps) {
             </button>
 
             <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: 14, color: '#6b7280' }}>{isSignUp ? '¿Ya tienes cuenta? ' : '¿Primera vez? '}</span>
+              <span style={{ fontSize: 14, color: 'var(--lpR-text2)' }}>{isSignUp ? '¿Ya tienes cuenta? ' : '¿Primera vez? '}</span>
               <button onClick={() => { setIsSignUp(!isSignUp); setErrorMessage(''); setShowForgotInfo(false) }}
                 style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 {isSignUp ? 'Iniciar sesión' : 'Crear una cuenta'}
               </button>
             </div>
 
-            <p style={{ textAlign: 'center', fontSize: 11, color: '#d1d5db', marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--lpR-text2)', marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
               <Lock size={10} /> Acceso cifrado y protegido
             </p>
-            <p style={{ textAlign: 'center', fontSize: 11, color: '#d1d5db', marginTop: 8 }}>
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--lpR-text2)', marginTop: 8 }}>
               <a href="/privacidad" style={{ color: '#9ca3af', textDecoration: 'none' }}>{t('auth.politicaPriv')}</a>
               {' · '}
               <a href="/terminos" style={{ color: '#9ca3af', textDecoration: 'none' }}>{t('auth.terminosServ')}</a>
