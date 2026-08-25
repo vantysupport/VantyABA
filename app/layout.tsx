@@ -163,6 +163,11 @@ export default async function RootLayout({
                 var dark = stored === 'dark' || ((stored === 'system' || !stored) && prefersDark);
                 if (dark) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
+                // Declarar el esquema ANTES del primer pintado: así el navegador NO
+                // aplica su "force dark" invirtiendo la página (causaba el gris lavado).
+                var cs = dark ? 'dark' : 'light';
+                document.documentElement.style.colorScheme = cs;
+                if (document.body) document.body.style.colorScheme = cs;
               } catch (e) { /* silencioso */ }
             })();
           `
