@@ -2,7 +2,6 @@
 import React from 'react'
 
 import { useI18n } from '@/lib/i18n-context'
-import { useTheme } from '@/components/ThemeContext'
 
 import { useState, use, useEffect } from 'react'
 import Image from 'next/image'
@@ -25,22 +24,23 @@ export default function LoginPage(props: PageProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showForgotInfo, setShowForgotInfo] = useState(false)
 
-  const { isDark } = useTheme()
-
-  // ── El login SIGUE el tema de la app (claro/oscuro). Fijamos color-scheme en el
-  //    <html> según el tema para que el navegador no invierta la página por su cuenta. ──
+  // ── El login SIEMPRE es claro. Forzamos color-scheme: only light en html+body y
+  //    quitamos la clase dark, para que el navegador NO lo invierta (force-dark). ──
   useEffect(() => {
     const html = document.documentElement
     const body = document.body
     const prevHtmlCS = html.style.colorScheme
     const prevBodyCS = body.style.colorScheme
-    html.style.colorScheme = isDark ? 'dark' : 'light'
-    body.style.colorScheme = isDark ? 'dark' : 'light'
+    const hadDark = html.classList.contains('dark')
+    html.classList.remove('dark')
+    html.style.colorScheme = 'only light'
+    body.style.colorScheme = 'only light'
     return () => {
       html.style.colorScheme = prevHtmlCS
       body.style.colorScheme = prevBodyCS
+      if (hadDark) html.classList.add('dark')
     }
-  }, [isDark])
+  }, [])
 
   // ── Aviso si fue expulsado por sesión única ──
   useEffect(() => {
@@ -172,44 +172,6 @@ export default function LoginPage(props: PageProps) {
           --lpR-pill-tx: #0369a1;
           --lpR-logo-tx: #0c4a6e;
         }
-        .dark .login-root {
-          --lpR-page: #0a0e14;
-          --lpR-bg: #0d1117;
-          --lpR-glow: rgba(56,189,248,.10);
-          --lpR-text: #e6edf3;
-          --lpR-text2: #9ca3af;
-          --lpR-text3: #c9d1d9;
-          --lpR-inbg: #161b22;
-          --lpR-inbd: #30363d;
-          --lpR-inbd-hover: #3f4753;
-          --lpR-ph: #6b7280;
-          --lpR-sep: #30363d;
-          --lpR-pill-bg: rgba(56,189,248,.12);
-          --lpR-pill-bd: rgba(56,189,248,.30);
-          --lpR-pill-tx: #7dd3fc;
-          --lpR-logo-tx: #7dd3fc;
-        }
-        /* Modo oscuro NATIVO por preferencia del SO. Esto es lo que Chrome mira para
-           decidir NO invertir la página (force-dark). Mismos tokens que .dark. */
-        @media (prefers-color-scheme: dark) {
-          .login-root {
-            --lpR-page: #0a0e14;
-            --lpR-bg: #0d1117;
-            --lpR-glow: rgba(56,189,248,.10);
-            --lpR-text: #e6edf3;
-            --lpR-text2: #9ca3af;
-            --lpR-text3: #c9d1d9;
-            --lpR-inbg: #161b22;
-            --lpR-inbd: #30363d;
-            --lpR-inbd-hover: #3f4753;
-            --lpR-ph: #6b7280;
-            --lpR-sep: #30363d;
-            --lpR-pill-bg: rgba(56,189,248,.12);
-            --lpR-pill-bd: rgba(56,189,248,.30);
-            --lpR-pill-tx: #7dd3fc;
-            --lpR-logo-tx: #7dd3fc;
-          }
-        }
         .lp-left {
           display: none;
           width: 50%;
@@ -321,17 +283,7 @@ export default function LoginPage(props: PageProps) {
         .login-root input { font-size: 16px; } /* evita zoom en iOS */
       `}</style>
 
-      <div className="login-root" style={{
-        background: 'var(--lpR-page)',
-        colorScheme: isDark ? 'dark' : 'light',
-        ...(isDark ? {
-          '--lpR-page': '#0a0e14', '--lpR-bg': '#0d1117', '--lpR-glow': 'rgba(56,189,248,.10)',
-          '--lpR-text': '#e6edf3', '--lpR-text2': '#9ca3af', '--lpR-text3': '#c9d1d9',
-          '--lpR-inbg': '#161b22', '--lpR-inbd': '#30363d', '--lpR-inbd-hover': '#3f4753',
-          '--lpR-ph': '#6b7280', '--lpR-sep': '#30363d', '--lpR-pill-bg': 'rgba(56,189,248,.12)',
-          '--lpR-pill-bd': 'rgba(56,189,248,.30)', '--lpR-pill-tx': '#7dd3fc', '--lpR-logo-tx': '#7dd3fc',
-        } : {}),
-      } as React.CSSProperties}>
+      <div className="login-root" style={{ background: '#eef5fb', colorScheme: 'only light' } as React.CSSProperties}>
 
         {/* LEFT */}
         <div className="lp-left">

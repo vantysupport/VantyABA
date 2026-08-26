@@ -26,9 +26,19 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 const STORAGE_KEY = 'app-theme'
 
+function isLoginPage(): boolean {
+  if (typeof window === 'undefined') return false
+  const path = window.location.pathname.replace(/^\/(en|es)(?=\/|$)/, '') || '/'
+  return path === '/' || path === '/login'
+}
+
 function applyDarkClass(isDark: boolean) {
   if (typeof document === 'undefined') return
-  // El login ya tiene su propio modo oscuro → también sigue el tema.
+  // El login SIEMPRE es claro: nunca le aplicamos la clase dark.
+  if (isLoginPage()) {
+    document.documentElement.classList.remove('dark')
+    return
+  }
   document.documentElement.classList.toggle('dark', isDark)
 }
 

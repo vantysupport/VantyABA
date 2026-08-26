@@ -157,14 +157,20 @@ export default async function RootLayout({
           __html: `
             (function() {
               try {
-                // El login TAMBIÉN sigue el tema (tiene su propio modo oscuro).
+                var p = window.location.pathname.replace(/^\/(en|es)(?=\/|$)/, '') || '/';
+                var isLogin = p === '/' || p === '/login';
+                if (isLogin) {
+                  // El login SIEMPRE es claro. Forzamos only light para que el
+                  // navegador no lo invierta (force-dark) desde el primer pintado.
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.style.colorScheme = 'only light';
+                  return;
+                }
                 var stored = localStorage.getItem('app-theme');
                 var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                 var dark = stored === 'dark' || ((stored === 'system' || !stored) && prefersDark);
                 if (dark) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
-                // Declarar el esquema ANTES del primer pintado: así el navegador NO
-                // aplica su "force dark" invirtiendo la página (causaba el gris lavado).
                 var cs = dark ? 'dark' : 'light';
                 document.documentElement.style.colorScheme = cs;
                 if (document.body) document.body.style.colorScheme = cs;
