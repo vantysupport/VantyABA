@@ -321,7 +321,17 @@ export default function LoginPage(props: PageProps) {
         .login-root input { font-size: 16px; } /* evita zoom en iOS */
       `}</style>
 
-      <div className="login-root" style={{ background: '#eef5fb', colorScheme: 'light' }}>
+      <div className="login-root" style={{
+        background: 'var(--lpR-page)',
+        colorScheme: isDark ? 'dark' : 'light',
+        ...(isDark ? {
+          '--lpR-page': '#0a0e14', '--lpR-bg': '#0d1117', '--lpR-glow': 'rgba(56,189,248,.10)',
+          '--lpR-text': '#e6edf3', '--lpR-text2': '#9ca3af', '--lpR-text3': '#c9d1d9',
+          '--lpR-inbg': '#161b22', '--lpR-inbd': '#30363d', '--lpR-inbd-hover': '#3f4753',
+          '--lpR-ph': '#6b7280', '--lpR-sep': '#30363d', '--lpR-pill-bg': 'rgba(56,189,248,.12)',
+          '--lpR-pill-bd': 'rgba(56,189,248,.30)', '--lpR-pill-tx': '#7dd3fc', '--lpR-logo-tx': '#7dd3fc',
+        } : {}),
+      } as React.CSSProperties}>
 
         {/* LEFT */}
         <div className="lp-left">
