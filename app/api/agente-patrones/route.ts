@@ -175,6 +175,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { childId, childName, semanas = 16 } = body
     const userLocale = body.locale || req.headers.get('x-locale') || 'es'
+    const isEN = String(userLocale).toLowerCase().startsWith('en')
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
 
     const fechaInicio = new Date()
@@ -251,35 +252,47 @@ export async function POST(req: NextRequest) {
         if (valores.length >= 2 && valores.slice(-2).every((v: number) => v >= criterio)) {
           todosPatrones.push({
             tipo: 'dominio', area: nombreProg,
-            descripcion: `"${nombreProg}"${etiquetaSet} alcanzó criterio de dominio (≥${criterio}%) en las últimas ${Math.min(valores.length, 2)} sesiones`,
+            descripcion: isEN
+              ? `"${nombreProg}"${etiquetaSet} reached mastery criterion (≥${criterio}%) in the last ${Math.min(valores.length, 2)} sessions`
+              : `"${nombreProg}"${etiquetaSet} alcanzó criterio de dominio (≥${criterio}%) en las últimas ${Math.min(valores.length, 2)} sesiones`,
             confianza: 92, sesiones_involucradas: Math.min(valores.length, 2),
             valor_actual: Math.round(promReciente), valor_anterior: Math.round(promAnterior),
             semanas_detectado: semanas_,
-            accion_sugerida: `Avanzar al siguiente set o fase de generalización en "${nombreProg}"`
+            accion_sugerida: isEN
+              ? `Advance to the next set or generalization phase in "${nombreProg}"`
+              : `Avanzar al siguiente set o fase de generalización en "${nombreProg}"`
           })
         }
         // REGRESIÓN dentro del set: bajó más de 15 puntos
         else if (delta < -15 && valores.length >= 2) {
           todosPatrones.push({
             tipo: 'regresion', area: nombreProg,
-            descripcion: `"${nombreProg}"${etiquetaSet} bajó ${Math.abs(Math.round(delta))} puntos dentro del set (${Math.round(promAnterior)}% → ${Math.round(promReciente)}%)`,
+            descripcion: isEN
+              ? `"${nombreProg}"${etiquetaSet} dropped ${Math.abs(Math.round(delta))} points within the set (${Math.round(promAnterior)}% → ${Math.round(promReciente)}%)`
+              : `"${nombreProg}"${etiquetaSet} bajó ${Math.abs(Math.round(delta))} puntos dentro del set (${Math.round(promAnterior)}% → ${Math.round(promReciente)}%)`,
             confianza: Math.min(95, 60 + Math.abs(delta)),
             sesiones_involucradas: recientes.length,
             valor_actual: Math.round(promReciente), valor_anterior: Math.round(promAnterior),
             semanas_detectado: semanas_,
-            accion_sugerida: `Revisar reforzadores y antecedentes en "${nombreProg}". Posible necesidad de ajustar el SD o simplificar la tarea`
+            accion_sugerida: isEN
+              ? `Review reinforcers and antecedents in "${nombreProg}". May need to adjust the SD or simplify the task`
+              : `Revisar reforzadores y antecedentes en "${nombreProg}". Posible necesidad de ajustar el SD o simplificar la tarea`
           })
         }
         // ACELERACIÓN dentro del set: subió más de 20 puntos
         else if (delta > 20 && valores.length >= 2) {
           todosPatrones.push({
             tipo: 'aceleracion', area: nombreProg,
-            descripcion: `"${nombreProg}"${etiquetaSet} aceleró +${Math.round(delta)} puntos en las últimas sesiones`,
+            descripcion: isEN
+              ? `"${nombreProg}"${etiquetaSet} accelerated +${Math.round(delta)} points in the last sessions`
+              : `"${nombreProg}"${etiquetaSet} aceleró +${Math.round(delta)} puntos en las últimas sesiones`,
             confianza: Math.min(95, 55 + delta),
             sesiones_involucradas: recientes.length,
             valor_actual: Math.round(promReciente), valor_anterior: Math.round(promAnterior),
             semanas_detectado: semanas_,
-            accion_sugerida: `Identificar qué está funcionando en "${nombreProg}" y replicar la estrategia`
+            accion_sugerida: isEN
+              ? `Identify what is working in "${nombreProg}" and replicate the strategy`
+              : `Identificar qué está funcionando en "${nombreProg}" y replicar la estrategia`
           })
         }
         // ESTANCAMIENTO dentro del set: ≥5 sesiones en el set, pendiente plana
@@ -292,11 +305,15 @@ export async function POST(req: NextRequest) {
           if (esPlana && lejosDelCriterio) {
             todosPatrones.push({
               tipo: 'estancamiento', area: nombreProg,
-              descripcion: `"${nombreProg}"${etiquetaSet} sin mejora estadística en ${valores.length} sesiones del set (pendiente ${slope >= 0 ? '+' : ''}${slope}%/sesión, promedio ${Math.round(promVentana)}%, criterio ${criterio}%)`,
+              descripcion: isEN
+                ? `"${nombreProg}"${etiquetaSet} with no statistical improvement across ${valores.length} sessions in the set (slope ${slope >= 0 ? '+' : ''}${slope}%/session, average ${Math.round(promVentana)}%, criterion ${criterio}%)`
+                : `"${nombreProg}"${etiquetaSet} sin mejora estadística en ${valores.length} sesiones del set (pendiente ${slope >= 0 ? '+' : ''}${slope}%/sesión, promedio ${Math.round(promVentana)}%, criterio ${criterio}%)`,
               confianza: 80, sesiones_involucradas: ventana.length,
               valor_actual: Math.round(promVentana), valor_anterior: Math.round(promAnterior),
               semanas_detectado: semanas_,
-              accion_sugerida: `Revisar estrategia de enseñanza en "${nombreProg}". Considerar cambio de método o ajuste de la dificultad`
+              accion_sugerida: isEN
+                ? `Review the teaching strategy in "${nombreProg}". Consider changing the method or adjusting the difficulty`
+                : `Revisar estrategia de enseñanza en "${nombreProg}". Considerar cambio de método o ajuste de la dificultad`
             })
           }
         }
@@ -308,11 +325,15 @@ export async function POST(req: NextRequest) {
           if (std > 20) {
             todosPatrones.push({
               tipo: 'inconsistencia', area: nombreProg,
-              descripcion: `"${nombreProg}" muestra alta variabilidad (desv. estándar: ${Math.round(std)} pts, rango: ${Math.round(Math.min(...valores))}-${Math.round(Math.max(...valores))}%)`,
+              descripcion: isEN
+                ? `"${nombreProg}" shows high variability (standard deviation: ${Math.round(std)} pts, range: ${Math.round(Math.min(...valores))}-${Math.round(Math.max(...valores))}%)`
+                : `"${nombreProg}" muestra alta variabilidad (desv. estándar: ${Math.round(std)} pts, rango: ${Math.round(Math.min(...valores))}-${Math.round(Math.max(...valores))}%)`,
               confianza: 75, sesiones_involucradas: valores.length,
               valor_actual: Math.round(ultimo), valor_anterior: Math.round(promAnterior),
               semanas_detectado: semanas_,
-              accion_sugerida: `Revisar consistencia ambiental y de terapeuta en "${nombreProg}". Verificar factores contextuales (sueño, rutina)`
+              accion_sugerida: isEN
+                ? `Review environmental and therapist consistency in "${nombreProg}". Check contextual factors (sleep, routine)`
+                : `Revisar consistencia ambiental y de terapeuta en "${nombreProg}". Verificar factores contextuales (sueño, rutina)`
             })
           }
         }
@@ -323,12 +344,10 @@ export async function POST(req: NextRequest) {
 
     const patrones = todosPatrones.sort((a, b) => b.confianza - a.confianza)
 
-    const isENresumen = String(userLocale).toLowerCase().startsWith('en')
-
     if (sesiones.length < 2) {
       return NextResponse.json({
         patrones: [],
-        resumen: isENresumen
+        resumen: isEN
           ? 'Not enough sessions to detect patterns (minimum 2 per program).'
           : 'Insuficientes sesiones para detectar patrones (mínimo 2 por programa).',
         sesiones_analizadas: sesiones.length,
@@ -346,7 +365,6 @@ export async function POST(req: NextRequest) {
     } catch { /* fallback */ }
     // ━━━ FIN CEREBRO IA ━━━
     let analisis_ia: string | null = null
-    const isEN = String(userLocale).toLowerCase().startsWith('en')
     if (patrones.length > 0) {
       try {
         const systemPrompt = isEN
@@ -483,7 +501,7 @@ Identifica recursos conductuales y habilidades del paciente que son activos tera
       patrones,
       sesiones_analizadas: sesiones.length,
       patrones_urgentes: tiposUrgentes.length,
-      resumen: isENresumen
+      resumen: isEN
         ? (patrones.length === 0
             ? `No problematic patterns detected in ${sesiones.length} sessions. Stable progress.`
             : `${patrones.length} pattern(s) detected: ${tiposUrgentes.length} require immediate attention.`)

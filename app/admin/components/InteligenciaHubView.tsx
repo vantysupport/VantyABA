@@ -993,17 +993,19 @@ function TabCompetitividad() {
 // accent = color principal, usado en borde izq, número, badge
 // bg/border son suficientemente ligeros para light mode
 const PATRON_CONFIG: Record<string, {
-  label: string; Icon: any; accent: string; lightBg: string; lightBorder: string; lightText: string; darkBg: string; darkBorder: string; darkText: string
+  label: string; labelEn: string; Icon: any; accent: string; lightBg: string; lightBorder: string; lightText: string; darkBg: string; darkBorder: string; darkText: string
 }> = {
-  regresion:     { label: 'Regresión Conductual',         Icon: TrendingDown, accent: '#ef4444', lightBg: '#fef2f2', lightBorder: '#fecaca', lightText: '#b91c1c', darkBg: 'rgba(239,68,68,0.12)',  darkBorder: 'rgba(239,68,68,0.3)',  darkText: '#fca5a5' },
-  estancamiento: { label: 'Estancamiento de Aprendizaje', Icon: Minus,        accent: '#f59e0b', lightBg: '#fffbeb', lightBorder: '#fde68a', lightText: '#b45309', darkBg: 'rgba(245,158,11,0.12)', darkBorder: 'rgba(245,158,11,0.3)', darkText: '#fcd34d' },
-  aceleracion:   { label: 'Aceleración del Logro',        Icon: TrendingUp,   accent: '#10b981', lightBg: '#f0fdf4', lightBorder: '#a7f3d0', lightText: '#047857', darkBg: 'rgba(16,185,129,0.12)', darkBorder: 'rgba(16,185,129,0.3)', darkText: '#6ee7b7' },
-  inconsistencia:{ label: 'Variabilidad Alta',            Icon: Activity,     accent: '#0891b2', lightBg: '#ecfeff', lightBorder: '#a5f3fc', lightText: '#0e7490', darkBg: 'rgba(8,145,178,0.12)',  darkBorder: 'rgba(8,145,178,0.3)',  darkText: '#67e8f9' },
-  dominio:       { label: 'Criterio de Dominio',          Icon: Award,        accent: '#0284c7', lightBg: '#f0f9ff', lightBorder: '#bae6fd', lightText: '#075985', darkBg: 'rgba(2,132,199,0.12)',  darkBorder: 'rgba(2,132,199,0.3)',  darkText: '#7dd3fc' },
+  regresion:     { label: 'Regresión Conductual',         labelEn: 'Behavioral Regression', Icon: TrendingDown, accent: '#ef4444', lightBg: '#fef2f2', lightBorder: '#fecaca', lightText: '#b91c1c', darkBg: 'rgba(239,68,68,0.12)',  darkBorder: 'rgba(239,68,68,0.3)',  darkText: '#fca5a5' },
+  estancamiento: { label: 'Estancamiento de Aprendizaje', labelEn: 'Learning Plateau',      Icon: Minus,        accent: '#f59e0b', lightBg: '#fffbeb', lightBorder: '#fde68a', lightText: '#b45309', darkBg: 'rgba(245,158,11,0.12)', darkBorder: 'rgba(245,158,11,0.3)', darkText: '#fcd34d' },
+  aceleracion:   { label: 'Aceleración del Logro',        labelEn: 'Achievement Acceleration', Icon: TrendingUp, accent: '#10b981', lightBg: '#f0fdf4', lightBorder: '#a7f3d0', lightText: '#047857', darkBg: 'rgba(16,185,129,0.12)', darkBorder: 'rgba(16,185,129,0.3)', darkText: '#6ee7b7' },
+  inconsistencia:{ label: 'Variabilidad Alta',            labelEn: 'High Variability',      Icon: Activity,     accent: '#0891b2', lightBg: '#ecfeff', lightBorder: '#a5f3fc', lightText: '#0e7490', darkBg: 'rgba(8,145,178,0.12)',  darkBorder: 'rgba(8,145,178,0.3)',  darkText: '#67e8f9' },
+  dominio:       { label: 'Criterio de Dominio',          labelEn: 'Mastery Criterion',     Icon: Award,        accent: '#0284c7', lightBg: '#f0f9ff', lightBorder: '#bae6fd', lightText: '#075985', darkBg: 'rgba(2,132,199,0.12)',  darkBorder: 'rgba(2,132,199,0.3)',  darkText: '#7dd3fc' },
 }
 
 function PatronCard({ p, index, defaultOpen = false }: { p: any; index: number; defaultOpen?: boolean; key?: any }) {
+  const { locale } = useI18n()
   const cfg = PATRON_CONFIG[p.tipo] || PATRON_CONFIG.estancamiento
+  const cfgLabel = locale === 'en' ? cfg.labelEn : cfg.label
   const delta = p.valor_actual - p.valor_anterior
   const [open, setOpen] = useState<boolean>(defaultOpen)
   const deltaColor = delta < 0 ? '#ef4444' : delta > 0 ? '#10b981' : 'var(--text-muted)'
@@ -1027,7 +1029,7 @@ function PatronCard({ p, index, defaultOpen = false }: { p: any; index: number; 
               <div className="min-w-0 flex-1">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded inline-block"
                   style={{ background: `${cfg.accent}12`, color: cfg.accent, border: `1px solid ${cfg.accent}30` }}>
-                  {cfg.label}
+                  {cfgLabel}
                 </span>
                 <p className="font-bold text-sm mt-1 leading-tight truncate" style={{ color: 'var(--text-primary)' }}>{p.area}</p>
               </div>
@@ -1054,9 +1056,9 @@ function PatronCard({ p, index, defaultOpen = false }: { p: any; index: number; 
             {/* Metrics */}
             <div className="grid grid-cols-3 gap-2 my-3">
               {[
-                { label: 'Valor anterior', val: `${p.valor_anterior}%`, hi: false },
-                { label: 'Valor actual',   val: `${p.valor_actual}%`,   hi: true  },
-                { label: 'Δ Cambio',       val: `${delta >= 0 ? '+' : ''}${delta}%`, hi: false },
+                { label: locale === 'en' ? 'Previous value' : 'Valor anterior', val: `${p.valor_anterior}%`, hi: false },
+                { label: locale === 'en' ? 'Current value' : 'Valor actual',   val: `${p.valor_actual}%`,   hi: true  },
+                { label: locale === 'en' ? 'Δ Change' : 'Δ Cambio',       val: `${delta >= 0 ? '+' : ''}${delta}%`, hi: false },
               ].map(m => (
                 <div key={m.label} className="rounded-lg p-2.5 text-center"
                   style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
@@ -1075,7 +1077,11 @@ function PatronCard({ p, index, defaultOpen = false }: { p: any; index: number; 
             </div>
 
             <p className="text-[10px] mt-3" style={{ color: 'var(--text-muted)' }}>
-              Basado en <strong style={{ color: 'var(--text-secondary)' }}>{p.sesiones_involucradas} sesiones</strong> · {p.semanas_detectado} sem. de monitoreo
+              {locale === 'en' ? (
+                <>Based on <strong style={{ color: 'var(--text-secondary)' }}>{p.sesiones_involucradas} sessions</strong> · {p.semanas_detectado} wks of monitoring</>
+              ) : (
+                <>Basado en <strong style={{ color: 'var(--text-secondary)' }}>{p.sesiones_involucradas} sesiones</strong> · {p.semanas_detectado} sem. de monitoreo</>
+              )}
             </p>
           </div>
         )}
