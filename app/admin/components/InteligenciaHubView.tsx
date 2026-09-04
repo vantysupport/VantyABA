@@ -1332,9 +1332,9 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
           {/* KPIs */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'Sesiones analizadas', val: resultado.sesiones_analizadas || 0, color: '#0284c7', Icon: FileText },
-              { label: 'Patrones detectados', val: resultado.patrones?.length || 0,   color: '#0891b2', Icon: Search },
-              { label: 'Requieren atención',  val: resultado.patrones_urgentes || 0,   color: resultado.patrones_urgentes > 0 ? '#ef4444' : '#10b981', Icon: resultado.patrones_urgentes > 0 ? AlertTriangle : CheckCircle },
+              { label: locale === 'en' ? 'Sessions analyzed' : 'Sesiones analizadas', val: resultado.sesiones_analizadas || 0, color: '#0284c7', Icon: FileText },
+              { label: locale === 'en' ? 'Patterns detected' : 'Patrones detectados', val: resultado.patrones?.length || 0,   color: '#0891b2', Icon: Search },
+              { label: locale === 'en' ? 'Need attention' : 'Requieren atención',  val: resultado.patrones_urgentes || 0,   color: resultado.patrones_urgentes > 0 ? '#ef4444' : '#10b981', Icon: resultado.patrones_urgentes > 0 ? AlertTriangle : CheckCircle },
             ].map(m => (
               <div key={m.label} className="group rounded-2xl p-4 text-center border transition-all hover:-translate-y-0.5 hover:shadow-md"
                 style={{ background: `linear-gradient(157deg, ${m.color}10 0%, var(--card) 50%)`, borderColor: `${m.color}25` }}>
@@ -1355,7 +1355,7 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
               <p className="text-3xl mb-3">✓</p>
               <p className="font-bold text-sm mb-1" style={{ color: '#10b981' }}>{t("hub.progresoEstable")}</p>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {resultado.resumen || `Sin patrones problemáticos en ${resultado.sesiones_analizadas} sesiones.`}
+                {resultado.resumen || (locale === 'en' ? `No problematic patterns in ${resultado.sesiones_analizadas} sessions.` : `Sin patrones problemáticos en ${resultado.sesiones_analizadas} sesiones.`)}
               </p>
             </div>
           )}

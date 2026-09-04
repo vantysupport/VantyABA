@@ -323,10 +323,14 @@ export async function POST(req: NextRequest) {
 
     const patrones = todosPatrones.sort((a, b) => b.confianza - a.confianza)
 
+    const isENresumen = String(userLocale).toLowerCase().startsWith('en')
+
     if (sesiones.length < 2) {
       return NextResponse.json({
         patrones: [],
-        resumen: 'Insuficientes sesiones para detectar patrones (mínimo 2 por programa).',
+        resumen: isENresumen
+          ? 'Not enough sessions to detect patterns (minimum 2 per program).'
+          : 'Insuficientes sesiones para detectar patrones (mínimo 2 por programa).',
         sesiones_analizadas: sesiones.length,
         analisis_ia: null
       })
@@ -479,9 +483,13 @@ Identifica recursos conductuales y habilidades del paciente que son activos tera
       patrones,
       sesiones_analizadas: sesiones.length,
       patrones_urgentes: tiposUrgentes.length,
-      resumen: patrones.length === 0
-        ? `Sin patrones problemáticos detectados en ${sesiones.length} sesiones. Progreso estable.`
-        : `${patrones.length} patrón(es) detectado(s): ${tiposUrgentes.length} requieren atención inmediata.`,
+      resumen: isENresumen
+        ? (patrones.length === 0
+            ? `No problematic patterns detected in ${sesiones.length} sessions. Stable progress.`
+            : `${patrones.length} pattern(s) detected: ${tiposUrgentes.length} require immediate attention.`)
+        : (patrones.length === 0
+            ? `Sin patrones problemáticos detectados en ${sesiones.length} sesiones. Progreso estable.`
+            : `${patrones.length} patrón(es) detectado(s): ${tiposUrgentes.length} requieren atención inmediata.`),
       analisis_ia
     })
 
