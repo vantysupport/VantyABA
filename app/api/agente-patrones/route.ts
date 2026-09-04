@@ -342,14 +342,68 @@ export async function POST(req: NextRequest) {
     } catch { /* fallback */ }
     // ━━━ FIN CEREBRO IA ━━━
     let analisis_ia: string | null = null
+    const isEN = String(userLocale).toLowerCase().startsWith('en')
     if (patrones.length > 0) {
       try {
-        analisis_ia = await callGroqSimple(
-          `Eres un neuropsicólogo clínico certificado BCBA con especialización en Análisis de Conducta Aplicado (ABA) para niños y adolescentes neurodivergentes (TEA, TDAH, TDL, discapacidad intelectual).
+        const systemPrompt = isEN
+          ? `You are a board-certified clinical neuropsychologist (BCBA) specialized in Applied Behavior Analysis (ABA) for neurodivergent children and adolescents (ASD, ADHD, DLD, intellectual disability).
+Your role is to write rigorous, evidence-based clinical reports with the depth an interdisciplinary team (psychologist, occupational therapist, speech-language pathologist, pediatrician) would expect.
+Ground your analysis in contemporary ABA literature: Cooper, Heron & Heward (ABA, 3rd ed.), Skinner, Lovaas, Sundberg & Partington (ABLLS), and BACB clinical practice guidelines.
+Write in professional clinical English. Use precise but comprehensible technical terminology.`
+          : `Eres un neuropsicólogo clínico certificado BCBA con especialización en Análisis de Conducta Aplicado (ABA) para niños y adolescentes neurodivergentes (TEA, TDAH, TDL, discapacidad intelectual).
 Tu rol es redactar informes clínicos rigurosos, fundamentados en evidencia científica, con el nivel de detalle y profundidad que esperaría un equipo interdisciplinario (psicólogo, terapeuta ocupacional, fonoaudiólogo, pediatra).
 Fundamenta tus análisis en la literatura ABA contemporánea: Cooper, Heron & Heward (ABA, 3ra ed.), Skinner, Lovaas, Sundberg & Partington (ABLLS), y guías de práctica clínica del BACB.
-Escribe en español clínico profesional. Usa terminología técnica precisa pero comprensible.`,
-          `═══════════════════════════════════════════════════
+Escribe en español clínico profesional. Usa terminología técnica precisa pero comprensible.`
+
+        const userPrompt = isEN
+          ? `═══════════════════════════════════════════════════
+CLINICAL RECORD — ABA PATTERN ANALYSIS
+═══════════════════════════════════════════════════
+PATIENT: ${childName || 'Patient'}
+EVALUATION PERIOD: Last ${semanas} weeks
+TOTAL SESSIONS ANALYZED: ${sesiones.length}
+
+─── DETECTED BEHAVIORAL PATTERNS ───────────────────
+${patrones.map(p => `▸ [${p.tipo.toUpperCase()}] ${p.area}
+   Description: ${p.descripcion}
+   Statistical confidence: ${p.confianza}%
+   Previous value: ${p.valor_anterior}% → Current value: ${p.valor_actual}%
+   Sessions involved: ${p.sesiones_involucradas}`).join('\n\n')}
+
+─── RECENT SESSION HISTORY ─────────────────────────
+${sesiones.slice(-8).map((s, i) => `Session ${sesiones.length - (sesiones.slice(-8).length - 1 - i)} (${s.fecha_sesion}):
+  • Goal achievement: ${s.datos?.nivel_logro_objetivos ?? 'N/A'}
+  • Attention level: ${s.datos?.nivel_atencion ?? 'N/A'}/5
+  • Frustration tolerance: ${s.datos?.tolerancia_frustracion ?? 'N/A'}/5
+  • Communicative initiative: ${s.datos?.iniciativa_comunicativa ?? 'N/A'}/5
+  • Target worked on: "${s.datos?.objetivo_principal || 'N/A'}"
+  • Clinical notes: "${s.datos?.notas_sesion || s.datos?.observaciones || 'No notes'}"`).join('\n\n')}
+
+─── CLINICAL KNOWLEDGE BASE ────────────────────────
+${_cerebroCtx || 'Not available'}
+
+═══════════════════════════════════════════════════
+REPORT INSTRUCTIONS:
+Write a complete, professional clinical neuropsychological report with the following sections. Each section must have at least 3-5 sentences with real clinical depth. Do NOT use simple bullet points; write in fluent technical prose.
+
+**CLINICAL INTERPRETATION**
+Analyze the combined meaning of all detected patterns. Describe what they reveal about the patient's neuropsychological profile, their stage of behavioral development, and how the different patterns interact. Contextualize within the known diagnosis.
+
+**CLINICAL HYPOTHESIS**
+Formulate 2-3 explanatory hypotheses about the underlying causes of the problematic patterns. Consider antecedent factors (setting events, motivating operations), environmental variables, neurological development, and possible behavior functions per the ABC model.
+
+**PRELIMINARY FUNCTIONAL ANALYSIS**
+Describe the probable function of the observed behaviors (positive, negative, automatic reinforcement, attentional control). Note which controlling variables might be maintaining the plateau or regression.
+
+**PRIORITY THERAPEUTIC RECOMMENDATIONS**
+Detail at least 3 concrete, evidence-based interventions for this week and the coming month. Specify ABA procedures (DTT, NET, PRT, incidental teaching, shaping, chaining, etc.) as appropriate. Include recommendations for the team and the family.
+
+**PROGNOSIS AND ADVANCEMENT CRITERIA**
+Project the expected course of treatment over the next 4-8 weeks if the suggested interventions are implemented. Define measurable progress indicators. Note warning signs that would require reviewing the plan.
+
+**POSITIVE SIGNS AND STRENGTHS**
+Identify the patient's behavioral resources and skills that are therapeutic assets. Describe how to leverage these strengths in the intervention plan.`
+          : `═══════════════════════════════════════════════════
 EXPEDIENTE CLÍNICO — ANÁLISIS DE PATRONES ABA
 ═══════════════════════════════════════════════════
 PACIENTE: ${childName || 'Paciente'}
@@ -395,7 +449,11 @@ Detalla al menos 3 intervenciones concretas y fundamentadas para esta semana y e
 Proyecta el curso esperado del tratamiento en las próximas 4-8 semanas si se implementan las intervenciones sugeridas. Define indicadores medibles de progreso. Señala señales de alarma que requerirían revisión del plan.
 
 **SEÑALES POSITIVAS Y FORTALEZAS**
-Identifica recursos conductuales y habilidades del paciente que son activos terapéuticos. Describe cómo aprovechar estas fortalezas en el plan de intervención.`,
+Identifica recursos conductuales y habilidades del paciente que son activos terapéuticos. Describe cómo aprovechar estas fortalezas en el plan de intervención.`
+
+        analisis_ia = await callGroqSimple(
+          systemPrompt,
+          userPrompt + getLangInstruction(userLocale),
           { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 2000 }
         )
       } catch (err) {

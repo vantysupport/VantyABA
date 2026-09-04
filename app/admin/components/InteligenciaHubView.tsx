@@ -1225,7 +1225,7 @@ function ResumenIACard({ texto }: { texto: string }) {
       <div className="px-6 py-3 flex items-center justify-between"
         style={{ background: 'var(--muted-bg)', borderTop: '1px solid var(--card-border)' }}>
         <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t("hub.generadoAnalista")}</p>
-        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
       </div>
     </div>
   )
@@ -1276,15 +1276,15 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
         </div>
         <div className="flex flex-wrap gap-3 mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
           {[
-            { Icon: TrendingDown, label: 'Regresión',     color: '#ef4444' },
-            { Icon: Minus,        label: 'Estancamiento',  color: '#f59e0b' },
-            { Icon: TrendingUp,   label: 'Aceleración',    color: '#10b981' },
-            { Icon: Activity,     label: 'Variabilidad',   color: '#0891b2' },
-            { Icon: Award,        label: 'Dominio',        color: '#0284c7' },
+            { Icon: TrendingDown, label: 'Regresión',     labelEn: 'Regression',    color: '#ef4444' },
+            { Icon: Minus,        label: 'Estancamiento',  labelEn: 'Plateau',       color: '#f59e0b' },
+            { Icon: TrendingUp,   label: 'Aceleración',    labelEn: 'Acceleration',  color: '#10b981' },
+            { Icon: Activity,     label: 'Variabilidad',   labelEn: 'Variability',   color: '#0891b2' },
+            { Icon: Award,        label: 'Dominio',        labelEn: 'Mastery',       color: '#0284c7' },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-1.5">
               <item.Icon size={13} style={{ color: item.color }} />
-              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+              <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{locale === 'en' ? item.labelEn : item.label}</span>
             </div>
           ))}
         </div>
