@@ -31,23 +31,23 @@ async function getToken(): Promise<string> {
   return data.access_token
 }
 
-const WHO_HEADERS = (token: string) => ({
+const WHO_HEADERS = (token: string, lang: string = 'es') => ({
   Authorization:     `Bearer ${token}`,
   Accept:            'application/json',
-  'Accept-Language': 'es',
+  'Accept-Language': lang === 'en' ? 'en' : 'es',
   'API-Version':     'v2',
 })
 
-function txt(v: any): string {
+function txt(v: any, lang: string = 'es'): string {
   if (!v) return ''
   if (typeof v === 'string') return v
   if (v['@value']) return v['@value']
   if (Array.isArray(v)) {
-    const es = v.find((x: any) => x['@language']?.startsWith('es'))
-    if (es?.['@value']) return es['@value']
+    const pref = v.find((x: any) => x['@language']?.startsWith(lang))
+    if (pref?.['@value']) return pref['@value']
     const any = v.find((x: any) => x['@value'])
     if (any?.['@value']) return any['@value']
-    return v.map(txt).filter(Boolean).join(' ')
+    return v.map(x => txt(x, lang)).filter(Boolean).join(' ')
   }
   return String(v)
 }
@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
   const action = searchParams.get('action') || ''
   const q      = searchParams.get('q')      || ''
   const code   = searchParams.get('code')   || ''
+  const lang   = searchParams.get('lang') === 'en' ? 'en' : 'es'
 
   // ── DEBUG ────────────────────────────────────────────────────────────────
   if (action === 'debug') {
@@ -106,7 +107,7 @@ export async function GET(req: NextRequest) {
       url.searchParams.set('highlightingEnabled', 'false')
       url.searchParams.set('includeKeywordResult', 'true')
 
-      const res = await fetch(url.toString(), { headers: WHO_HEADERS(token), cache: 'no-store' })
+      const res = await fetch(url.toString(), { headers: WHO_HEADERS(token, lang), cache: 'no-store' })
       if (!res.ok) return NextResponse.json({ results: [], fallback: true, error: `Search ${res.status}` })
 
       const data = await res.json()
@@ -138,7 +139,7 @@ export async function GET(req: NextRequest) {
 
     try {
       const res = await fetch(entityUrl, {
-        headers: WHO_HEADERS(token),
+        headers: WHO_HEADERS(token, lang),
         cache: 'no-store',
       })
 
@@ -161,18 +162,18 @@ export async function GET(req: NextRequest) {
           if (isSpecial) {
             return {
               id:    url.replace('http://', 'https://'),
-              code:  seg === 'other' ? 'Otro especificado' : 'Sin especificación',
-              title: seg === 'other' ? 'Otro trastorno especificado' : 'Sin especificación',
+              code:  seg === 'other' ? (lang === 'en' ? 'Other specified' : 'Otro especificado') : (lang === 'en' ? 'Unspecified' : 'Sin especificación'),
+              title: seg === 'other' ? (lang === 'en' ? 'Other specified disorder' : 'Otro trastorno especificado') : (lang === 'en' ? 'Unspecified' : 'Sin especificación'),
             }
           }
           try {
-            const cr = await fetch(url.replace('http://', 'https://'), { headers: WHO_HEADERS(token), cache: 'no-store' })
+            const cr = await fetch(url.replace('http://', 'https://'), { headers: WHO_HEADERS(token, lang), cache: 'no-store' })
             if (!cr.ok) return { id: url.replace('http://', 'https://'), code: seg, title: '' }
             const cd = await cr.json()
             return {
               id:    url.replace('http://', 'https://'),
               code:  cd.code || seg,
-              title: txt(cd.title),
+              title: txt(cd.title, lang),
             }
           } catch {
             return { id: url.replace('http://', 'https://'), code: seg, title: '' }
@@ -184,10 +185,10 @@ export async function GET(req: NextRequest) {
       let parent: { id: string; code: string; title: string } | null = null
       if (d.parent?.[0]) {
         try {
-          const pr = await fetch(d.parent[0].replace('http://', 'https://'), { headers: WHO_HEADERS(token), cache: 'no-store' })
+          const pr = await fetch(d.parent[0].replace('http://', 'https://'), { headers: WHO_HEADERS(token, lang), cache: 'no-store' })
           if (pr.ok) {
             const pd = await pr.json()
-            parent = { id: d.parent[0].replace('http://', 'https://'), code: pd.code || '', title: txt(pd.title) }
+            parent = { id: d.parent[0].replace('http://', 'https://'), code: pd.code || '', title: txt(pd.title, lang) }
           } else {
             parent = { id: d.parent[0].replace('http://', 'https://'), code: d.parent[0].split('/').pop() || '', title: '' }
           }
@@ -198,16 +199,16 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         code:               d.code || '',
-        title:              txt(d.title),
-        definition:         txt(d.definition) || txt(d.longDefinition) || '',
-        inclusions:         (d.inclusion  || []).map((i: any) => txt(i.label)).filter(Boolean),
-        exclusions:         (d.exclusion  || []).map((e: any) => txt(e.label)).filter(Boolean),
-        indexTerms:         (d.indexTerm  || []).map((t: any) => txt(t.label)).filter(Boolean),
-        codingNote:         txt(d.codingNote),
-        diagnosticCriteria: txt(d.diagnosticCriteria),
+        title:              txt(d.title, lang),
+        definition:         txt(d.definition, lang) || txt(d.longDefinition, lang) || '',
+        inclusions:         (d.inclusion  || []).map((i: any) => txt(i.label, lang)).filter(Boolean),
+        exclusions:         (d.exclusion  || []).map((e: any) => txt(e.label, lang)).filter(Boolean),
+        indexTerms:         (d.indexTerm  || []).map((t: any) => txt(t.label, lang)).filter(Boolean),
+        codingNote:         txt(d.codingNote, lang),
+        diagnosticCriteria: txt(d.diagnosticCriteria, lang),
         children,
         parent,
-        browserUrl: `https://icd.who.int/browse/2024-01/mms/es#${d.code || ''}`,
+        browserUrl: `https://icd.who.int/browse/2024-01/mms/${lang}#${d.code || ''}`,
       })
     } catch (e: any) {
       console.error('[CIE-11] Detail exception:', e.message)

@@ -50,7 +50,8 @@ interface Props {
 }
 
 export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: Props) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [q, setQ]               = useState('')
   const [results, setResults]   = useState<Result[]>([])
   const [loading, setLoading]   = useState(false)
@@ -66,11 +67,11 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
 
   // Verificar API al montar
   useEffect(() => {
-    fetch('/api/cie11?action=search&q=autismo')
+    fetch(`/api/cie11?action=search&q=autismo&lang=${locale}`)
       .then(r => r.json())
       .then(d => setApiOk(!d.fallback))
       .catch(() => setApiOk(false))
-  }, [])
+  }, [locale])
 
   // Búsqueda con debounce
   const doSearch = useCallback(async (query: string) => {
@@ -81,7 +82,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
     setSelected(null)
     setBreadcrumb([])
     try {
-      const res  = await fetch(`/api/cie11?action=search&q=${encodeURIComponent(resolved)}`)
+      const res  = await fetch(`/api/cie11?action=search&q=${encodeURIComponent(resolved)}&lang=${locale}`)
       const data = await res.json()
       setApiOk(!data.fallback)
       setResults(data.results || [])
@@ -92,7 +93,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
     } finally {
       setLoading(false)
     }
-  }, [history])
+  }, [history, locale])
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current)
@@ -113,12 +114,12 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
       definition: '', inclusions: [], exclusions: [],
       indexTerms: [], codingNote: '', diagnosticCriteria: '',
       children: [], parent: null,
-      browserUrl: `https://icd.who.int/browse/2024-01/mms/es#${r.code}`,
+      browserUrl: `https://icd.who.int/browse/2024-01/mms/${locale}#${r.code}`,
     })
     try {
       // Siempre usar el ID completo (URL) si está disponible — más confiable que el código alfanumérico
       const param = r.id || r.code
-      const res   = await fetch(`/api/cie11?action=detail&code=${encodeURIComponent(param)}`)
+      const res   = await fetch(`/api/cie11?action=detail&code=${encodeURIComponent(param)}&lang=${locale}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data  = await res.json()
       console.log('[CIE-11] detail response:', data)
@@ -134,7 +135,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
         codingNote:         data.codingNote         || '',
         diagnosticCriteria: data.diagnosticCriteria || '',
         parent:             data.parent             || null,
-        browserUrl:         data.browserUrl || `https://icd.who.int/browse/2024-01/mms/es#${data.code || r.code}`,
+        browserUrl:         data.browserUrl || `https://icd.who.int/browse/2024-01/mms/${locale}#${data.code || r.code}`,
       })
     } catch (e) {
       console.warn('[CIE-11] Detail load failed:', e)
@@ -169,7 +170,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
       {/* ── ESTADO API ── */}
       {apiOk === true && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
-          <Wifi size={13}/> Conectado a API oficial OMS — CIE-11 completo (+17.000 diagnósticos en español)
+          <Wifi size={13}/> {L('Connected to official WHO API — full ICD-11 (17,000+ diagnoses)','Conectado a API oficial OMS — CIE-11 completo (+17.000 diagnósticos en español)')}
         </div>
       )}
       {apiOk === false && (
@@ -232,7 +233,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
           <div className="px-4 py-2.5 border-b flex items-center gap-1.5 text-xs flex-wrap" style={{ background:'var(--muted-bg)', borderColor:'var(--card-border)' }}>
             <button onClick={() => { setSelected(null); setBreadcrumb([]) }}
               className="flex items-center gap-1 text-sky-600 hover:underline font-semibold">
-              <Home size={11}/> Inicio
+              <Home size={11}/> {L('Home','Inicio')}
             </button>
             {breadcrumb.map((bc, i) => (
               <span key={i} className="flex items-center gap-1">
@@ -248,7 +249,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
 
             {detailLoading && (
               <div className="flex items-center gap-2 py-2 text-xs text-slate-400">
-                <Loader2 size={14} className="animate-spin text-sky-400"/> Cargando detalle desde API OMS...
+                <Loader2 size={14} className="animate-spin text-sky-400"/> {L('Loading detail from WHO API...','Cargando detalle desde API OMS...')}
               </div>
             )}
             {true && (<>
@@ -260,7 +261,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
                   <h2 className="font-bold text-lg leading-tight" style={{ color:'var(--text-primary)' }}>{selected.title}</h2>
                   {selected.parent && (
                     <p className="text-xs mt-1 font-semibold" style={{ color:'var(--text-muted)' }}>
-                      Capítulo: {CHAPTER_NAMES[selected.parent.code] || selected.parent.title}
+                      {L('Chapter','Capítulo')}: {chapterName(selected.parent.code, locale) || selected.parent.title}
                     </p>
                   )}
                 </div>
@@ -270,7 +271,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               {selected.definition && (
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-teal-600 flex items-center gap-1.5">
-                    <BookOpen size={11}/> Definición
+                    <BookOpen size={11}/> {L('Definition','Definición')}
                   </p>
                   <p className="text-sm leading-relaxed" style={{ color:'var(--text-secondary)' }}>
                     {selected.definition}
@@ -282,7 +283,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               {selected.diagnosticCriteria && (
                 <div className="p-3 rounded-xl bg-teal-50 border border-teal-200">
                   <p className="text-[10px] font-bold text-teal-700 mb-1.5 flex items-center gap-1.5">
-                    🩺 Criterios diagnósticos (OMS CIE-11)
+                    🩺 {L('Diagnostic criteria (WHO ICD-11)','Criterios diagnósticos (OMS CIE-11)')}
                   </p>
                   <p className="text-xs leading-relaxed text-teal-900 whitespace-pre-line">{selected.diagnosticCriteria}</p>
                 </div>
@@ -291,7 +292,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               {/* Nota de codificación */}
               {selected.codingNote && (
                 <div className="p-3 rounded-xl bg-sky-50 border border-sky-100">
-                  <p className="text-[10px] font-bold text-sky-600 mb-1">📋 Nota de codificación</p>
+                  <p className="text-[10px] font-bold text-sky-600 mb-1">📋 {L('Coding note','Nota de codificación')}</p>
                   <p className="text-xs leading-relaxed text-sky-800">{selected.codingNote}</p>
                 </div>
               )}
@@ -300,7 +301,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               {selected.indexTerms.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold flex items-center gap-1.5" style={{ color:'var(--text-muted)' }}>
-                    <Tag size={11}/> Términos incluidos / sinónimos
+                    <Tag size={11}/> {L('Included terms / synonyms','Términos incluidos / sinónimos')}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {selected.indexTerms.map((t, i) => (
@@ -314,7 +315,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               {selected.inclusions.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold text-emerald-700 flex items-center gap-1.5">
-                    ✓ Incluye
+                    ✓ {L('Includes','Incluye')}
                   </p>
                   <ul className="space-y-1">
                     {selected.inclusions.map((inc, i) => (
@@ -330,7 +331,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               {selected.exclusions.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold text-red-600 flex items-center gap-1.5">
-                    ✕ Exclusiones
+                    ✕ {L('Exclusions','Exclusiones')}
                   </p>
                   <ul className="space-y-1">
                     {selected.exclusions.map((exc, i) => (
@@ -346,7 +347,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               {selected.children.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold flex items-center gap-1.5" style={{ color:'var(--text-muted)' }}>
-                    <GitBranch size={11}/> Subcategorías / Hijos
+                    <GitBranch size={11}/> {L('Subcategories / Children','Subcategorías / Hijos')}
                   </p>
                   <div className="space-y-1.5">
                     {selected.children.map((child, i) => (
@@ -355,7 +356,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
                         style={{ borderColor:'var(--card-border)', background:'var(--muted-bg)' }}>
                         <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-500 text-white flex-shrink-0">{child.code}</span>
                         <span className="text-sm font-semibold flex-1" style={{ color:'var(--text-primary)' }}>
-                          {child.title || `Ver subcategoría ${child.code}`}
+                          {child.title || (L('View subcategory ','Ver subcategoría ')+child.code)}
                         </span>
                         <ChevronRight size={14} className="text-slate-300 group-hover:text-teal-500 transition-colors flex-shrink-0"/>
                       </button>
@@ -368,7 +369,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               {selected.parent && (
                 <div className="space-y-2">
                   <p className="text-[10px] font-bold flex items-center gap-1.5" style={{ color:'var(--text-muted)' }}>
-                    ↑ Categoría Padre
+                    ↑ {L('Parent category','Categoría Padre')}
                   </p>
                   <button onClick={() => loadDetail(selected.parent!)}
                     className="w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all hover:border-sky-400 hover:bg-sky-50 group"
@@ -386,23 +387,23 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border transition-all hover:bg-slate-50"
                   style={{ borderColor:'var(--card-border)', color:'var(--text-secondary)' }}>
                   {copied === 'code' ? <Check size={14} className="text-emerald-500"/> : <Copy size={14}/>}
-                  Copiar código
+                  {L('Copy code','Copiar código')}
                 </button>
                 <button onClick={() => copiar(`${selected.title}\nCIE-11: ${selected.code}\n${selected.definition}`, 'full')}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-sky-600 text-white hover:bg-sky-700 transition-colors">
                   {copied === 'full' ? <Check size={14}/> : <Copy size={14}/>}
-                  Copiar para ARIA
+                  {L('Copy for ARIA','Copiar para ARIA')}
                 </button>
                 {showAsignar && onAsignar && (
                   <button onClick={() => onAsignar(selected)}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
-                    <Star size={14}/> Asignar al paciente
+                    <Star size={14}/> {L('Assign to patient','Asignar al paciente')}
                   </button>
                 )}
                 <a href={selected.browserUrl} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border transition-all hover:bg-slate-50"
                   style={{ borderColor:'var(--card-border)', color:'var(--text-secondary)' }}>
-                  <ExternalLink size={14}/> Ver en OMS CIE-11
+                  <ExternalLink size={14}/> {L('View on WHO ICD-11','Ver en OMS CIE-11')}
                 </a>
               </div>
 
@@ -418,8 +419,10 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
           {q.length >= 2 && !loading && (
             <p className="text-xs font-bold" style={{ color:'var(--text-muted)' }}>
               {results.length === 0
-                ? `Sin resultados para "${q}"`
-                : `${results.length} resultado${results.length !== 1 ? 's' : ''} — haz clic para ver el detalle completo`}
+                ? L(`No results for "${q}"`, `Sin resultados para "${q}"`)
+                : (locale === 'en'
+                    ? `${results.length} result${results.length !== 1 ? 's' : ''} — click to see full detail`
+                    : `${results.length} resultado${results.length !== 1 ? 's' : ''} — haz clic para ver el detalle completo`)}
             </p>
           )}
 
@@ -439,7 +442,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
             {!loading && q.length >= 2 && results.length === 0 && (
               <div className="text-center py-12">
                 <AlertCircle size={36} className="mx-auto mb-3 text-slate-200"/>
-                <p className="text-sm font-semibold mb-1" style={{ color:'var(--text-muted)' }}>Sin resultados para "{q}"</p>
+                <p className="text-sm font-semibold mb-1" style={{ color:'var(--text-muted)' }}>{L('No results for', 'Sin resultados para')} "{q}"</p>
                 <p className="text-xs mb-4" style={{ color:'var(--text-muted)' }}>{t("admin.intentaCodigoCIE")}</p>
                 <button onClick={clear} className="px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 text-white hover:bg-sky-700 transition-colors">{t("admin.nuevaBusqueda")}</button>
               </div>
@@ -457,7 +460,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
                   <p className="text-sm font-semibold leading-snug" style={{ color:'var(--text-primary)' }}>{r.title}</p>
                   {r.chapter && (
                     <p className="text-[10px] mt-0.5 font-medium" style={{ color:'var(--text-muted)' }}>
-                      {CHAPTER_NAMES[r.chapter] || `Capítulo ${r.chapter}`}
+                      {chapterName(r.chapter, locale) || (L('Chapter ','Capítulo ')+r.chapter)}
                     </p>
                   )}
                 </div>
@@ -470,7 +473,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
 
       {/* PIE */}
       <p className="text-[10px] text-center" style={{ color:'var(--text-muted)' }}>
-        CIE-11 — Clasificación Internacional de Enfermedades, 11.ª revisión · OMS 2024
+        {L('ICD-11 — International Classification of Diseases, 11th revision · WHO 2024','CIE-11 — Clasificación Internacional de Enfermedades, 11.ª revisión · OMS 2024')}
       </p>
     </div>
   )
@@ -485,4 +488,19 @@ const CHAPTER_NAMES: Record<string, string> = {
   '12':'Sistema respiratorio', '13':'Sistema digestivo',
   '14':'Piel', '15':'Músculo-esquelético', '16':'Genitourinario',
   '22':'Traumatismos', '24':'Factores de salud',
+}
+
+const CHAPTER_NAMES_EN: Record<string, string> = {
+  '01':'Infectious diseases', '02':'Neoplasms', '03':'Blood',
+  '04':'Immune system', '05':'Endocrine / Nutrition',
+  '06':'Mental disorders — Neurodevelopment',
+  '07':'Sleep disorders', '08':'Nervous system',
+  '09':'Eye', '10':'Ear', '11':'Circulatory system',
+  '12':'Respiratory system', '13':'Digestive system',
+  '14':'Skin', '15':'Musculoskeletal', '16':'Genitourinary',
+  '22':'Injuries', '24':'Health factors',
+}
+
+function chapterName(code: string, locale: string): string {
+  return (locale === 'en' ? CHAPTER_NAMES_EN[code] : CHAPTER_NAMES[code]) || ''
 }

@@ -17,7 +17,8 @@ type Tab = 'aprender' | 'biblioteca' | 'diagnosticos'
 
 export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Record<string, boolean> } = {}) {
   const toast = useToast()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const [tab, setTab] = useState<Tab>('aprender')
   const cerebroTabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -815,16 +816,16 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
             ? isDark ? 'bg-[#161b22] text-sky-400 shadow border border-[#30363d]' : 'bg-white text-sky-700 shadow border border-slate-200'
             : isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
           <Stethoscope size={13} />
-          <span className="hidden sm:inline">CIE-11 / DSM-5</span>
-          <span className="sm:hidden">CIE-11</span>
+          <span className="hidden sm:inline">{L('ICD-11 / DSM-5', 'CIE-11 / DSM-5')}</span>
+          <span className="sm:hidden">{L('ICD-11', 'CIE-11')}</span>
         </button>
         <button onClick={() => setTab('biblioteca')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 md:px-4 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${tab === 'biblioteca'
             ? isDark ? 'bg-[#161b22] text-sky-400 shadow border border-[#30363d]' : 'bg-white text-sky-700 shadow border border-slate-200'
             : isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
           <BookMarked size={13} />
-          <span className="hidden sm:inline">Biblioteca ({documentos.length})</span>
-          <span className="sm:hidden">Biblio ({documentos.length})</span>
+          <span className="hidden sm:inline">{L('Library', 'Biblioteca')} ({documentos.length})</span>
+          <span className="sm:hidden">{L('Library', 'Biblio')} ({documentos.length})</span>
         </button>
       </div>
 
@@ -1036,7 +1037,9 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
               <span className={`font-bold text-sm ${isDark ? 'text-sky-300' : 'text-sky-800'}`}>{t("admin.buscadorDiagnosticos")}</span>
             </div>
             <p className="text-xs text-sky-600">
-              Busca por nombre, código CIE-11 (ej: <b>6A02</b>), ICD-10 (ej: <b>F84</b>), DSM-5 o sinónimo. Haz clic en los códigos para copiarlos directamente.
+              {locale === 'en'
+                ? <>Search by name, ICD-11 code (e.g. <b>6A02</b>), ICD-10 (e.g. <b>F84</b>), DSM-5 or synonym. Click the codes to copy them directly.</>
+                : <>Busca por nombre, código CIE-11 (ej: <b>6A02</b>), ICD-10 (ej: <b>F84</b>), DSM-5 o sinónimo. Haz clic en los códigos para copiarlos directamente.</>}
             </p>
           </div>
           <DiagnosticoBuscador />
