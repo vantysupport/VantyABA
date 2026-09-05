@@ -795,10 +795,10 @@ export type HabilidadFila = {
 
 function estadoTexto(f: HabilidadFila): string {
   switch (f.estado) {
-    case 'logrado':      return 'Criterio alcanzado'
-    case 'casi_logrado': return 'En proceso'
-    case 'en_proceso':   return 'En proceso'
-    case 'no_iniciado':  return 'No iniciado'
+    case 'logrado':      return RL('Criterion reached', 'Criterio alcanzado')
+    case 'casi_logrado': return RL('In progress', 'En proceso')
+    case 'en_proceso':   return RL('In progress', 'En proceso')
+    case 'no_iniciado':  return RL('Not started', 'No iniciado')
     default:             return ''
   }
 }
@@ -882,7 +882,7 @@ export function tablaHabilidades(filas: HabilidadFila[]): Table {
     layout: TableLayoutType.FIXED,
     columnWidths: [1100, 1460, 5000, 1800],
     rows: [
-      new TableRow({ tableHeader: true, children: [hCell('ÁREA', 1100), hCell('SUBÁREA', 1460), hCell('OBJETIVO / SET', 5000), hCell('ESTADO', 1800)] }),
+      new TableRow({ tableHeader: true, children: [hCell(RL('AREA', 'ÁREA'), 1100), hCell(RL('SUB-AREA', 'SUBÁREA'), 1460), hCell(RL('OBJECTIVE / SET', 'OBJETIVO / SET'), 5000), hCell(RL('STATUS', 'ESTADO'), 1800)] }),
       ...filas.map(f => {
         const isSet     = !!f.set
         const hasSubarea = !!(f.subarea?.trim())
@@ -909,7 +909,16 @@ export function tablaHabilidades(filas: HabilidadFila[]): Table {
 
 // ─── Glosario ─────────────────────────────────────────────────────────────────
 export function glosarioAyudas(): Paragraph[] {
-  const lineas = [
+  const lineas = _reportLocale === 'en' ? [
+    'Gestural prompt (G.P.): pointing.',
+    'Full / partial echoic model (FEM / PEM): the word is said to the child fully or partially depending on the case.',
+    'Verbal prompt (VP): the instruction is repeated several times so the child performs the behavior correctly.',
+    'Physical prompt (PP): physical movements are used to help the child perform the behavior correctly.',
+    'Independent: the child performs the behavior without help.',
+    'Areas coded by letters (A, B, C, D, …) correspond to the different language and learning skill domains assessed in the program.',
+    'An objective is considered Achieved when it reaches at least 90% success across two consecutive sessions.',
+    'SETS are levels of prompting; the higher the SET, the lower the level of help, up to the Independent level.',
+  ] : [
     'Ayuda gestual (A.G.): señalar.',
     'Modelo ecoico total / parcial (MET / MEP): se le dice la palabra al menor de manera completa o parcial según el caso.',
     'Ayuda verbal (AV): se le da la instrucción repetidas veces para que ejecute la conducta correctamente.',
@@ -920,7 +929,7 @@ export function glosarioAyudas(): Paragraph[] {
     'Los SETS son niveles de ayuda; a mayor SET, menor grado de ayuda, hasta llegar al nivel Independiente.',
   ]
   return [
-    new Paragraph({ spacing: { before: 280, after: 100 }, children: [new TextRun({ text: 'Glosario de términos', bold: true, italics: true, size: 19, font: FONT, color: COLOR.grisMed })] }),
+    new Paragraph({ spacing: { before: 280, after: 100 }, children: [new TextRun({ text: RL('Glossary of terms', 'Glosario de términos'), bold: true, italics: true, size: 19, font: FONT, color: COLOR.grisMed })] }),
     ...lineas.map(l => new Paragraph({
       spacing: { before: 20, after: 20 },
       indent: { left: 300 },
@@ -941,9 +950,9 @@ export function recomendaciones(rec: RecomendacionesBloque, titulo = 'Recomendac
     spacing: { before: 200, after: 60 },
     children: [new TextRun({ text: txt, bold: true, size: 20, font: FONT, color: COLOR.azulDark })],
   })
-  if (rec.menor?.length)   { out.push(subLabel('Para el menor / la menor'));              out.push(...items(rec.menor)) }
-  if (rec.familia?.length) { out.push(subLabel('Para la familia'));                         out.push(...items(rec.familia)) }
-  if (rec.escuela?.length) { out.push(subLabel('Para la escuela / centro educativo'));      out.push(...items(rec.escuela)) }
+  if (rec.menor?.length)   { out.push(subLabel(RL('For the child', 'Para el menor / la menor')));              out.push(...items(rec.menor)) }
+  if (rec.familia?.length) { out.push(subLabel(RL('For the family', 'Para la familia')));                         out.push(...items(rec.familia)) }
+  if (rec.escuela?.length) { out.push(subLabel(RL('For the school / educational center', 'Para la escuela / centro educativo'))); out.push(...items(rec.escuela)) }
   return out
 }
 

@@ -1213,7 +1213,11 @@ async function generarInformeClinicoSanti(
     ? `${palabrasNombre.slice(1).join(' ').toUpperCase()}, ${palabrasNombre[0]}`
     : nombreCap.toUpperCase()
 
-  let edadTexto = 'no registrada'
+  const isEN = userLocale === 'en'
+  const L = (en: string, es: string) => (isEN ? en : es)
+  const dateLoc = isEN ? 'en-US' : 'es-ES'
+
+  let edadTexto = L('not recorded', 'no registrada')
   if ((child as any)?.birth_date) {
     const nac = new Date((child as any).birth_date)
     const ahora = new Date()
@@ -1221,9 +1225,11 @@ async function generarInformeClinicoSanti(
     const meses = ahora.getMonth() - nac.getMonth()
     const edad = (meses < 0 || (meses === 0 && ahora.getDate() < nac.getDate())) ? años - 1 : años
     const mesesAdj = meses < 0 ? meses + 12 : meses
-    edadTexto = `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
+    edadTexto = isEN
+      ? `${edad} year${edad === 1 ? '' : 's'}${mesesAdj > 0 ? ` ${mesesAdj} month${mesesAdj === 1 ? '' : 's'}` : ''}`
+      : `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
   } else if ((child as any)?.age) {
-    edadTexto = `${(child as any).age} años`
+    edadTexto = isEN ? `${(child as any).age} years` : `${(child as any).age} años`
   }
 
   // Total de sesiones realizadas (misma fórmula que el UI)
@@ -1339,7 +1345,7 @@ async function generarInformeClinicoSanti(
 
     return {
       id: p.id,
-      titulo: p.titulo || 'Sin nombre',
+      titulo: p.titulo || L('Untitled', 'Sin nombre'),
       area: areaFinal,
       areaKey: areaNorm,  // clave para agrupar sin duplicar
       primeraFecha,
@@ -1412,17 +1418,17 @@ async function generarInformeClinicoSanti(
   const promedioGlobal = avg(promediosTodos)
 
   const fechasUnif = sesProgArr.map((s: any) => s.fecha).filter(Boolean).sort()
-  const fmt = (d: string) => new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fmt = (d: string) => new Date(d).toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
   const fechaInicio = fechasUnif.length > 0 ? fmt(fechasUnif[0]) : '—'
   const fechaFin    = fechasUnif.length > 0 ? fmt(fechasUnif[fechasUnif.length - 1]) : fmt(new Date().toISOString())
   const semanas = fechasUnif.length > 1
     ? Math.round((new Date(fechasUnif[fechasUnif.length-1]).getTime() - new Date(fechasUnif[0]).getTime())/(7*24*60*60*1000))
     : 0
 
-  const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const hoy = new Date().toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
   const hoyISO = new Date().toISOString().slice(0, 10)
   const iniciales = tpl.generarIniciales(nombre)
-  const fileName = `Informe_Clinico_${nombreCap.replace(/\s+/g, '_')}_${hoyISO}.docx`
+  const fileName = `${L('Clinical_Report', 'Informe_Clinico')}_${nombreCap.replace(/\s+/g, '_')}_${hoyISO}.docx`
   const docNum = `IC-${hoyISO.replace(/-/g, '')}-${childId.slice(0, 6).toUpperCase()}`
 
   // ─── 4. Construir filas de Habilidades y Logros con vertical merge ──
@@ -1446,11 +1452,15 @@ async function generarInformeClinicoSanti(
       let objetivoTxt = p.objetivo_lp.trim()
       if (objetivoTxt) {
         // Si ya empieza con "Con un criterio" lo dejamos, sino lo prefijamos
-        if (!/^con un criterio/i.test(objetivoTxt)) {
-          objetivoTxt = `Con un criterio de éxito del ${p.criterio}% en dos sesiones consecutivas, ${objetivoTxt.charAt(0).toLowerCase() + objetivoTxt.slice(1)}`
+        if (!/^con un criterio/i.test(objetivoTxt) && !/^with a success criterion/i.test(objetivoTxt)) {
+          objetivoTxt = isEN
+            ? `With a success criterion of ${p.criterio}% across two consecutive sessions, ${objetivoTxt.charAt(0).toLowerCase() + objetivoTxt.slice(1)}`
+            : `Con un criterio de éxito del ${p.criterio}% en dos sesiones consecutivas, ${objetivoTxt.charAt(0).toLowerCase() + objetivoTxt.slice(1)}`
         }
       } else {
-        objetivoTxt = `Con un criterio de éxito del ${p.criterio}% en dos sesiones consecutivas, el/la estudiante deberá alcanzar el dominio del programa "${p.titulo}".`
+        objetivoTxt = isEN
+          ? `With a success criterion of ${p.criterio}% across two consecutive sessions, the student is expected to reach mastery of the "${p.titulo}" program.`
+          : `Con un criterio de éxito del ${p.criterio}% en dos sesiones consecutivas, el/la estudiante deberá alcanzar el dominio del programa "${p.titulo}".`
       }
 
       // Si el programa tiene SETs, el texto del criterio va dentro del primer SET (celda combinada).
@@ -1508,7 +1518,7 @@ async function generarInformeClinicoSanti(
           habilidades.push({
             area: '',
             subarea: '',
-            set: `SET ${s.numero_set}: ${s.descripcion || 'Sin descripción'}`,
+            set: `SET ${s.numero_set}: ${s.descripcion || L('No description', 'Sin descripción')}`,
             estado: estadoSet,
           })
         }
@@ -1666,9 +1676,9 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     }
   } catch {
     recomObj = {
-      menor: ['Continuar con el plan terapéutico actual.'],
-      familia: ['Mantener regularidad en la asistencia y practicar en casa lo trabajado.'],
-      escuela: ['Mantener comunicación constante con el equipo terapéutico.'],
+      menor: [L('Continue with the current therapeutic plan.', 'Continuar con el plan terapéutico actual.')],
+      familia: [L('Maintain regular attendance and practice at home what has been worked on.', 'Mantener regularidad en la asistencia y practicar en casa lo trabajado.')],
+      escuela: [L('Maintain constant communication with the therapeutic team.', 'Mantener comunicación constante con el equipo terapéutico.')],
     }
   }
 
@@ -1711,7 +1721,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     .map(p => ({ label: p.titulo.slice(0, 38), valor: p.promedio_reciente ?? p.promedio ?? 0 }))
 
   // ─── 7. Construir documento ─────────────────────────────────────────
-  const periodoTexto = fechasUnif.length > 1 ? `${fechaInicio} al ${fechaFin}` : (fechasUnif.length === 1 ? fechaInicio : '—')
+  const periodoTexto = fechasUnif.length > 1 ? L(`${fechaInicio} to ${fechaFin}`, `${fechaInicio} al ${fechaFin}`) : (fechasUnif.length === 1 ? fechaInicio : '—')
 
   // ── Especialista a cargo: tomado de la ficha clínica más reciente ──────
   const especialistaNombre = (() => {
@@ -1721,7 +1731,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
       const rol = fichaConNombre.filler_role ? ` (${fichaConNombre.filler_role})` : ''
       return `${n}${rol}`
     }
-    return 'Equipo Clínico SANTI'
+    return L('SANTI Clinical Team', 'Equipo Clínico SANTI')
   })()
 
   // ── Generar QR async (necesita estar fuera del array spread) ─────────
@@ -1734,12 +1744,12 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
   const sections: DocChild[] = [
     // ── PORTADA institucional con QR ──
     ...portadaInstitucional({
-      tipoInforme: 'INFORME CLÍNICO DE TRATAMIENTO',
+      tipoInforme: L('CLINICAL TREATMENT REPORT', 'INFORME CLÍNICO DE TRATAMIENTO'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
-      diagnostico: (child as any)?.diagnosis || 'En evaluación clínica',
+      diagnostico: (child as any)?.diagnosis || L('Under clinical evaluation', 'En evaluación clínica'),
       especialista: especialistaNombre,
-      credenciales: 'Centro Especializado en Neuropsicología y Terapias',
+      credenciales: L('Specialized Center for Neuropsychology and Therapies', 'Centro Especializado en Neuropsicología y Terapias'),
       fechaEmision: hoy,
       periodoEval: periodoTexto,
       codigoDoc: docNum,
@@ -1747,32 +1757,32 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     // (la portada ya incluye su propio salto de página)
 
     // ── DATOS GENERALES ──
-    tpl.tituloSeccion('I.  Datos Generales'),
+    tpl.tituloSeccion(L('I.  General Information', 'I.  Datos Generales')),
     tpl.tablaDatosGenerales([
-      ['Apellidos y nombres', nombreFormateado],
-      ['Fecha de nacimiento', (child as any)?.birth_date
-        ? new Date((child as any).birth_date).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
+      [L('Last and first names', 'Apellidos y nombres'), nombreFormateado],
+      [L('Date of birth', 'Fecha de nacimiento'), (child as any)?.birth_date
+        ? new Date((child as any).birth_date).toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
         : '—'],
-      ['Edad', edadTexto],
-      ['Institución educativa', (child as any)?.school_type || 'Regular'],
-      ['Diagnóstico', (child as any)?.diagnosis || 'En evaluación'],
-      ['Total de sesiones realizadas', String(totalSesionesRealizadas)],
+      [L('Age', 'Edad'), edadTexto],
+      [L('School', 'Institución educativa'), (child as any)?.school_type || L('Mainstream', 'Regular')],
+      [L('Diagnosis', 'Diagnóstico'), (child as any)?.diagnosis || L('Under evaluation', 'En evaluación')],
+      [L('Total sessions held', 'Total de sesiones realizadas'), String(totalSesionesRealizadas)],
       // Programas activos = todos los que tienen datos y NO cumplen criterio (en intervención)
-      ['Programas activos', String(progArr.filter((p: any) => !programaCumpleCriterio(p.id) && ['activo', 'intervencion', 'en_intervencion', ''].includes(p.estado ?? '')).length)],
+      [L('Active programs', 'Programas activos'), String(progArr.filter((p: any) => !programaCumpleCriterio(p.id) && ['activo', 'intervencion', 'en_intervencion', ''].includes(p.estado ?? '')).length)],
       // Programas con criterio alcanzado = dominados por estado, sesiones consecutivas, o TODOS sus sets dominados
-      ['Programas con criterio alcanzado', String(progArr.filter((p: any) => programaCumpleCriterio(p.id)).length)],
-      ['Sets con criterio alcanzado', String(habilidades.filter(f => f.set && f.estado === 'logrado').length)],
-      ['N° de informe en la app', docNum],
-      ['Especialista a cargo', especialistaNombre],
-      ['Fecha de entrega del informe', hoy],
+      [L('Programs with criterion reached', 'Programas con criterio alcanzado'), String(progArr.filter((p: any) => programaCumpleCriterio(p.id)).length)],
+      [L('Sets with criterion reached', 'Sets con criterio alcanzado'), String(habilidades.filter(f => f.set && f.estado === 'logrado').length)],
+      [L('Report No. in the app', 'N° de informe en la app'), docNum],
+      [L('Specialist in charge', 'Especialista a cargo'), especialistaNombre],
+      [L('Report delivery date', 'Fecha de entrega del informe'), hoy],
     ]),
 
     // ── RESUMEN EJECUTIVO ──
-    tpl.tituloSeccion('II.  Resumen Ejecutivo'),
+    tpl.tituloSeccion(L('II.  Executive Summary', 'II.  Resumen Ejecutivo')),
     ...parsearProsaConSubsecciones(textoResumenEjecutivo),
 
     // ── HABILIDADES Y LOGROS (TABLA CON MERGE) ──
-    tpl.tituloSeccion('III.  Habilidades y Logros'),
+    tpl.tituloSeccion(L('III.  Skills and Achievements', 'III.  Habilidades y Logros')),
     new Paragraph({
       spacing: { before: 100, after: 120 },
       children: [new TextRun({
@@ -1784,15 +1794,17 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     ...tpl.glosarioAyudas(),
 
     // ── SETS CON CRITERIO ALCANZADO ──
-    tpl.tituloSeccion('IV.  Sets con Criterio Alcanzado'),
+    tpl.tituloSeccion(L('IV.  Sets with Criterion Reached', 'IV.  Sets con Criterio Alcanzado')),
     ...(() => {
       const setsLogrados = habilidades.filter(f => f.set && f.estado === 'logrado')
       if (setsLogrados.length === 0) {
-        return [tpl.parrafo('No se registran sets con criterio alcanzado en el período evaluado.', '64748B')]
+        return [tpl.parrafo(L('No sets with criterion reached are recorded for the evaluated period.', 'No se registran sets con criterio alcanzado en el período evaluado.'), '64748B')]
       }
       return [
         tpl.parrafo(
-          `Se registran ${setsLogrados.length} set${setsLogrados.length !== 1 ? 's' : ''} con criterio de dominio alcanzado durante el período de intervención:`,
+          isEN
+            ? `${setsLogrados.length} set${setsLogrados.length !== 1 ? 's' : ''} with mastery criterion reached are recorded during the intervention period:`
+            : `Se registran ${setsLogrados.length} set${setsLogrados.length !== 1 ? 's' : ''} con criterio de dominio alcanzado durante el período de intervención:`,
           '334155'
         ),
         tpl.tablaDatosGenerales(
@@ -1802,59 +1814,60 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     })(),
 
     // ── ANÁLISIS POR ÁREA ──
-    tpl.tituloSeccion('V.  Análisis Clínico por Área'),
+    tpl.tituloSeccion(L('V.  Clinical Analysis by Area', 'V.  Análisis Clínico por Área')),
     ...parsearProsaConSubsecciones(textoAnalisisGlobal),
   ]
 
   // Gráficos
   if (datosGraficoArea.length > 0) {
-    sections.push(tpl.tituloSeccion('VI.  Representación Gráfica del Progreso'))
+    sections.push(tpl.tituloSeccion(L('VI.  Graphic Representation of Progress', 'VI.  Representación Gráfica del Progreso')))
     sections.push(new Paragraph({
       spacing: { before: 100, after: 100 },
       children: [new TextRun({ text: (userLocale === 'en' ? 'Average achievement by intervention area (recent sessions):' : 'Promedio de logro por área de intervención (sesiones recientes):'), size: 19, font: 'Arial', color: '475569', italics: true })],
     }))
-    sections.push(...tpl.graficoProgresoBarra('Logro por área (%)', datosGraficoArea, { mostrarMeta: true, metaPct: 90 }))
+    sections.push(...tpl.graficoProgresoBarra(L('Achievement by area (%)', 'Logro por área (%)'), datosGraficoArea, { mostrarMeta: true, metaPct: 90 }))
   }
   if (datosGraficoTopProgs.length > 0) {
     sections.push(new Paragraph({
       spacing: { before: 220, after: 100 },
       children: [new TextRun({ text: (userLocale === 'en' ? `Current performance by program (top ${datosGraficoTopProgs.length}):` : `Desempeño actual por programa (top ${datosGraficoTopProgs.length}):`), size: 19, font: 'Arial', color: '475569', italics: true })],
     }))
-    sections.push(...tpl.graficoProgresoBarra('Logro por programa (%)', datosGraficoTopProgs, { mostrarMeta: true, metaPct: 90 }))
+    sections.push(...tpl.graficoProgresoBarra(L('Achievement by program (%)', 'Logro por programa (%)'), datosGraficoTopProgs, { mostrarMeta: true, metaPct: 90 }))
   }
 
   // Plan terapéutico
-  sections.push(tpl.tituloSeccion('VII.  Plan Terapéutico 30 / 60 / 90 días'))
+  sections.push(tpl.tituloSeccion(L('VII.  Therapeutic Plan 30 / 60 / 90 days', 'VII.  Plan Terapéutico 30 / 60 / 90 días')))
   sections.push(...parsearProsaConSubsecciones(textoPlanTerapeutico))
 
   // Limitaciones — dificultades encontradas durante la intervención
-  sections.push(tpl.tituloSeccion('VIII.  Limitaciones'))
+  sections.push(tpl.tituloSeccion(L('VIII.  Limitations', 'VIII.  Limitaciones')))
   const limitacionesLimpio = (textoLimitaciones || '').trim()
   if (limitacionesLimpio) {
     sections.push(...limitacionesLimpio.split('\n').map(l => l.trim()).filter(Boolean).map(l => tpl.parrafo(l)))
   } else {
-    sections.push(tpl.parrafo('Durante el período evaluado no se han registrado limitaciones significativas que hayan condicionado el progreso terapéutico.'))
+    sections.push(tpl.parrafo(L('During the evaluated period, no significant limitations affecting therapeutic progress were recorded.', 'Durante el período evaluado no se han registrado limitaciones significativas que hayan condicionado el progreso terapéutico.')))
   }
 
   // Recomendaciones
-  sections.push(...tpl.recomendaciones(recomObj, 'IX.  Recomendaciones'))
+  sections.push(...tpl.recomendaciones(recomObj, L('IX.  Recommendations', 'IX.  Recomendaciones')))
 
   // ─── VIII. FUENTE DE DATOS Y TRAZABILIDAD ──────────────────────────
   //   Esto permite al lector verificar cada número del informe contra
   //   los datos reales del expediente. Cero datos sintéticos.
-  sections.push(tpl.tituloSeccion('X.  Fuente de Datos y Trazabilidad'))
+  sections.push(tpl.tituloSeccion(L('X.  Data Source and Traceability', 'X.  Fuente de Datos y Trazabilidad')))
 
   sections.push(tpl.parrafo(
-    `Todos los porcentajes, conteos y análisis de este informe se calculan en tiempo real a partir de los datos registrados en la plataforma Vanty ABA para este paciente. No se incluyen valores predeterminados, simulados ni inferidos. Las fuentes consultadas son:`
+    L(`All percentages, counts and analyses in this report are calculated in real time from the data recorded in the Vanty ABA platform for this patient. No default, simulated or inferred values are included. The sources consulted are:`,
+      `Todos los porcentajes, conteos y análisis de este informe se calculan en tiempo real a partir de los datos registrados en la plataforma Vanty ABA para este paciente. No se incluyen valores predeterminados, simulados ni inferidos. Las fuentes consultadas son:`)
   ))
 
   sections.push(...tpl.items([
-    `Programas de intervención — ${progArr.length} programas registrados para ${nombreCap}.`,
-    `Registro de sesiones — ${sesProgArr.length} sesiones registradas en el período del ${fechaInicio} al ${fechaFin}.`,
-    `Objetivos a corto plazo (sets) — ${objetivosArr.length} sets asociados a los programas activos.`,
-    evalIni ? `Evaluación inicial — evaluación inicial registrada (estado: ${(evalIni as any).estado}).` : 'Evaluación inicial — sin evaluación inicial registrada.',
-    `Documentos del expediente — ${docsArr.length} documentos con texto extraído por IA.`,
-    `Fichas clínicas — ${fichasArr.length} fichas clínicas registradas.`,
+    L(`Intervention programs — ${progArr.length} programs recorded for ${nombreCap}.`, `Programas de intervención — ${progArr.length} programas registrados para ${nombreCap}.`),
+    L(`Session records — ${sesProgArr.length} sessions recorded in the period ${fechaInicio} to ${fechaFin}.`, `Registro de sesiones — ${sesProgArr.length} sesiones registradas en el período del ${fechaInicio} al ${fechaFin}.`),
+    L(`Short-term objectives (sets) — ${objetivosArr.length} sets associated with the active programs.`, `Objetivos a corto plazo (sets) — ${objetivosArr.length} sets asociados a los programas activos.`),
+    evalIni ? L(`Initial evaluation — initial evaluation recorded (status: ${(evalIni as any).estado}).`, `Evaluación inicial — evaluación inicial registrada (estado: ${(evalIni as any).estado}).`) : L('Initial evaluation — no initial evaluation recorded.', 'Evaluación inicial — sin evaluación inicial registrada.'),
+    L(`Case-file documents — ${docsArr.length} documents with AI-extracted text.`, `Documentos del expediente — ${docsArr.length} documentos con texto extraído por IA.`),
+    L(`Clinical records — ${fichasArr.length} clinical records registered.`, `Fichas clínicas — ${fichasArr.length} fichas clínicas registradas.`),
   ]))
 
   sections.push(new Paragraph({
@@ -1868,10 +1881,11 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
   // Tabla de trazabilidad: una fila por programa con todos los datos crudos
   const filasTraza: [string, string][] = []
   for (const p of programasConDatos) {
-    const fechaIni = p.primeraFecha ? new Date(p.primeraFecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
-    const fechaFn = p.ultimaFecha ? new Date(p.ultimaFecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
-    const detalle =
-      `${p.n_sesiones} sesiones · min ${p.minPct ?? '—'}% · max ${p.maxPct ?? '—'}% · promedio total ${p.promedio ?? '—'}% · promedio últimas 5 ${p.promedio_reciente ?? '—'}% · primera ${fechaIni} · última ${fechaFn} · estado ${p.estado} · tendencia ${p.tendencia}`
+    const fechaIni = p.primeraFecha ? new Date(p.primeraFecha).toLocaleDateString(dateLoc, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    const fechaFn = p.ultimaFecha ? new Date(p.ultimaFecha).toLocaleDateString(dateLoc, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    const detalle = isEN
+      ? `${p.n_sesiones} sessions · min ${p.minPct ?? '—'}% · max ${p.maxPct ?? '—'}% · overall average ${p.promedio ?? '—'}% · last-5 average ${p.promedio_reciente ?? '—'}% · first ${fechaIni} · last ${fechaFn} · status ${p.estado} · trend ${p.tendencia}`
+      : `${p.n_sesiones} sesiones · min ${p.minPct ?? '—'}% · max ${p.maxPct ?? '—'}% · promedio total ${p.promedio ?? '—'}% · promedio últimas 5 ${p.promedio_reciente ?? '—'}% · primera ${fechaIni} · última ${fechaFn} · estado ${p.estado} · tendencia ${p.tendencia}`
     filasTraza.push([
       `${p.titulo}  (${p.area})`,
       detalle,
@@ -1882,7 +1896,8 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
   }
 
   sections.push(tpl.parrafo(
-    `Fórmulas utilizadas: "promedio total" = media aritmética de todas las sesiones del programa; "promedio últimas 5" = media de las cinco sesiones más recientes (lo que se muestra en los gráficos); "tendencia" se determina por la diferencia entre las cinco primeras y las cinco últimas sesiones (≥ +8% ascendente, ≤ −8% descendente, sino estable); "estado" proviene del campo "estado" del programa registrado por el especialista en la plataforma.`,
+    L(`Formulas used: "overall average" = arithmetic mean of all the program's sessions; "last-5 average" = mean of the five most recent sessions (shown in the charts); "trend" is determined by the difference between the first five and the last five sessions (≥ +8% ascending, ≤ −8% descending, otherwise stable); "status" comes from the program's "status" field recorded by the specialist in the platform.`,
+      `Fórmulas utilizadas: "promedio total" = media aritmética de todas las sesiones del programa; "promedio últimas 5" = media de las cinco sesiones más recientes (lo que se muestra en los gráficos); "tendencia" se determina por la diferencia entre las cinco primeras y las cinco últimas sesiones (≥ +8% ascendente, ≤ −8% descendente, sino estable); "estado" proviene del campo "estado" del programa registrado por el especialista en la plataforma.`),
   ))
 
   // ── Sello QR de verificación + firma del equipo ──
