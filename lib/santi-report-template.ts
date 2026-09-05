@@ -915,7 +915,7 @@ export function glosarioAyudas(): Paragraph[] {
     'Ayuda verbal (AV): se le da la instrucción repetidas veces para que ejecute la conducta correctamente.',
     'Ayuda física (AF): se acompaña con movimientos físicos para que ejecute la conducta correctamente.',
     'Independiente: el menor ejecuta la conducta sin ayuda.',
-    'Las áreas con codificación por letras (A, B, C, D, …) corresponden al Assessment of Basic Language and Learning Skills, Revised (ABLLS-R).',
+    'Las áreas con codificación por letras (A, B, C, D, …) corresponden a los distintos dominios de habilidades de lenguaje y aprendizaje evaluados en el programa.',
     'Un objetivo se considera Logrado cuando alcanza al menos 90% de éxito durante dos sesiones consecutivas.',
     'Los SETS son niveles de ayuda; a mayor SET, menor grado de ayuda, hasta llegar al nivel Independiente.',
   ]

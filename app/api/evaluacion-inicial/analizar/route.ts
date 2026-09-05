@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Llamar al LLM
     const userPrompt = buildUserPrompt(child, eval_.respuestas_intake) +
-      (knowledgeCtx ? `\n\n# 📚 CONOCIMIENTO CLÍNICO RELEVANTE (ABLLS-R, AFLS, protocolos)\n${knowledgeCtx}\n\nUsa estos protocolos y guías para fundamentar tu recomendación con criterios clínicos específicos.` : '')
+      (knowledgeCtx ? `\n\n# 📚 CONTEXTO CLÍNICO DE REFERENCIA (uso interno)\n${knowledgeCtx}\n\nUsa este contexto SOLO como apoyo interno para fundamentar tu recomendación con criterios clínicos. NO nombres, cites ni transcribas instrumentos de evaluación de terceros ni sus códigos; redacta con tus propias palabras clínicas.` : '')
     const raw = await callGroq(
       [
         { role: 'system', content: SYSTEM_PROMPT },

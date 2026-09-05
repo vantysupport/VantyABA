@@ -24,10 +24,14 @@ interface EvaluationRequest {
 
 // i18n: responder en el idioma del usuario
 function getLangInstruction(locale: string): string {
-  if (String(locale || '').toLowerCase().startsWith('en')) {
-    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish. Keep clinical protocol codes (e.g. ABLLS-R F24) as they are, but translate their descriptions to English.'
-  }
-  return ''
+  const en = String(locale || '').toLowerCase().startsWith('en')
+  const lang = en
+    ? '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish.'
+    : ''
+  const src = en
+    ? '\n\n🔒 SOURCES — MANDATORY: Base your clinical reasoning on established evidence-based ABA practice, but present it entirely as your OWN professional clinical judgment. NEVER name, cite, quote or reference any external standardized assessment instrument, test or curriculum (or its item codes / section letters) in your response, even if such material appears in the context provided to you. Describe every objective, criterion and recommendation in your own words.'
+    : '\n\n🔒 FUENTES — OBLIGATORIO: Fundamenta tu razonamiento en buenas prácticas ABA basadas en evidencia, pero preséntalo enteramente como tu PROPIO juicio clínico profesional. NUNCA nombres, cites, transcribas ni hagas referencia a instrumentos de evaluación estandarizados, tests o currículos de terceros (ni a sus códigos de ítem o letras de sección) en tu respuesta, aunque ese material aparezca en el contexto que se te entrega. Describe cada objetivo, criterio y recomendación con tus propias palabras.'
+  return lang + src
 }
 let _evalLocale = 'es'
 
@@ -593,13 +597,13 @@ async function analyzeABLLSR(responses: any, childName: string, childAge: number
   else nivelGlobal = 'Habilidades Iniciales — Requiere Apoyo Intensivo'
 
   const prompt = `
-    ACTÚA COMO: Especialista certificado en ABA y evaluación ABLLS-R con experiencia en TEA y trastornos del neurodesarrollo.
-    TAREA: Generar un informe clínico completo basado en los resultados del ABLLS-R.
+    ACTÚA COMO: Especialista certificado en ABA con experiencia en TEA y trastornos del neurodesarrollo.
+    TAREA: Generar un informe clínico completo basado en los resultados de la evaluación de habilidades básicas de lenguaje y aprendizaje.
 
     PACIENTE: ${childName}, ${childAge} años.
     ${historialTexto}
 
-    PERFIL DE DOMINIOS ABLLS-R:
+    PERFIL DE DOMINIOS EVALUADOS:
     1. Cooperación y Reforzadores: ${cooperacion}/20 (${pctCoop}%)
     2. Lenguaje Receptivo:         ${receptivo}/24 (${pctRec}%)
     3. Lenguaje Expresivo:         ${expresivo}/20 (${pctExp}%) — Ecolalia: ${ecolalia}/4
@@ -617,7 +621,7 @@ async function analyzeABLLSR(responses: any, childName: string, childAge: number
     {
       "analisis_ablls_ia": "Análisis clínico de 3-4 párrafos: (1) Perfil global de habilidades y nivel de funcionamiento. (2) Análisis del lenguaje receptivo vs expresivo y su impacto en la comunicación. (3) Habilidades sociales y de juego. (4) Fortalezas identificadas y áreas de mayor necesidad. Usa lenguaje clínico profesional.",
       "objetivos_prioritarios": "Lista de 6-8 objetivos ABA específicos y medibles priorizados según los dominios más bajos, en formato: 'Dominio — Objetivo: descripción conductual observable'. Ordenados de mayor a menor urgencia clínica.",
-      "informe_padres_ablls": "Resumen de 180-220 palabras para los padres explicando qué evalúa el ABLLS-R, cómo está su hijo en cada área, y 3-4 estrategias concretas que pueden implementar en casa para apoyar el desarrollo del lenguaje y las habilidades de vida diaria. Tono empático y esperanzador."
+      "informe_padres_ablls": "Resumen de 180-220 palabras para los padres explicando qué evalúa esta evaluación de habilidades de lenguaje y aprendizaje, cómo está su hijo en cada área, y 3-4 estrategias concretas que pueden implementar en casa para apoyar el desarrollo del lenguaje y las habilidades de vida diaria. Tono empático y esperanzador. No menciones nombres de tests comerciales."
     }
   `
 

@@ -164,10 +164,14 @@ function detectarPatrones(sesiones: any[]): PatronDetectado[] {
 
 // i18n: responder en el idioma del usuario
 function getLangInstruction(locale: string): string {
-  if (String(locale || '').toLowerCase().startsWith('en')) {
-    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish. Keep clinical protocol codes (e.g. ABLLS-R F24) as they are, but translate their descriptions to English.'
-  }
-  return ''
+  const en = String(locale || '').toLowerCase().startsWith('en')
+  const lang = en
+    ? '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish.'
+    : ''
+  const src = en
+    ? '\n\n🔒 SOURCES — MANDATORY: Base your clinical reasoning on established evidence-based ABA practice, but present it entirely as your OWN professional clinical judgment. NEVER name, cite, quote or reference any external standardized assessment instrument, test or curriculum (or its item codes / section letters) in your response, even if such material appears in the context provided to you. Describe every objective, criterion and recommendation in your own words.'
+    : '\n\n🔒 FUENTES — OBLIGATORIO: Fundamenta tu razonamiento en buenas prácticas ABA basadas en evidencia, pero preséntalo enteramente como tu PROPIO juicio clínico profesional. NUNCA nombres, cites, transcribas ni hagas referencia a instrumentos de evaluación estandarizados, tests o currículos de terceros (ni a sus códigos de ítem o letras de sección) en tu respuesta, aunque ese material aparezca en el contexto que se te entrega. Describe cada objetivo, criterio y recomendación con tus propias palabras.'
+  return lang + src
 }
 
 export async function POST(req: NextRequest) {
@@ -370,11 +374,11 @@ export async function POST(req: NextRequest) {
         const systemPrompt = isEN
           ? `You are a board-certified clinical neuropsychologist (BCBA) specialized in Applied Behavior Analysis (ABA) for neurodivergent children and adolescents (ASD, ADHD, DLD, intellectual disability).
 Your role is to write rigorous, evidence-based clinical reports with the depth an interdisciplinary team (psychologist, occupational therapist, speech-language pathologist, pediatrician) would expect.
-Ground your analysis in contemporary ABA literature: Cooper, Heron & Heward (ABA, 3rd ed.), Skinner, Lovaas, Sundberg & Partington (ABLLS), and BACB clinical practice guidelines.
+Ground your analysis in contemporary ABA literature: Cooper, Heron & Heward (ABA, 3rd ed.), Skinner, Lovaas, Sundberg & Partington, and BACB clinical practice guidelines.
 Write in professional clinical English. Use precise but comprehensible technical terminology.`
           : `Eres un neuropsicólogo clínico certificado BCBA con especialización en Análisis de Conducta Aplicado (ABA) para niños y adolescentes neurodivergentes (TEA, TDAH, TDL, discapacidad intelectual).
 Tu rol es redactar informes clínicos rigurosos, fundamentados en evidencia científica, con el nivel de detalle y profundidad que esperaría un equipo interdisciplinario (psicólogo, terapeuta ocupacional, fonoaudiólogo, pediatra).
-Fundamenta tus análisis en la literatura ABA contemporánea: Cooper, Heron & Heward (ABA, 3ra ed.), Skinner, Lovaas, Sundberg & Partington (ABLLS), y guías de práctica clínica del BACB.
+Fundamenta tus análisis en la literatura ABA contemporánea: Cooper, Heron & Heward (ABA, 3ra ed.), Skinner, Lovaas, Sundberg & Partington, y guías de práctica clínica del BACB.
 Escribe en español clínico profesional. Usa terminología técnica precisa pero comprensible.`
 
         const userPrompt = isEN

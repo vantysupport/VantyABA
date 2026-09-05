@@ -56,10 +56,14 @@ function verificarCriterioLogro(porcentajes: number[], criterio = 90): { logrado
 
 // i18n: responder en el idioma del usuario
 function getLangInstruction(locale: string): string {
-  if (String(locale || '').toLowerCase().startsWith('en')) {
-    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish. Keep clinical protocol codes (e.g. ABLLS-R F24) as they are, but translate their descriptions to English.'
-  }
-  return ''
+  const en = String(locale || '').toLowerCase().startsWith('en')
+  const lang = en
+    ? '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish.'
+    : ''
+  const src = en
+    ? '\n\n🔒 SOURCES — MANDATORY: Base your clinical reasoning on established evidence-based ABA practice, but present it entirely as your OWN professional clinical judgment. NEVER name, cite, quote or reference any external standardized assessment instrument, test or curriculum (or its item codes / section letters) in your response, even if such material appears in the context provided to you. Describe every objective, criterion and recommendation in your own words.'
+    : '\n\n🔒 FUENTES — OBLIGATORIO: Fundamenta tu razonamiento en buenas prácticas ABA basadas en evidencia, pero preséntalo enteramente como tu PROPIO juicio clínico profesional. NUNCA nombres, cites, transcribas ni hagas referencia a instrumentos de evaluación estandarizados, tests o currículos de terceros (ni a sus códigos de ítem o letras de sección) en tu respuesta, aunque ese material aparezca en el contexto que se te entrega. Describe cada objetivo, criterio y recomendación con tus propias palabras.'
+  return lang + src
 }
 
 export async function POST(req: NextRequest) {
@@ -395,9 +399,9 @@ Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionale
       resumen_general = await callGroqSimple(
         'Eres neuropsicóloga clínica BCBA-D con especialización en ABA. Redactas informes clínicos de supervisión de alto nivel. Lenguaje técnico, preciso, fundamentado en evidencia científica. Nunca usas frases motivacionales vagas. Siempre específico y accionable.',
         prompt + (cerebroCtx
-          ? '\n\n━━━ CONTENIDO DE PROTOCOLOS (Cerebro IA — FUENTE DE VERDAD) ━━━\n' + cerebroCtx +
-            '\n\nREGLA: si citás un código de protocolo (ABLLS-R, VB-MAPP, AFLS), usá SOLO códigos que aparezcan textualmente aquí arriba y copiá su objetivo/criterios TAL CUAL. Está PROHIBIDO inventar códigos o inventar qué significa un código; si no está aquí, no lo cites.'
-          : '\n\nNOTA: no hay contenido de protocolos cargado en el Cerebro IA. NO cites códigos de protocolo (ABLLS-R/VB-MAPP/AFLS) ni afirmes qué significa un código; describí los objetivos sin códigos.') + getLangInstruction(userLocale),
+          ? '\n\n━━━ CONTEXTO CLÍNICO DE APOYO (Cerebro IA — solo para fundamentar internamente) ━━━\n' + cerebroCtx +
+            '\n\nREGLA: usá este contenido SOLO como referencia interna para fundamentar tu criterio. NUNCA nombres, cites ni transcribas instrumentos de evaluación de terceros ni sus códigos en tu respuesta; describí objetivos y criterios con tus propias palabras clínicas.'
+          : '') + getLangInstruction(userLocale),
         { model: GROQ_MODELS.SMART, temperature: 0.25, maxTokens: 1000 }
       )
     } catch (err) {

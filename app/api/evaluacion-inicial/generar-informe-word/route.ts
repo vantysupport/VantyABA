@@ -285,12 +285,12 @@ ${fmtPorSecciones()}
 - Tipo de evaluación recomendada: ${tipoInforme}
 - Razonamiento previo: ${eval_.recomendacion_razon || '—'}
 
-${knowledgeCtx ? `# 📚 PROTOCOLOS CLÍNICOS Y GUÍAS DE REFERENCIA (Cerebro IA SANTI)
+${knowledgeCtx ? `# 📚 CONTEXTO CLÍNICO DE REFERENCIA (Cerebro IA SANTI — uso interno)
 ${knowledgeCtx}
 
 INSTRUCCIONES ADICIONALES:
-- Cuando hagas afirmaciones clínicas, FUNDAMENTA con criterios de los protocolos arriba (ABLLS-R, AFLS, DSM-5, CIE-11, guías).
-- Cita áreas/hitos específicos (ej: "compatible con criterios del área de manding del ABLLS-R" o "indicadores funcionales por debajo del rango esperado según AFLS para su edad").
+- Cuando hagas afirmaciones clínicas, fundaméntalas con criterios clínicos y, cuando corresponda, con clasificaciones diagnósticas estándar (DSM-5, CIE-11).
+- Usa el contenido de referencia SOLO como apoyo interno. NO nombres, cites ni transcribas instrumentos de evaluación de habilidades de terceros ni sus códigos/áreas; describe hitos y criterios con tus propias palabras clínicas.
 - Sé técnico pero claro.
 ` : ''}
 

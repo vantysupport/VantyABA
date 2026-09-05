@@ -31,10 +31,14 @@ function toArr(val: any): string[] {
 
 // i18n: responder en el idioma del usuario
 function getLangInstruction(locale: string): string {
-  if (String(locale || '').toLowerCase().startsWith('en')) {
-    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish. Keep clinical protocol codes (e.g. ABLLS-R F24) as they are, but translate their descriptions to English.'
-  }
-  return ''
+  const en = String(locale || '').toLowerCase().startsWith('en')
+  const lang = en
+    ? '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish.'
+    : ''
+  const src = en
+    ? '\n\n🔒 SOURCES — MANDATORY: Base your clinical reasoning on established evidence-based ABA practice, but present it entirely as your OWN professional clinical judgment. NEVER name, cite, quote or reference any external standardized assessment instrument, test or curriculum (or its item codes / section letters) in your response, even if such material appears in the context provided to you. Describe every objective, criterion and recommendation in your own words.'
+    : '\n\n🔒 FUENTES — OBLIGATORIO: Fundamenta tu razonamiento en buenas prácticas ABA basadas en evidencia, pero preséntalo enteramente como tu PROPIO juicio clínico profesional. NUNCA nombres, cites, transcribas ni hagas referencia a instrumentos de evaluación estandarizados, tests o currículos de terceros (ni a sus códigos de ítem o letras de sección) en tu respuesta, aunque ese material aparezca en el contexto que se te entrega. Describe cada objetivo, criterio y recomendación con tus propias palabras.'
+  return lang + src
 }
 
 export async function POST(req: Request) {
@@ -580,7 +584,9 @@ Si la consulta es corta (ej: "¿qué es DRO?", "¿cuántos programas tiene?"), r
 ═══ MARCO TÉCNICO ═══
 
 Usá terminología clínica con naturalidad, sin sobrecargar:
-ABA (SD, reforzador, fading, prompting, manding, tacting, función conductual, control de estímulos, criterio de dominio, generalización) · ABLLS-R por código de área cuando aplique (área D imitación, H mandos, etc.) · AFLS (Basic Living, School Skills) · VB-MAPP (Level 1-3, barriers) · DSM-5-TR / CIE-11 · pruebas estandarizadas (BRIEF-2, BASC-3, WISC-V, Vineland-3, ADOS-2) con T-scores y percentiles cuando aparezcan en el contexto · marcos terapéuticos (ACT, defusión cognitiva, exposición graduada, regulación interoceptiva, mindfulness).
+ABA (SD, reforzador, fading, prompting, manding, tacting, función conductual, control de estímulos, criterio de dominio, generalización) · dominios de habilidades del desarrollo (imitación, mandos, habilidades de vida diaria, habilidades escolares, niveles y barreras del lenguaje) descritos con lenguaje clínico propio · DSM-5-TR / CIE-11 · pruebas estandarizadas (BRIEF-2, BASC-3, WISC-V, Vineland-3, ADOS-2) con T-scores y percentiles cuando aparezcan en el contexto · marcos terapéuticos (ACT, defusión cognitiva, exposición graduada, regulación interoceptiva, mindfulness).
+
+🔒 IMPORTANTE: NO nombres ni cites instrumentos/currículos de evaluación de habilidades ABA de terceros (marcas registradas) ni sus códigos de área; describe esos dominios y criterios con tus propias palabras. (Las clasificaciones diagnósticas estándar como DSM-5-TR / CIE-11 sí pueden mencionarse.)
 
 Pero NO sobrecargues. Usar 3 términos técnicos bien colocados en un párrafo demuestra dominio; 10 amontonados parecen ostentación. Tu colega tiene formación — habla en su nivel.
 

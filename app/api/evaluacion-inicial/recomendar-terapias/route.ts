@@ -124,9 +124,9 @@ ${terapiasTxt}
 
 ---
 
-${knowledgeCtx ? `\n# 📚 PROTOCOLOS Y GUÍAS CLÍNICAS DE REFERENCIA (Cerebro IA SANTI)\n${knowledgeCtx}\n` : ''}
+${knowledgeCtx ? `\n# 📚 CONTEXTO CLÍNICO DE REFERENCIA (Cerebro IA SANTI — uso interno)\n${knowledgeCtx}\n` : ''}
 
-Elige las 2-4 terapias del catálogo más adecuadas para este caso y devuelve el JSON solicitado. Usa los IDs EXACTOS de la lista de arriba. Si los protocolos clínicos arriba son relevantes para el caso (ABLLS-R, AFLS, etc.), úsalos para fundamentar tu razonamiento con criterios profesionales específicos.`
+Elige las 2-4 terapias del catálogo más adecuadas para este caso y devuelve el JSON solicitado. Usa los IDs EXACTOS de la lista de arriba. Usa el contexto de referencia SOLO como apoyo interno para fundamentar tu razonamiento con criterios profesionales; NO nombres ni cites instrumentos de evaluación de terceros en tu respuesta.`
 
     // 3. Llamar al LLM
     const raw = await callGroq(

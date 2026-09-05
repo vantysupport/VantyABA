@@ -412,7 +412,7 @@ Lenguaje técnico-educativo. Cada objetivo debe incluir condición, conducta y c
   },
 
   lenguaje_verbal: {
-    titulo: 'EVALUACIÓN DE CONDUCTA VERBAL (VB-MAPP Adaptado)',
+    titulo: 'EVALUACIÓN DE CONDUCTA VERBAL',
     subtitulo: 'Perfil de habilidades de lenguaje y comunicación',
     secciones: [
       'I. DATOS DE IDENTIFICACIÓN',
@@ -424,7 +424,7 @@ Lenguaje técnico-educativo. Cada objetivo debe incluir condición, conducta y c
       'VII. OBJETIVOS Y PLAN DE INTERVENCIÓN',
     ],
     instrucciones: `Eres especialista en conducta verbal y comunicación aumentativa/alternativa (CAA).
-Analiza el perfil VB-MAPP. Evalúa operantes verbales: mando, tacto, ecoico, intraverbal, oyente, lector/escritor.
+Analiza el perfil de conducta verbal. Evalúa operantes verbales: mando, tacto, ecoico, intraverbal, oyente, lector/escritor.
 Identifica el nivel (1-3), barreras al aprendizaje y necesidades de CAA.
 Usa terminología de Skinner (Verbal Behavior) y recomienda objetivos priorizados por función comunicativa.`,
   },
