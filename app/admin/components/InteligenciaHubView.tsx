@@ -1672,7 +1672,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
   const { t, locale } = useI18n()
 
   const [selected, setSelected] = useState<Paciente | null>(null)
-  const [tipo, setTipo] = useState<'padres' | 'seguro' | 'comparativo' | 'general'>('padres')
+  const [tipo, setTipo] = useState<'padres' | 'seguro' | 'comparativo'>('padres')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -1781,7 +1781,6 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
     padres:      { label: t('docs.tPadresLabel'),      desc: t('docs.tPadresDesc'),      emoji: '👨‍👩‍👧' },
     seguro:      { label: t('docs.tClinicoLabel'),     desc: t('docs.tClinicoDesc'),     emoji: '📋' },
     comparativo: { label: t('docs.tComparativoLabel'), desc: t('docs.tComparativoDesc'), emoji: '📊' },
-    general:     { label: t('docs.tGeneralLabel'),     desc: t('docs.tGeneralDesc'),     emoji: '🗂️' },
   }
 
   return (
@@ -1802,7 +1801,7 @@ function TabReportes({ pacientes }: { pacientes: Paciente[] }) {
         </select>
 
         <label className="text-xs font-bold text-slate-500">{t('hub.tipoReporte')}</label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {(Object.entries(tipoInfo) as [typeof tipo, typeof tipoInfo['padres']][]).map(([k, v]) => (
             <button key={k} onClick={() => setTipo(k)}
               className={`p-3 rounded-xl border text-left transition ${tipo === k ? 'border-teal-400 bg-teal-50 shadow-sm' : 'border-slate-100 bg-slate-50 hover:border-teal-200'}`}>
