@@ -2275,12 +2275,15 @@ async function generarReporteComparativoPro(
   const nombreCap = nombre.split(' ')
     .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(' ')
-  const diagnostico = (child as any)?.diagnosis || 'En evaluación'
+  const isEN = userLocale === 'en'
+  const L = (en: string, es: string) => (isEN ? en : es)
+  const dateLoc = isEN ? 'en-US' : 'es-ES'
+  const diagnostico = (child as any)?.diagnosis || L('Under evaluation', 'En evaluación')
 
   // Total de sesiones realizadas (misma fórmula que el UI)
   const totalSesionesRealizadas = await contarSesionesRealizadas(childId, (child as any)?.sessions_before_platform)
 
-  let edadTexto = 'no registrada'
+  let edadTexto = L('not recorded', 'no registrada')
   if ((child as any)?.birth_date) {
     const nac = new Date((child as any).birth_date)
     const ahora = new Date()
@@ -2288,9 +2291,11 @@ async function generarReporteComparativoPro(
     const meses = ahora.getMonth() - nac.getMonth()
     const edad = (meses < 0 || (meses === 0 && ahora.getDate() < nac.getDate())) ? años - 1 : años
     const mesesAdj = meses < 0 ? meses + 12 : meses
-    edadTexto = `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
+    edadTexto = isEN
+      ? `${edad} year${edad === 1 ? '' : 's'}${mesesAdj > 0 ? ` ${mesesAdj} month${mesesAdj === 1 ? '' : 's'}` : ''}`
+      : `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
   } else if ((child as any)?.age) {
-    edadTexto = `${(child as any).age} años`
+    edadTexto = isEN ? `${(child as any).age} years` : `${(child as any).age} años`
   }
 
   const [
@@ -2353,7 +2358,7 @@ async function generarReporteComparativoPro(
   const pendiente = calcPendiente(logros)
 
   const fechasUnif = sesionesUnif.map(s => s.fecha)
-  const fmt = (d: string) => new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fmt = (d: string) => new Date(d).toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
   const fechaInicio = fechasUnif.length > 0 ? fmt(fechasUnif[0]) : '—'
   const fechaFin    = fechasUnif.length > 0 ? fmt(fechasUnif[fechasUnif.length - 1]) : fmt(new Date().toISOString())
   const semanas = fechasUnif.length > 1
@@ -2373,13 +2378,13 @@ async function generarReporteComparativoPro(
     pred30  = Math.min(100, avg2 + mm)
     pred90  = Math.min(100, avg2 + mm * 3)
     pred180 = Math.min(100, avg2 + mm * 6)
-    confianzaNota = `Proyección basada en benchmarks clínicos ABA (${logros.length} sesiones disponibles). Se recomienda re-evaluar a partir de la sesión 8.`
+    confianzaNota = L(`Projection based on ABA clinical benchmarks (${logros.length} sessions available). Re-evaluation is recommended from session 8 onward.`, `Proyección basada en benchmarks clínicos ABA (${logros.length} sesiones disponibles). Se recomienda re-evaluar a partir de la sesión 8.`)
   } else {
     const señal = diferencia * 0.15
     pred30  = Math.min(100, Math.max(avg2 + 1, Math.round(avg2 + pendiente * ses30d + señal)))
     pred90  = Math.min(100, Math.max(pred30 + 1, Math.round(avg2 + pendiente * ses90d + señal * 2)))
     pred180 = Math.min(100, Math.max(pred90 + 1, Math.round(avg2 + pendiente * ses180d + señal * 3)))
-    confianzaNota = `Proyección por regresión lineal sobre ${logros.length} sesiones (confianza ${logros.length >= 12 ? 'alta' : 'moderada'}).`
+    confianzaNota = L(`Linear-regression projection over ${logros.length} sessions (${logros.length >= 12 ? 'high' : 'moderate'} confidence).`, `Proyección por regresión lineal sobre ${logros.length} sesiones (confianza ${logros.length >= 12 ? 'alta' : 'moderada'}).`)
   }
 
   // Por área
@@ -2397,12 +2402,12 @@ async function generarReporteComparativoPro(
     }
   }
 
-  const tendencia = diferencia > 10 ? 'progreso significativo' : diferencia > 3 ? 'progreso moderado' : diferencia < -5 ? 'regresión' : 'estabilidad'
+  const tendencia = diferencia > 10 ? L('significant progress', 'progreso significativo') : diferencia > 3 ? L('moderate progress', 'progreso moderado') : diferencia < -5 ? L('regression', 'regresión') : L('stability', 'estabilidad')
 
-  const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const hoy = new Date().toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
   const hoyISO = new Date().toISOString().slice(0, 10)
   const iniciales = tpl.generarIniciales(nombre)
-  const fileName = `Analisis_Comparativo_${nombreCap.replace(/\s+/g, '_')}_${hoyISO}.docx`
+  const fileName = `${L('Comparative_Analysis', 'Analisis_Comparativo')}_${nombreCap.replace(/\s+/g, '_')}_${hoyISO}.docx`
   const codigoDoc = generarCodigoDocumento(childId, 'comp')
 
   // IA: análisis comparativo + predicción + recomendaciones
@@ -2481,7 +2486,7 @@ Datos:
 - Tendencia: ${tendencia}, logro actual ${avg2}%
 - Áreas activas: ${[...new Set(progArr.map((p: any) => p.area))].join(', ')}${evaluacionesCtx}
 
-3-4 ítems por array. Específicos al caso. Sin emojis.`,
+3-4 ítems por array. Específicos al caso. Sin emojis.`+getLangInstruction(userLocale),
       { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 500 },
     ),
   ])
@@ -2496,7 +2501,7 @@ Datos:
     codigoDoc, fechaEmision: hoy, especialista: 'Equipo Clínico SANTI',
   })
 
-  const periodoTexto = fechasUnif.length > 1 ? `${fechaInicio} al ${fechaFin}` : (fechasUnif.length === 1 ? fechaInicio : '—')
+  const periodoTexto = fechasUnif.length > 1 ? L(`${fechaInicio} to ${fechaFin}`, `${fechaInicio} al ${fechaFin}`) : (fechasUnif.length === 1 ? fechaInicio : '—')
 
   const parsearProsa = (texto: string): Paragraph[] => {
     return texto.split('\n').filter(l => l.trim())
@@ -2506,12 +2511,12 @@ Datos:
   const sections: DocChild[] = [
     // PORTADA con QR
     ...portadaInstitucional({
-      tipoInforme: 'ANÁLISIS COMPARATIVO Y PROYECCIÓN TERAPÉUTICA',
+      tipoInforme: L('COMPARATIVE ANALYSIS AND THERAPEUTIC PROJECTION', 'ANÁLISIS COMPARATIVO Y PROYECCIÓN TERAPÉUTICA'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
       diagnostico,
-      especialista: 'Equipo Clínico SANTI',
-      credenciales: 'BCBA · Neuropsicología Infantil',
+      especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+      credenciales: L('BCBA · Child Neuropsychology', 'BCBA · Neuropsicología Infantil'),
       fechaEmision: hoy,
       periodoEval: periodoTexto,
       codigoDoc,
@@ -2519,72 +2524,72 @@ Datos:
     // (la portada ya incluye su propio salto de página)
 
     // I. Datos del análisis
-    tpl.tituloSeccion('I.  Datos del Análisis'),
+    tpl.tituloSeccion(L('I.  Analysis Data', 'I.  Datos del Análisis')),
     tpl.tablaDatosGenerales([
-      ['Apellidos y nombres', nombre],
-      ['Edad', edadTexto],
-      ['Diagnóstico', diagnostico],
-      ['Período analizado', periodoTexto],
-      ['Total de sesiones realizadas', String(totalSesionesRealizadas)],
-      ['Tendencia clínica', tendencia],
-      ['Documento N°', codigoDoc],
+      [L('Last and first names', 'Apellidos y nombres'), nombre],
+      [L('Age', 'Edad'), edadTexto],
+      [L('Diagnosis', 'Diagnóstico'), diagnostico],
+      [L('Period analyzed', 'Período analizado'), periodoTexto],
+      [L('Total sessions held', 'Total de sesiones realizadas'), String(totalSesionesRealizadas)],
+      [L('Clinical trend', 'Tendencia clínica'), tendencia],
+      [L('Document No.', 'Documento N°'), codigoDoc],
     ]),
 
     // II. Comparación P1 vs P2
-    tpl.tituloSeccion('II.  Comparación Directa de Períodos'),
+    tpl.tituloSeccion(L('II.  Direct Comparison of Periods', 'II.  Comparación Directa de Períodos')),
     tpl.tablaDatosGenerales([
-      [`Período 1 (${p1.length} registros)`, `${avg1}% promedio`],
-      [`Período 2 (${p2.length} registros)`, `${avg2}% promedio`],
-      ['Variación', `${diferencia > 0 ? '+' : ''}${diferencia}%`],
-      ['Lectura clínica', tendencia],
+      [L(`Period 1 (${p1.length} records)`, `Período 1 (${p1.length} registros)`), L(`${avg1}% average`, `${avg1}% promedio`)],
+      [L(`Period 2 (${p2.length} records)`, `Período 2 (${p2.length} registros)`), L(`${avg2}% average`, `${avg2}% promedio`)],
+      [L('Change', 'Variación'), `${diferencia > 0 ? '+' : ''}${diferencia}%`],
+      [L('Clinical reading', 'Lectura clínica'), tendencia],
     ]),
 
     // III. Gráfico por fases
-    tpl.tituloSeccion('III.  Evolución por Fase del Tratamiento'),
-    tpl.parrafo('La evolución del logro terapéutico, distribuida en cuatro fases del tratamiento desde el inicio hasta hoy:'),
-    ...tpl.graficoProgresoBarra('Evolución por fase (%)', [
-      { label: `Fase 1 — Inicio  (S1–S${Math.ceil(total*0.25)})`, valor: q1 },
-      { label: `Fase 2 — Desarrollo  (S${Math.ceil(total*0.25)+1}–S${Math.ceil(total*0.5)})`, valor: q2 },
-      { label: `Fase 3 — Consolidación  (S${Math.ceil(total*0.5)+1}–S${Math.ceil(total*0.75)})`, valor: q3 },
-      { label: `Fase 4 — Estado Actual  (S${Math.ceil(total*0.75)+1}–S${total})`, valor: q4 },
+    tpl.tituloSeccion(L('III.  Evolution by Treatment Phase', 'III.  Evolución por Fase del Tratamiento')),
+    tpl.parrafo(L('The evolution of therapeutic achievement, distributed across four treatment phases from the beginning to today:', 'La evolución del logro terapéutico, distribuida en cuatro fases del tratamiento desde el inicio hasta hoy:')),
+    ...tpl.graficoProgresoBarra(L('Evolution by phase (%)', 'Evolución por fase (%)'), [
+      { label: L(`Phase 1 — Start  (S1–S${Math.ceil(total*0.25)})`, `Fase 1 — Inicio  (S1–S${Math.ceil(total*0.25)})`), valor: q1 },
+      { label: L(`Phase 2 — Development  (S${Math.ceil(total*0.25)+1}–S${Math.ceil(total*0.5)})`, `Fase 2 — Desarrollo  (S${Math.ceil(total*0.25)+1}–S${Math.ceil(total*0.5)})`), valor: q2 },
+      { label: L(`Phase 3 — Consolidation  (S${Math.ceil(total*0.5)+1}–S${Math.ceil(total*0.75)})`, `Fase 3 — Consolidación  (S${Math.ceil(total*0.5)+1}–S${Math.ceil(total*0.75)})`), valor: q3 },
+      { label: L(`Phase 4 — Current State  (S${Math.ceil(total*0.75)+1}–S${total})`, `Fase 4 — Estado Actual  (S${Math.ceil(total*0.75)+1}–S${total})`), valor: q4 },
     ], { mostrarMeta: true, metaPct: 90 }),
 
     // IV. Análisis clínico
-    tpl.tituloSeccion('IV.  Análisis Clínico Comparativo'),
+    tpl.tituloSeccion(L('IV.  Comparative Clinical Analysis', 'IV.  Análisis Clínico Comparativo')),
     ...parsearProsa(analisisComp),
 
     // V. Predicción
-    tpl.tituloSeccion('V.  Proyección Terapéutica'),
+    tpl.tituloSeccion(L('V.  Therapeutic Projection', 'V.  Proyección Terapéutica')),
     tpl.tablaDatosGenerales([
-      ['Logro actual', `${avg2}%`],
-      ['Proyección 30 días', `${pred30}%`],
-      ['Proyección 90 días', `${pred90}%`],
-      ['Proyección 180 días', `${pred180}%`],
-      ['Pendiente observada', `${pendiente.toFixed(2)} pts/sesión`],
-      ['Sesiones esperadas (período)', `${ses30d} (30d) · ${ses90d} (90d) · ${ses180d} (180d)`],
+      [L('Current achievement', 'Logro actual'), `${avg2}%`],
+      [L('30-day projection', 'Proyección 30 días'), `${pred30}%`],
+      [L('90-day projection', 'Proyección 90 días'), `${pred90}%`],
+      [L('180-day projection', 'Proyección 180 días'), `${pred180}%`],
+      [L('Observed slope', 'Pendiente observada'), L(`${pendiente.toFixed(2)} pts/session`, `${pendiente.toFixed(2)} pts/sesión`)],
+      [L('Expected sessions (period)', 'Sesiones esperadas (período)'), `${ses30d} (30d) · ${ses90d} (90d) · ${ses180d} (180d)`],
     ]),
     ...parsearProsa(analisisPred),
-    tpl.parrafo(`Nota técnica: ${confianzaNota}`),
+    tpl.parrafo(L(`Technical note: ${confianzaNota}`, `Nota técnica: ${confianzaNota}`)),
   ]
 
   // VI. Análisis por área
   const areasConDatos = Object.entries(areaMap).filter(([_, v]) => v.p1.length > 0 || v.p2.length > 0)
   if (areasConDatos.length > 0) {
-    sections.push(tpl.tituloSeccion('VI.  Avance por Área de Intervención'))
-    sections.push(tpl.parrafo('Comparación del logro promedio por área entre el período de referencia y el período actual:'))
-    sections.push(...tpl.graficoProgresoBarra('Período 1 (referencia) — Logro por área (%)',
+    sections.push(tpl.tituloSeccion(L('VI.  Progress by Intervention Area', 'VI.  Avance por Área de Intervención')))
+    sections.push(tpl.parrafo(L('Comparison of average achievement by area between the reference period and the current period:', 'Comparación del logro promedio por área entre el período de referencia y el período actual:')))
+    sections.push(...tpl.graficoProgresoBarra(L('Period 1 (reference) — Achievement by area (%)', 'Período 1 (referencia) — Logro por área (%)'),
       areasConDatos.map(([area, v]) => ({ label: area, valor: avg(v.p1) })),
       { mostrarMeta: true, metaPct: 90 },
     ))
     sections.push(new Paragraph({ spacing: { before: 200, after: 0 }, children: [] }))
-    sections.push(...tpl.graficoProgresoBarra('Período 2 (actual) — Logro por área (%)',
+    sections.push(...tpl.graficoProgresoBarra(L('Period 2 (current) — Achievement by area (%)', 'Período 2 (actual) — Logro por área (%)'),
       areasConDatos.map(([area, v]) => ({ label: area, valor: avg(v.p2) })),
       { mostrarMeta: true, metaPct: 90 },
     ))
   }
 
   // VII. Recomendaciones
-  sections.push(tpl.tituloSeccion('VII.  Recomendaciones Terapéuticas'))
+  sections.push(tpl.tituloSeccion(L('VII.  Therapeutic Recommendations', 'VII.  Recomendaciones Terapéuticas')))
   if (recomData.ajustes_plan?.length > 0) {
     sections.push(new Paragraph({
       spacing: { before: 200, after: 80 },
@@ -2600,7 +2605,7 @@ Datos:
     sections.push(...tpl.items(recomData.objetivos_proximos))
   }
   if (recomData.frecuencia) {
-    sections.push(tpl.subseccion('Frecuencia sugerida', recomData.frecuencia))
+    sections.push(tpl.subseccion(L('Suggested frequency', 'Frecuencia sugerida'), recomData.frecuencia))
   }
 
   // QR + firma
