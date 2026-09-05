@@ -142,7 +142,7 @@ async function makeDoc(
   const conPortada = opts?.conPortada !== false
   const conQR      = opts?.conQR !== false
   const codigo     = opts?.codigoDoc ?? ''
-  const fecha      = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fecha      = new Date().toLocaleDateString(tpl.getReportLocale() === 'en' ? 'en-US' : 'es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
 
   const seccionPortada = conPortada ? [{
     properties: {
@@ -3358,18 +3358,21 @@ async function generarReporteGeneral(childId: string, userLocale = 'es'): Promis
     .select('name, age, birth_date, diagnosis, created_at, sessions_before_platform')
     .eq('id', childId).single()
 
+  const isEN = userLocale === 'en'
+  const L = (en: string, es: string) => (isEN ? en : es)
+  const dateLoc = isEN ? 'en-US' : 'es-ES'
   const nombre = (child as any)?.name || 'Paciente'
   const nombreCap = nombre.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-  const diagnosis = (child as any)?.diagnosis || 'No especificado'
-  let edadTexto = (child as any)?.age ? `${(child as any).age} años` : 'no registrada'
+  const diagnosis = (child as any)?.diagnosis || L('Not specified', 'No especificado')
+  let edadTexto = (child as any)?.age ? (isEN ? `${(child as any).age} years` : `${(child as any).age} años`) : L('not recorded', 'no registrada')
   if ((child as any)?.birth_date) {
     const nac = new Date((child as any).birth_date); const ahora = new Date()
     let años = ahora.getFullYear() - nac.getFullYear()
     if (ahora.getMonth() < nac.getMonth() || (ahora.getMonth() === nac.getMonth() && ahora.getDate() < nac.getDate())) años--
-    edadTexto = `${años} años`
+    edadTexto = isEN ? `${años} year${años === 1 ? '' : 's'}` : `${años} años`
   }
   const enTerapiaDesde = (child as any)?.created_at
-    ? new Date((child as any).created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+    ? new Date((child as any).created_at).toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
     : '—'
   const totalSesionesRealizadas = await contarSesionesRealizadas(childId, (child as any)?.sessions_before_platform)
 
@@ -3460,66 +3463,84 @@ async function generarReporteGeneral(childId: string, userLocale = 'es'): Promis
 
   // ── 6. Construir el documento ──
   const sections: any[] = []
-  sections.push(title('REPORTE GENERAL DEL PACIENTE'))
-  sections.push(kv('Paciente', nombreCap))
-  sections.push(kv('Edad', edadTexto))
-  sections.push(kv('Diagnóstico', diagnosis))
-  sections.push(kv('En seguimiento desde', enTerapiaDesde))
-  sections.push(kv('Sesiones totales', String(totalSesionesRealizadas)))
+  sections.push(title(L('GENERAL PATIENT REPORT', 'REPORTE GENERAL DEL PACIENTE')))
+  // FIX: kv() devuelve TableRow — deben ir DENTRO de una Table, no sueltos en el
+  //      documento (un TableRow como hijo directo corrompe el .docx / no abre).
+  sections.push(new Table({
+    width: { size: 9360, type: WidthType.DXA },
+    rows: [
+      kv(L('Patient', 'Paciente'), nombreCap),
+      kv(L('Age', 'Edad'), edadTexto),
+      kv(L('Diagnosis', 'Diagnóstico'), diagnosis),
+      kv(L('In follow-up since', 'En seguimiento desde'), enTerapiaDesde),
+      kv(L('Total sessions', 'Sesiones totales'), String(totalSesionesRealizadas)),
+    ],
+  }))
 
-  sections.push(h2('RESUMEN GENERAL'))
+  sections.push(h2(L('GENERAL SUMMARY', 'RESUMEN GENERAL')))
   sections.push(infoBox(
-    `Programas ABA: ${progResumen.length} (${nLogrados} con criterio alcanzado · ${nEnProgreso} en intervención). ` +
-    `Evaluaciones/documentos: ${materialEval.length}. Fichas clínicas: ${fichasArr.length}. ` +
-    `Informes emitidos: ${emitidosArr.length}. Sesiones registradas: ${totalSesionesRealizadas}.`
+    isEN
+      ? `ABA programs: ${progResumen.length} (${nLogrados} with criterion reached · ${nEnProgreso} in intervention). ` +
+        `Evaluations/documents: ${materialEval.length}. Clinical records: ${fichasArr.length}. ` +
+        `Reports issued: ${emitidosArr.length}. Recorded sessions: ${totalSesionesRealizadas}.`
+      : `Programas ABA: ${progResumen.length} (${nLogrados} con criterio alcanzado · ${nEnProgreso} en intervención). ` +
+        `Evaluaciones/documentos: ${materialEval.length}. Fichas clínicas: ${fichasArr.length}. ` +
+        `Informes emitidos: ${emitidosArr.length}. Sesiones registradas: ${totalSesionesRealizadas}.`
   ))
-  if (sintesis) { sections.push(h2('SÍNTESIS CLÍNICA')); sections.push(pp(sintesis)) }
+  if (sintesis) { sections.push(h2(L('CLINICAL SYNTHESIS', 'SÍNTESIS CLÍNICA'))); sections.push(pp(sintesis)) }
 
   // Programas
-  sections.push(h2('PROGRAMAS ABA'))
-  if (progResumen.length === 0) sections.push(pp('No hay programas ABA registrados para este paciente.'))
+  sections.push(h2(L('ABA PROGRAMS', 'PROGRAMAS ABA')))
+  if (progResumen.length === 0) sections.push(pp(L('No ABA programs recorded for this patient.', 'No hay programas ABA registrados para este paciente.')))
   else progResumen.forEach(p => {
-    const estado = p.dominado ? '✓ Criterio alcanzado' : (p.ultimo != null ? `en intervención — último ${p.ultimo}%${p.promedio != null ? `, promedio ${p.promedio}%` : ''}` : 'sin sesiones aún')
-    const setsTxt = p.sets > 0 ? ` · Sets: ${p.setsDominados}/${p.sets} dominados` : ''
-    sections.push(bullet(`${p.titulo} (${p.area}) — ${estado} · ${p.n} sesión(es)${setsTxt}`))
+    const estado = p.dominado
+      ? L('✓ Criterion reached', '✓ Criterio alcanzado')
+      : (p.ultimo != null
+          ? (isEN ? `in intervention — last ${p.ultimo}%${p.promedio != null ? `, average ${p.promedio}%` : ''}` : `en intervención — último ${p.ultimo}%${p.promedio != null ? `, promedio ${p.promedio}%` : ''}`)
+          : L('no sessions yet', 'sin sesiones aún'))
+    const setsTxt = p.sets > 0 ? L(` · Sets: ${p.setsDominados}/${p.sets} mastered`, ` · Sets: ${p.setsDominados}/${p.sets} dominados`) : ''
+    sections.push(bullet(isEN
+      ? `${p.titulo} (${p.area}) — ${estado} · ${p.n} session(s)${setsTxt}`
+      : `${p.titulo} (${p.area}) — ${estado} · ${p.n} sesión(es)${setsTxt}`))
   })
 
   // Evaluaciones e informes
-  sections.push(h2('EVALUACIONES E INFORMES'))
+  sections.push(h2(L('EVALUATIONS AND REPORTS', 'EVALUACIONES E INFORMES')))
   if (resumenesEval.length > 0) {
     resumenesEval.forEach(r => sections.push(bullet(r)))
   } else if (materialEval.length > 0) {
     // Fallback sin IA: mostrar excerpts recortados
-    if (evalIni?.recomendacion_resumen) sections.push(bullet(`Evaluación inicial: ${String(evalIni.recomendacion_resumen).slice(0, 300)}`))
+    if (evalIni?.recomendacion_resumen) sections.push(bullet(L('Initial evaluation: ', 'Evaluación inicial: ') + `${String(evalIni.recomendacion_resumen).slice(0, 300)}`))
     formArr.forEach((f: any) => f.ai_analysis && sections.push(bullet(`${f.form_title || f.form_type}: ${String(f.ai_analysis).slice(0, 250)}`)))
-    docsArr.forEach((d: any) => sections.push(bullet(`Documento "${d.file_name}": ${String(d.extracted_text || '').slice(0, 250)}…`)))
+    docsArr.forEach((d: any) => sections.push(bullet(L('Document ', 'Documento ') + `"${d.file_name}": ${String(d.extracted_text || '').slice(0, 250)}…`)))
   } else {
-    sections.push(pp('No hay evaluaciones ni documentos con contenido registrado para este paciente.'))
+    sections.push(pp(L('No evaluations or documents with recorded content for this patient.', 'No hay evaluaciones ni documentos con contenido registrado para este paciente.')))
   }
   if (fichasArr.length > 0) {
-    sections.push(pp('Fichas clínicas registradas:', '64748B'))
-    fichasArr.forEach((f: any) => sections.push(bullet(`${(f.clinical_templates as any)?.name || 'Ficha'} — ${f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES') : ''}${f.filler_name ? ` (por ${f.filler_name})` : ''}`)))
+    sections.push(pp(L('Registered clinical records:', 'Fichas clínicas registradas:'), '64748B'))
+    fichasArr.forEach((f: any) => sections.push(bullet(`${(f.clinical_templates as any)?.name || L('Record', 'Ficha')} — ${f.created_at ? new Date(f.created_at).toLocaleDateString(dateLoc) : ''}${f.filler_name ? L(` (by ${f.filler_name})`, ` (por ${f.filler_name})`) : ''}`)))
   }
 
   // Documentos emitidos
   if (emitidosArr.length > 0) {
-    sections.push(h2('DOCUMENTOS EMITIDOS'))
+    sections.push(h2(L('ISSUED DOCUMENTS', 'DOCUMENTOS EMITIDOS')))
     emitidosArr.forEach((d: any) => sections.push(bullet(
-      `${d.tipo_label || d.codigo_doc} — ${d.fecha_emision ? new Date(d.fecha_emision).toLocaleDateString('es-ES') : ''} · Código ${d.codigo_doc}${d.valido === false ? ' (anulado)' : ''}`
+      `${d.tipo_label || d.codigo_doc} — ${d.fecha_emision ? new Date(d.fecha_emision).toLocaleDateString(dateLoc) : ''} · ${L('Code', 'Código')} ${d.codigo_doc}${d.valido === false ? L(' (voided)', ' (anulado)') : ''}`
     )))
   }
 
   // ── 7. Registrar + generar ──
   const codigoDoc = generarCodigoDocumento(childId, 'general')
+  const fileName = `${L('General_Report', 'Reporte_General')}_${nombreCap.replace(/\s+/g, '_')}.docx`
   await registrarDocumentoEmitido({
     codigoDoc, childId, tipo: 'reporte_general', pacienteNombre: nombreCap,
-    fileName: `Reporte_General_${nombreCap.replace(/\s+/g, '_')}.docx`,
+    fileName,
   }).catch(() => {})
 
-  const doc = await makeDoc(sections, `Reporte_General_${nombreCap.replace(/\s+/g, '_')}.docx`, {
-    tipoInforme: 'Reporte General', childName: nombreCap, childAge: edadTexto, diagnosis, codigoDoc,
+  const doc = await makeDoc(sections, fileName, {
+    tipoInforme: L('General Report', 'Reporte General'), childName: nombreCap, childAge: edadTexto, diagnosis, codigoDoc,
   })
-  return { doc, fileName: `Reporte_General_${nombreCap.replace(/\s+/g, '_')}.docx` }
+  return { doc, fileName }
 }
 
 export async function POST(req: NextRequest) {
