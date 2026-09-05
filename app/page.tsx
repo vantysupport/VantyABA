@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { claimSession } from '@/lib/session-lock'
 import { Mail, Lock, User, Loader2, Eye, EyeOff, AlertCircle, MessageCircle, ArrowRight, ShieldCheck } from 'lucide-react'
+import LocaleSelector from '@/app/components/LocaleSelector'
 
 interface PageProps {
   searchParams: Promise<{ mode?: string; session?: string }>
@@ -17,7 +18,9 @@ interface PageProps {
 export default function LoginPage(props: PageProps) {
   const searchParams = use(props.searchParams)
   const router = useRouter()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  // Helper bilingue para mensajes dinamicos (errores, avisos)
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [isSignUp, setIsSignUp] = useState(searchParams.mode === 'signup')
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -45,7 +48,7 @@ export default function LoginPage(props: PageProps) {
   // ── Aviso si fue expulsado por sesión única ──
   useEffect(() => {
     if (searchParams.session === 'taken') {
-      setErrorMessage('Un usuario está usando este perfil ahora. Solo se permite una sesión activa por cuenta.')
+      setErrorMessage(L('Someone is using this profile right now. Only one active session per account is allowed.', 'Un usuario está usando este perfil ahora. Solo se permite una sesión activa por cuenta.'))
     }
   }, [searchParams.session])
 
@@ -61,7 +64,7 @@ export default function LoginPage(props: PageProps) {
       })
       if (error) throw error
     } catch (err: any) {
-      setErrorMessage('Error al conectar con Google. Intenta de nuevo.')
+      setErrorMessage(L('Error connecting with Google. Please try again.', 'Error al conectar con Google. Intenta de nuevo.'))
       setIsLoading(false)
     }
   }
@@ -79,7 +82,7 @@ export default function LoginPage(props: PageProps) {
       })
       if (error) throw error
     } catch (err: any) {
-      setErrorMessage('Error al conectar con Microsoft. Intenta de nuevo.')
+      setErrorMessage(L('Error connecting with Microsoft. Please try again.', 'Error al conectar con Microsoft. Intenta de nuevo.'))
       setIsLoading(false)
     }
   }
@@ -99,7 +102,7 @@ export default function LoginPage(props: PageProps) {
         if (error) throw error
         // Supabase a veces NO lanza error cuando el usuario ya existe — en su lugar devuelve identities: []
         if (!authData.user || (authData.user.identities && authData.user.identities.length === 0)) {
-          setErrorMessage('Este correo ya está registrado. Usa "Iniciar sesión" o recupera tu contraseña.')
+          setErrorMessage(L('This email is already registered. Use "Sign in" or recover your password.', 'Este correo ya está registrado. Usa "Iniciar sesión" o recupera tu contraseña.'))
           setIsLoading(false)
           return
         }
@@ -112,7 +115,7 @@ export default function LoginPage(props: PageProps) {
         // ── Sesión única (con timeout interno; si falla, deja entrar igual) ──
         const claim = await claimSession()
         if (claim === 'in_use') {
-          setErrorMessage('Un usuario está usando este perfil ahora. Solo se permite una sesión activa por cuenta.')
+          setErrorMessage(L('Someone is using this profile right now. Only one active session per account is allowed.', 'Un usuario está usando este perfil ahora. Solo se permite una sesión activa por cuenta.'))
           setIsLoading(false)
           // scope:'local' => cierra SOLO esta sesión (la que se bloquea), NO la
           // sesión activa del otro dispositivo (global la mataría a TODAS).
@@ -130,15 +133,15 @@ export default function LoginPage(props: PageProps) {
     } catch (err: any) {
       const msg = err.message || ''
       const status = err.status || err.statusCode
-      if (msg.includes('Invalid login credentials')) setErrorMessage('Correo o contraseña incorrectos.')
-      else if (msg.includes('Email not confirmed')) setErrorMessage('Cuenta no confirmada. Contacta al administrador.')
+      if (msg.includes('Invalid login credentials')) setErrorMessage(L('Incorrect email or password.', 'Correo o contraseña incorrectos.'))
+      else if (msg.includes('Email not confirmed')) setErrorMessage(L('Account not confirmed. Please contact the administrator.', 'Cuenta no confirmada. Contacta al administrador.'))
       else if (msg.includes('User already registered') || msg.includes('already been registered') || msg.toLowerCase().includes('already exists') || status === 409) {
-        setErrorMessage('Este correo ya está registrado. Usa "Iniciar sesión" o recupera tu contraseña.')
+        setErrorMessage(L('This email is already registered. Use "Sign in" or recover your password.', 'Este correo ya está registrado. Usa "Iniciar sesión" o recupera tu contraseña.'))
       }
-      else if (msg.includes('Password should be at least')) setErrorMessage('La contraseña debe tener al menos 6 caracteres.')
-      else if (msg.includes('rate limit') || msg.toLowerCase().includes('too many')) setErrorMessage('Demasiados intentos. Espera unos minutos e intenta de nuevo.')
-      else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) setErrorMessage('Sin conexión al servidor. Verifica tu internet o intenta en unos minutos.')
-      else setErrorMessage(msg || 'Error al procesar la solicitud. Intenta de nuevo.')
+      else if (msg.includes('Password should be at least')) setErrorMessage(L('The password must be at least 6 characters.', 'La contraseña debe tener al menos 6 caracteres.'))
+      else if (msg.includes('rate limit') || msg.toLowerCase().includes('too many')) setErrorMessage(L('Too many attempts. Wait a few minutes and try again.', 'Demasiados intentos. Espera unos minutos e intenta de nuevo.'))
+      else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) setErrorMessage(L('No connection to the server. Check your internet or try again in a few minutes.', 'Sin conexión al servidor. Verifica tu internet o intenta en unos minutos.'))
+      else setErrorMessage(msg || L('Error processing the request. Please try again.', 'Error al procesar la solicitud. Intenta de nuevo.'))
       setIsLoading(false)
     }
   }
@@ -307,7 +310,7 @@ export default function LoginPage(props: PageProps) {
           <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 540 }}>
             <h2 style={{ color: '#fff', fontWeight: 800, fontSize: 'clamp(46px, 4.2vw, 66px)', lineHeight: 1.0, letterSpacing: '-0.035em', marginBottom: 26 }}>
               <span className="lp-line" style={{ animationDelay: '.05s' }}>{t("landing.tuHijoMerece")}</span>
-              <span className="lp-line" style={{ animationDelay: '.2s', color: '#7dd3fc' }}>lo mejor.</span>
+              <span className="lp-line" style={{ animationDelay: '.2s', color: '#7dd3fc' }}>{locale === 'en' ? 'the best.' : 'lo mejor.'}</span>
             </h2>
             <p className="lp-hero-anim" style={{ color: 'rgba(255,255,255,.62)', fontSize: 17, lineHeight: 1.7, maxWidth: 400, animationDelay: '.38s' }}>
               {t('auto.page.acompanamientoClinicoAbaConIntelig')}
@@ -327,6 +330,10 @@ export default function LoginPage(props: PageProps) {
 
         {/* RIGHT */}
         <div className="lp-right">
+          {/* Selector de idioma ES/EN */}
+          <div style={{ position: 'absolute', top: 20, right: 20, zIndex: 5 }}>
+            <LocaleSelector />
+          </div>
           <div className="lp-form-box">
 
             <div className="mobile-logo" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
@@ -339,14 +346,20 @@ export default function LoginPage(props: PageProps) {
 
             <div className="lp-pill">
               <ShieldCheck size={13} strokeWidth={2.2} />
-              {isSignUp ? 'Crea tu cuenta gratis' : 'Plataforma clínica protegida'}
+              {isSignUp
+                ? (locale === 'en' ? 'Create your free account' : 'Crea tu cuenta gratis')
+                : (locale === 'en' ? 'Protected clinical platform' : 'Plataforma clínica protegida')}
             </div>
 
             <h1 style={{ fontSize: 'clamp(26px, 5vw, 33px)', fontWeight: 800, color: 'var(--lpR-text)', marginBottom: 7, lineHeight: 1.12, letterSpacing: '-0.025em' }}>
-              {isSignUp ? 'Bienvenido al equipo' : 'Ingresa a tu cuenta'}
+              {isSignUp
+                ? (locale === 'en' ? 'Welcome to the team' : 'Bienvenido al equipo')
+                : (locale === 'en' ? 'Sign in to your account' : 'Ingresa a tu cuenta')}
             </h1>
             <p style={{ fontSize: 14.5, color: 'var(--lpR-text2)', marginBottom: 24 }}>
-              {isSignUp ? 'Completa los datos para comenzar' : 'Continúa el seguimiento de tu hijo'}
+              {isSignUp
+                ? (locale === 'en' ? 'Fill in your details to get started' : 'Completa los datos para comenzar')
+                : (locale === 'en' ? "Continue following your child's progress" : 'Continúa el seguimiento de tu hijo')}
             </p>
 
             <form onSubmit={handleSubmit}>
@@ -367,7 +380,7 @@ export default function LoginPage(props: PageProps) {
               <div className="lp-field">
                 <label>{t('auth.password')}</label>
                 <Lock size={15} className="lp-icon" />
-                <input name="password" type={showPassword ? 'text' : 'password'} placeholder={isSignUp ? 'Mínimo 6 caracteres' : '••••••••'} required minLength={6} style={{ paddingRight: 44 }} />
+                <input name="password" type={showPassword ? 'text' : 'password'} placeholder={isSignUp ? (locale === 'en' ? 'Minimum 6 characters' : 'Mínimo 6 caracteres') : '••••••••'} required minLength={6} style={{ paddingRight: 44 }} />
                 <button type="button" className="lp-eye" onClick={() => setShowPassword(!showPassword)}>
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -384,7 +397,7 @@ export default function LoginPage(props: PageProps) {
                 <div className="lp-forgot">
                   <p>{t("auth.comunicateCon")} <strong>{t('auto.page.neuropsicologiaYTerapiasSanti')}</strong> {t('auth.restablecen')}</p>
                   <a href="https://wa.me/51991070734?text=Hola,%20olvidé%20mi%20contraseña." target="_blank" rel="noopener noreferrer">
-                    <MessageCircle size={14} /> Contactar por WhatsApp
+                    <MessageCircle size={14} /> {locale === 'en' ? 'Contact via WhatsApp' : 'Contactar por WhatsApp'}
                   </a>
                 </div>
               )}
@@ -398,7 +411,7 @@ export default function LoginPage(props: PageProps) {
               <button type="submit" className="lp-btn" disabled={isLoading}>
                 {isLoading
                   ? <><Loader2 size={17} className="spin" /> {t('common.procesando')}</>
-                  : <>{isSignUp ? 'Crear Cuenta' : 'Ingresar'} <ArrowRight size={15} /></>
+                  : <>{isSignUp ? (locale === 'en' ? 'Create Account' : 'Crear Cuenta') : (locale === 'en' ? 'Sign In' : 'Ingresar')} <ArrowRight size={15} /></>
                 }
               </button>
             </form>
@@ -454,15 +467,15 @@ export default function LoginPage(props: PageProps) {
             </button>
 
             <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: 14, color: 'var(--lpR-text2)' }}>{isSignUp ? '¿Ya tienes cuenta? ' : '¿Primera vez? '}</span>
+              <span style={{ fontSize: 14, color: 'var(--lpR-text2)' }}>{isSignUp ? (locale === 'en' ? 'Already have an account? ' : '¿Ya tienes cuenta? ') : (locale === 'en' ? 'First time? ' : '¿Primera vez? ')}</span>
               <button onClick={() => { setIsSignUp(!isSignUp); setErrorMessage(''); setShowForgotInfo(false) }}
                 style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                {isSignUp ? 'Iniciar sesión' : 'Crear una cuenta'}
+                {isSignUp ? (locale === 'en' ? 'Sign in' : 'Iniciar sesión') : (locale === 'en' ? 'Create an account' : 'Crear una cuenta')}
               </button>
             </div>
 
             <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--lpR-text2)', marginTop: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-              <Lock size={10} /> Acceso cifrado y protegido
+              <Lock size={10} /> {locale === 'en' ? 'Encrypted and protected access' : 'Acceso cifrado y protegido'}
             </p>
             <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--lpR-text2)', marginTop: 8 }}>
               <a href="/privacidad" style={{ color: '#9ca3af', textDecoration: 'none' }}>{t('auth.politicaPriv')}</a>
