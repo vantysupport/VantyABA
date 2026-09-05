@@ -37,8 +37,10 @@ function parseLogro(val: any): number | null {
   return null
 }
 
-async function analizarPaciente(childId: string, childName: string): Promise<Sugerencia[]> {
+async function analizarPaciente(childId: string, childName: string, isEN: boolean = false): Promise<Sugerencia[]> {
   const sugerencias: Sugerencia[] = []
+  // Helper bilingue para las plantillas de alerta
+  const L = (en: string, es: string) => (isEN ? en : es)
 
   const hace8semanas = new Date(); hace8semanas.setDate(hace8semanas.getDate() - 56)
   const hace4semanas = new Date(); hace4semanas.setDate(hace4semanas.getDate() - 28)
@@ -80,17 +82,21 @@ async function analizarPaciente(childId: string, childName: string): Promise<Sug
       const min4sem = Math.min(...logros4sem)
 
       if (prom4sem < 60 && (max4sem - min4sem) < 10) {
-        const objetivoActual = sesiones4sem[sesiones4sem.length - 1]?.datos?.objetivo_principal || 'objetivo actual'
+        const objetivoActual = sesiones4sem[sesiones4sem.length - 1]?.datos?.objetivo_principal || (isEN ? 'current goal' : 'objetivo actual')
         sugerencias.push({
           tipo: 'objetivo_estancado',
           prioridad: 'alta',
-          titulo: `${childName}: Objetivo sin avance por 4+ semanas`,
-          descripcion: `"${objetivoActual}" muestra estancamiento. Promedio de logro: ${Math.round(prom4sem)}% con variación mínima (${Math.round(min4sem)}-${Math.round(max4sem)}%).`,
-          accion_concreta: 'Considera dividir el objetivo en pasos más pequeños, cambiar el reforzador o revisar si hay factores ambientales nuevos.',
+          titulo: L(`${childName}: Goal with no progress for 4+ weeks`, `${childName}: Objetivo sin avance por 4+ semanas`),
+          descripcion: L(
+            `"${objetivoActual}" shows a plateau. Average achievement: ${Math.round(prom4sem)}% with minimal variation (${Math.round(min4sem)}-${Math.round(max4sem)}%).`,
+            `"${objetivoActual}" muestra estancamiento. Promedio de logro: ${Math.round(prom4sem)}% con variación mínima (${Math.round(min4sem)}-${Math.round(max4sem)}%).`),
+          accion_concreta: L(
+            'Consider breaking the goal into smaller steps, changing the reinforcer, or checking for new environmental factors.',
+            'Considera dividir el objetivo en pasos más pequeños, cambiar el reforzador o revisar si hay factores ambientales nuevos.'),
           child_id: childId,
           child_name: childName,
           semanas_detectado: 4,
-          dato_clave: `Logro promedio: ${Math.round(prom4sem)}%`
+          dato_clave: L(`Average achievement: ${Math.round(prom4sem)}%`, `Logro promedio: ${Math.round(prom4sem)}%`)
         })
       }
     }
@@ -121,18 +127,24 @@ async function analizarPaciente(childId: string, childName: string): Promise<Sug
       const dominados = objetivos.filter((o: any) => o.estado === 'dominado').length
       const total = objetivos.length
       const razon = todosSetsDominados
-        ? `Todos los sets (${dominados}/${total}) marcados como dominados`
-        : `Últimas ${critSes} sesiones ≥ ${crit}% (criterio automático)`
+        ? L(`All sets (${dominados}/${total}) marked as mastered`, `Todos los sets (${dominados}/${total}) marcados como dominados`)
+        : L(`Last ${critSes} sessions ≥ ${crit}% (automatic criterion)`, `Últimas ${critSes} sesiones ≥ ${crit}% (criterio automático)`)
       sugerencias.push({
         tipo: 'cambio_fase',
         prioridad: 'media',
-        titulo: `${childName}: "${prog.titulo}" listo para avanzar`,
-        descripcion: `${razon}. Programa actualmente en fase "${prog.fase_actual || '—'}".`,
-        accion_concreta: `Marcá el programa como "Criterio alcanzado" o avanzá a generalización con 2do terapeuta / entorno distinto.`,
+        titulo: L(`${childName}: "${prog.titulo}" ready to advance`, `${childName}: "${prog.titulo}" listo para avanzar`),
+        descripcion: L(
+          `${razon}. Program currently in "${prog.fase_actual || '—'}" phase.`,
+          `${razon}. Programa actualmente en fase "${prog.fase_actual || '—'}".`),
+        accion_concreta: L(
+          `Mark the program as "Criterion reached" or advance to generalization with a 2nd therapist / different setting.`,
+          `Marcá el programa como "Criterio alcanzado" o avanzá a generalización con 2do terapeuta / entorno distinto.`),
         child_id: childId,
         child_name: childName,
         semanas_detectado: 0,
-        dato_clave: todosSetsDominados ? `${dominados}/${total} sets dominados` : `Últimas ${critSes} sesiones ≥ ${crit}%`
+        dato_clave: todosSetsDominados
+          ? L(`${dominados}/${total} sets mastered`, `${dominados}/${total} sets dominados`)
+          : L(`Last ${critSes} sessions ≥ ${crit}%`, `Últimas ${critSes} sesiones ≥ ${crit}%`)
       })
     }
   }
@@ -165,13 +177,17 @@ async function analizarPaciente(childId: string, childName: string): Promise<Sug
       sugerencias.push({
         tipo: 'objetivo_estancado',
         prioridad: 'alta',
-        titulo: `${childName}: Regresión en "${prog.titulo}"${setLabel}`,
-        descripcion: `Caída de ${Math.round(promViejo)}% → ${Math.round(promReciente)}% (${delta}%) dentro del set activo${setLabel}. Comparado con las primeras sesiones del mismo set.`,
-        accion_concreta: 'Revisar reforzadores, SD y posibles factores ambientales del set actual. Considerá volver a la fase de adquisición o reforzar prompts antes de continuar.',
+        titulo: L(`${childName}: Regression in "${prog.titulo}"${setLabel}`, `${childName}: Regresión en "${prog.titulo}"${setLabel}`),
+        descripcion: L(
+          `Drop from ${Math.round(promViejo)}% → ${Math.round(promReciente)}% (${delta}%) within the active set${setLabel}. Compared to the first sessions of the same set.`,
+          `Caída de ${Math.round(promViejo)}% → ${Math.round(promReciente)}% (${delta}%) dentro del set activo${setLabel}. Comparado con las primeras sesiones del mismo set.`),
+        accion_concreta: L(
+          'Review reinforcers, SD and possible environmental factors of the current set. Consider returning to the acquisition phase or reinforcing prompts before continuing.',
+          'Revisar reforzadores, SD y posibles factores ambientales del set actual. Considerá volver a la fase de adquisición o reforzar prompts antes de continuar.'),
         child_id: childId,
         child_name: childName,
         semanas_detectado: 4,
-        dato_clave: `${Math.round(promViejo)}% → ${Math.round(promReciente)}% en set activo`
+        dato_clave: L(`${Math.round(promViejo)}% → ${Math.round(promReciente)}% in active set`, `${Math.round(promViejo)}% → ${Math.round(promReciente)}% en set activo`)
       })
     }
   }
@@ -183,13 +199,17 @@ async function analizarPaciente(childId: string, childName: string): Promise<Sug
     sugerencias.push({
       tipo: 'conducta_desafiante',
       prioridad: pct > 50 ? 'alta' : 'media',
-      titulo: `${childName}: Conductas desafiantes en ${pct}% de las sesiones`,
-      descripcion: `Se registraron conductas desafiantes en ${sesionesConConducas.length} de ${sesiones.length} sesiones recientes.`,
-      accion_concreta: 'Revisar análisis funcional ABC. Considerar reunión de equipo o consulta con comportamentalista senior.',
+      titulo: L(`${childName}: Challenging behaviors in ${pct}% of sessions`, `${childName}: Conductas desafiantes en ${pct}% de las sesiones`),
+      descripcion: L(
+        `Challenging behaviors were recorded in ${sesionesConConducas.length} of ${sesiones.length} recent sessions.`,
+        `Se registraron conductas desafiantes en ${sesionesConConducas.length} de ${sesiones.length} sesiones recientes.`),
+      accion_concreta: L(
+        'Review the ABC functional analysis. Consider a team meeting or consultation with a senior behavior analyst.',
+        'Revisar análisis funcional ABC. Considerar reunión de equipo o consulta con comportamentalista senior.'),
       child_id: childId,
       child_name: childName,
       semanas_detectado: Math.ceil(sesiones.length / 2),
-      dato_clave: `${pct}% sesiones con conductas`
+      dato_clave: L(`${pct}% of sessions with behaviors`, `${pct}% sesiones con conductas`)
     })
   }
 
@@ -200,13 +220,17 @@ async function analizarPaciente(childId: string, childName: string): Promise<Sug
       sugerencias.push({
         tipo: 'logro_celebrar',
         prioridad: 'baja',
-        titulo: `${childName}: ${prog.titulo} consolidado`,
-        descripcion: `Este programa ya alcanzó el criterio de dominio en ${prog.area || 'su área'}.`,
-        accion_concreta: 'Compartí este logro con la familia. Considerá iniciar generalización en nuevos entornos o subir complejidad.',
+        titulo: L(`${childName}: ${prog.titulo} consolidated`, `${childName}: ${prog.titulo} consolidado`),
+        descripcion: L(
+          `This program has already reached the mastery criterion in ${prog.area || 'its area'}.`,
+          `Este programa ya alcanzó el criterio de dominio en ${prog.area || 'su área'}.`),
+        accion_concreta: L(
+          'Share this achievement with the family. Consider starting generalization in new settings or increasing complexity.',
+          'Compartí este logro con la familia. Considerá iniciar generalización en nuevos entornos o subir complejidad.'),
         child_id: childId,
         child_name: childName,
         semanas_detectado: 0,
-        dato_clave: 'Criterio alcanzado',
+        dato_clave: L('Criterion reached', 'Criterio alcanzado'),
       })
     }
   }
@@ -220,13 +244,17 @@ async function analizarPaciente(childId: string, childName: string): Promise<Sug
     sugerencias.push({
       tipo: 'carga_sesiones',
       prioridad: 'media',
-      titulo: `${childName}: Baja frecuencia de sesiones`,
-      descripcion: `Solo ${sesionesUltimas4} sesión${sesionesUltimas4 === 1 ? '' : 'es'} en las últimas 4 semanas. La frecuencia recomendada es 2-4/semana.`,
-      accion_concreta: 'Revisar agenda con la familia. Alta frecuencia en fase inicial es crítica para el progreso.',
+      titulo: L(`${childName}: Low session frequency`, `${childName}: Baja frecuencia de sesiones`),
+      descripcion: L(
+        `Only ${sesionesUltimas4} session${sesionesUltimas4 === 1 ? '' : 's'} in the last 4 weeks. The recommended frequency is 2-4/week.`,
+        `Solo ${sesionesUltimas4} sesión${sesionesUltimas4 === 1 ? '' : 'es'} en las últimas 4 semanas. La frecuencia recomendada es 2-4/semana.`),
+      accion_concreta: L(
+        'Review the schedule with the family. High frequency in the initial phase is critical for progress.',
+        'Revisar agenda con la familia. Alta frecuencia en fase inicial es crítica para el progreso.'),
       child_id: childId,
       child_name: childName,
       semanas_detectado: 4,
-      dato_clave: `${sesionesUltimas4} sesiones/4 semanas`
+      dato_clave: L(`${sesionesUltimas4} sessions/4 weeks`, `${sesionesUltimas4} sesiones/4 semanas`)
     })
   }
 
@@ -250,6 +278,7 @@ function getLangInstruction(locale: string): string {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const userLocale = searchParams.get('locale') || req.headers.get('x-locale') || 'es'
+  const isEN = String(userLocale).toLowerCase().startsWith('en')
   const childId = searchParams.get('child_id')
   const soloGuardadas = searchParams.get('guardadas') === 'true'
 
@@ -284,7 +313,7 @@ export async function GET(req: NextRequest) {
     for (let i = 0; i < pacientes.length; i += BATCH) {
       const batch = pacientes.slice(i, i + BATCH)
       const resultados = await Promise.all(
-        batch.map(p => analizarPaciente(p.id, p.name).catch(err => {
+        batch.map(p => analizarPaciente(p.id, p.name, isEN).catch(err => {
           console.warn(`[agente-sugerencias] falló análisis de ${p.name}:`, err?.message || err)
           return []
         }))
@@ -330,13 +359,13 @@ export async function GET(req: NextRequest) {
     if (urgentes.length >= 2) {
       try {
         insightGlobal = await callGroqSimple(
-          'Eres un supervisor clínico ABA analizando el estado del centro terapéutico. Fundamenta con libros clínicos del Cerebro IA.',
+          'Eres un supervisor clínico ABA analizando el estado del centro terapéutico. Usa el contexto clínico solo como apoyo interno.',
           `SUGERENCIAS URGENTES DETECTADAS EN EL CENTRO (${urgentes.length} de ${pacientes.length} pacientes):
 ${urgentes.slice(0, 5).map(s => `- ${s.titulo}: ${s.descripcion}`).join('\n')}
 
 Genera un RESUMEN EJECUTIVO para la directora del centro (2-3 oraciones). Qué patrón global ves y cuál es la prioridad de acción de esta semana.
 
-CONOCIMIENTO CLÍNICO (Cerebro IA): ${_cerebroCtx || 'No disponible'}`,
+CONTEXTO CLÍNICO DE APOYO (uso interno): ${_cerebroCtx || 'No disponible'}` + getLangInstruction(userLocale),
           { model: GROQ_MODELS.FAST, temperature: 0.3, maxTokens: 200 }
         )
       } catch { /* no bloquear */ }

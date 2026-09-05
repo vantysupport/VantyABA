@@ -1573,7 +1573,8 @@ function TabSugerencias() {
     setLoading(true); setError('')
     try {
       // ✅ FIX: usar GET (no POST). POST solo sirve para marcar sugerencias como resueltas.
-      const res = await fetch('/api/agente-sugerencias')
+      const loc = typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es'
+      const res = await fetch(`/api/agente-sugerencias?locale=${loc}`, { headers: { 'x-locale': loc } })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
       setSugerencias(json.sugerencias || [])
@@ -1615,7 +1616,7 @@ function TabSugerencias() {
       {insightGlobal && (
         <div className=" rounded-xl border border-orange-200 p-4" style={{ background: "var(--card)" }}>
           <p className="text-[10px] font-bold text-orange-500 mb-2 flex items-center gap-1.5">
-            <Sparkles size={10} /> RESUMEN EJECUTIVO IA
+            <Sparkles size={10} /> {locale === 'en' ? 'AI EXECUTIVE SUMMARY' : 'RESUMEN EJECUTIVO IA'}
           </p>
           <p className="text-sm text-slate-700 leading-relaxed">{insightGlobal}</p>
         </div>
@@ -1634,7 +1635,7 @@ function TabSugerencias() {
         <div key={i} className=" rounded-xl border border-slate-100 p-4" style={{ background: "var(--card)" }}>
           <div className="flex items-start justify-between gap-2 mb-2">
             <div>
-              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${prioColor[s.prioridad]}`}>{s.prioridad}</span>
+              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${prioColor[s.prioridad]}`}>{prioridadLabel(s.prioridad, locale)}</span>
               <span className="ml-2 text-[10px] text-slate-400">{s.child_name}</span>
             </div>
             <span className="text-[10px] text-slate-400">{s.semanas_detectado}w</span>
@@ -1642,7 +1643,7 @@ function TabSugerencias() {
           <p className="font-bold text-sm text-slate-800" style={{ color: "var(--text-primary)" }}>{s.titulo}</p>
           <p className="text-xs text-slate-500 mt-1">{s.descripcion}</p>
           <p className="text-xs font-semibold mt-2 rounded-lg px-3 py-2" style={{ background: "var(--muted-bg)", color: "var(--text-secondary)" }}>→ {s.accion_concreta}</p>
-          {s.dato_clave && <p className="text-[10px] text-slate-400 mt-1">Dato: {s.dato_clave}</p>}
+          {s.dato_clave && <p className="text-[10px] text-slate-400 mt-1">{locale === 'en' ? 'Data' : 'Dato'}: {s.dato_clave}</p>}
         </div>
       ))}
     </div>
