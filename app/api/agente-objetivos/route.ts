@@ -12,9 +12,9 @@ import { buildAIContext } from '@/lib/ai-context-builder'
 // i18n: responder en el idioma del usuario
 function getLangInstruction(locale: string): string {
   if (String(locale || '').toLowerCase().startsWith('en')) {
-    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — headings, labels, section titles, terminology, summaries and recommendations — must be in English. Do NOT reply in Spanish. Keep clinical protocol codes (e.g. ABLLS-R F24) as they are, but translate their descriptions to English.'
+    return '\n\n🌐 LANGUAGE — MANDATORY: Respond ENTIRELY in professional clinical English. Every part of your output — titles, labels, descriptions, criteria, methodology and rationale — must be in English. Do NOT reply in Spanish.'
   }
-  return ''
+  return '\n\n🌐 IDIOMA: Responde ENTERAMENTE en español clínico profesional.'
 }
 
 export async function POST(req: NextRequest) {
@@ -110,30 +110,17 @@ export async function POST(req: NextRequest) {
     // Prompt según acción
     let promptBase = ''
 
-    // Sugerencia de protocolo según edad/diagnóstico
-    const edadNum = Number(edad)
-    let protocoloSugerido = 'ABLLS-R'
-    if (!isNaN(edadNum)) {
-      if (edadNum < 4) protocoloSugerido = 'VB-MAPP'  // 0-48 meses
-      else if (edadNum <= 12) protocoloSugerido = 'ABLLS-R'  // hasta 12 años
-      else protocoloSugerido = 'AFLS'  // adolescentes/adultos: habilidades funcionales
-    }
+    const protocolosGuia = `MARCO CLÍNICO PARA EL DISEÑO DE OBJETIVOS:
+Diseña objetivos ABA basados en evidencia y buenas prácticas del análisis conductual, apropiados al nivel de desarrollo del paciente (zona de desarrollo próximo). Organiza por dominios funcionales del desarrollo: Conducta Verbal / Comunicación, Habilidades Académicas, Habilidades Sociales, Juego, Autonomía / Habilidades de la vida diaria, Conducta Adaptativa.
 
-    const protocolosGuia = `PROTOCOLOS ABA DE REFERENCIA:
-- VB-MAPP (0-48m): 16 áreas verbales (Mand, Tact, Echoic, Listener, etc.).
-- ABLLS-R (2-12 años): 25 áreas A-Z (A=Cooperación, B=Desempeño visual, C=Lenguaje receptivo, D=Imitación motriz, E=Imitación vocal, F=Peticiones/mandos, G=Etiquetar/tactos, H=Intraverbales, K=Juego, L=Social, Q=Lectura, R=Matemáticas, etc.).
-- AFLS (adolescentes/funcional): 6 módulos (Basic, Home, Community, School, Vocational, Independent).
+🚫 PROHIBIDO citar, nombrar o hacer referencia a instrumentos de evaluación estandarizados de terceros (marcas registradas) ni a sus códigos de ítem. Describe cada objetivo con lenguaje clínico propio y operacionalizado, sin mencionar el nombre de ningún test comercial.
 
-PROTOCOLO SUGERIDO PARA ESTE CASO: ${protocoloSugerido}
-
-⚠️ FUENTE DE VERDAD DE CÓDIGOS Y CRITERIOS: el bloque "CONTENIDO DE LOS PROTOCOLOS (Cerebro IA)" que se te entrega más abajo. El objetivo y los criterios de un código deben copiarse TAL CUAL aparecen ahí (verbatim). PROHIBIDO inventar códigos o inventar el significado/criterios de un código. Si el código exacto no está en ese contenido, NO lo cites: describí el objetivo sin código.
-
-🚫 NUNCA objetivos genéricos. ✅ SIEMPRE: SD/R/consecuencia + criterio numérico + técnica ABA (el código del protocolo solo si está en el Cerebro IA).`
+🚫 NUNCA objetivos genéricos. ✅ SIEMPRE: SD/R/consecuencia + criterio numérico observable + técnica ABA reconocida (DTT, NET, ITT, errorless teaching, prompt fading, task analysis, BST, video modeling, etc.).`
 
     if (accion === 'evaluar_dominio') {
       promptBase = `${protocolosGuia}
 
-TAREA: Evaluar si los siguientes programas están listos para avanzar de fase o cerrar por dominio, según los estándares de ABLLS-R / VB-MAPP / AFLS.
+TAREA: Evaluar si los siguientes programas están listos para avanzar de fase o cerrar por dominio, según buenas prácticas del análisis conductual aplicado.
 
 PACIENTE: ${nombre} | Edad: ${edad} | Diagnóstico: ${diagnostico}
 
@@ -145,17 +132,17 @@ ${resumenSesiones.map(s => `- ${s.fecha}: objetivo="${s.objetivo}", logro=${s.lo
 
 Para cada programa, indica:
 1. ESTADO: listo_para_avanzar / mantener / necesita_ajuste
-2. ACCIÓN: qué hacer específicamente (avanzar al siguiente ítem del protocolo, cerrar el programa, ajustar criterio, agregar generalización con 2do terapeuta, etc.)
-3. JUSTIFICACIÓN: 1 oración clínica que cite el protocolo (ej: "Cumple criterio ABLLS-R B12; corresponde avanzar a B13 (petición con 2 palabras)")
-4. SIGUIENTE PASO: objetivo concreto del siguiente nivel del protocolo, con código exacto
+2. ACCIÓN: qué hacer específicamente (avanzar al siguiente objetivo, cerrar el programa, ajustar criterio, agregar generalización con 2do terapeuta, etc.)
+3. JUSTIFICACIÓN: 1 oración clínica basada en el desempeño observado (sin nombrar tests comerciales)
+4. SIGUIENTE PASO: objetivo concreto del siguiente nivel, operacionalizado
 
-Responde en JSON con array "evaluaciones": [{programa, protocolo_referencia, codigo_item, estado, accion, justificacion, siguiente_paso}]
+Responde en JSON con array "evaluaciones": [{programa, estado, accion, justificacion, siguiente_paso}]
 SOLO JSON, sin markdown.`
 
     } else if (accion === 'ajustar') {
       promptBase = `${protocolosGuia}
 
-TAREA: Ajustar los objetivos terapéuticos actuales aplicando técnicas ABA fundamentadas en ABLLS-R / VB-MAPP / AFLS.
+TAREA: Ajustar los objetivos terapéuticos actuales aplicando técnicas ABA basadas en evidencia.
 
 PACIENTE: ${nombre} | Edad: ${edad} | Diagnóstico: ${diagnostico}
 
@@ -166,19 +153,18 @@ PROGRAMAS ACTIVOS:
 ${resumenProgramas.map(p => `- "${p.titulo}" (${p.area}): fase ${p.fase}, ${p.pct_dominio}% dominio`).join('\n')}
 
 Genera ajustes específicos para cada área problemática. Para cada ajuste:
-1. PROTOCOLO_REFERENCIA: VB-MAPP / ABLLS-R / AFLS + código del ítem
-2. QUÉ AJUSTAR: el objetivo o estrategia exacta a modificar
-3. CÓMO AJUSTAR: técnica ABA específica del protocolo (ej: "aplicar errorless teaching con prompt graduado de física total → física parcial → gestual → independiente", "fragmentar B12 en 3 sub-pasos siguiendo task analysis", "introducir contraprueba con 2do terapeuta")
-4. META 4 SEMANAS: resultado observable y medible
+1. QUÉ AJUSTAR: el objetivo o estrategia exacta a modificar
+2. CÓMO AJUSTAR: técnica ABA específica (ej: "aplicar errorless teaching con prompt graduado de física total → física parcial → gestual → independiente", "fragmentar la tarea en 3 sub-pasos siguiendo task analysis", "introducir contraprueba con 2do terapeuta")
+3. META 4 SEMANAS: resultado observable y medible
 
-Responde en JSON: {"ajustes": [{area, protocolo_referencia, codigo_item, que_ajustar, como_ajustar, meta_4_semanas}]}
+Responde en JSON: {"ajustes": [{area, que_ajustar, como_ajustar, meta_4_semanas}]}
 SOLO JSON.`
 
     } else {
       // accion === 'generar' (default)
       promptBase = `${protocolosGuia}
 
-TAREA: Generar 3-5 nuevos objetivos terapéuticos fundamentados en ABLLS-R / VB-MAPP / AFLS, apropiados para el nivel actual del paciente (zona de desarrollo próximo).
+TAREA: Generar 3-5 nuevos objetivos terapéuticos basados en evidencia, apropiados para el nivel actual del paciente (zona de desarrollo próximo).
 
 PACIENTE: ${nombre} | Edad: ${edad} | Diagnóstico: ${diagnostico}
 
@@ -193,54 +179,45 @@ ${patrones.slice(0, 3).map((p: any) => `- [${p.tipo}] ${p.area}: ${p.descripcion
 
 Para CADA objetivo nuevo devolvé:
 - titulo: conducta operacionalizada (ej: "Petición de 5 ítems preferidos usando 2 palabras")
-- protocolo_referencia: "ABLLS-R" / "VB-MAPP" / "AFLS"
-- codigo_item: SOLO el código que aparezca TEXTUALMENTE en el CONTENIDO DE LOS PROTOCOLOS del Cerebro IA (ej: "B12"). Si el código exacto no está en ese contenido, dejalo vacío ("") — NUNCA lo inventes ni uses uno "plausible".
 - area: dominio funcional (Conducta Verbal / Habilidades académicas / Autonomía / Habilidades sociales / etc.)
 - descripcion: SD + R + consecuencia operacionalizadas
 - criterio_dominio: numérico observable (ej: "80% en 3 sesiones consecutivas con 2 terapeutas distintos en 2 entornos diferentes")
 - metodologia: técnica de enseñanza específica (DTT / NET / ITT / video modeling / BST / cadenas de tareas con prompt graduado / etc.)
-- justificacion_clinica: 1-2 oraciones citando el protocolo + el progreso actual
+- justificacion_clinica: 1-2 oraciones basadas en el nivel de desarrollo y el progreso actual (sin nombrar tests comerciales)
 - prioridad: "alta" | "media" | "baja"
 
-🚫 NUNCA devuelvas títulos genéricos como "Mejorar atención" o "Desarrollar lenguaje". Tiene que estar anclado a un ítem específico del protocolo.
+🚫 NUNCA devuelvas títulos genéricos como "Mejorar atención" o "Desarrollar lenguaje". Cada objetivo debe estar operacionalizado y anclado a una conducta concreta.
 
-Responde en JSON: {"objetivos_sugeridos": [{titulo, protocolo_referencia, codigo_item, area, descripcion, criterio_dominio, metodologia, justificacion_clinica, prioridad}]}
+Responde en JSON: {"objetivos_sugeridos": [{titulo, area, descripcion, criterio_dominio, metodologia, justificacion_clinica, prioridad}]}
 SOLO JSON.`
     }
 
 
-    // ━━━ CEREBRO IA: buscar contenido específico de los protocolos ABA ━━━
+    // ━━━ CEREBRO IA: grounding clínico general (sin apuntar a tests comerciales) ━━━
     let _cerebroCtx = ''
     try {
-      // Querys orientadas a los 3 protocolos + las áreas activas del paciente
       const areasPaciente = [...new Set(resumenProgramas.map(p => p.area).filter(Boolean))].join(' ')
-      const _query = `ABLLS-R VB-MAPP AFLS ${protocoloSugerido} ítems criterios dominio ${areasPaciente} ${diagnostico}`
+      const _query = `objetivos ABA criterios dominio ${areasPaciente} ${diagnostico}`
       const _kb = await buildAIContext(undefined, undefined, undefined, _query)
       _cerebroCtx = _kb.knowledgeContext
     } catch { /* Cerebro IA no disponible */ }
     // ━━━ FIN CEREBRO IA ━━━
 
     const promptConCerebro = _cerebroCtx
-      ? `${promptBase}\n\n📚 CONTENIDO DE LOS PROTOCOLOS (Cerebro IA — usá esto como fuente de verdad para los códigos y criterios):\n${_cerebroCtx}`
+      ? `${promptBase}\n\n📚 CONTEXTO CLÍNICO DE APOYO (Cerebro IA — úsalo solo como referencia general, NO copies ni cites nombres de tests comerciales):\n${_cerebroCtx}`
       : promptBase
 
     const sistemaPrompt = `Eres un psicólogo conductual certificado BCBA especializado en diseño de programas ABA para niños con TEA y TDAH.
 
-TU CONOCIMIENTO BASE:
-- ABLLS-R (Partington, 2006): 25 áreas A-Z, ~544 ítems con códigos específicos.
-- VB-MAPP (Sundberg, 2008): 16 áreas operantes verbales, 3 niveles (0-18m, 18-30m, 30-48m).
-- AFLS (Partington & Mueller, 2012): 6 módulos de habilidades funcionales para la vida.
-
 REGLAS NO NEGOCIABLES:
-1. NUNCA generes objetivos genéricos. Operacionalizá siempre la conducta.
-2. FUENTE DE VERDAD: solo podés citar un código de protocolo (ej: "H7", "B12") si aparece TEXTUALMENTE en el bloque "CONTENIDO DE LOS PROTOCOLOS (Cerebro IA)". Cuando cites un código, copiá su objetivo y sus criterios TAL CUAL están ahí (verbatim), sin parafrasear, resumir ni inventar. Está PROHIBIDO inventar un código o inventar qué significa un código.
-3. Si el código o el criterio exacto NO está en ese contenido, dejá codigo_item vacío ("") y NO afirmes "el código X se refiere a…". Describí el objetivo sin código.
-4. Operacionalizá cada conducta con SD (antecedente), R (respuesta esperada), criterio numérico.
-5. Métodos de enseñanza deben ser técnicas ABA reconocidas (DTT, NET, ITT, errorless, prompt fading, etc.).
-6. Respondés SIEMPRE con JSON válido sin texto adicional.`
+1. NUNCA generes objetivos genéricos. Operacionaliza siempre la conducta.
+2. PROHIBIDO nombrar, citar o referenciar instrumentos de evaluación estandarizados de terceros (marcas registradas) o sus códigos de ítem. Nunca copies textualmente contenido de esos instrumentos. Redacta cada objetivo con lenguaje clínico propio.
+3. Operacionaliza cada conducta con SD (antecedente), R (respuesta esperada) y criterio numérico observable.
+4. Los métodos de enseñanza deben ser técnicas ABA reconocidas genéricas (DTT, NET, ITT, errorless, prompt fading, task analysis, BST, etc.).
+5. Respondes SIEMPRE con JSON válido sin texto adicional.`
 
     const respuestaRaw = await callGroqSimple(sistemaPrompt,
-      promptConCerebro,
+      promptConCerebro + getLangInstruction(userLocale),
       { model: GROQ_MODELS.SMART, temperature: 0.3, maxTokens: 4000 }
     )
 

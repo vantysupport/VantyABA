@@ -1418,6 +1418,28 @@ function TabPatrones({ pacientes }: { pacientes: Paciente[] }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // TAB: OBJETIVOS ADAPTATIVOS (CAPA 1)
 // ═══════════════════════════════════════════════════════════════════════════════
+// Mapea la prioridad (viene de la IA en ES: alta/media/baja) a etiqueta según idioma
+function prioridadLabel(p: string, locale: string): string {
+  const v = String(p || '').toLowerCase()
+  if (locale === 'en') {
+    if (v === 'alta' || v === 'high') return 'High'
+    if (v === 'media' || v === 'medium') return 'Medium'
+    if (v === 'baja' || v === 'low') return 'Low'
+  }
+  return p
+}
+
+// Mapea el estado de evaluación de dominio a etiqueta legible según idioma
+function estadoLabel(e: string, locale: string): string {
+  const v = String(e || '').toLowerCase()
+  const map: Record<string, string> = {
+    listo_para_avanzar: locale === 'en' ? 'ready to advance' : 'listo para avanzar',
+    mantener: locale === 'en' ? 'maintain' : 'mantener',
+    necesita_ajuste: locale === 'en' ? 'needs adjustment' : 'necesita ajuste',
+  }
+  return map[v] || String(e || '').replace(/_/g, ' ')
+}
+
 function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
   const { t, locale } = useI18n()
 
@@ -1459,8 +1481,12 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
           {pacientes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         <div className="flex gap-2">
-          {([['generar', 'Generar nuevos'], ['ajustar', 'Ajustar existentes'], ['evaluar_dominio', 'Evaluar dominio']] as const).map(([val, lbl]) => (
-            <button key={val} onClick={() => setAccion(val)}
+          {([
+            ['generar', locale === 'en' ? 'Generate new' : 'Generar nuevos'],
+            ['ajustar', locale === 'en' ? 'Adjust existing' : 'Ajustar existentes'],
+            ['evaluar_dominio', locale === 'en' ? 'Evaluate mastery' : 'Evaluar dominio'],
+          ] as const).map(([val, lbl]) => (
+            <button key={val} onClick={() => setAccion(val as 'generar' | 'ajustar' | 'evaluar_dominio')}
               className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${accion === val ? 'bg-amber-100 text-amber-700' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
               {lbl}
             </button>
@@ -1476,27 +1502,18 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
         <div className="space-y-3">
           {/* generar → resultado.resultado.objetivos_sugeridos */}
           {(resultado.resultado?.objetivos_sugeridos || []).map((obj: any, i: number) => {
-            const protoColor = obj.protocolo_referencia === 'VB-MAPP' ? 'bg-sky-100 text-sky-700'
-              : obj.protocolo_referencia === 'ABLLS-R' ? 'bg-emerald-100 text-emerald-700'
-              : obj.protocolo_referencia === 'AFLS' ? 'bg-sky-100 text-sky-700'
-              : 'bg-slate-100 text-slate-600'
             return (
             <div key={i} className="rounded-xl border border-amber-100 p-4 overflow-hidden" style={{ background: "var(--card)" }}>
               <div className="flex items-start justify-between gap-2 mb-2 flex-wrap">
                 <p className="font-bold text-sm text-slate-800 flex-1 min-w-0 break-words" style={{ color: "var(--text-primary)" }}>{obj.titulo}</p>
                 <div className="flex gap-1 flex-wrap">
-                  {obj.protocolo_referencia && (
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${protoColor}`}>
-                      📘 {obj.protocolo_referencia}{obj.codigo_item ? ` · ${obj.codigo_item}` : ''}
-                    </span>
-                  )}
                   {obj.area && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">{obj.area}</span>}
-                  {obj.prioridad && <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${obj.prioridad === 'alta' ? 'bg-red-100 text-red-600' : obj.prioridad === 'media' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{obj.prioridad}</span>}
+                  {obj.prioridad && <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${obj.prioridad === 'alta' ? 'bg-red-100 text-red-600' : obj.prioridad === 'media' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>{prioridadLabel(obj.prioridad, locale)}</span>}
                 </div>
               </div>
               <p className="text-xs text-slate-500 break-words">{obj.descripcion}</p>
-              {obj.criterio_dominio && <p className="text-xs font-semibold text-slate-600 mt-1 break-words">✓ Criterio: {obj.criterio_dominio}</p>}
-              {obj.metodologia && <p className="text-xs text-slate-500 mt-1 break-words">⚙ Método: {obj.metodologia}</p>}
+              {obj.criterio_dominio && <p className="text-xs font-semibold text-slate-600 mt-1 break-words">✓ {locale === 'en' ? 'Criterion' : 'Criterio'}: {obj.criterio_dominio}</p>}
+              {obj.metodologia && <p className="text-xs text-slate-500 mt-1 break-words">⚙ {locale === 'en' ? 'Method' : 'Método'}: {obj.metodologia}</p>}
               {obj.justificacion_clinica && <p className="text-xs text-amber-700 mt-2 bg-amber-50 px-3 py-2 rounded-lg break-words">{obj.justificacion_clinica}</p>}
             </div>
             )
@@ -1506,15 +1523,10 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
             <div key={i} className=" rounded-xl border border-orange-100 p-4" style={{ background: "var(--card)" }}>
               <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
                 <p className="font-bold text-sm text-slate-800 flex-1" style={{ color: "var(--text-primary)" }}>{obj.area}</p>
-                {obj.protocolo_referencia && (
-                  <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
-                    📘 {obj.protocolo_referencia}{obj.codigo_item ? ` · ${obj.codigo_item}` : ''}
-                  </span>
-                )}
               </div>
               <p className="text-xs text-slate-600 mt-1"><strong>{t('hub.queAjustar')}</strong> {obj.que_ajustar}</p>
               <p className="text-xs text-slate-600 mt-1"><strong>{t('hub.como')}</strong> {obj.como_ajustar}</p>
-              <p className="text-xs text-amber-700 mt-2 bg-amber-50 px-3 py-2 rounded-lg">Meta 4 semanas: {obj.meta_4_semanas}</p>
+              <p className="text-xs text-amber-700 mt-2 bg-amber-50 px-3 py-2 rounded-lg">{locale === 'en' ? '4-week goal' : 'Meta 4 semanas'}: {obj.meta_4_semanas}</p>
             </div>
           ))}
           {/* evaluar_dominio → resultado.resultado.evaluaciones */}
@@ -1523,15 +1535,10 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
               <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
                 <p className="font-bold text-sm text-slate-800 flex-1" style={{ color: "var(--text-primary)" }}>{obj.programa}</p>
                 <div className="flex gap-1 flex-wrap">
-                  {obj.protocolo_referencia && (
-                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
-                      📘 {obj.protocolo_referencia}{obj.codigo_item ? ` · ${obj.codigo_item}` : ''}
-                    </span>
-                  )}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${obj.estado === 'listo_para_avanzar' ? 'bg-green-100 text-green-700' : obj.estado === 'necesita_ajuste' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}`}>{obj.estado?.replace(/_/g,' ')}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${obj.estado === 'listo_para_avanzar' ? 'bg-green-100 text-green-700' : obj.estado === 'necesita_ajuste' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'}`}>{estadoLabel(obj.estado, locale)}</span>
                 </div>
               </div>
-              <p className="text-xs text-slate-600">Acción: {obj.accion}</p>
+              <p className="text-xs text-slate-600">{locale === 'en' ? 'Action' : 'Acción'}: {obj.accion}</p>
               <p className="text-xs text-slate-500 mt-1">{obj.justificacion}</p>
               {obj.siguiente_paso && <p className="text-xs text-sky-700 mt-2 bg-sky-50 px-3 py-2 rounded-lg">→ {obj.siguiente_paso}</p>}
             </div>
@@ -1543,7 +1550,7 @@ function TabObjetivos({ pacientes }: { pacientes: Paciente[] }) {
               <pre className="text-xs text-amber-800 whitespace-pre-wrap break-words overflow-x-auto max-h-96 overflow-y-auto bg-white/50 rounded p-2 border border-amber-200">{resultado.resultado.texto_libre}</pre>
             </div>
           )}
-          <p className="text-xs text-slate-400">Programas analizados: {resultado.programas_analizados || 0} · Patrones considerados: {resultado.patrones_considerados || 0}</p>
+          <p className="text-xs text-slate-400">{locale === 'en' ? 'Programs analyzed' : 'Programas analizados'}: {resultado.programas_analizados || 0} · {locale === 'en' ? 'Patterns considered' : 'Patrones considerados'}: {resultado.patrones_considerados || 0}</p>
         </div>
       )}
     </div>
