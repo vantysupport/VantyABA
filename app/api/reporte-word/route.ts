@@ -212,6 +212,9 @@ async function makeDoc(
 }
 
 async function generarReportePadres(childId: string, userLocale = 'es'): Promise<{ doc: Document; fileName: string }> {
+  const isEN = userLocale === 'en'
+  const L = (en: string, es: string) => (isEN ? en : es)
+  const dateLoc = isEN ? 'en-US' : 'es-ES'
   const { data: child } = await supabaseAdmin.from('children').select('name, age, diagnosis').eq('id', childId).single()
   const nombre = (child as any)?.name || 'Paciente'
   const nombreCap = nombre.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
@@ -263,7 +266,7 @@ async function generarReportePadres(childId: string, userLocale = 'es'): Promise
   const fechasUnif = fechasModernas.length > 0 ? fechasModernas : fechasLegacy
 
   const totalSesiones = fechasUnif.length
-  const fmt = (d: string) => new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fmt = (d: string) => new Date(d).toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
   const fechaInicio = fechasUnif.length > 0 ? fmt(fechasUnif[0]) : 'N/A'
   const fechaFin = fechasUnif.length > 0 ? fmt(fechasUnif[fechasUnif.length-1]) : fmt(new Date().toISOString())
   const semanas = fechasUnif.length > 1
@@ -272,7 +275,7 @@ async function generarReportePadres(childId: string, userLocale = 'es'): Promise
 
   // Logro emoji para padres
   const logroEmoji = promedioLogro >= 80 ? '­ƒîƒ' : promedioLogro >= 65 ? 'Ô¡É' : promedioLogro >= 50 ? '­ƒôê' : '­ƒÆ¬'
-  const logroTexto = promedioLogro >= 80 ? '┬íExcelente!' : promedioLogro >= 65 ? '┬íMuy bien!' : promedioLogro >= 50 ? 'En progreso' : 'Trabajando duro'
+  const logroTexto = promedioLogro >= 80 ? L('Excellent!', '¡Excelente!') : promedioLogro >= 65 ? L('Great job!', '¡Muy bien!') : promedioLogro >= 50 ? L('In progress', 'En progreso') : L('Working hard', 'Trabajando duro')
 
   const areaMap: Record<string,number[]> = {}
   for (const p of progArr) {
@@ -282,9 +285,9 @@ async function generarReportePadres(childId: string, userLocale = 'es'): Promise
   }
   const areasData = Object.entries(areaMap).map(([label,vals])=>({label,valor:avg(vals)}))
 
-  const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const hoy = new Date().toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
   const hoyISO = new Date().toISOString().slice(0,10)
-  const fileName = `Reporte_Familia_${nombreCap.replace(/\s+/g,'_')}_${hoyISO}.docx`
+  const fileName = `${L('Family_Report', 'Reporte_Familia')}_${nombreCap.replace(/\s+/g,'_')}_${hoyISO}.docx`
 
   const [textoBienvenida, textoLogros, textoActividadesCasa, textoMensaje] = await Promise.all([
     callGroqSimple('Eres terapeuta ABA emp├ítica. Lenguaje c├ílido, cercano, sin tecnicismos, como carta a una familia querida.',
@@ -330,11 +333,11 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
       children:[new TextRun({text:(userLocale === 'en' ? `Period: ${fechaInicio} to ${fechaFin}   ·   ${totalSesiones} sessions   ·   Issued: ${hoy}` : `Período: ${fechaInicio} al ${fechaFin}   ·   ${totalSesiones} sesiones   ·   Emitido: ${hoy}`),size:18,font:'Arial',color:'6D28D9'})] }),
 
     // BIENVENIDA
-    h2('Querida Familia:'),
+    h2(L('Dear Family:', 'Querida Familia:')),
     ...textoBienvenida.split('\n').filter((l:string)=>l.trim()).map((l:string)=>pp(l)),
 
     // C├ôMO VA
-    h2(`┬┐C├│mo va ${nombreCorto}? ${logroEmoji}`),
+    h2(`${L(`How is ${nombreCorto} doing?`, `¿Cómo va ${nombreCorto}?`)} ${logroEmoji}`),
     // Tarjeta de logro visual
     new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[4680,4680], rows:[
       new TableRow({children:[
@@ -349,14 +352,14 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
             new Paragraph({spacing:{before:80}, children:[new TextRun({text:(userLocale === 'en' ? '📅  Sessions held' : '📅  Sesiones realizadas'),size:18,font:'Arial',color:'475569'})]}),
             new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:(userLocale === 'en' ? `${totalSesiones} sessions in ${semanas} weeks` : `${totalSesiones} sesiones en ${semanas} semanas`),bold:true,size:22,font:'Arial',color:'1E293B'})]}),
             new Paragraph({spacing:{before:0}, children:[new TextRun({text:(userLocale === 'en' ? '📈  Progress evolution' : '📈  Evolución del progreso'),size:18,font:'Arial',color:'475569'})]}),
-            new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:`${promedioInicial}% al inicio ÔåÆ ${promedioReciente}% hoy`,bold:true,size:22,font:'Arial',color:delta>=0?'15803D':'BE123C'})]}),
+            new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:L(`${promedioInicial}% at start → ${promedioReciente}% today`,`${promedioInicial}% al inicio → ${promedioReciente}% hoy`),bold:true,size:22,font:'Arial',color:delta>=0?'15803D':'BE123C'})]}),
             ...(promedioAtencion>0?[
-              new Paragraph({spacing:{before:0}, children:[new TextRun({text:'­ƒÄ»  Atenci├│n en sesi├│n',size:18,font:'Arial',color:'475569'})]}),
+              new Paragraph({spacing:{before:0}, children:[new TextRun({text:L('🎯  Attention in session','🎯  Atención en sesión'),size:18,font:'Arial',color:'475569'})]}),
               new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:(userLocale === 'en' ? `${promedioAtencion}% sustained attention` : `${promedioAtencion}% de atención sostenida`),bold:true,size:22,font:'Arial',color:'1E293B'})]}),
             ]:[]),
             ...(promedioTolerancia>0?[
-              new Paragraph({spacing:{before:0}, children:[new TextRun({text:'­ƒÿî  Manejo emocional',size:18,font:'Arial',color:'475569'})]}),
-              new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:`${promedioTolerancia}% tolerancia a la frustraci├│n`,bold:true,size:22,font:'Arial',color:'1E293B'})]}),
+              new Paragraph({spacing:{before:0}, children:[new TextRun({text:L('😌  Emotional regulation','😌  Manejo emocional'),size:18,font:'Arial',color:'475569'})]}),
+              new Paragraph({spacing:{before:20,after:60}, children:[new TextRun({text:L(`${promedioTolerancia}% frustration tolerance`,`${promedioTolerancia}% tolerancia a la frustración`),bold:true,size:22,font:'Arial',color:'1E293B'})]}),
             ]:[]),
             ...(progDominados.length>0?[
               new Paragraph({spacing:{before:0}, children:[new TextRun({text:(userLocale === 'en' ? '✅  Mastered achievements' : '✅  Logros dominados'),size:18,font:'Arial',color:'15803D'})]}),
@@ -369,19 +372,19 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
 
     // GR├üFICO POR ├üREAS (si hay datos)
     ...(areasData.length>0?[
-      pp('As├¡ va en cada ├írea que estamos trabajando:'),
-      ...graficoBarras('Progreso por ├írea',areasData),
+      pp(L('Here is how each area is going:','Así va en cada área que estamos trabajando:')),
+      ...graficoBarras(L('Progress by area','Progreso por área'),areasData),
       new Paragraph({spacing:{before:160,after:0},children:[]}),
     ]:[]),
 
     // LOGROS EN TEXTO
-    h2('Sus logros este per├¡odo'),
+    h2(L('Their achievements this period','Sus logros este período')),
     ...textoLogros.split('\n').filter((l:string)=>l.trim()).map((l:string)=>pp(l)),
 
     // PROGRAMAS (simplificado para padres)
     ...(progArr.length>0?[
-      h2('┬┐Qu├® estamos trabajando juntos?'),
-      pp('Estas son las habilidades que estamos desarrollando con '+ nombreCorto+' en este momento:'),
+      h2(L('What are we working on together?','¿Qué estamos trabajando juntos?')),
+      pp(L('These are the skills we are currently developing with '+ nombreCorto+':','Estas son las habilidades que estamos desarrollando con '+ nombreCorto+' en este momento:')),
       new Table({ width:{size:9360,type:WidthType.DXA}, columnWidths:[3600,3360,2400], rows:[
         new TableRow({children:[
           new TableCell({borders:BDR,shading:{fill:'4C1D95',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:(userLocale === 'en' ? 'Skill' : 'Habilidad'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
@@ -391,29 +394,29 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
         ...progArr.map((p:any,i:number)=>new TableRow({children:[
           new TableCell({borders:BDR,shading:{fill:i%2===0?'F5F3FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:p.titulo||p.nombre||'Habilidad',size:17,font:'Arial',bold:true,color:'4C1D95'})]})]  }),
           new TableCell({borders:BDR,shading:{fill:i%2===0?'F5F3FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:p.area||'General',size:16,font:'Arial',color:'475569'})]})]  }),
-          new TableCell({borders:BDR,shading:{fill:p.estado==='dominado'?'F0FDF4':i%2===0?'F5F3FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:p.estado==='dominado'?'Ô£à Dominado':'­ƒöÁ Activo',bold:true,size:16,font:'Arial',color:p.estado==='dominado'?'15803D':'4C1D95'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:p.estado==='dominado'?'F0FDF4':i%2===0?'F5F3FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:p.estado==='dominado'?L('✅ Mastered','✅ Dominado'):L('🔵 Active','🔵 Activo'),bold:true,size:16,font:'Arial',color:p.estado==='dominado'?'15803D':'4C1D95'})]})]  }),
         ]})),
       ]}),
     ]:[]),
 
     // ACTIVIDADES EN CASA
-    h2('Actividades para hacer en casa ­ƒÅá'),
-    pp(`Estas actividades complementan el trabajo que hacemos en sesi├│n. Solo necesitan 10-15 minutos al d├¡a y hacen una gran diferencia en el progreso de ${nombreCorto}:`),
+    h2(L('Activities to do at home 🏠','Actividades para hacer en casa 🏠')),
+    pp(L(`These activities complement the work we do in session. They take just 10-15 minutes a day and make a big difference in ${nombreCorto}'s progress:`,`Estas actividades complementan el trabajo que hacemos en sesión. Solo necesitan 10-15 minutos al día y hacen una gran diferencia en el progreso de ${nombreCorto}:`)),
     ...textoActividadesCasa.split('\n').filter((l:string)=>l.trim()).map((l:string)=>pp(l)),
 
     // HISTORIAL RECIENTE (simple, visual)
     ...(sesArr.slice(-8).length>0?[
-      h2('As├¡ fue sesi├│n por sesi├│n ­ƒôè'),
-      pp('Cada sesi├│n es un paso adelante. Aqu├¡ puedes ver c├│mo progres├│ en las ├║ltimas semanas:'),
-      ...graficoBarras('Progreso por sesi├│n', sesArr.slice(-8).map((s:any,i:number)=>({
-        label:`Sesi├│n ${sesArr.length-7+i} ÔÇö ${new Date(s.fecha_sesion).toLocaleDateString('es-ES',{day:'2-digit',month:'short'})}`,
+      h2(L('Session by session 📊','Así fue sesión por sesión 📊')),
+      pp(L('Every session is a step forward. Here you can see the progress over the last weeks:','Cada sesión es un paso adelante. Aquí puedes ver cómo progresó en las últimas semanas:')),
+      ...graficoBarras(L('Progress by session','Progreso por sesión'), sesArr.slice(-8).map((s:any,i:number)=>({
+        label:`${L(`Session ${sesArr.length-7+i}`,`Sesión ${sesArr.length-7+i}`)} — ${new Date(s.fecha_sesion).toLocaleDateString(dateLoc,{day:'2-digit',month:'short'})}`,
         valor:extraerLogro(s)??0
       }))),
       new Paragraph({spacing:{before:160,after:0},children:[]}),
     ]:[]),
 
     // MENSAJE FINAL
-    h2(`Un mensaje especial para ustedes ­ƒÆ£`),
+    h2(L('A special message for you 💜','Un mensaje especial para ustedes 💜')),
     new Paragraph({ spacing:{before:80,after:160}, shading:{fill:'F5F3FF',type:ShadingType.CLEAR},
       border:{left:{style:BorderStyle.SINGLE,size:12,color:'7C3AED',space:10}},
       children:textoMensaje.split('\n').filter((l:string)=>l.trim()).flatMap((line:string,i:number,arr:string[])=>[
@@ -437,7 +440,7 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
   })
   return {
     doc: await makeDoc(sections, fileName, {
-      tipoInforme:  'REPORTE DE PROGRESO PARA LA FAMILIA',
+      tipoInforme:  L('FAMILY PROGRESS REPORT','REPORTE DE PROGRESO PARA LA FAMILIA'),
       childName:    nombreCap,
       childAge:     String(edad),
       diagnosis:    diagnostico,
@@ -1950,8 +1953,11 @@ async function generarReportePadresPro(
     .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(' ')
   const nombreCorto = nombreCap.split(' ')[0]
+  const isEN = userLocale === 'en'
+  const L = (en: string, es: string) => (isEN ? en : es)
+  const dateLoc = isEN ? 'en-US' : 'es-ES'
 
-  let edadTexto = 'no registrada'
+  let edadTexto = L('not recorded', 'no registrada')
   if ((child as any)?.birth_date) {
     const nac = new Date((child as any).birth_date)
     const ahora = new Date()
@@ -1959,9 +1965,11 @@ async function generarReportePadresPro(
     const meses = ahora.getMonth() - nac.getMonth()
     const edad = (meses < 0 || (meses === 0 && ahora.getDate() < nac.getDate())) ? años - 1 : años
     const mesesAdj = meses < 0 ? meses + 12 : meses
-    edadTexto = `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
+    edadTexto = isEN
+      ? `${edad} year${edad === 1 ? '' : 's'}${mesesAdj > 0 ? ` ${mesesAdj} month${mesesAdj === 1 ? '' : 's'}` : ''}`
+      : `${edad} años${mesesAdj > 0 ? ` ${mesesAdj} meses` : ''}`
   } else if ((child as any)?.age) {
-    edadTexto = `${(child as any).age} años`
+    edadTexto = isEN ? `${(child as any).age} years` : `${(child as any).age} años`
   }
 
   // Total de sesiones realizadas (misma fórmula que el UI)
@@ -2061,17 +2069,17 @@ async function generarReportePadresPro(
   const totalSesiones = fechasDistintas.size
 
   const fechasUnif = sesProgArr.map((s: any) => s.fecha).filter(Boolean).sort()
-  const fmt = (d: string) => new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const fmt = (d: string) => new Date(d).toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
   const fechaInicio = fechasUnif.length > 0 ? fmt(fechasUnif[0]) : '—'
   const fechaFin    = fechasUnif.length > 0 ? fmt(fechasUnif[fechasUnif.length - 1]) : fmt(new Date().toISOString())
   const semanas = fechasUnif.length > 1
     ? Math.round((new Date(fechasUnif[fechasUnif.length-1]).getTime() - new Date(fechasUnif[0]).getTime())/(7*24*60*60*1000))
     : 0
 
-  const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  const hoy = new Date().toLocaleDateString(dateLoc, { day: '2-digit', month: 'long', year: 'numeric' })
   const hoyISO = new Date().toISOString().slice(0, 10)
   const iniciales = tpl.generarIniciales(nombre)
-  const fileName = `Reporte_Familia_${nombreCap.replace(/\s+/g, '_')}_${hoyISO}.docx`
+  const fileName = `${L('Family_Report', 'Reporte_Familia')}_${nombreCap.replace(/\s+/g, '_')}_${hoyISO}.docx`
   const codigoDoc = generarCodigoDocumento(childId, 'padres')
 
   // ── IA: bienvenida + celebración + plan en casa + cierre cálido ──
@@ -2148,17 +2156,17 @@ Cada actividad como un párrafo corto: nombre + cómo hacerla (1-2 oraciones) + 
     datosGraficoAreas.push({ label: area, valor: avg(vals) })
   }
 
-  const periodoTexto = fechasUnif.length > 1 ? `${fechaInicio} al ${fechaFin}` : (fechasUnif.length === 1 ? fechaInicio : '—')
+  const periodoTexto = fechasUnif.length > 1 ? L(`${fechaInicio} to ${fechaFin}`, `${fechaInicio} al ${fechaFin}`) : (fechasUnif.length === 1 ? fechaInicio : '—')
 
   const sections: DocChild[] = [
     // PORTADA con QR
     ...portadaInstitucional({
-      tipoInforme: 'REPORTE DE PROGRESO PARA LA FAMILIA',
+      tipoInforme: L('FAMILY PROGRESS REPORT', 'REPORTE DE PROGRESO PARA LA FAMILIA'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
-      diagnostico: (child as any)?.diagnosis || 'En proceso',
-      especialista: 'Equipo Clínico SANTI',
-      credenciales: 'Terapia ABA · Centro Especializado',
+      diagnostico: (child as any)?.diagnosis || L('In progress', 'En proceso'),
+      especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+      credenciales: L('ABA Therapy · Specialized Center', 'Terapia ABA · Centro Especializado'),
       fechaEmision: hoy,
       periodoEval: periodoTexto,
       codigoDoc,
@@ -2166,39 +2174,39 @@ Cada actividad como un párrafo corto: nombre + cómo hacerla (1-2 oraciones) + 
     // (la portada ya incluye su propio salto de página)
 
     // I. Bienvenida
-    tpl.tituloSeccion('I.  Querida Familia'),
+    tpl.tituloSeccion(L('I.  Dear Family', 'I.  Querida Familia')),
     ...bienvenida.split('\n').filter(l => l.trim()).map(l => tpl.parrafo(l.replace(/\*\*/g, ''))),
 
     // II. Resumen del progreso (datos visuales)
-    tpl.tituloSeccion(`II.  ¿Cómo va ${nombreCorto}?`),
+    tpl.tituloSeccion(L(`II.  How is ${nombreCorto} doing?`, `II.  ¿Cómo va ${nombreCorto}?`)),
     tpl.tablaDatosGenerales([
-      ['Período de trabajo', periodoTexto],
-      ['Total de sesiones realizadas', String(totalSesionesRealizadas)],
-      ['Promedio general de logro', `${promedioGlobal}%`],
+      [L('Work period', 'Período de trabajo'), periodoTexto],
+      [L('Total sessions held', 'Total de sesiones realizadas'), String(totalSesionesRealizadas)],
+      [L('Overall achievement average', 'Promedio general de logro'), `${promedioGlobal}%`],
       // Programas en curso (no incluye los que ya cumplen criterio)
-      ['Programas en los que está trabajando', `${programasInfo.filter(p => !p.cumple_criterio && !['dominado','logrado','criterio_alcanzado'].includes(p.estado)).length}`],
-      ['Programas con criterio alcanzado', `${programasDominados.length}`],
+      [L('Programs currently in progress', 'Programas en los que está trabajando'), `${programasInfo.filter(p => !p.cumple_criterio && !['dominado','logrado','criterio_alcanzado'].includes(p.estado)).length}`],
+      [L('Programs with criterion reached', 'Programas con criterio alcanzado'), `${programasDominados.length}`],
     ]),
 
     // III. Celebración de logros
-    tpl.tituloSeccion('III.  Sus logros este período'),
+    tpl.tituloSeccion(L('III.  Their achievements this period', 'III.  Sus logros este período')),
     ...celebracion.split('\n').filter(l => l.trim()).map(l => tpl.parrafo(l.replace(/\*\*/g, ''))),
   ]
 
   // IV. Gráfico de áreas
   if (datosGraficoAreas.length > 0) {
-    sections.push(tpl.tituloSeccion('IV.  Progreso por área de trabajo'))
-    sections.push(tpl.parrafo('Así va en cada área que estamos trabajando con ' + nombreCorto + ':'))
-    sections.push(...tpl.graficoProgresoBarra('Logro por área (%)', datosGraficoAreas, { mostrarMeta: true, metaPct: 90 }))
+    sections.push(tpl.tituloSeccion(L('IV.  Progress by work area', 'IV.  Progreso por área de trabajo')))
+    sections.push(tpl.parrafo(L('Here is how each area we are working on with ' + nombreCorto + ' is going:', 'Así va en cada área que estamos trabajando con ' + nombreCorto + ':')))
+    sections.push(...tpl.graficoProgresoBarra(L('Achievement by area (%)', 'Logro por área (%)'), datosGraficoAreas, { mostrarMeta: true, metaPct: 90 }))
   }
 
   // V. Actividades en casa
-  sections.push(tpl.tituloSeccion('V.  Actividades para hacer en casa'))
-  sections.push(tpl.parrafo(`Estas actividades complementan el trabajo que hacemos en sesión. Solo necesitan 10-15 minutos al día y hacen una gran diferencia en el progreso de ${nombreCorto}:`))
+  sections.push(tpl.tituloSeccion(L('V.  Activities to do at home', 'V.  Actividades para hacer en casa')))
+  sections.push(tpl.parrafo(L(`These activities complement the work we do in session. They take just 10-15 minutes a day and make a big difference in ${nombreCorto}'s progress:`, `Estas actividades complementan el trabajo que hacemos en sesión. Solo necesitan 10-15 minutos al día y hacen una gran diferencia en el progreso de ${nombreCorto}:`)))
   planCasa.split('\n').filter(l => l.trim()).forEach(l => sections.push(tpl.parrafo(l.replace(/\*\*/g, ''))))
 
   // VI. Mensaje de cierre
-  sections.push(tpl.tituloSeccion('VI.  Un mensaje especial para ustedes'))
+  sections.push(tpl.tituloSeccion(L('VI.  A special message for you', 'VI.  Un mensaje especial para ustedes')))
   mensajeCierre.split('\n').filter(l => l.trim()).forEach(l => sections.push(tpl.parrafo(l.replace(/\*\*/g, ''))))
 
   // QR + firma
