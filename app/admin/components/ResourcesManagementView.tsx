@@ -26,6 +26,15 @@ const RESOURCE_TAGS = [
   'Relajación', 'Juego', 'Rutinas', 'Emociones', 'Escuela', 'ABA', 'PECS'
 ]
 
+// Etiqueta EN para mostrar (el valor guardado sigue siendo el de RESOURCE_TAGS)
+const TAG_EN: Record<string, string> = {
+  'TDAH': 'ADHD', 'TEA': 'ASD', 'Sensorial': 'Sensory', 'Lenguaje': 'Language',
+  'Conducta': 'Behavior', 'Social': 'Social', 'Familia': 'Family', 'Relajación': 'Relaxation',
+  'Juego': 'Play', 'Rutinas': 'Routines', 'Emociones': 'Emotions', 'Escuela': 'School',
+  'ABA': 'ABA', 'PECS': 'PECS',
+}
+const tagLabel = (tag: string, locale: string) => (locale === 'en' ? (TAG_EN[tag] || tag) : tag)
+
 export default function ResourcesManagementView() {
   const toast = useToast()
   const { t, locale } = useI18n()
@@ -272,7 +281,7 @@ export default function ResourcesManagementView() {
                   {resource.tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {resource.tags.map((tag: string) => (
-                        <span key={tag} className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--muted-bg)", color: "var(--text-secondary)" }}>{tag}</span>
+                        <span key={tag} className="px-2 py-0.5 text-[10px] font-bold rounded-full" style={{ background: "var(--muted-bg)", color: "var(--text-secondary)" }}>{tagLabel(tag, locale)}</span>
                       ))}
                     </div>
                   )}
@@ -355,7 +364,7 @@ export default function ResourcesManagementView() {
                   {RESOURCE_TAGS.map(tag => (
                     <button key={tag} type="button" onClick={() => toggleTag(tag)}
                       className={`px-3 py-1.5 rounded-xl border-2 text-xs font-bold transition-all ${newResource.tags.includes(tag) ? 'bg-sky-600 text-white border-sky-600' : 'border-slate-200 text-slate-500 hover:border-sky-300'}`} style={!newResource.tags.includes(tag) ? { background: 'var(--muted-bg)' } : {}}>
-                      {tag}
+                      {tagLabel(tag, locale)}
                     </button>
                   ))}
                 </div>
