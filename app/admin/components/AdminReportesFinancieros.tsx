@@ -237,6 +237,23 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
     URL.revokeObjectURL(url); toast.success(t('auto.adminReportesFinancieros.reporteExportado'))
   }
 
+  // Excel anual profesional (multi-hoja con formato) — reutiliza /api/pagos/reporte-mensual
+  const exportExcelAnual = async () => {
+    try {
+      const res = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=0&lang=${locale}`)
+      if (!res.ok) { toast.error(t('auto.adminReportesFinancieros.errorGenerandoReporte')); return }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `${L('financial_report', 'reporte_financiero')}_${anio}.xlsx`
+      a.click(); URL.revokeObjectURL(url)
+      toast.success(t('auto.adminReportesFinancieros.reporteExportado'))
+    } catch (e: any) {
+      toast.error('Error: ' + e.message)
+    }
+  }
+
   const fmt = (n: number) => `S/ ${n.toLocaleString(dateLoc, { minimumFractionDigits: 2 })}`
 
   // Filtered porMes for selected month
@@ -271,9 +288,16 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
               <option value="">{t("admin.todoAnio")}</option>
               {MESL.map((m, i) => <option key={i} value={i}>{m}</option>)}
             </select>
+            <button onClick={exportExcelAnual}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+              style={{ background: '#0f766e' }}
+              title={L('Download professional annual Excel', 'Descargar Excel anual profesional')}>
+              <Download size={13} /> Excel
+            </button>
             <button onClick={exportCSV}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all hover:opacity-80"
-              style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
+              style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}
+              title={L('Download summary as CSV', 'Descargar resumen en CSV')}>
               <Download size={13} /> CSV
             </button>
             <button onClick={cargar} className="p-2 rounded-xl transition-all hover:opacity-70"
