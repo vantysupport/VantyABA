@@ -298,9 +298,14 @@ export default function FonemasPractica({ childId }: { childId: string }) {
   // etiqueta (o no hay imagen propia), se usa el ejemplo por defecto del fonema.
   const currentWord = (curImg?.label && curImg.label.trim()) ? curImg.label.trim() : f.ejemplo
   const isVowel = ['a', 'e', 'i', 'o', 'u'].includes(f.id)
-  // En vocales anclamos el idioma con una palabra española antes del sonido,
-  // así "aaa/eee" no se pronuncia en inglés.
-  const fonemaText = isVowel ? `${currentWord}. ${f.silabas}` : f.silabas
+  // "Escuchar fonema": en INGLÉS pronunciamos el NOMBRE de la letra (A → "ei",
+  // B → "bee"), que es lo que la familia espera oír. En español, en vocales
+  // anclamos el idioma con la palabra antes del sonido para que "aaa/eee" no
+  // suene en inglés; en consonantes se dicen las sílabas.
+  const letraSola = f.letra.split(/[ /]/)[0]  // "A a" → "A", "C/K" → "C"
+  const fonemaText = isEN
+    ? letraSola
+    : (isVowel ? `${currentWord}. ${f.silabas}` : f.silabas)
   // Cada sílaba es un botón. En vocales anclamos con la palabra; en consonantes
   // repetimos la sílaba (mejor para practicar y para que el español suene bien).
   const silArr = f.silabas.split(',').map(s => s.trim()).filter(Boolean)
