@@ -17,8 +17,11 @@ import { useToast } from '@/components/Toast'
 
 const MESES     = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const MESES_L   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_EN   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const MESES_L_EN = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const COLORS    = ['#0284c7','#10b981','#f59e0b','#0ea5e9','#ef4444','#0891b2','#06b6d4','#6366f1']
 const METHODS   = ['efectivo','yape','plin','transferencia','tarjeta','otro']
+const METHOD_EN: Record<string, string> = { efectivo: 'Cash', yape: 'Yape', plin: 'Plin', transferencia: 'Bank Transfer', tarjeta: 'Card', otro: 'Other' }
 
 // ── KPI grande con comparativa ────────────────────────────────────────────────
 function KPIBig({ label, value, sub, icon: Icon, bar, delta, deltaLabel }: any) {
@@ -55,7 +58,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
           <span style={{ color: 'var(--text-muted)' }}>{p.name}:</span>
           <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
-            {p.name === 'Sesiones' ? p.value : `S/ ${Number(p.value).toFixed(2)}`}
+            {p.dataKey === 'sesiones' ? p.value : `S/ ${Number(p.value).toFixed(2)}`}
           </span>
         </div>
       ))}
@@ -64,14 +67,19 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?: Record<string, boolean> } = {}) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const isEN = locale === 'en'
+  const L = (en: string, es: string) => (isEN ? en : es)
+  const MES  = isEN ? MESES_EN : MESES
+  const MESL = isEN ? MESES_L_EN : MESES_L
+  const dateLoc = isEN ? 'en-US' : 'es-PE'
   const toast = useToast()
   const [loading, setLoading]         = useState(true)
   const [tab, setTab] = useState<'overview' | 'pacientes' | 'servicios'>('overview')
   const reportesTabs = ([
-    { id: 'overview',  label: 'Ingresos',    Icon: TrendingUp },
-    { id: 'pacientes', label: 'Pacientes',   Icon: Users },
-    { id: 'servicios', label: 'Servicios',   Icon: Package },
+    { id: 'overview',  label: L('Income', 'Ingresos'),      Icon: TrendingUp },
+    { id: 'pacientes', label: L('Patients', 'Pacientes'),   Icon: Users },
+    { id: 'servicios', label: L('Services', 'Servicios'),   Icon: Package },
   ] as const).filter(t => !enabledTabs || enabledTabs[`reportes_${t.id}`] !== false)
   type ReportesTab = 'overview' | 'pacientes' | 'servicios'
   const activeTab: ReportesTab = reportesTabs.find(t => t.id === tab) ? tab : (reportesTabs[0]?.id ?? 'overview')
@@ -117,12 +125,12 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
       const m = String(i + 1).padStart(2,'0')
       const mp = paid.filter(p => (p.paid_at || p.created_at).startsWith(`${año}-${m}`))
       const pp = pending.filter(p => p.created_at.startsWith(`${año}-${m}`))
-      return { mes: MESES[i], ingresos: sum(mp), pendiente: sum(pp), sesiones: mp.length }
+      return { mes: MES[i], ingresos: sum(mp), pendiente: sum(pp), sesiones: mp.length }
     })
 
     // Por método de pago
     const porMetodo = METHODS.map((m, i) => ({
-      name: m.charAt(0).toUpperCase() + m.slice(1),
+      name: isEN ? (METHOD_EN[m] || m) : (m.charAt(0).toUpperCase() + m.slice(1)),
       value: sum(paid.filter(p => p.payment_method === m)),
       color: COLORS[i % COLORS.length],
     })).filter(m => m.value > 0)
@@ -157,7 +165,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
     // Por servicio
     const sMap: Record<string, { value: number; count: number }> = {}
     paid.forEach(p => {
-      const s = p.concept?.replace(/ \(\d+\/\d+\)$/, '') || 'Otro'
+      const s = p.concept?.replace(/ \(\d+\/\d+\)$/, '') || L('Other', 'Otro')
       if (!sMap[s]) sMap[s] = { value: 0, count: 0 }
       sMap[s].value += Number(p.amount)
       sMap[s].count++
@@ -174,7 +182,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
       porMes, porMetodo, porTerapeuta, porPaciente, porServicio,
       tasaCobro: pays.length > 0 ? Math.round((paid.length / pays.length) * 100) : 0,
     })
-  }, [])
+  }, [MES, isEN])
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -198,8 +206,8 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
   useEffect(() => { if (raw.payments.length > 0) compute(raw.payments, raw.appointments, raw.specialists, anio, mesFilter) }, [mesFilter])
 
   const exportCSV = async () => {
-    const rows = [['Fecha','Paciente','Concepto','Monto','Método','Estado'],
-      ...raw.payments.map((p: any) => [new Date(p.created_at).toLocaleDateString('es-PE'), p.children?.name||'—', p.concept, p.amount, p.payment_method, p.status])]
+    const rows = [[L('Date','Fecha'),L('Patient','Paciente'),L('Concept','Concepto'),L('Amount','Monto'),L('Method','Método'),L('Status','Estado')],
+      ...raw.payments.map((p: any) => [new Date(p.created_at).toLocaleDateString(dateLoc), p.children?.name||'—', p.concept, p.amount, p.payment_method, p.status])]
     const csv = rows.map(r => r.join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob); const a = document.createElement('a')
@@ -207,7 +215,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
     URL.revokeObjectURL(url); toast.success(t('auto.adminReportesFinancieros.reporteExportado'))
   }
 
-  const fmt = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
+  const fmt = (n: number) => `S/ ${n.toLocaleString(dateLoc, { minimumFractionDigits: 2 })}`
 
   // Filtered porMes for selected month
   const chartData = mesFilter !== null ? data.porMes.filter((_, i) => i === mesFilter) : data.porMes
@@ -221,7 +229,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
         <div className="px-6 py-4 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{t("admin.reportesFinancieros")}</h2>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Ingresos, facturación y métricas del centro · {MESES_L[new Date().getMonth()]} {anio}</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{L('Income, billing and center metrics','Ingresos, facturación y métricas del centro')} · {MESL[new Date().getMonth()]} {anio}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Año */}
@@ -256,10 +264,10 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
 
       {/* ── KPIs ────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KPIBig label="Ingresos del año"    value={loading ? '—' : fmt(data.totalAnio)}         sub={`${anio}`}              icon={DollarSign}  bar="#10b981" />
-        <KPIBig label="Este mes"            value={loading ? '—' : fmt(data.totalMes)}           sub={MESES_L[new Date().getMonth()]} icon={TrendingUp} bar="#0284c7" delta={data.deltaMes} />
-        <KPIBig label="Cobros realizados"   value={loading ? '—' : data.sesionesAnio}            sub={`${data.tasaCobro}% tasa de cobro`} icon={CheckCircle2} bar="#0ea5e9" />
-        <KPIBig label="Por cobrar"          value={loading ? '—' : fmt(data.totalPendiente)}     sub="Pendiente de pago"     icon={Calendar}    bar="#f59e0b" />
+        <KPIBig label={L('Income this year','Ingresos del año')}    value={loading ? '—' : fmt(data.totalAnio)}         sub={`${anio}`}              icon={DollarSign}  bar="#10b981" />
+        <KPIBig label={L('This month','Este mes')}            value={loading ? '—' : fmt(data.totalMes)}           sub={MESL[new Date().getMonth()]} icon={TrendingUp} bar="#0284c7" delta={data.deltaMes} />
+        <KPIBig label={L('Payments collected','Cobros realizados')}   value={loading ? '—' : data.sesionesAnio}            sub={`${data.tasaCobro}% ${L('collection rate','tasa de cobro')}`} icon={CheckCircle2} bar="#0ea5e9" />
+        <KPIBig label={L('Outstanding','Por cobrar')}          value={loading ? '—' : fmt(data.totalPendiente)}     sub={L('Pending payment','Pendiente de pago')}     icon={Calendar}    bar="#f59e0b" />
       </div>
 
       {/* ── TABS ────────────────────────────────────────────────────────────── */}
@@ -293,11 +301,11 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
               <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
                 <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
                   <div>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Evolución de ingresos {anio}</h3>
+                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{L('Income evolution','Evolución de ingresos')} {anio}</h3>
                     <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{t("admin.ingresosCobrados")}</p>
                   </div>
                   <div className="flex items-center gap-3 text-[11px]">
-                    {[{ color: '#10b981', label: 'Cobrado' }, { color: '#f59e0b', label: 'Pendiente' }].map(l => (
+                    {[{ color: '#10b981', label: L('Collected','Cobrado') }, { color: '#f59e0b', label: L('Pending','Pendiente') }].map(l => (
                       <div key={l.label} className="flex items-center gap-1.5">
                         <div className="w-3 h-3 rounded-sm" style={{ background: l.color }} />
                         <span style={{ color: 'var(--text-muted)' }}>{l.label}</span>
@@ -322,8 +330,8 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                       <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={50} tickFormatter={v => `S/${v}`} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="ingresos" name="Cobrado"   stroke="#10b981" strokeWidth={2.5} fill="url(#gIngresos)"  dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                      <Area type="monotone" dataKey="pendiente" name="Pendiente" stroke="#f59e0b" strokeWidth={2} fill="url(#gPendiente)" dot={{ r: 3, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
+                      <Area type="monotone" dataKey="ingresos" name={L('Collected','Cobrado')}   stroke="#10b981" strokeWidth={2.5} fill="url(#gIngresos)"  dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                      <Area type="monotone" dataKey="pendiente" name={L('Pending','Pendiente')} stroke="#f59e0b" strokeWidth={2} fill="url(#gPendiente)" dot={{ r: 3, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -393,7 +401,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                         <XAxis dataKey="mes" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                         <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={20} allowDecimals={false} />
                         <Tooltip content={<CustomTooltip />} />
-                        <Bar dataKey="sesiones" name="Sesiones" fill="#0284c7" radius={[5,5,0,0]} />
+                        <Bar dataKey="sesiones" name={L('Sessions','Sesiones')} fill="#0284c7" radius={[5,5,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -403,7 +411,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
               {/* Tabla resumen mes a mes */}
               <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
                 <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                  <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Resumen mensual {anio}</h3>
+                  <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{L('Monthly summary','Resumen mensual')} {anio}</h3>
                   <button
                     onClick={async () => {
                       const res = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=0`)
@@ -414,18 +422,18 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                       a.href     = url
                       a.download = `reporte_financiero_${anio}.xlsx`
                       a.click(); URL.revokeObjectURL(url)
-                      toast.success('Excel anual exportado')
+                      toast.success(L('Annual Excel exported','Excel anual exportado'))
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all hover:opacity-80"
                     style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
-                    <Download size={12} /> Excel anual
+                    <Download size={12} /> {L('Annual Excel','Excel anual')}
                   </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr style={{ background: 'var(--muted-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                        {['Mes','Sesiones','Cobrado','Pendiente','Total',''].map(h => (
+                        {[L('Month','Mes'),L('Sessions','Sesiones'),L('Collected','Cobrado'),L('Pending','Pendiente'),L('Total','Total'),''].map(h => (
                           <th key={h} className="text-left px-3 sm:px-5 py-2.5 text-[10px] font-bold whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{h}</th>
                         ))}
                       </tr>
@@ -433,7 +441,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                     <tbody>
                       {data.porMes.map((m, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', opacity: m.ingresos + m.pendiente === 0 ? 0.4 : 1 }}>
-                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{MESES_L[i]}</td>
+                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{MESL[i]}</td>
                           <td className="px-3 sm:px-5 py-3" style={{ color: 'var(--text-muted)' }}>{m.sesiones}</td>
                           <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {m.ingresos.toFixed(2)}</td>
                           <td className="px-3 sm:px-5 py-3 font-medium whitespace-nowrap" style={{ color: '#f59e0b' }}>S/ {m.pendiente.toFixed(2)}</td>
@@ -447,11 +455,11 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                                   const blob = await res.blob()
                                   const url  = URL.createObjectURL(blob)
                                   const a    = document.createElement('a')
-                                  a.href     = url; a.download = `reporte_${MESES_L[i].toLowerCase()}_${anio}.xlsx`
+                                  a.href     = url; a.download = `reporte_${MESL[i].toLowerCase()}_${anio}.xlsx`
                                   a.click(); URL.revokeObjectURL(url)
-                                  toast.success(t('auto.adminReportesFinancieros.excelDeExportado', { v1: String(MESES_L[i]) }))
+                                  toast.success(t('auto.adminReportesFinancieros.excelDeExportado', { v1: String(MESL[i]) }))
                                 }}
-                                title={`Descargar reporte de ${MESES_L[i]}`}
+                                title={`${L('Download report for','Descargar reporte de')} ${MESL[i]}`}
                                 className="p-1.5 rounded-lg transition-all hover:opacity-70"
                                 style={{ background: 'rgba(59,130,246,0.1)', color: '#0284c7' }}>
                                 <Download size={12} />
@@ -463,7 +471,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                     </tbody>
                     <tfoot>
                       <tr style={{ background: 'var(--muted-bg)', borderTop: '2px solid var(--card-border)' }}>
-                        <td className="px-3 sm:px-5 py-3 font-bold text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>Total {anio}</td>
+                        <td className="px-3 sm:px-5 py-3 font-bold text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{L('Total','Total')} {anio}</td>
                         <td className="px-3 sm:px-5 py-3 font-bold" style={{ color: 'var(--text-primary)' }}>{data.sesionesAnio}</td>
                         <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {data.totalAnio.toFixed(2)}</td>
                         <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#f59e0b' }}>S/ {data.totalPendiente.toFixed(2)}</td>
@@ -483,8 +491,8 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
             <div className="space-y-4">
               <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
                 <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                  <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Ingresos por paciente {anio}</h3>
-                  <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{data.porPaciente.length} pacientes</span>
+                  <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{L('Income by patient','Ingresos por paciente')} {anio}</h3>
+                  <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{data.porPaciente.length} {L('patients','pacientes')}</span>
                 </div>
                 <div className="p-5 space-y-3">
                   {data.porPaciente.length === 0 ? (
@@ -505,7 +513,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--card)' }}>
                             <div style={{ width: `${pct}%`, background: COLORS[i % COLORS.length], height: '100%', borderRadius: '999px', transition: 'width 0.6s ease' }} />
                           </div>
-                          <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>{p.sesiones} sesiones pagadas</p>
+                          <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>{p.sesiones} {L('paid sessions','sesiones pagadas')}</p>
                         </div>
                       </div>
                     )
@@ -557,7 +565,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                         <p className="text-xs font-medium flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>{s.name}</p>
                         <div className="text-right">
                           <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>S/ {s.value.toFixed(2)}</p>
-                          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{s.count} cobros</p>
+                          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{s.count} {L('payments','cobros')}</p>
                         </div>
                       </div>
                     ))}
