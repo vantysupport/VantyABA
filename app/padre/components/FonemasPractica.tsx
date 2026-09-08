@@ -50,6 +50,40 @@ export const FONEMAS: Fonema[] = [
   { id: 'y',  letra: 'Y y', ejemplo: 'Yoyo',      emoji: '🪀', code: '1FA80', silabas: 'ya, ye, yi, yo, yu',  tip: 'Parecido a la LL' },
 ]
 
+// Set de fonemas en INGLÉS (alfabeto fonético inglés con palabra de ejemplo).
+// Se usa cuando el idioma de la app es inglés. `silabas` = mezclas CV para lectura.
+export const FONEMAS_EN: Fonema[] = [
+  { id: 'a',  letra: 'A a', ejemplo: 'Apple',    emoji: '🍎', code: '1F34E', silabas: 'ah, a, ay',            tip: 'Open mouth: "ah"' },
+  { id: 'b',  letra: 'B b', ejemplo: 'Ball',     emoji: '⚽', code: '26BD',  silabas: 'ba, be, bi, bo, bu',  tip: 'Lips together, then pop' },
+  { id: 'c',  letra: 'C c', ejemplo: 'Cat',      emoji: '🐱', code: '1F431', silabas: 'ca, co, cu',          tip: 'Hard "k" at the back' },
+  { id: 'd',  letra: 'D d', ejemplo: 'Dog',      emoji: '🐶', code: '1F436', silabas: 'da, de, di, do, du',  tip: 'Tongue behind teeth' },
+  { id: 'e',  letra: 'E e', ejemplo: 'Elephant', emoji: '🐘', code: '1F418', silabas: 'eh, ee',              tip: 'Little smile: "eh"' },
+  { id: 'f',  letra: 'F f', ejemplo: 'Fish',     emoji: '🐟', code: '1F41F', silabas: 'fa, fe, fi, fo, fu',  tip: 'Teeth on lip: "fff"' },
+  { id: 'g',  letra: 'G g', ejemplo: 'Goat',     emoji: '🐐', code: '1F410', silabas: 'ga, go, gu',          tip: 'Back of the mouth, voiced' },
+  { id: 'h',  letra: 'H h', ejemplo: 'Hat',      emoji: '🎩', code: '1F3A9', silabas: 'ha, he, hi, ho, hu',  tip: 'Soft breath: "hh"' },
+  { id: 'i',  letra: 'I i', ejemplo: 'Iguana',   emoji: '🦎', code: '1F98E', silabas: 'ih, eye',             tip: 'Short "ih" / long "eye"' },
+  { id: 'j',  letra: 'J j', ejemplo: 'Juice',    emoji: '🧃', code: '1F9C3', silabas: 'ja, je, ji, jo, ju',  tip: 'Soft "j" sound' },
+  { id: 'k',  letra: 'K k', ejemplo: 'Kite',     emoji: '🪁', code: '1FA81', silabas: 'ka, ke, ki, ko, ku',  tip: 'Sharp "k" at the back' },
+  { id: 'l',  letra: 'L l', ejemplo: 'Lion',     emoji: '🦁', code: '1F981', silabas: 'la, le, li, lo, lu',  tip: 'Tongue up behind teeth' },
+  { id: 'm',  letra: 'M m', ejemplo: 'Moon',     emoji: '🌙', code: '1F319', silabas: 'ma, me, mi, mo, mu',  tip: 'Lips together: "mmm"' },
+  { id: 'n',  letra: 'N n', ejemplo: 'Nose',     emoji: '👃', code: '1F443', silabas: 'na, ne, ni, no, nu',  tip: 'Air out the nose' },
+  { id: 'o',  letra: 'O o', ejemplo: 'Orange',   emoji: '🍊', code: '1F34A', silabas: 'oh, ah',              tip: 'Round mouth: "oh"' },
+  { id: 'p',  letra: 'P p', ejemplo: 'Pig',      emoji: '🐷', code: '1F437', silabas: 'pa, pe, pi, po, pu',  tip: 'Pop air with lips' },
+  { id: 'q',  letra: 'Q q', ejemplo: 'Queen',    emoji: '👑', code: '1F451', silabas: 'qua, que, qui',       tip: 'Say "kw"' },
+  { id: 'r',  letra: 'R r', ejemplo: 'Rabbit',   emoji: '🐰', code: '1F430', silabas: 'ra, re, ri, ro, ru',  tip: 'Round the lips: "rr"' },
+  { id: 's',  letra: 'S s', ejemplo: 'Sun',      emoji: '☀️', code: '2600',  silabas: 'sa, se, si, so, su',  tip: 'Like a snake: "sss"' },
+  { id: 't',  letra: 'T t', ejemplo: 'Turtle',   emoji: '🐢', code: '1F422', silabas: 'ta, te, ti, to, tu',  tip: 'Tongue taps behind teeth' },
+  { id: 'u',  letra: 'U u', ejemplo: 'Umbrella', emoji: '☂️', code: '2602',  silabas: 'uh, you',             tip: 'Short "uh" / long "you"' },
+  { id: 'v',  letra: 'V v', ejemplo: 'Van',      emoji: '🚐', code: '1F690', silabas: 'va, ve, vi, vo, vu',  tip: 'Teeth on lip with voice' },
+  { id: 'w',  letra: 'W w', ejemplo: 'Whale',    emoji: '🐳', code: '1F433', silabas: 'wa, we, wi, wo, wu',  tip: 'Round lips: "wuh"' },
+  { id: 'x',  letra: 'X x', ejemplo: 'Fox',      emoji: '🦊', code: '1F98A', silabas: 'ax, ex, ox',          tip: 'Ending sound "ks"' },
+  { id: 'y',  letra: 'Y y', ejemplo: 'Yoyo',     emoji: '🪀', code: '1FA80', silabas: 'ya, ye, yi, yo, yu',  tip: 'Say "yuh"' },
+  { id: 'z',  letra: 'Z z', ejemplo: 'Zebra',    emoji: '🦓', code: '1F993', silabas: 'za, ze, zi, zo, zu',  tip: 'Buzzing sound: "zzz"' },
+]
+
+// Devuelve el set de fonemas según el idioma.
+export const getFonemas = (locale?: string): Fonema[] => (locale === 'en' ? FONEMAS_EN : FONEMAS)
+
 // OpenMoji (CC BY-SA 4.0) — ilustraciones tipo sticker servidas por CDN.
 export const OPENMOJI_BASE = 'https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@15.0.0/color/svg'
 
@@ -133,7 +167,10 @@ function silabear(palabra: string): string[] {
 }
 
 export default function FonemasPractica({ childId }: { childId: string }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
+  const isEN = locale === 'en'
+  const FON = getFonemas(locale)
   const [idx, setIdx] = useState(0)
   const [logrados, setLogrados] = useState<Set<string>>(new Set())
   const [hablando, setHablando] = useState(false)
@@ -146,7 +183,7 @@ export default function FonemasPractica({ childId }: { childId: string }) {
   const tokenRef = useRef(0)
   const ttsOk = typeof window !== 'undefined' && 'speechSynthesis' in window
 
-  const f = FONEMAS[idx]
+  const f = FON[idx]
 
   useEffect(() => {
     // Cargamos tras el montaje (no en el render) para evitar mismatch de hidratación SSR.
@@ -201,9 +238,10 @@ export default function FonemasPractica({ childId }: { childId: string }) {
     try {
       window.speechSynthesis.cancel()
       const u = new SpeechSynthesisUtterance(texto)
-      u.lang = 'es-ES'; u.rate = 0.9; u.pitch = 1.05
-      const es = voicesRef.current.filter(v => v.lang?.toLowerCase().startsWith('es'))
-      const v = es.find(v => /google|natural|premium|enhanced/i.test(v.name)) || es[0]
+      const langPrefix = isEN ? 'en' : 'es'
+      u.lang = isEN ? 'en-US' : 'es-ES'; u.rate = 0.9; u.pitch = 1.05
+      const matching = voicesRef.current.filter(v => v.lang?.toLowerCase().startsWith(langPrefix))
+      const v = matching.find(v => /google|natural|premium|enhanced/i.test(v.name)) || matching[0]
       if (v) u.voice = v
       u.onstart = () => setHablando(true)
       u.onend = () => setHablando(false)
@@ -223,7 +261,7 @@ export default function FonemasPractica({ childId }: { childId: string }) {
       const res = await fetch('/api/elevenlabs-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: texto, language: 'es' }),
+        body: JSON.stringify({ text: texto, language: isEN ? 'en' : 'es' }),
       })
       if (!res.ok) throw new Error('tts')
       const blob = await res.blob()
@@ -236,7 +274,7 @@ export default function FonemasPractica({ childId }: { childId: string }) {
   }
 
   const go = (d: number) => {
-    setIdx(i => (i + d + FONEMAS.length) % FONEMAS.length)
+    setIdx(i => (i + d + FON.length) % FON.length)
     setGalIdx(0)
     setModal(null)
     stopAudio()
@@ -351,7 +389,7 @@ export default function FonemasPractica({ childId }: { childId: string }) {
           <p>{t("familias.escuchenRepitan")}</p>
         </div>
         <div className="fon-prog">
-          <p className="v">{logrados.size}/{FONEMAS.length}</p>
+          <p className="v">{logrados.size}/{FON.length}</p>
           <p className="l">{t("familias.logrados")}</p>
         </div>
       </div>
@@ -378,7 +416,7 @@ export default function FonemasPractica({ childId }: { childId: string }) {
         <div className="fon-word">{currentWord}</div>
         <div className="fon-sil">
           {silArr.map((syl, k) => (
-            <button key={k} className="fon-sil-chip" onClick={() => speakSilaba(syl)} title={`Escuchar ${syl}`}>{syl}</button>
+            <button key={k} className="fon-sil-chip" onClick={() => speakSilaba(syl)} title={`${L('Listen to','Escuchar')} ${syl}`}>{syl}</button>
           ))}
         </div>
         <div className="fon-tip"><Sparkles size={13} /> {f.tip}</div>
@@ -387,12 +425,12 @@ export default function FonemasPractica({ childId }: { childId: string }) {
           <div className="fon-help">
             {cur.boca_url && (
               <button className="fon-help-btn" onClick={() => setModal({ type: 'img', url: cur.boca_url! })}>
-                <Smile size={15} /> Ver la boca
+                <Smile size={15} /> {L('See the mouth','Ver la boca')}
               </button>
             )}
             {cur.video_url && (
               <button className="fon-help-btn video" onClick={() => setModal({ type: 'video', url: cur.video_url! })}>
-                <Video size={15} /> Cómo se pronuncia
+                <Video size={15} /> {L('How to pronounce','Cómo se pronuncia')}
               </button>
             )}
           </div>
@@ -400,32 +438,32 @@ export default function FonemasPractica({ childId }: { childId: string }) {
 
         <div className="fon-btns">
           <button className={`fon-btn primary ${hablando ? 'speaking' : ''}`} onClick={() => speak(fonemaText)}>
-            <Volume2 size={17} /> Escuchar fonema
+            <Volume2 size={17} /> {L('Play sound','Escuchar fonema')}
           </button>
           <button className="fon-btn soft" onClick={() => speak(currentWord)}>
-            <Volume2 size={16} /> Escuchar palabra
+            <Volume2 size={16} /> {L('Play word','Escuchar palabra')}
           </button>
           <button className="fon-btn silabas" onClick={() => speak(silabear(currentWord).join(', '))}>
-            <Volume2 size={16} /> Por sílabas
+            <Volume2 size={16} /> {L('By syllables','Por sílabas')}
           </button>
         </div>
 
         <div>
           <button className={`fon-logro ${esLogrado ? 'on' : 'off'}`} onClick={() => toggleLogrado(f.id)}>
-            <Check size={16} /> {esLogrado ? t('auto.fonemasPractica.logrado') : 'Marcar como logrado'}
+            <Check size={16} /> {esLogrado ? t('auto.fonemasPractica.logrado') : L('Mark as done','Marcar como logrado')}
           </button>
         </div>
 
         <div className="fon-nav">
-          <button className="fon-arrow" aria-label="Anterior" onClick={() => go(-1)}><ChevronLeft size={20} /></button>
-          <span className="fon-count">{idx + 1} de {FONEMAS.length}</span>
-          <button className="fon-arrow" aria-label="Siguiente" onClick={() => go(1)}><ChevronRight size={20} /></button>
+          <button className="fon-arrow" aria-label={L('Previous','Anterior')} onClick={() => go(-1)}><ChevronLeft size={20} /></button>
+          <span className="fon-count">{idx + 1} {L('of','de')} {FON.length}</span>
+          <button className="fon-arrow" aria-label={L('Next','Siguiente')} onClick={() => go(1)}><ChevronRight size={20} /></button>
         </div>
       </div>
 
       {/* Selector rápido de todos los fonemas */}
       <div className="fon-grid">
-        {FONEMAS.map((x, i) => {
+        {FON.map((x, i) => {
           const xc = customImgs[x.id] || []
           return (
             <button key={x.id} className={`fon-chip ${i === idx ? 'on' : ''}`} onClick={() => go(i - idx)} title={x.ejemplo}>
@@ -449,14 +487,14 @@ export default function FonemasPractica({ childId }: { childId: string }) {
           onClick={() => { setLogrados(new Set()); saveLogrados(childId, []) }}
           style={{ alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent',
             border: 'none', color: 'var(--c-text-muted,#64748b)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <RotateCcw size={13} /> Reiniciar progreso
+          <RotateCcw size={13} /> {L('Reset progress','Reiniciar progreso')}
         </button>
       )}
 
       {modal && (
         <div className="fon-modal" onClick={() => setModal(null)}>
           <div className="fon-modal-box" onClick={e => e.stopPropagation()}>
-            <button className="fon-modal-x" onClick={() => setModal(null)} aria-label="Cerrar"><X size={18} /></button>
+            <button className="fon-modal-x" onClick={() => setModal(null)} aria-label={L('Close','Cerrar')}><X size={18} /></button>
             {modal.type === 'img' ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img className="fon-modal-img" src={modal.url} alt={t('auto.fonemasPractica.posicionDeLaBoca')} />

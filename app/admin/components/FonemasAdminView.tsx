@@ -9,13 +9,15 @@ import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { Mic, Plus, Trash2, Loader2, Eye, EyeOff, Images, Save, Smile, Video } from 'lucide-react'
-import FonemasPractica, { FONEMAS, FonemaImg } from '@/app/padre/components/FonemasPractica'
+import FonemasPractica, { getFonemas, FonemaImg } from '@/app/padre/components/FonemasPractica'
 
 type ImgRow = { id: string; url: string; label?: string }
 type Ayuda = { boca_url?: string | null; video_url?: string | null }
 
 export default function FonemasAdminView() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
+  const FONEMAS = getFonemas(locale)
   const toast = useToast()
   const [imgs, setImgs] = useState<Record<string, ImgRow[]>>({})
   const [inputs, setInputs] = useState<Record<string, { label: string; url: string }>>({})
@@ -86,7 +88,7 @@ export default function FonemasAdminView() {
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok) { toast.error(j.error || 'Error al guardar'); return }
-      toast.success('Ayuda guardada')
+      toast.success(L('Help saved', 'Ayuda guardada'))
     } catch { toast.error(t('auto.fonemasAdminView.errorDeRed3')) } finally { setBusy(null) }
   }
 
@@ -94,7 +96,7 @@ export default function FonemasAdminView() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-4">
         <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-          <Mic size={20} /> Fonemas
+          <Mic size={20} /> {L('Phonemes', 'Fonemas')}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           {t('auto.fonemasAdminView.actividadDeFonemasYRepositorio')}
@@ -106,7 +108,7 @@ export default function FonemasAdminView() {
         onClick={() => setPreview(p => !p)}
         className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-sky-700 dark:text-sky-400">
         {preview ? <EyeOff size={15} /> : <Eye size={15} />}
-        {preview ? 'Ocultar vista previa' : 'Ver la actividad (vista previa)'}
+        {preview ? L('Hide preview', 'Ocultar vista previa') : L('View the activity (preview)', 'Ver la actividad (vista previa)')}
       </button>
 
       {preview && (
@@ -173,7 +175,7 @@ export default function FonemasAdminView() {
                   <button
                     onClick={() => add(f.id)} disabled={busy === f.id + ':add'}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-bold disabled:opacity-50 shrink-0">
-                    {busy === f.id + ':add' ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Agregar
+                    {busy === f.id + ':add' ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} {L('Add', 'Agregar')}
                   </button>
                 </div>
               </div>
@@ -199,7 +201,7 @@ export default function FonemasAdminView() {
                   <button
                     onClick={() => saveAyuda(f.id)} disabled={busy === f.id + ':ayuda'}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-600 text-white text-xs font-bold disabled:opacity-50 shrink-0">
-                    {busy === f.id + ':ayuda' ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar
+                    {busy === f.id + ':ayuda' ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} {L('Save', 'Guardar')}
                   </button>
                 </div>
               </div>
