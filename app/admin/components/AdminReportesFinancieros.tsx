@@ -205,38 +205,6 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
   useEffect(() => { cargar() }, [cargar])
   useEffect(() => { if (raw.payments.length > 0) compute(raw.payments, raw.appointments, raw.specialists, anio, mesFilter) }, [mesFilter])
 
-  const exportCSV = async () => {
-    // Escapa un valor para CSV (comillas + comas seguras).
-    const esc = (v: any) => {
-      const s = String(v ?? '')
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-    }
-    const money = (n: number) => Number(n || 0).toFixed(2)
-
-    // ── RESUMEN ANUAL: desglose mes a mes + total ──
-    const rows: any[][] = []
-    rows.push([`${L('Financial Report', 'Reporte Financiero')} — ${anio}`])
-    rows.push([`${L('Generated', 'Generado')}: ${new Date().toLocaleDateString(dateLoc)}`])
-    rows.push([])
-    rows.push([L('Month', 'Mes'), L('Sessions', 'Sesiones'), L('Collected (S/)', 'Cobrado (S/)'), L('Pending (S/)', 'Pendiente (S/)'), L('Total (S/)', 'Total (S/)')])
-    data.porMes.forEach((m: any, i: number) => {
-      rows.push([MESL[i], m.sesiones, money(m.ingresos), money(m.pendiente), money(m.ingresos + m.pendiente)])
-    })
-    rows.push([
-      `${L('Total', 'Total')} ${anio}`,
-      data.sesionesAnio,
-      money(data.totalAnio),
-      money(data.totalPendiente),
-      money(data.totalAnio + data.totalPendiente),
-    ])
-
-    const csv = '﻿' + rows.map(r => r.map(esc).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob); const a = document.createElement('a')
-    a.href = url; a.download = `${L('financial_report', 'reporte_financiero')}_${anio}.csv`; a.click()
-    URL.revokeObjectURL(url); toast.success(t('auto.adminReportesFinancieros.reporteExportado'))
-  }
-
   // Excel anual profesional (multi-hoja con formato) — reutiliza /api/pagos/reporte-mensual
   const exportExcelAnual = async () => {
     try {
@@ -293,12 +261,6 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
               style={{ background: '#0f766e' }}
               title={L('Download professional annual Excel', 'Descargar Excel anual profesional')}>
               <Download size={13} /> Excel
-            </button>
-            <button onClick={exportCSV}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all hover:opacity-80"
-              style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}
-              title={L('Download summary as CSV', 'Descargar resumen en CSV')}>
-              <Download size={13} /> CSV
             </button>
             <button onClick={cargar} className="p-2 rounded-xl transition-all hover:opacity-70"
               style={{ color: 'var(--text-muted)', background: 'var(--muted-bg)' }}>
