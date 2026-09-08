@@ -42,7 +42,14 @@ const SIGLAS_ES: Record<string, string> = {
   'tartamudez': 'Disfluencia',
 }
 
-const CHIPS = ['TEA','TDAH','TOC','TEPT','Ansiedad','Dislexia','TND','Depresión','Bipolar','Enuresis','ARFID','Dispraxia','Tourette','Mutismo','TLP','Esquizofrenia']
+const CHIPS: { es: string; en: string }[] = [
+  { es: 'TEA', en: 'ASD' }, { es: 'TDAH', en: 'ADHD' }, { es: 'TOC', en: 'OCD' },
+  { es: 'TEPT', en: 'PTSD' }, { es: 'Ansiedad', en: 'Anxiety' }, { es: 'Dislexia', en: 'Dyslexia' },
+  { es: 'TND', en: 'ODD' }, { es: 'Depresión', en: 'Depression' }, { es: 'Bipolar', en: 'Bipolar' },
+  { es: 'Enuresis', en: 'Enuresis' }, { es: 'ARFID', en: 'ARFID' }, { es: 'Dispraxia', en: 'Dyspraxia' },
+  { es: 'Tourette', en: 'Tourette' }, { es: 'Mutismo', en: 'Mutism' }, { es: 'TLP', en: 'BPD' },
+  { es: 'Esquizofrenia', en: 'Schizophrenia' },
+]
 
 interface Props {
   onAsignar?: (r: Result | Detail) => void
@@ -214,13 +221,16 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
           )}
           <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-[10px] font-bold text-slate-400">{t("admin.explorar")}</span>
-            {CHIPS.map(c => (
-              <button key={c} onClick={() => setQ(c)}
+            {CHIPS.map(c => {
+              const label = locale === 'en' ? c.en : c.es
+              return (
+              <button key={c.es} onClick={() => setQ(label)}
                 className="px-2.5 py-1 rounded-full text-xs font-bold border transition-all hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700"
                 style={{ background:'var(--card)', borderColor:'var(--card-border)', color:'var(--text-secondary)' }}>
-                {c}
+                {label}
               </button>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
