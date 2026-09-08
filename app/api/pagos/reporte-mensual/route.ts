@@ -11,12 +11,19 @@ const supabase = createClient(
 )
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAYS_ES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
 const STATUS_LABELS: Record<string, string> = {
   paid: 'Pagado', pending: 'Pendiente', partial: 'Parcial',
   cancelled: 'Cancelado', refunded: 'Devuelto',
 }
+const STATUS_LABELS_EN: Record<string, string> = {
+  paid: 'Paid', pending: 'Pending', partial: 'Partial',
+  cancelled: 'Cancelled', refunded: 'Refunded',
+}
+const METHOD_EN: Record<string, string> = { efectivo: 'Cash', yape: 'Yape', plin: 'Plin', transferencia: 'Bank Transfer', tarjeta: 'Card', otro: 'Other' }
 const STATUS_COLORS: Record<string, { fill: string; font: string }> = {
   paid:      { fill: 'FFD1FAE5', font: 'FF065F46' },
   pending:   { fill: 'FFFEF3C7', font: 'FF92400E' },
@@ -100,6 +107,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const anio = Number(searchParams.get('anio') || new Date().getFullYear())
   const mes  = Number(searchParams.get('mes')  || new Date().getMonth() + 1) // 1-12
+  const lang = searchParams.get('lang') === 'en' ? 'en' : (req.headers.get('x-locale') === 'en' ? 'en' : 'es')
+  const isEN = lang === 'en'
+  const L = (en: string, es: string) => (isEN ? en : es)
+  const MESL = isEN ? MESES_EN : MESES
+  const DAYS = isEN ? DAYS_EN : DAYS_ES
+  const STATUS_LBL = isEN ? STATUS_LABELS_EN : STATUS_LABELS
+  const dateLoc = isEN ? 'en-US' : 'es-PE'
+  const methodLabel = (m: string) => isEN ? (METHOD_EN[m] || m) : (m.charAt(0).toUpperCase() + m.slice(1))
 
   // mes=0 means full year report
   const isFullYear = mes === 0
@@ -134,14 +149,14 @@ export async function GET(req: NextRequest) {
     const totalAll  = sum(all)
     const tasaCobro = all.length > 0 ? Math.round(paid.length / all.length * 100) : 0
 
-    const mesLabel = isFullYear ? `Año ${anio}` : `${MESES[mes-1]} ${anio}`
-    const emitDate = new Date().toLocaleDateString('es-PE', { day:'2-digit', month:'long', year:'numeric' })
+    const mesLabel = isFullYear ? L(`Year ${anio}`, `Año ${anio}`) : `${MESL[mes-1]} ${anio}`
+    const emitDate = new Date().toLocaleDateString(dateLoc, { day:'2-digit', month:'long', year:'numeric' })
 
     // Group by patient
     const byPatient: Record<string, { name: string; pays: any[]; total: number }> = {}
     all.forEach(p => {
       const id = p.child_id || 'sin'
-      if (!byPatient[id]) byPatient[id] = { name: p.children?.name || 'Sin paciente', pays: [], total: 0 }
+      if (!byPatient[id]) byPatient[id] = { name: p.children?.name || L('No patient','Sin paciente'), pays: [], total: 0 }
       byPatient[id].pays.push(p)
       byPatient[id].total += Number(p.amount)
     })
@@ -150,7 +165,7 @@ export async function GET(req: NextRequest) {
     // Group by concept/service
     const byService: Record<string, { count: number; total: number }> = {}
     paid.forEach(p => {
-      const s = (p.concept || 'Otro').replace(/ \(\d+\/\d+\)$/, '')
+      const s = (p.concept || L('Other','Otro')).replace(/ \(\d+\/\d+\)$/, '')
       if (!byService[s]) byService[s] = { count: 0, total: 0 }
       byService[s].count++
       byService[s].total += Number(p.amount)
@@ -173,7 +188,7 @@ export async function GET(req: NextRequest) {
     // ══════════════════════════════════════════════════════════════════════════
     // HOJA 1 — RESUMEN EJECUTIVO
     // ══════════════════════════════════════════════════════════════════════════
-    const ws1 = wb.addWorksheet('Resumen', { properties: { tabColor: { argb: C.navy } } })
+    const ws1 = wb.addWorksheet(L('Summary','Resumen'), { properties: { tabColor: { argb: C.navy } } })
     ws1.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, margins: { left: 0.5, right: 0.5, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 } }
 
     ws1.columns = [
@@ -194,7 +209,7 @@ export async function GET(req: NextRequest) {
 
     ws1.mergeCells('A2:D2')
     const subBanner = ws1.getCell('A2')
-    subBanner.value = `Reporte Financiero Mensual — ${mesLabel}`
+    subBanner.value = `${L(`Monthly Financial Report`,`Reporte Financiero Mensual`)} — ${mesLabel}`
     subBanner.font  = { name: 'Calibri', size: 12, bold: true, color: { argb: C.white } }
     subBanner.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navyLight } }
     subBanner.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -211,9 +226,9 @@ export async function GET(req: NextRequest) {
 
     // ── KPIs ──
     ws1.mergeCells('A5:D5')
-    sectionTitle(ws1, 5, 'A5:D5', '  INDICADORES CLAVE DEL MES')
+    sectionTitle(ws1, 5, 'A5:D5', L('  KEY MONTHLY INDICATORS','  INDICADORES CLAVE DEL MES'))
 
-    const kpiHeaders = ['Indicador', 'Importe', 'Cantidad', 'Detalle']
+    const kpiHeaders = [L('Indicator','Indicador'), L('Amount','Importe'), L('Count','Cantidad'), L('Detail','Detalle')]
     ws1.getRow(6).values = kpiHeaders
     ws1.getRow(6).eachCell(c => {
       c.font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.white } }
@@ -223,10 +238,10 @@ export async function GET(req: NextRequest) {
     ws1.getRow(6).height = 20
 
     const kpiData = [
-      ['Total Facturado',  totalAll,  all.length,  `${tasaCobro}% tasa de cobro`],
-      ['Cobrado',          totalPaid, paid.length, `${MESES[mes-1]} ${anio}`],
-      ['Pendiente',        totalPend, pend.length, 'Por cobrar'],
-      ['Cancelado',        totalCanc, canc.length, 'No realizadas'],
+      [L('Total Billed','Total Facturado'),  totalAll,  all.length,  `${tasaCobro}% ${L(`collection rate`,`tasa de cobro`)}`],
+      [L('Collected','Cobrado'),          totalPaid, paid.length, `${MESL[mes-1] || ``} ${anio}`],
+      [L('Pending','Pendiente'),        totalPend, pend.length, L('Outstanding','Por cobrar')],
+      [L('Cancelled','Cancelado'),        totalCanc, canc.length, L('Not performed','No realizadas')],
     ]
     const kpiColors = [C.navy, C.green, C.amber, C.red]
     const kpiBgs    = ['FFEFF6FF', C.greenBg, C.amberBg, C.redBg]
@@ -259,9 +274,9 @@ export async function GET(req: NextRequest) {
     // ── Por servicio ──
     const svcRow = 12
     ws1.mergeCells(`A${svcRow}:D${svcRow}`)
-    sectionTitle(ws1, svcRow, `A${svcRow}:D${svcRow}`, '  INGRESOS POR SERVICIO')
+    sectionTitle(ws1, svcRow, `A${svcRow}:D${svcRow}`, L('  INCOME BY SERVICE','  INGRESOS POR SERVICIO'))
 
-    ws1.getRow(svcRow + 1).values = ['Servicio', 'Sesiones', 'Ingreso', '% del Total']
+    ws1.getRow(svcRow + 1).values = [L('Service','Servicio'), L('Sessions','Sesiones'), L('Income','Ingreso'), L('% of Total','% del Total')]
     ws1.getRow(svcRow + 1).eachCell(c => {
       c.font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.white } }
       c.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
@@ -296,9 +311,9 @@ export async function GET(req: NextRequest) {
     // ── Por método ──
     const methodStartRow = svcRow + 2 + Object.keys(byService).length + 2
     ws1.mergeCells(`A${methodStartRow}:D${methodStartRow}`)
-    sectionTitle(ws1, methodStartRow, `A${methodStartRow}:D${methodStartRow}`, '  INGRESOS POR MÉTODO DE PAGO')
+    sectionTitle(ws1, methodStartRow, `A${methodStartRow}:D${methodStartRow}`, L('  INCOME BY PAYMENT METHOD','  INGRESOS POR MÉTODO DE PAGO'))
 
-    ws1.getRow(methodStartRow + 1).values = ['Método', '', 'Ingreso', '% del Total']
+    ws1.getRow(methodStartRow + 1).values = [L('Method','Método'), '', L('Income','Ingreso'), L('% of Total','% del Total')]
     ws1.getRow(methodStartRow + 1).eachCell(c => {
       c.font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.white } }
       c.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
@@ -310,7 +325,7 @@ export async function GET(req: NextRequest) {
       const rn  = methodStartRow + 2 + i
       const r   = ws1.getRow(rn)
       const pct = totalPaid > 0 ? amount / totalPaid : 0
-      const label = method.charAt(0).toUpperCase() + method.slice(1)
+      const label = methodLabel(method)
       r.values  = [label, '', amount, pct]
       r.height  = 18
       const bg  = i % 2 === 0 ? C.white : C.gray1
@@ -331,7 +346,7 @@ export async function GET(req: NextRequest) {
     // ══════════════════════════════════════════════════════════════════════════
     // HOJA 2 — DETALLE DE TRANSACCIONES
     // ══════════════════════════════════════════════════════════════════════════
-    const ws2 = wb.addWorksheet('Transacciones', { properties: { tabColor: { argb: 'FF2563EB' } } })
+    const ws2 = wb.addWorksheet(L('Transactions','Transacciones'), { properties: { tabColor: { argb: 'FF2563EB' } } })
     ws2.pageSetup = { paperSize: 9, orientation: 'landscape', fitToPage: true }
 
     ws2.columns = [
@@ -346,13 +361,13 @@ export async function GET(req: NextRequest) {
 
     ws2.mergeCells('A1:G1')
     const ws2Title = ws2.getCell('A1')
-    ws2Title.value = `${center.nombre} — Transacciones de ${mesLabel}`
+    ws2Title.value = `${center.nombre} — ${L(`Transactions of`,`Transacciones de`)} ${mesLabel}`
     ws2Title.font  = { name: 'Calibri', size: 13, bold: true, color: { argb: C.white } }
     ws2Title.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
     ws2Title.alignment = { horizontal: 'center', vertical: 'middle' }
     ws2.getRow(1).height = 30
 
-    const ws2Headers = ['Fecha', 'Día', 'Paciente', 'Concepto', 'Método', 'Monto (S/)', 'Estado']
+    const ws2Headers = [L('Date','Fecha'), L('Day','Día'), L('Patient','Paciente'), L('Concept','Concepto'), L('Method','Método'), L('Amount (S/)','Monto (S/)'), L('Status','Estado')]
     ws2.getRow(2).values = ws2Headers
     ws2.getRow(2).height = 20
     ws2.getRow(2).eachCell(c => {
@@ -364,14 +379,14 @@ export async function GET(req: NextRequest) {
 
     all.forEach((p, i) => {
       const d   = new Date(p.paid_at || p.created_at)
-      const dateStr = d.toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' })
-      const day = DAYS_ES[d.getDay()]
+      const dateStr = d.toLocaleDateString(dateLoc, { day:'2-digit', month:'2-digit', year:'numeric' })
+      const day = DAYS[d.getDay()]
       const st  = STATUS_COLORS[p.status] || { fill: 'FFF3F4F6', font: 'FF374151' }
       const bg  = i % 2 === 0 ? C.white : C.gray1
       const concept = (p.concept || '—').replace(/ \(\d+\/\d+\)$/, '')
 
       const r   = ws2.getRow(3 + i)
-      r.values  = [dateStr, day, p.children?.name || '—', concept, p.payment_method?.charAt(0).toUpperCase() + p.payment_method?.slice(1) || '—', Number(p.amount), STATUS_LABELS[p.status] || p.status]
+      r.values  = [dateStr, day, p.children?.name || '—', concept, p.payment_method ? methodLabel(p.payment_method) : '—', Number(p.amount), STATUS_LBL[p.status] || p.status]
       r.height  = 17
 
       r.eachCell((c, col) => {
@@ -394,7 +409,7 @@ export async function GET(req: NextRequest) {
     totalsRow.height = 22
     // Set merged cell A and then individual cells F and G
     const tCellA = totalsRow.getCell(1)
-    tCellA.value = `TOTAL — ${all.length} registros`
+    tCellA.value = `TOTAL — ${all.length} ${L(`records`,`registros`)}`
     tCellA.font  = { name: 'Calibri', size: 11, bold: true, color: { argb: C.white } }
     tCellA.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
     tCellA.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -405,7 +420,7 @@ export async function GET(req: NextRequest) {
     tCellF.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
     tCellF.alignment = { horizontal: 'right', vertical: 'middle' }
     const tCellG = totalsRow.getCell(7)
-    tCellG.value = STATUS_LABELS['paid'] + `: S/ ${paid.reduce((a,p)=>a+Number(p.amount),0).toFixed(2)}`
+    tCellG.value = STATUS_LBL['paid'] + `: S/ ${paid.reduce((a,p)=>a+Number(p.amount),0).toFixed(2)}`
     tCellG.font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.white } }
     tCellG.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
     tCellG.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -416,7 +431,7 @@ export async function GET(req: NextRequest) {
     // ══════════════════════════════════════════════════════════════════════════
     // HOJA 3 — RESUMEN POR PACIENTE
     // ══════════════════════════════════════════════════════════════════════════
-    const ws3 = wb.addWorksheet('Por Paciente', { properties: { tabColor: { argb: 'FF059669' } } })
+    const ws3 = wb.addWorksheet(L('By Patient','Por Paciente'), { properties: { tabColor: { argb: 'FF059669' } } })
     ws3.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true }
 
     ws3.columns = [
@@ -429,13 +444,13 @@ export async function GET(req: NextRequest) {
 
     ws3.mergeCells('A1:E1')
     const ws3Title = ws3.getCell('A1')
-    ws3Title.value = `${center.nombre} — Resumen por Paciente · ${mesLabel}`
+    ws3Title.value = `${center.nombre} — ${L(`Summary by Patient`,`Resumen por Paciente`)} · ${mesLabel}`
     ws3Title.font  = { name: 'Calibri', size: 13, bold: true, color: { argb: C.white } }
     ws3Title.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
     ws3Title.alignment = { horizontal: 'center', vertical: 'middle' }
     ws3.getRow(1).height = 30
 
-    ws3.getRow(2).values = ['Paciente', 'Sesiones', 'Cobrado', 'Pendiente', 'Total']
+    ws3.getRow(2).values = [L('Patient','Paciente'), L('Sessions','Sesiones'), L('Collected','Cobrado'), L('Pending','Pendiente'), L('Total','Total')]
     ws3.getRow(2).height = 20
     ws3.getRow(2).eachCell(c => {
       c.font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.white } }
@@ -467,7 +482,7 @@ export async function GET(req: NextRequest) {
 
     // Grand total
     const gt = ws3.getRow(3 + patients.length)
-    gt.values = ['TOTAL GENERAL', all.length, totalPaid, totalPend, totalAll]
+    gt.values = [L('GRAND TOTAL','TOTAL GENERAL'), all.length, totalPaid, totalPend, totalAll]
     gt.height  = 22
     gt.eachCell(c => {
       c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: C.white } }
@@ -482,7 +497,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="reporte_financiero_${MESES[mes-1].toLowerCase()}_${anio}.xlsx"`,
+        'Content-Disposition': `attachment; filename="${L(`financial_report`,`reporte_financiero`)}_${isFullYear ? L('year','anual') : (MESL[mes-1] || String(mes)).toLowerCase()}_${anio}.xlsx"`,
       },
     })
   } catch (e: any) {

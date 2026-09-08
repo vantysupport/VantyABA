@@ -414,7 +414,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                   <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{L('Monthly summary','Resumen mensual')} {anio}</h3>
                   <button
                     onClick={async () => {
-                      const res = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=0`)
+                      const res = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=0&lang=${locale}`)
                       if (!res.ok) { toast.error(t('auto.adminReportesFinancieros.errorGenerandoReporte')); return }
                       const blob = await res.blob()
                       const url  = URL.createObjectURL(blob)
@@ -450,7 +450,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                             {(m.ingresos + m.pendiente) > 0 && (
                               <button
                                 onClick={async () => {
-                                  const res  = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=${i + 1}`)
+                                  const res  = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=${i + 1}&lang=${locale}`)
                                   if (!res.ok) { toast.error(t('auto.adminReportesFinancieros.error')); return }
                                   const blob = await res.blob()
                                   const url  = URL.createObjectURL(blob)
