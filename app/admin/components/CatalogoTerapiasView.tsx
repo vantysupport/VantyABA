@@ -34,11 +34,16 @@ const VACIA: Partial<Terapia> = {
 }
 
 const CATEGORIAS = ['ABA', 'Psicología', 'Lenguaje', 'Ocupacional', 'Aprendizaje', 'Neuropsicología', 'Familia', 'Otro']
-const MODALIDADES: { id: string; label: string; icon: any }[] = [
-  { id: 'presencial', label: 'Presencial', icon: MapPin },
-  { id: 'online',     label: 'Online',     icon: Wifi },
-  { id: 'mixta',      label: 'Mixta',      icon: Layers },
+const MODALIDADES: { id: string; label: string; labelEn: string; icon: any }[] = [
+  { id: 'presencial', label: 'Presencial', labelEn: 'In-person', icon: MapPin },
+  { id: 'online',     label: 'Online',     labelEn: 'Online',    icon: Wifi },
+  { id: 'mixta',      label: 'Mixta',      labelEn: 'Hybrid',    icon: Layers },
 ]
+// Etiqueta de modalidad a mostrar (el valor guardado sigue siendo el id canónico)
+const modLabel = (id: string, locale: string) => {
+  const m = MODALIDADES.find(x => x.id === id)
+  return m ? (locale === 'en' ? m.labelEn : m.label) : id
+}
 
 // Paleta de colores: cada tema → gradiente, accent, banner sólido y badge soft.
 const COLORES: Record<string, { gradient: string; accent: string; accentDark: string; soft: string; softDark: string; nombre: string; emoji: string }> = {
@@ -55,12 +60,17 @@ const COLORES: Record<string, { gradient: string; accent: string; accentDark: st
 }
 
 const colorDe = (key?: string | null) => COLORES[key || 'indigo'] || COLORES.indigo
+const COLOR_NOMBRE_EN: Record<string, string> = {
+  indigo: 'Indigo', purple: 'Purple', pink: 'Pink', rose: 'Coral', amber: 'Amber',
+  emerald: 'Emerald', cyan: 'Cyan', blue: 'Blue', orange: 'Orange', slate: 'Gray',
+}
 
 // Helper para usar CSS vars que sirven en oscuro y claro.
 // Tailwind no nos da var() para `from-`/`to-` así que aplicamos gradiente vía style.
 
 export default function CatalogoTerapiasView() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [terapias, setTerapias] = useState<Terapia[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Terapia> | null>(null)
@@ -158,12 +168,12 @@ export default function CatalogoTerapiasView() {
               <h1 className="text-xl md:text-2xl font-bold tracking-tight">{t("admin.catalogoTerapias")}</h1>
             </div>
             <p className="text-white/90 text-sm leading-relaxed max-w-2xl">
-              Las terapias que verán los padres tras la evaluación inicial. La IA usará estos datos para recomendar las más adecuadas según cada caso.
+              {L('The therapies parents will see after the initial evaluation. AI uses this data to recommend the most suitable ones for each case.','Las terapias que verán los padres tras la evaluación inicial. La IA usará estos datos para recomendar las más adecuadas según cada caso.')}
             </p>
           </div>
           <button onClick={() => setEditing({ ...VACIA })}
             className="px-4 py-2.5 rounded-xl bg-white text-sky-700 font-bold text-sm flex items-center gap-2 shadow-lg hover:scale-105 active:scale-100 transition shrink-0">
-            <Plus size={16} /> Nueva terapia
+            <Plus size={16} /> {L('New therapy','Nueva terapia')}
           </button>
         </div>
       </div>
@@ -190,7 +200,7 @@ export default function CatalogoTerapiasView() {
           ))}
         </select>
         <div className="text-xs font-bold px-3 py-2.5 rounded-xl" style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)' }}>
-          {terapiasFiltradas.length} {terapiasFiltradas.length === 1 ? 'terapia' : 'terapias'}
+          {terapiasFiltradas.length} {terapiasFiltradas.length === 1 ? L('therapy','terapia') : L('therapies','terapias')}
         </div>
       </div>
 
@@ -199,10 +209,10 @@ export default function CatalogoTerapiasView() {
         <div className="rounded-2xl p-12 text-center border-2 border-dashed" style={{ borderColor: 'var(--card-border)' }}>
           <Sparkles size={36} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
           <p className="font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-            {terapias.length === 0 ? 'Aún no hay terapias en el catálogo' : 'Sin resultados con esos filtros'}
+            {terapias.length === 0 ? L('No therapies in the catalog yet','Aún no hay terapias en el catálogo') : L('No results with those filters','Sin resultados con esos filtros')}
           </p>
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-            {terapias.length === 0 ? 'Agrega la primera para que los padres la vean.' : 'Ajusta la búsqueda o limpia los filtros.'}
+            {terapias.length === 0 ? L('Add the first one so parents can see it.','Agrega la primera para que los padres la vean.') : L('Adjust the search or clear the filters.','Ajusta la búsqueda o limpia los filtros.')}
           </p>
         </div>
       ) : (
@@ -241,7 +251,8 @@ export default function CatalogoTerapiasView() {
 function TerapiaCard({
   t, onEdit, onDelete, onToggle,
 }: { t: Terapia; onEdit: () => void; onDelete: () => void; onToggle: () => void }) {
-  const { t: tr } = useI18n()
+  const { t: tr, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const c = colorDe(t.color_tema)
   const ModIcon = MODALIDADES.find(m => m.id === t.modalidad)?.icon || MapPin
 
@@ -272,7 +283,7 @@ function TerapiaCard({
           )}
           {!t.activo && (
             <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-slate-900/80 text-white">
-              Oculto
+              {L('Hidden','Oculto')}
             </span>
           )}
         </div>
@@ -280,7 +291,7 @@ function TerapiaCard({
         {/* Acciones flotantes */}
         <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
           <button onClick={onToggle}
-            title={t.activo ? 'Ocultar' : 'Mostrar'}
+            title={t.activo ? L('Hide','Ocultar') : L('Show','Mostrar')}
             className="w-8 h-8 rounded-lg backdrop-blur bg-white/90 dark:bg-slate-800/90 flex items-center justify-center hover:scale-110 transition">
             {t.activo ? <Eye size={14} className="text-green-600" /> : <EyeOff size={14} className="text-slate-500" />}
           </button>
@@ -321,7 +332,7 @@ function TerapiaCard({
             }}
           >
             <p className="text-[10px] font-bold mb-1 flex items-center gap-1" style={{ color: c.accent }}>
-              <Sparkles size={11} /> ¿Por qué llevarla?
+              <Sparkles size={11} /> {L('Why choose it?','¿Por qué llevarla?')}
             </p>
             <p>{t.por_que}</p>
           </div>
@@ -339,7 +350,7 @@ function TerapiaCard({
           <div className="flex items-center gap-1.5 rounded-lg p-2"
             style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)' }}>
             <ModIcon size={12} className="shrink-0" style={{ color: c.accent }} />
-            <span className="capitalize">{t.modalidad}</span>
+            <span className="capitalize">{modLabel(t.modalidad, locale)}</span>
           </div>
         </div>
 
@@ -347,7 +358,7 @@ function TerapiaCard({
         <div className="flex items-end justify-between pt-3 border-t" style={{ borderColor: 'var(--card-border)' }}>
           <div>
             <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-              Inversión
+              {L('Investment','Inversión')}
             </p>
             {t.precio != null ? (
               <div className="flex items-baseline gap-1">
@@ -372,7 +383,8 @@ function TerapiaCard({
 function EditorModal({
   editing, setEditing, saving, uploading, onSubirImagen, onGuardar, onClose,
 }: any) {
-  const { t: tr } = useI18n()
+  const { t: tr, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const c = colorDe(editing?.color_tema)
 
   return (
@@ -387,8 +399,8 @@ function EditorModal({
               <Sparkles size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-lg">{editing.id ? 'Editar terapia' : 'Nueva terapia'}</h3>
-              <p className="text-xs opacity-90">{c.nombre}</p>
+              <h3 className="font-bold text-lg">{editing.id ? L('Edit therapy','Editar terapia') : L('New therapy','Nueva terapia')}</h3>
+              <p className="text-xs opacity-90">{locale === 'en' ? (COLOR_NOMBRE_EN[editing?.color_tema || 'indigo'] || c.nombre) : c.nombre}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
@@ -401,7 +413,7 @@ function EditorModal({
           {/* PALETA DE COLORES */}
           <div>
             <label className="text-xs font-bold block mb-2 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-              <Palette size={12} /> Color de la tarjeta
+              <Palette size={12} /> {L('Card color','Color de la tarjeta')}
             </label>
             <div className="flex gap-2 flex-wrap">
               {Object.entries(COLORES).map(([key, col]) => (
@@ -419,14 +431,14 @@ function EditorModal({
           </div>
 
           {/* NOMBRE */}
-          <Field label="Nombre *">
+          <Field label={L('Name *','Nombre *')}>
             <input value={editing.nombre || ''} onChange={e => setEditing({ ...editing, nombre: e.target.value })}
               className="w-full px-3 py-2.5 rounded-lg border outline-none text-sm focus:border-sky-500"
               style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
           </Field>
 
           {/* IMAGEN */}
-          <Field label="Imagen">
+          <Field label={L('Image','Imagen')}>
             <div className="flex gap-3 items-start">
               {editing.imagen_url ? (
                 <div className="relative">
@@ -449,12 +461,12 @@ function EditorModal({
                   style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
                 <label className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-bold cursor-pointer bg-gradient-to-r ${c.gradient}`}>
                   {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                  {uploading ? 'Subiendo…' : 'Subir imagen'}
+                  {uploading ? L('Uploading…','Subiendo…') : L('Upload image','Subir imagen')}
                   <input type="file" accept="image/*" className="hidden"
                     onChange={e => e.target.files?.[0] && onSubirImagen(e.target.files[0])} />
                 </label>
                 <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
-                  Recomendado: imagen cuadrada o paisaje, mínimo 600×400px.
+                  {L('Recommended: square or landscape image, at least 600×400px.','Recomendado: imagen cuadrada o paisaje, mínimo 600×400px.')}
                 </p>
               </div>
             </div>
@@ -462,7 +474,7 @@ function EditorModal({
 
           {/* CATEGORÍA + MODALIDAD */}
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Categoría">
+            <Field label={L('Category','Categoría')}>
               <input
                 type="text"
                 value={editing.categoria || ''}
@@ -471,7 +483,7 @@ function EditorModal({
                 className="w-full px-3 py-2.5 rounded-lg border outline-none text-sm focus:border-sky-500"
                 style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
             </Field>
-            <Field label="Modalidad">
+            <Field label={L('Modality','Modalidad')}>
               <div className="grid grid-cols-3 gap-1.5">
                 {MODALIDADES.map(m => {
                   const active = editing.modalidad === m.id
@@ -481,7 +493,7 @@ function EditorModal({
                         active ? `text-white bg-gradient-to-r ${c.gradient} border-transparent` : ''
                       }`}
                       style={active ? {} : { background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-                      <m.icon size={12} /> {m.label}
+                      <m.icon size={12} /> {locale === 'en' ? m.labelEn : m.label}
                     </button>
                   )
                 })}
@@ -491,7 +503,7 @@ function EditorModal({
 
           {/* PRECIO + DURACIÓN */}
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Precio (Soles)">
+            <Field label={L('Price (Soles)','Precio (Soles)')}>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold pointer-events-none" style={{ color: 'var(--text-muted)' }}>S/.</span>
                 <input type="number" step="0.01" value={editing.precio ?? ''}
@@ -501,7 +513,7 @@ function EditorModal({
                   style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
               </div>
             </Field>
-            <Field label="Duración">
+            <Field label={L('Duration','Duración')}>
               <input value={editing.duracion || ''} onChange={e => setEditing({ ...editing, duracion: e.target.value })}
                 placeholder={tr("admin.phSesiones")}
                 className="w-full px-3 py-2.5 rounded-lg border outline-none text-sm focus:border-sky-500"
@@ -510,7 +522,7 @@ function EditorModal({
           </div>
 
           {/* DESCRIPCIÓN */}
-          <Field label="Descripción">
+          <Field label={L('Description','Descripción')}>
             <textarea value={editing.descripcion || ''} onChange={e => setEditing({ ...editing, descripcion: e.target.value })}
               rows={3} placeholder={tr("admin.phQueHace")}
               className="w-full px-3 py-2.5 rounded-lg border outline-none text-sm resize-none focus:border-sky-500"
@@ -519,8 +531,8 @@ function EditorModal({
 
           {/* POR QUÉ */}
           <Field
-            label="¿Por qué llevarla?"
-            hint="✨ Este texto lo usa la IA para decidir cuándo recomendar esta terapia. Sé específico."
+            label={L('Why choose it?','¿Por qué llevarla?')}
+            hint={L('✨ AI uses this text to decide when to recommend this therapy. Be specific.','✨ Este texto lo usa la IA para decidir cuándo recomendar esta terapia. Sé específico.')}
           >
             <textarea value={editing.por_que || ''} onChange={e => setEditing({ ...editing, por_que: e.target.value })}
               rows={3} placeholder={tr("admin.phBeneficios")}
@@ -531,13 +543,13 @@ function EditorModal({
           {/* PREVIEW */}
           <div>
             <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
-              Vista previa
+              {L('Preview','Vista previa')}
             </p>
             <div className="max-w-sm">
               <TerapiaCard
                 t={{
                   id: 'preview',
-                  nombre: editing.nombre || 'Nombre de la terapia',
+                  nombre: editing.nombre || L('Therapy name','Nombre de la terapia'),
                   descripcion: editing.descripcion || null,
                   por_que: editing.por_que || null,
                   imagen_url: editing.imagen_url || null,
@@ -564,11 +576,11 @@ function EditorModal({
           <button onClick={onGuardar} disabled={saving}
             className={`flex-1 px-4 py-3 rounded-xl text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50 bg-gradient-to-r ${c.gradient} shadow-lg`}>
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            Guardar terapia
+            {L('Save therapy','Guardar terapia')}
           </button>
           <button onClick={onClose} className="px-5 py-3 rounded-xl border-2 font-bold"
             style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-            Cancelar
+            {L('Cancel','Cancelar')}
           </button>
         </div>
       </div>
