@@ -247,7 +247,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
               className="px-3 py-2 rounded-xl text-xs font-bold border-2 outline-none"
               style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
               <option value="">{t("admin.todoAnio")}</option>
-              {MESES_L.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              {MESL.map((m, i) => <option key={i} value={i}>{m}</option>)}
             </select>
             <button onClick={exportCSV}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all hover:opacity-80"
