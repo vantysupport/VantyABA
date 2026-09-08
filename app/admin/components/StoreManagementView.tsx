@@ -38,13 +38,17 @@ const ESTADO_CFG: Record<string, any> = {
 const CATEGORIAS = ['material', 'guia', 'juego', 'libro', 'otro']
 const ESTADOS_FLUJO = ['pendiente', 'confirmado', 'listo', 'entregado', 'cancelado']
 const CAT_EMOJI: Record<string,string> = { material:'🧩', guia:'📋', juego:'🎮', libro:'📚', otro:'🎁' }
+const CAT_LABEL_EN: Record<string,string> = { material:'Material', guia:'Guide', juego:'Game', libro:'Book', otro:'Other' }
+// Etiqueta de categoría a mostrar (el valor guardado sigue siendo el canónico ES)
+const catLabel = (cat: string, locale: string) => (locale === 'en' ? (CAT_LABEL_EN[cat] || cat) : cat)
 const EMPTY_FORM = {
   nombre: '', descripcion: '', precio_soles: '', stock: '',
   categoria: 'material', tipo: 'fisico' as 'fisico'|'digital', activo: true, destacado: false,
 }
 
 function ProductModal({ product, onClose, onSaved }: { product: Product|null; onClose:()=>void; onSaved:()=>void }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const toast = useToast(); const { isDark } = useTheme()
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<any>(product ? {
@@ -71,10 +75,10 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
       fd.append('bucket', 'store-images')
       const res = await fetch('/api/admin/upload-imagen', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok || !data.url) { toast.error(data.error || 'Error subiendo imagen'); return null }
+      if (!res.ok || !data.url) { toast.error(data.error || L('Error uploading image','Error subiendo imagen')); return null }
       return data.url as string
     } catch (e: any) {
-      toast.error('Error subiendo imagen: ' + e.message)
+      toast.error(L('Error uploading image: ','Error subiendo imagen: ') + e.message)
       return null
     }
   }
@@ -115,8 +119,8 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
               <ShoppingBag size={18} className="text-white" />
             </div>
             <div>
-              <h2 className={`text-lg font-bold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{product ? 'Editar producto' : 'Nuevo producto'}</h2>
-              <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{product ? `ID: ${product.id.slice(0,8)}…` : 'Completa los datos del artículo'}</p>
+              <h2 className={`text-lg font-bold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{product ? L('Edit product','Editar producto') : L('New product','Nuevo producto')}</h2>
+              <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{product ? `ID: ${product.id.slice(0,8)}…` : L('Fill in the item details','Completa los datos del artículo')}</p>
             </div>
           </div>
           <button onClick={onClose} className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}><X size={18}/></button>
@@ -170,7 +174,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
           <div>
             <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.tipoProd")}</label>
             <div className="grid grid-cols-2 gap-3">
-              {([['fisico','📦','Físico','Se retira en el centro'],['digital','📄','Digital','PDF o archivo descargable']] as const).map(([val,emoji,lbl,desc]) => (
+              {([['fisico','📦',L('Physical','Físico'),L('Picked up at the center','Se retira en el centro')],['digital','📄','Digital',L('PDF or downloadable file','PDF o archivo descargable')]] as const).map(([val,emoji,lbl,desc]) => (
                 <button key={val} type="button" onClick={() => setForm((f:any) => ({ ...f, tipo: val }))}
                   className={`p-4 rounded-2xl border-2 text-left transition-all ${form.tipo === val
                     ? 'border-sky-500 bg-sky-50 shadow-md shadow-sky-100'
@@ -197,7 +201,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
               <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{form.tipo==='digital' ? 'Stock (∞)' : 'Stock *'}</label>
               <input type="number" min="0" value={form.tipo==='digital' ? '' : form.stock}
                 onChange={e => setForm((f:any) => ({ ...f, stock: e.target.value }))}
-                disabled={form.tipo==='digital'} placeholder={form.tipo==='digital' ? '∞ Ilimitado' : '0'}
+                disabled={form.tipo==='digital'} placeholder={form.tipo==='digital' ? L('∞ Unlimited','∞ Ilimitado') : '0'}
                 className={inp + (form.tipo==='digital' ? ' opacity-50 cursor-not-allowed' : '')} />
             </div>
           </div>
@@ -210,7 +214,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 text-sm font-bold capitalize transition-all ${form.categoria===cat
                     ? 'border-sky-500 bg-sky-50 text-sky-700'
                     : isDark ? 'border-[#30363d] text-slate-400 hover:border-[#4a5568]' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}>
-                  {CAT_EMOJI[cat]} {cat}
+                  {CAT_EMOJI[cat]} {catLabel(cat, locale)}
                 </button>
               ))}
             </div>
@@ -218,8 +222,8 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { key:'activo', label:'Visible en tienda', desc:'Los padres pueden verlo', icon:'👁️', ac:'emerald' },
-              { key:'destacado', label:'Destacado', desc:'Aparece primero con ⭐', icon:'⭐', ac:'amber' },
+              { key:'activo', label:L('Visible in store','Visible en tienda'), desc:L('Parents can see it','Los padres pueden verlo'), icon:'👁️', ac:'emerald' },
+              { key:'destacado', label:L('Featured','Destacado'), desc:L('Appears first with ⭐','Aparece primero con ⭐'), icon:'⭐', ac:'amber' },
             ].map(({ key, label, desc, icon, ac }) => {
               const on = form[key]
               return (
@@ -244,7 +248,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
           <button onClick={handleSave} disabled={saving}
             className="flex-1 py-3.5 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-sky-200">
             {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
-            {saving ? 'Guardando…' : product ? 'Guardar cambios' : 'Crear producto'}
+            {saving ? L('Saving…','Guardando…') : product ? L('Save changes','Guardar cambios') : L('Create product','Crear producto')}
           </button>
         </div>
       </div>
@@ -253,7 +257,8 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
 }
 
 function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>void; onToggle:()=>void|Promise<void>; onDelete:()=>void|Promise<void>; key?:any }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const lowStock = p.tipo==='fisico' && p.stock<=3
 
@@ -282,7 +287,7 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
         {lowStock && (
           <div className="absolute top-3 right-3">
             <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm ${p.stock===0 ? 'bg-red-600 text-white' : 'bg-orange-500 text-white'}`}>
-              {p.stock===0 ? '❌ Sin stock' : `⚠️ Solo ${p.stock}`}
+              {p.stock===0 ? L('❌ Out of stock','❌ Sin stock') : `⚠️ ${L(`Only ${p.stock}`,`Solo ${p.stock}`)}`}
             </span>
           </div>
         )}
@@ -297,10 +302,10 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <h3 className={`font-bold text-sm leading-snug flex-1 line-clamp-2 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{p.nombre}</h3>
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg capitalize shrink-0 ${isDark ? 'bg-[#21262d] text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-            {CAT_EMOJI[p.categoria]} {p.categoria}
+            {CAT_EMOJI[p.categoria]} {catLabel(p.categoria, locale)}
           </span>
         </div>
-        <p className={`text-xs leading-relaxed line-clamp-2 mb-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{p.descripcion||'Sin descripción'}</p>
+        <p className={`text-xs leading-relaxed line-clamp-2 mb-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{p.descripcion||L('No description','Sin descripción')}</p>
 
         <div className={`flex items-center justify-between mb-4 pb-4 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
           <span className={`text-2xl font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>S/ {Number(p.precio_soles).toFixed(2)}</span>
@@ -309,7 +314,7 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
             p.stock===0 ? 'text-red-500' : p.stock<=3 ? 'text-orange-500' :
             isDark ? 'text-emerald-400' : 'text-emerald-600'
           }`}>
-            {p.tipo==='digital' ? '∞ Ilimitado' : p.stock===0 ? 'Sin stock' : `${p.stock} disponibles`}
+            {p.tipo==='digital' ? L('∞ Unlimited','∞ Ilimitado') : p.stock===0 ? L('Out of stock','Sin stock') : `${p.stock} ${L(`available`,`disponibles`)}`}
           </p>
         </div>
 
@@ -336,6 +341,7 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
 
 export default function StoreManagementView() {
   const toast = useToast(); const { isDark } = useTheme(); const { locale, t } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [tab, setTab] = useState<'productos'|'pedidos'>('productos')
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -365,7 +371,7 @@ export default function StoreManagementView() {
   const toggleActivo = async (p: Product) => {
     await supabase.from('store_products').update({ activo: !p.activo }).eq('id', p.id)
     setProducts(prev => prev.map(x => x.id===p.id ? { ...x, activo: !x.activo } : x))
-    toast.success(p.activo ? 'Producto ocultado' : 'Producto activado')
+    toast.success(p.activo ? L('Product hidden','Producto ocultado') : L('Product activated','Producto activado'))
   }
   const deleteProduct = async (p: Product) => {
     if (!confirm(t('auto.storeManagementView.eliminar', { v1: String(p.nombre) }))) return
@@ -377,11 +383,11 @@ export default function StoreManagementView() {
     setUpdatingOrder(orderId)
     await supabase.from('store_orders').update({ estado, updated_at: new Date().toISOString() }).eq('id', orderId)
     setOrders(prev => prev.map(o => o.id===orderId ? { ...o, estado } : o))
-    toast.success(`Pedido: ${ESTADO_CFG[estado]?.label}`); setUpdatingOrder(null)
+    toast.success(`${L(`Order`,`Pedido`)}: ${t(`pedido.` + estado)}`); setUpdatingOrder(null)
   }
   const updateAdminNota = async (orderId: string, nota: string) => {
     await supabase.from('store_orders').update({ admin_notas: nota }).eq('id', orderId)
-    toast.success('Nota guardada')
+    toast.success(L('Note saved','Nota guardada'))
   }
 
   const stats = {
@@ -421,7 +427,7 @@ export default function StoreManagementView() {
           </div>
           <button onClick={() => { setEditProduct(null); setShowModal(true) }}
             className="flex items-center gap-2 bg-white text-sky-700 font-bold px-5 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 text-sm active:scale-95">
-            <Plus size={15}/> Nuevo producto
+            <Plus size={15}/> {L('New product','Nuevo producto')}
           </button>
         </div>
       </div>
@@ -429,11 +435,11 @@ export default function StoreManagementView() {
       {/* STATS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
-          { label:'Productos',  value: stats.total,    sub:`${stats.activos} activos`,  icon: Boxes,         grad:'from-sky-500 to-sky-600',     txt: isDark?'text-sky-400':'text-sky-600' },
-          { label:'Activos',    value: stats.activos,  sub:'Visibles para padres',      icon: BadgeCheck,    grad:'from-emerald-500 to-emerald-600',txt: isDark?'text-emerald-400':'text-emerald-600' },
-          { label:'Stock bajo', value: stats.stockBajo,sub:'≤ 3 unidades',              icon: AlertTriangle, grad: stats.stockBajo>0?'from-orange-500 to-orange-600':'from-slate-400 to-slate-500', txt: stats.stockBajo>0?(isDark?'text-orange-400':'text-orange-600'):(isDark?'text-slate-500':'text-slate-400') },
-          { label:'Pendientes', value: stats.pendientes,sub:'Por atender',              icon: ShoppingCart,  grad: stats.pendientes>0?'from-amber-500 to-amber-600':'from-slate-400 to-slate-500',  txt: stats.pendientes>0?(isDark?'text-amber-400':'text-amber-600'):(isDark?'text-slate-500':'text-slate-400') },
-          { label:'Ingresos',   value:`S/ ${stats.revenue.toFixed(2)}`, sub:'Pedidos completados', icon:TrendingUp,grad:'from-sky-500 to-sky-600', txt:isDark?'text-sky-400':'text-sky-600' },
+          { label:L('Products','Productos'),  value: stats.total,    sub:`${stats.activos} ${L(`active`,`activos`)}`,  icon: Boxes,         grad:'from-sky-500 to-sky-600',     txt: isDark?'text-sky-400':'text-sky-600' },
+          { label:L('Active','Activos'),    value: stats.activos,  sub:L('Visible to parents','Visibles para padres'),      icon: BadgeCheck,    grad:'from-emerald-500 to-emerald-600',txt: isDark?'text-emerald-400':'text-emerald-600' },
+          { label:L('Low stock','Stock bajo'), value: stats.stockBajo,sub:L('≤ 3 units','≤ 3 unidades'),              icon: AlertTriangle, grad: stats.stockBajo>0?'from-orange-500 to-orange-600':'from-slate-400 to-slate-500', txt: stats.stockBajo>0?(isDark?'text-orange-400':'text-orange-600'):(isDark?'text-slate-500':'text-slate-400') },
+          { label:L('Pending','Pendientes'), value: stats.pendientes,sub:L('To attend','Por atender'),              icon: ShoppingCart,  grad: stats.pendientes>0?'from-amber-500 to-amber-600':'from-slate-400 to-slate-500',  txt: stats.pendientes>0?(isDark?'text-amber-400':'text-amber-600'):(isDark?'text-slate-500':'text-slate-400') },
+          { label:L('Revenue','Ingresos'),   value:`S/ ${stats.revenue.toFixed(2)}`, sub:L('Completed orders','Pedidos completados'), icon:TrendingUp,grad:'from-sky-500 to-sky-600', txt:isDark?'text-sky-400':'text-sky-600' },
         ].map(({ label, value, icon: Icon, grad, txt, sub }) => (
           <div key={label} className={`rounded-2xl p-4 border transition-all hover:shadow-lg hover:-translate-y-0.5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80 shadow-sm'}`}>
             <div className={`w-10 h-10 rounded-xl mb-3 flex items-center justify-center bg-gradient-to-br ${grad} shadow-md`}>
@@ -449,8 +455,8 @@ export default function StoreManagementView() {
       {/* TABS */}
       <div className={`flex gap-1 p-1 rounded-2xl w-fit ${isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>
         {[
-          { id:'productos', label:'Productos', count:products.length, icon:Boxes },
-          { id:'pedidos',   label:'Pedidos',   count:orders.length,  icon:ShoppingCart, badge:stats.pendientes },
+          { id:'productos', label:L('Products','Productos'), count:products.length, icon:Boxes },
+          { id:'pedidos',   label:L('Orders','Pedidos'),   count:orders.length,  icon:ShoppingCart, badge:stats.pendientes },
         ].map(({ id, label, count, icon: Icon, badge }: any) => (
           <button key={id} onClick={() => setTab(id)}
             className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tab===id
@@ -474,14 +480,14 @@ export default function StoreManagementView() {
                 className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium outline-none transition-all border-2 ${isDark ? 'bg-[#0d1117] border-[#30363d] text-slate-300 placeholder-slate-600 focus:border-sky-500' : 'bg-slate-50 border-transparent text-slate-700 focus:border-sky-400 focus:bg-white'}`}/>
             </div>
             <div className={`flex items-center gap-1 p-1 rounded-xl ${isDark ? 'bg-[#0d1117]' : 'bg-slate-100'}`}>
-              {[['todos','Todos'],['fisico','📦 Físicos'],['digital','📄 Digitales']].map(([f,lbl]) => (
+              {[['todos',L('All','Todos')],['fisico','📦 '+L('Physical','Físicos')],['digital','📄 '+L('Digital','Digitales')]].map(([f,lbl]) => (
                 <button key={f} onClick={() => setFilterTipo(f)}
                   className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${filterTipo===f ? 'bg-sky-600 text-white shadow-sm' : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
                   {lbl}
                 </button>
               ))}
             </div>
-            <p className={`text-xs font-medium ml-auto ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{filteredProducts.length} resultado(s)</p>
+            <p className={`text-xs font-medium ml-auto ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{filteredProducts.length} {L('result(s)','resultado(s)')}</p>
           </div>
 
           {filteredProducts.length===0 ? (
@@ -493,7 +499,7 @@ export default function StoreManagementView() {
               </div>
               <button onClick={() => { setEditProduct(null); setShowModal(true) }}
                 className="flex items-center gap-2 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold px-7 py-3.5 rounded-xl text-sm shadow-lg shadow-sky-200 transition-all hover:-translate-y-0.5 active:scale-95">
-                <Plus size={16}/> Crear primer producto
+                <Plus size={16}/> {L('Create first product','Crear primer producto')}
               </button>
             </div>
           ) : (
@@ -552,13 +558,13 @@ export default function StoreManagementView() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          <p className={`font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{order.parent_name||'Padre/Madre'}</p>
+                          <p className={`font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{order.parent_name||L('Parent','Padre/Madre')}</p>
                           <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${cfg.bg} ${cfg.text} ${cfg.border}`}>{t('pedido.' + order.estado)}</span>
                         </div>
                         <div className={`flex items-center gap-3 text-[11px] flex-wrap font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                           {order.parent_phone && <span className="flex items-center gap-1"><Phone size={10}/>{order.parent_phone}</span>}
                           <span>{new Date(order.created_at).toLocaleDateString(toBCP47(locale),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
-                          <span>{order.store_order_items?.length||0} artículo(s)</span>
+                          <span>{order.store_order_items?.length||0} {L('item(s)','artículo(s)')}</span>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
@@ -617,7 +623,7 @@ export default function StoreManagementView() {
                                     ? `${c.bg} ${c.text} ${c.border} ring-2 ${c.ring} ring-offset-1`
                                     : isDark ? 'bg-[#161b22] text-slate-400 border-[#30363d] hover:border-[#4a5568]' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
                                   {updatingOrder===order.id ? <Loader2 size={12} className="animate-spin"/> : <span className={`w-2 h-2 rounded-full ${c.dot}`}/>}
-                                  {c.label} {isActive && '✓'}
+                                  {t('pedido.' + e)} {isActive && '✓'}
                                 </button>
                               )
                             })}
@@ -628,7 +634,7 @@ export default function StoreManagementView() {
                           <a href={`https://wa.me/51${order.parent_phone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hola! Su pedido está ${ESTADO_CFG[order.estado]?.label?.toLowerCase()}. Total: S/ ${Number(order.total_soles).toFixed(2)} — Neuropsicología y Terapias SANTI`)}`}
                             target="_blank" rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-green-200 hover:-translate-y-0.5 active:scale-95">
-                            <Phone size={15}/> Contactar por WhatsApp
+                            <Phone size={15}/> {L('Contact via WhatsApp','Contactar por WhatsApp')}
                           </a>
                         )}
                       </div>
