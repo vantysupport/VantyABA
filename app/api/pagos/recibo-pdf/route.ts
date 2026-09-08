@@ -12,12 +12,12 @@ const supabase = createClient(
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function padRecibo(n: number) { return String(n).padStart(4, '0') }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
+function fmtDate(iso: string, lang: string = 'es') {
+  return new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-function fmtCurrency(n: number) {
-  return `S/\u00a0${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function fmtCurrency(n: number, lang: string = 'es') {
+  return `S/\u00a0${n.toLocaleString(lang === 'en' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 // ── Fetch center config ───────────────────────────────────────────────────────
@@ -45,8 +45,13 @@ async function getCenterInfo() {
 // ── PDF generation (pure JS, no jsPDF import needed server-side) ──────────────
 // We generate an HTML template and return it as a self-printing page.
 // The client will open this in a new tab and the browser handles PDF via print.
-function generateReceiptHTML(payment: any, center: any, child: any, parentProfile: any, reciboNum: string) {
-  const statusLabels: Record<string, string> = {
+function generateReceiptHTML(payment: any, center: any, child: any, parentProfile: any, reciboNum: string, lang: string = 'es') {
+  const isEN = lang === 'en'
+  const L = (en: string, es: string) => (isEN ? en : es)
+  const statusLabels: Record<string, string> = isEN ? {
+    paid: 'PAID', pending: 'PENDING', partial: 'PARTIAL',
+    cancelled: 'CANCELLED', refunded: 'REFUNDED',
+  } : {
     paid: 'PAGADO', pending: 'PENDIENTE', partial: 'PARCIAL',
     cancelled: 'CANCELADO', refunded: 'DEVUELTO',
   }
@@ -63,10 +68,13 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
   const statusLbl = statusLabels[payment.status] || payment.status.toUpperCase()
   const statusClr = statusColors[payment.status] || '#374151'
   const statusBgC = statusBg[payment.status]     || '#f3f4f6'
-  const paidDate  = payment.paid_at ? fmtDate(payment.paid_at) : fmtDate(payment.created_at)
-  const emitDate  = fmtDate(payment.created_at)
+  const paidDate  = payment.paid_at ? fmtDate(payment.paid_at, lang) : fmtDate(payment.created_at, lang)
+  const emitDate  = fmtDate(payment.created_at, lang)
 
-  const methodIcon: Record<string, string> = {
+  const methodIcon: Record<string, string> = isEN ? {
+    yape: 'Yape', plin: 'Plin', efectivo: 'Cash',
+    transferencia: 'Bank Transfer', tarjeta: 'Card', otro: 'Other',
+  } : {
     yape: 'Yape', plin: 'Plin', efectivo: 'Efectivo',
     transferencia: 'Transferencia Bancaria', tarjeta: 'Tarjeta', otro: 'Otro',
   }
@@ -77,11 +85,11 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
     : null
 
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Recibo ${reciboNum}</title>
+  <title>${L('Receipt','Recibo')} ${reciboNum}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Segoe UI',Helvetica,Arial,sans-serif;background:#eef2f7;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px}
@@ -184,55 +192,55 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
           </div>
           <div class="company-text">
             <h1>${center.nombre}</h1>
-            <p>Centro de Terapias ABA</p>
+            <p>${L('ABA Therapy Center','Centro de Terapias ABA')}</p>
             <div class="company-meta">
               ${center.ruc ? `<span class="ruc">RUC: ${center.ruc}</span>` : ''}
               ${center.direccion ? `<span>${center.direccion}</span>` : ''}
-              ${center.telefono ? `<span>Tel: ${center.telefono}</span>` : ''}
+              ${center.telefono ? `<span>${L('Phone','Tel')}: ${center.telefono}</span>` : ''}
               ${center.email ? `<span>${center.email}</span>` : ''}
             </div>
           </div>
         </div>
         <div class="recibo-info">
-          <p class="tipo">Recibo de Pago</p>
+          <p class="tipo">${L('Payment Receipt','Recibo de Pago')}</p>
           <p class="num">#${reciboNum}</p>
-          <p class="emitido">Emitido: ${emitDate}</p>
+          <p class="emitido">${L('Issued','Emitido')}: ${emitDate}</p>
         </div>
       </div>
 
       <!-- ── STATUS ─────────────────────────────── -->
       <div class="stripe" style="background:${statusBgC}30">
         <span class="badge" style="background:${statusBgC};color:${statusClr}">${statusLbl}</span>
-        <span class="stripe-right">Fecha de pago: <strong>${paidDate}</strong></span>
+        <span class="stripe-right">${L('Payment date','Fecha de pago')}: <strong>${paidDate}</strong></span>
       </div>
 
       <!-- ── BODY ──────────────────────────────── -->
       <div class="body">
 
         <!-- DATOS CLIENTE -->
-        <p class="stitle">Datos del cliente</p>
+        <p class="stitle">${L('Client details','Datos del cliente')}</p>
         <div class="igrid">
           <div class="iitem">
-            <label>Paciente</label>
+            <label>${L('Patient','Paciente')}</label>
             <p>${child?.name || '—'}</p>
           </div>
           <div class="iitem">
-            <label>Responsable / Tutor</label>
+            <label>${L('Guardian / Tutor','Responsable / Tutor')}</label>
             <p>${parentProfile?.full_name || '—'}</p>
           </div>
-          ${parentProfile?.phone ? `<div class="iitem"><label>Teléfono</label><p>${parentProfile.phone}</p></div>` : ''}
-          ${parentProfile?.email ? `<div class="iitem"><label>Correo</label><p class="muted">${parentProfile.email}</p></div>` : ''}
+          ${parentProfile?.phone ? `<div class="iitem"><label>${L('Phone','Teléfono')}</label><p>${parentProfile.phone}</p></div>` : ''}
+          ${parentProfile?.email ? `<div class="iitem"><label>${L('Email','Correo')}</label><p class="muted">${parentProfile.email}</p></div>` : ''}
         </div>
 
         <!-- SERVICIOS -->
-        <p class="stitle">Detalle de servicios</p>
+        <p class="stitle">${L('Service details','Detalle de servicios')}</p>
         <table class="tbl">
           <thead>
             <tr>
-              <th style="width:50%">Descripción</th>
-              <th class="c" style="width:10%">Cant.</th>
-              <th class="r" style="width:20%">P. Unit.</th>
-              <th class="r" style="width:20%">Total</th>
+              <th style="width:50%">${L('Description','Descripción')}</th>
+              <th class="c" style="width:10%">${L('Qty','Cant.')}</th>
+              <th class="r" style="width:20%">${L('Unit price','P. Unit.')}</th>
+              <th class="r" style="width:20%">${L('Total','Total')}</th>
             </tr>
           </thead>
           <tbody>
@@ -242,8 +250,8 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
                 ${payment.notes ? `<span class="sub">${payment.notes}</span>` : ''}
               </td>
               <td class="c">1</td>
-              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount))}</span></td>
-              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount))}</span></td>
+              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount), lang)}</span></td>
+              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount), lang)}</span></td>
             </tr>
           </tbody>
         </table>
@@ -251,20 +259,20 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
         <!-- TOTAL -->
         <div class="total-box">
           <div>
-            <p class="lbl">Total</p>
-            <p style="font-size:11px;color:#6b7280;margin-top:2px">Incluye todos los conceptos</p>
+            <p class="lbl">${L('Total','Total')}</p>
+            <p style="font-size:11px;color:#6b7280;margin-top:2px">${L('Includes all items','Incluye todos los conceptos')}</p>
           </div>
-          <p class="val">${fmtCurrency(Number(payment.amount))}</p>
+          <p class="val">${fmtCurrency(Number(payment.amount), lang)}</p>
         </div>
 
         <!-- MÉTODO DE PAGO -->
         <div class="pay-grid">
           <div class="pay-item">
-            <label>Método de pago</label>
+            <label>${L('Payment method','Método de pago')}</label>
             <span class="pill">${methodIcon[payment.payment_method] || payment.payment_method}</span>
           </div>
           <div class="pay-item">
-            <label>Fecha de pago</label>
+            <label>${L('Payment date','Fecha de pago')}</label>
             <p class="date">${paidDate}</p>
           </div>
         </div>
@@ -272,7 +280,7 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
         ${isPaid ? `
         <div class="confirm">
           <span style="font-size:12px;font-weight:900;color:#059669;background:#dcfce7;padding:3px 8px;border-radius:4px;font-family:monospace">OK</span>
-          <p>Pago recibido y confirmado. Gracias por confiar en ${center.nombre}.</p>
+          <p>${L('Payment received and confirmed. Thank you for trusting','Pago recibido y confirmado. Gracias por confiar en')} ${center.nombre}.</p>
         </div>` : ''}
 
       </div>
@@ -283,20 +291,20 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
           <strong>${center.nombre}</strong>
           ${center.ruc ? `RUC: ${center.ruc}` : 'Centro de Terapias ABA'}
           ${center.direccion ? `<br/>${center.direccion}` : ''}
-          <br/>Este documento es un recibo interno de pago.
+          <br/>${L('This document is an internal payment receipt.','Este documento es un recibo interno de pago.')}
         </div>
         <div class="footer-r">
-          Recibo N° ${reciboNum}<br/>
-          ${new Date().toLocaleDateString('es-PE')}<br/>
-          <span style="color:#d1d5db">No válido como comprobante SUNAT</span>
+          ${L('Receipt No.','Recibo N°')} ${reciboNum}<br/>
+          ${new Date().toLocaleDateString(isEN ? 'en-US' : 'es-PE')}<br/>
+          <span style="color:#d1d5db">${L('Not valid as a SUNAT tax document','No válido como comprobante SUNAT')}</span>
         </div>
       </div>
     </div>
 
     <!-- Botones (no imprimen) -->
     <div class="actions">
-      <button class="btn-print" onclick="window.print()">Imprimir / Guardar PDF</button>
-      <button class="btn-close" onclick="window.close()">Cerrar</button>
+      <button class="btn-print" onclick="window.print()">${L('Print / Save PDF','Imprimir / Guardar PDF')}</button>
+      <button class="btn-close" onclick="window.close()">${L('Close','Cerrar')}</button>
     </div>
   </div>
 </body>
@@ -308,6 +316,7 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const paymentId = searchParams.get('id')
+  const lang = (searchParams.get('lang') === 'en' ? 'en' : (req.headers.get('x-locale') === 'en' ? 'en' : 'es'))
 
   if (!paymentId) {
     return NextResponse.json({ error: 'Falta el ID del pago' }, { status: 400 })
@@ -348,7 +357,7 @@ export async function GET(req: NextRequest) {
     const parentProfile = (child as any)?.profiles
 
     // 5. Generate HTML receipt
-    const html = generateReceiptHTML(payment, center, child, parentProfile, reciboNum)
+    const html = generateReceiptHTML(payment, center, child, parentProfile, reciboNum, lang)
 
     return new NextResponse(html, {
       headers: {

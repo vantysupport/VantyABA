@@ -10,16 +10,17 @@ const supabase = createClient(
 )
 
 const DAYS_ES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
+function fmtDate(iso: string, lang: string = 'es') {
+  return new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 function fmtShort(iso: string) {
   const d = new Date(iso)
   return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`
 }
-function fmtMoney(n: number) {
-  return `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function fmtMoney(n: number, lang: string = 'es') {
+  return `S/ ${n.toLocaleString(lang === 'en' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 function padNum(n: number) { return String(n).padStart(4, '0') }
 
@@ -36,6 +37,10 @@ export async function GET(req: NextRequest) {
   const ids     = searchParams.get('ids')?.split(',').filter(Boolean) || []
   const childId = searchParams.get('child_id')
   const month   = searchParams.get('month') // YYYY-M (optional, for month filter)
+  const lang    = searchParams.get('lang') === 'en' ? 'en' : (req.headers.get('x-locale') === 'en' ? 'en' : 'es')
+  const isEN    = lang === 'en'
+  const L       = (en: string, es: string) => (isEN ? en : es)
+  const DAYS    = isEN ? DAYS_EN : DAYS_ES
 
   if (ids.length === 0 && !childId) {
     return NextResponse.json({ error: 'Falta ids o child_id' }, { status: 400 })
@@ -80,22 +85,22 @@ export async function GET(req: NextRequest) {
     const logoUrl   = process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo.png` : null
 
     const STATUS: Record<string, { label: string; color: string; bg: string }> = {
-      paid:      { label: 'Pagado',    color: '#059669', bg: '#dcfce7' },
-      pending:   { label: 'Pendiente', color: '#b45309', bg: '#fef9c3' },
-      partial:   { label: 'Parcial',   color: '#1d4ed8', bg: '#dbeafe' },
-      cancelled: { label: 'Cancelado', color: '#dc2626', bg: '#fee2e2' },
-      refunded:  { label: 'Devuelto',  color: '#7c3aed', bg: '#ede9fe' },
+      paid:      { label: L('Paid','Pagado'),       color: '#059669', bg: '#dcfce7' },
+      pending:   { label: L('Pending','Pendiente'), color: '#b45309', bg: '#fef9c3' },
+      partial:   { label: L('Partial','Parcial'),   color: '#1d4ed8', bg: '#dbeafe' },
+      cancelled: { label: L('Cancelled','Cancelado'), color: '#dc2626', bg: '#fee2e2' },
+      refunded:  { label: L('Refunded','Devuelto'),  color: '#7c3aed', bg: '#ede9fe' },
     }
 
     const firstDate = payments[0].paid_at || payments[0].created_at
     const lastDate  = payments[payments.length - 1].paid_at || payments[payments.length - 1].created_at
 
     const html = `<!DOCTYPE html>
-<html lang="es">
+<html lang="${lang}">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Recibo Paquete ${reciboNum}</title>
+  <title>${L('Package Receipt','Recibo Paquete')} ${reciboNum}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Segoe UI',Helvetica,Arial,sans-serif;background:#eef2f7;display:flex;flex-direction:column;align-items:center;padding:32px 16px}
@@ -177,53 +182,53 @@ export async function GET(req: NextRequest) {
       </div>
       <div>
         <p class="cn">${center.nombre}</p>
-        <p class="cs">Centro de Terapias ABA</p>
+        <p class="cs">${L('ABA Therapy Center','Centro de Terapias ABA')}</p>
         <div class="ci">
           ${center.ruc       ? `<span class="ruc">RUC: ${center.ruc}</span>` : ''}
           ${center.direccion ? `<span>${center.direccion}</span>` : ''}
-          ${center.telefono  ? `<span>Tel. ${center.telefono}</span>` : ''}
+          ${center.telefono  ? `<span>${L('Phone','Tel.')} ${center.telefono}</span>` : ''}
           ${center.email     ? `<span>${center.email}</span>` : ''}
         </div>
       </div>
     </div>
     <div class="hr">
-      <p class="rl">Recibo de Paquete</p>
+      <p class="rl">${L('Package Receipt','Recibo de Paquete')}</p>
       <p class="rn">#${reciboNum}</p>
-      <p class="rd">Emitido el ${fmtDate(new Date().toISOString())}</p>
+      <p class="rd">${L('Issued on','Emitido el')} ${fmtDate(new Date().toISOString(), lang)}</p>
     </div>
   </div>
 
   <div class="sbar">
-    <span class="badge" style="background:#dbeafe;color:#1d4ed8">${payments.length} sesiones · ${fmtShort(firstDate)} — ${fmtShort(lastDate)}</span>
-    <span class="sinfo">${paid.length} pagadas · ${pending.length} pendientes</span>
+    <span class="badge" style="background:#dbeafe;color:#1d4ed8">${payments.length} ${L('sessions','sesiones')} · ${fmtShort(firstDate)} — ${fmtShort(lastDate)}</span>
+    <span class="sinfo">${paid.length} ${L('paid','pagadas')} · ${pending.length} ${L('pending','pendientes')}</span>
   </div>
 
   <div class="body">
 
-    <p class="st">Datos del cliente</p>
+    <p class="st">${L('Client details','Datos del cliente')}</p>
     <div class="cg">
-      <div class="ci2"><label>Paciente</label><p>${child?.name || '—'}</p></div>
-      <div class="ci2"><label>Responsable / Tutor</label><p>${parentProfile?.full_name || '—'}</p></div>
-      ${parentProfile?.phone ? `<div class="ci2"><label>Teléfono</label><p>${parentProfile.phone}</p></div>` : ''}
-      ${parentProfile?.email ? `<div class="ci2"><label>Correo</label><p style="font-weight:400;color:#374151">${parentProfile.email}</p></div>` : ''}
+      <div class="ci2"><label>${L('Patient','Paciente')}</label><p>${child?.name || '—'}</p></div>
+      <div class="ci2"><label>${L('Guardian / Tutor','Responsable / Tutor')}</label><p>${parentProfile?.full_name || '—'}</p></div>
+      ${parentProfile?.phone ? `<div class="ci2"><label>${L('Phone','Teléfono')}</label><p>${parentProfile.phone}</p></div>` : ''}
+      ${parentProfile?.email ? `<div class="ci2"><label>${L('Email','Correo')}</label><p style="font-weight:400;color:#374151">${parentProfile.email}</p></div>` : ''}
     </div>
 
-    <p class="st">Detalle de sesiones (${payments.length} en total)</p>
+    <p class="st">${L('Session details','Detalle de sesiones')} (${payments.length} ${L('in total','en total')})</p>
     <table>
       <thead>
         <tr>
-          <th style="width:8%">Día</th>
-          <th style="width:13%">Fecha</th>
-          <th style="width:35%">Concepto</th>
-          <th class="ac" style="width:14%">Método</th>
-          <th class="ac" style="width:12%">Estado</th>
-          <th class="ar" style="width:18%">Monto</th>
+          <th style="width:8%">${L('Day','Día')}</th>
+          <th style="width:13%">${L('Date','Fecha')}</th>
+          <th style="width:35%">${L('Concept','Concepto')}</th>
+          <th class="ac" style="width:14%">${L('Method','Método')}</th>
+          <th class="ac" style="width:12%">${L('Status','Estado')}</th>
+          <th class="ar" style="width:18%">${L('Amount','Monto')}</th>
         </tr>
       </thead>
       <tbody>
         ${payments.map(p => {
           const d   = new Date(p.paid_at || p.created_at)
-          const day = DAYS_ES[d.getDay()]
+          const day = DAYS[d.getDay()]
           const st  = STATUS[p.status] || { label: p.status, color: '#6b7280', bg: '#f3f4f6' }
           const concept = (p.concept || '—').replace(/ \(\d+\/\d+\)$/, '')
           return `<tr>
@@ -232,7 +237,7 @@ export async function GET(req: NextRequest) {
             <td style="font-size:12.5px;color:#111827;font-weight:600">${concept}</td>
             <td class="ac" style="font-size:12px;color:#374151;text-transform:capitalize">${p.payment_method}</td>
             <td class="ac"><span class="sdot" style="background:${st.bg};color:${st.color}">${st.label}</span></td>
-            <td class="ar">${fmtMoney(Number(p.amount))}</td>
+            <td class="ar">${fmtMoney(Number(p.amount), lang)}</td>
           </tr>`
         }).join('')}
       </tbody>
@@ -240,17 +245,17 @@ export async function GET(req: NextRequest) {
 
     <div class="sumbox">
       <div class="srow">
-        <span class="slbl">Sesiones pagadas (${paid.length})</span>
-        <span class="sval" style="color:#059669">${fmtMoney(totalPaid)}</span>
+        <span class="slbl">${L('Paid sessions','Sesiones pagadas')} (${paid.length})</span>
+        <span class="sval" style="color:#059669">${fmtMoney(totalPaid, lang)}</span>
       </div>
       ${pending.length > 0 ? `
       <div class="srow">
-        <span class="slbl">Sesiones pendientes (${pending.length})</span>
-        <span class="sval" style="color:#b45309">${fmtMoney(totalPend)}</span>
+        <span class="slbl">${L('Pending sessions','Sesiones pendientes')} (${pending.length})</span>
+        <span class="sval" style="color:#b45309">${fmtMoney(totalPend, lang)}</span>
       </div>` : ''}
       <div class="srow">
-        <span class="stlbl">Total del paquete</span>
-        <span class="stval">${fmtMoney(total)}</span>
+        <span class="stlbl">${L('Package total','Total del paquete')}</span>
+        <span class="stval">${fmtMoney(total, lang)}</span>
       </div>
     </div>
 
@@ -261,19 +266,19 @@ export async function GET(req: NextRequest) {
       <strong>${center.nombre}</strong>
       ${center.ruc ? `RUC: ${center.ruc}` : 'Centro de Terapias ABA'}
       ${center.direccion ? `<br/>${center.direccion}` : ''}
-      <br/>Este documento es un recibo interno de pago.
+      <br/>${L('This document is an internal payment receipt.','Este documento es un recibo interno de pago.')}
     </div>
     <div class="fr">
-      Recibo N.° ${reciboNum}<br/>
-      ${new Date().toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' })}<br/>
-      No válido como comprobante SUNAT
+      ${L('Receipt No.','Recibo N.°')} ${reciboNum}<br/>
+      ${new Date().toLocaleDateString(isEN ? 'en-US' : 'es-PE', { day:'2-digit', month:'2-digit', year:'numeric' })}<br/>
+      ${L('Not valid as a SUNAT tax document','No válido como comprobante SUNAT')}
     </div>
   </div>
 
 </div>
 <div class="actions">
-  <button class="bp" onclick="window.print()">Imprimir / Guardar PDF</button>
-  <button class="bc" onclick="window.close()">Cerrar</button>
+  <button class="bp" onclick="window.print()">${L('Print / Save PDF','Imprimir / Guardar PDF')}</button>
+  <button class="bc" onclick="window.close()">${L('Close','Cerrar')}</button>
 </div>
 </div>
 </body>

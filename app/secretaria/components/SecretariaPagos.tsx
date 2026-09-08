@@ -898,7 +898,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       </div>
                     </div>
                     <button
-                      onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}`, '_blank')}
+                      onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}&lang=${locale}`, '_blank')}
                       title={t("admin.verRecibo")}
                       className="p-1.5 rounded-lg transition-all hover:opacity-70 flex-shrink-0"
                       style={{ background: 'var(--muted-bg)', color: '#0284c7' }}>
@@ -962,7 +962,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       onClick={e => {
                         e.stopPropagation()
                         const ids = g.pays.map((p: any) => p.id).join(',')
-                        window.open(`/api/pagos/recibo-paquete?ids=${ids}`, '_blank')
+                        window.open(`/api/pagos/recibo-paquete?ids=${ids}&lang=${locale}`, '_blank')
                       }}
                       title={t("admin.reciboPaquete")}
                       className="p-2 rounded-lg transition-all hover:opacity-70 flex-shrink-0"
