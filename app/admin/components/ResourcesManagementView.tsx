@@ -13,12 +13,12 @@ import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 
 const RESOURCE_TYPES = [
-  { id: 'video', label: 'Video', icon: Video, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', hint: 'YouTube, Vimeo, URL de video...' },
-  { id: 'pdf', label: 'PDF / Doc', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200', hint: 'URL de PDF o documento en Google Drive' },
-  { id: 'link', label: 'Enlace web', icon: LinkIcon, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200', hint: 'Cualquier página web útil...' },
-  { id: 'image', label: 'Imagen', icon: ImageIcon, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', hint: 'URL de imagen...' },
-  { id: 'document', label: 'Material', icon: BookOpen, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', hint: 'Guías, artículos, materiales...' },
-  { id: 'audio', label: 'Audio', icon: Music, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200', hint: 'Podcast, meditación, música...' },
+  { id: 'video', label: 'Video', labelEn: 'Video', icon: Video, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', hint: 'YouTube, Vimeo, URL de video...', hintEn: 'YouTube, Vimeo, video URL...' },
+  { id: 'pdf', label: 'PDF / Doc', labelEn: 'PDF / Doc', icon: FileText, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200', hint: 'URL de PDF o documento en Google Drive', hintEn: 'URL of a PDF or Google Drive document' },
+  { id: 'link', label: 'Enlace web', labelEn: 'Web link', icon: LinkIcon, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200', hint: 'Cualquier página web útil...', hintEn: 'Any useful web page...' },
+  { id: 'image', label: 'Imagen', labelEn: 'Image', icon: ImageIcon, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', hint: 'URL de imagen...', hintEn: 'Image URL...' },
+  { id: 'document', label: 'Material', labelEn: 'Material', icon: BookOpen, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', hint: 'Guías, artículos, materiales...', hintEn: 'Guides, articles, materials...' },
+  { id: 'audio', label: 'Audio', labelEn: 'Audio', icon: Music, color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-200', hint: 'Podcast, meditación, música...', hintEn: 'Podcast, meditation, music...' },
 ]
 
 const RESOURCE_TAGS = [
@@ -29,6 +29,7 @@ const RESOURCE_TAGS = [
 export default function ResourcesManagementView() {
   const toast = useToast()
   const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [resources, setResources] = useState<any[]>([])
   const [patients, setPatients] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -67,7 +68,7 @@ export default function ResourcesManagementView() {
 
   const handleSave = async () => {
     if (!newResource.title.trim()) { toast.error(t('auto.resourcesManagementView.elTituloEsObligatorio')); return }
-    if (!newResource.url.trim()) { toast.error('La URL es obligatoria'); return }
+    if (!newResource.url.trim()) { toast.error(L('URL is required','La URL es obligatoria')); return }
     if (!newResource.is_global && !newResource.child_id) { toast.error(t('auto.resourcesManagementView.seleccionaUnPaciente')); return }
     setIsSaving(true)
     try {
@@ -166,10 +167,10 @@ export default function ResourcesManagementView() {
         <div>
           <h2 className="font-bold text-2xl md:text-3xl text-slate-800 tracking-tight flex items-center gap-3">
             <div className="p-2.5 bg-sky-100 rounded-2xl"><BookOpen className="text-sky-600" size={28}/></div>
-            Centro de Recursos
+            {L('Resource Center','Centro de Recursos')}
           </h2>
           <p className="text-slate-400 text-sm font-medium mt-1 ml-1">
-            Comparte videos, PDFs, guías y materiales con las familias
+            {L('Share videos, PDFs, guides and materials with families','Comparte videos, PDFs, guías y materiales con las familias')}
           </p>
         </div>
         <div className="flex gap-3">
@@ -177,7 +178,7 @@ export default function ResourcesManagementView() {
             <RefreshCw size={18}/>
           </button>
           <button onClick={() => setShowForm(true)} className="bg-gradient-to-r from-sky-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:from-sky-700 hover:to-sky-700 shadow-lg shadow-sky-200/50 transition-all flex items-center gap-2">
-            <Plus size={18}/> Compartir Recurso
+            <Plus size={18}/> {L('Share Resource','Compartir Recurso')}
           </button>
         </div>
       </div>
@@ -185,10 +186,10 @@ export default function ResourcesManagementView() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total', value: resources.length, color: 'violet' },
-          { label: 'Para todos', value: globalCount, color: 'blue' },
-          { label: 'Específicos', value: specificCount, color: 'indigo' },
-          { label: 'Tipos', value: new Set(resources.map(r => r.resource_type)).size, color: 'emerald' },
+          { label: L('Total','Total'), value: resources.length, color: 'violet' },
+          { label: L('For everyone','Para todos'), value: globalCount, color: 'blue' },
+          { label: L('Specific','Específicos'), value: specificCount, color: 'indigo' },
+          { label: L('Types','Tipos'), value: new Set(resources.map(r => r.resource_type)).size, color: 'emerald' },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-2xl p-5 shadow-sm border" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
             <p className="text-xs font-bold text-slate-400">{label}</p>
@@ -206,7 +207,7 @@ export default function ResourcesManagementView() {
         </div>
         <select value={filterType} onChange={e => setFilterType(e.target.value)} className="p-3.5 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all border-2" style={{ background: "var(--input-bg)", borderColor: "var(--input-border)", color: "var(--text-primary)" }}>
           <option value="all">{t('common.todos')}</option>
-          {RESOURCE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+          {RESOURCE_TYPES.map(t => <option key={t.id} value={t.id}>{locale === 'en' ? t.labelEn : t.label}</option>)}
         </select>
       </div>
 
@@ -234,11 +235,11 @@ export default function ResourcesManagementView() {
                       <IconComp size={18} className={typeInfo.color}/>
                     </div>
                     <div>
-                      <span className={`text-[9px] font-bold ${typeInfo.color}`}>{typeInfo.label}</span>
+                      <span className={`text-[9px] font-bold ${typeInfo.color}`}>{locale === 'en' ? typeInfo.labelEn : typeInfo.label}</span>
                       <div className="flex items-center gap-1 mt-0.5">
                         {resource.is_global ? (
                           <span className="flex items-center gap-1 text-[9px] font-bold text-slate-500">
-                            <Globe size={9}/> Para todos
+                            <Globe size={9}/> {L('For everyone','Para todos')}
                           </span>
                         ) : (
                           <span className="flex items-center gap-1 text-[9px] font-bold text-sky-600">
@@ -279,7 +280,7 @@ export default function ResourcesManagementView() {
                   {resource.url && (
                     <a href={resource.url} target="_blank" rel="noopener noreferrer"
                       className={`flex items-center gap-2 text-xs font-bold ${typeInfo.color} hover:underline`}>
-                      <Eye size={12}/> Vista previa
+                      <Eye size={12}/> {L('Preview','Vista previa')}
                     </a>
                   )}
                   
@@ -298,7 +299,7 @@ export default function ResourcesManagementView() {
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-xl flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
                 {editingId ? <Pencil size={20} className="text-sky-600"/> : <Gift size={20} className="text-sky-600"/>}
-                {editingId ? 'Editar Recurso' : 'Compartir Recurso'}
+                {editingId ? L('Edit Resource','Editar Recurso') : L('Share Resource','Compartir Recurso')}
               </h3>
               <button onClick={() => { setShowForm(false); setEditingId(null); setNewResource({ title: '', description: '', resource_type: 'video', url: '', is_global: true, child_id: '', tags: [] }) }} className="p-2 rounded-full hover:bg-slate-100 transition-all"><X size={20}/></button>
             </div>
@@ -314,7 +315,7 @@ export default function ResourcesManagementView() {
                       <button key={type.id} onClick={() => setNewResource(p => ({ ...p, resource_type: type.id }))}
                         className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1.5 transition-all ${newResource.resource_type === type.id ? `${type.bg} ${type.border} shadow-md` : 'border-slate-200 hover:border-slate-300'}`} style={newResource.resource_type !== type.id ? { background: 'var(--muted-bg)' } : {}}>
                         <Icon size={18} className={newResource.resource_type === type.id ? type.color : 'text-slate-400'}/>
-                        <span className={`text-[10px] font-bold ${newResource.resource_type === type.id ? type.color : 'text-slate-500'}`}>{type.label}</span>
+                        <span className={`text-[10px] font-bold ${newResource.resource_type === type.id ? type.color : 'text-slate-500'}`}>{locale === 'en' ? type.labelEn : type.label}</span>
                       </button>
                     )
                   })}
@@ -339,7 +340,7 @@ export default function ResourcesManagementView() {
                 <label className="text-xs font-bold text-slate-400 block mb-2">
                   URL *
                   <span className="ml-2 font-normal text-slate-300">
-                    {RESOURCE_TYPES.find(t => t.id === newResource.resource_type)?.hint}
+                    {locale === 'en' ? RESOURCE_TYPES.find(t => t.id === newResource.resource_type)?.hintEn : RESOURCE_TYPES.find(t => t.id === newResource.resource_type)?.hint}
                   </span>
                 </label>
                 <input type="url" value={newResource.url} onChange={e => setNewResource(p => ({ ...p, url: e.target.value }))}
@@ -384,12 +385,12 @@ export default function ResourcesManagementView() {
 
               <div className="flex gap-3 pt-2">
                 <button onClick={() => { setShowForm(false); setEditingId(null); setNewResource({ title: '', description: '', resource_type: 'video', url: '', is_global: true, child_id: '', tags: [] }) }} className="flex-1 py-4 text-slate-400 font-bold uppercase text-xs tracking-widest hover:bg-slate-50 rounded-xl border-2 border-slate-100 transition-all">
-                  Cancelar
+                  {L('Cancel','Cancelar')}
                 </button>
                 <button onClick={handleSave} disabled={isSaving}
                   className="flex-[2] py-4 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-sky-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2 hover:from-sky-700">
                   {isSaving ? <Loader2 size={18} className="animate-spin"/> : <Send size={18}/>}
-                  {isSaving ? 'Guardando...' : 'Compartir'}
+                  {isSaving ? L('Saving...','Guardando...') : L('Share','Compartir')}
                 </button>
               </div>
             </div>
