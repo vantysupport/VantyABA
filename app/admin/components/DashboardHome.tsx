@@ -2,6 +2,7 @@
 
 import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
+import { translateAlertaMensaje } from '@/lib/translate-alertas'
 import { adminFetch } from '@/lib/admin-fetch'
 import { useState, useEffect, useCallback } from 'react'
 import {
@@ -73,7 +74,8 @@ function KPI({ label, value, sub, icon: Icon, bar, urgent, onClick }: any) {
 
 // ─── Alerta row ───────────────────────────────────────────────────────────────
 function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const mensajeL = translateAlertaMensaje(String(mensaje || ''), locale)
   // Detecta alertas positivas (logros) por prefijo del tipo
   const tipoStr = String(tipo || '')
   const esLogro = tipoStr.startsWith('logro_') || tipoStr === 'criterio_alcanzado'
@@ -128,8 +130,8 @@ function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: a
             </span>
           </div>
         )}
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{paciente || mensaje}</p>
-        {paciente && mensaje && <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{mensaje}</p>}
+        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{paciente || mensajeL}</p>
+        {paciente && mensajeL && <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{mensajeL}</p>}
       </button>
       <div className="flex items-center gap-1 flex-shrink-0">
         <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} onClick={onClick} className="cursor-pointer hover:opacity-70 transition-opacity" />
