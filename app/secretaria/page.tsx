@@ -75,7 +75,8 @@ function SidebarLink({ icon: Icon, label, active, onClick, badge }: any) {
 }
 
 export default function SecretariaDashboard() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const router = useRouter()
   const toast = useToast()
   const { isDark } = useTheme()
@@ -90,12 +91,12 @@ export default function SecretariaDashboard() {
   ]
 
   const PAGE_TITLES: Record<string, string> = {
-    inicio:       'Panel Principal',
-    agenda:       'Agenda',
-    pagos:                'Pagos y Facturación',
-    'reportes-financieros': 'Reportes Financieros',
-    'recursos-adicionales': 'Recursos Adicionales',
-    perfil:       'Mi Perfil',
+    inicio:       L('Main Panel', 'Panel Principal'),
+    agenda:       L('Schedule', 'Agenda'),
+    pagos:                L('Payments and Billing', 'Pagos y Facturación'),
+    'reportes-financieros': L('Financial Reports', 'Reportes Financieros'),
+    'recursos-adicionales': L('Additional Resources', 'Recursos Adicionales'),
+    perfil:       L('My Profile', 'Mi Perfil'),
   }
 
   const NO_PADDING_VIEWS = ['agenda']
@@ -223,7 +224,7 @@ export default function SecretariaDashboard() {
             </button>
             <div>
               <h1 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{PAGE_TITLES[activeView] || 'Panel'}</h1>
-              <p className="text-[10px] hidden sm:block" style={{ color: 'var(--text-muted)' }}>Neuropsicología y Terapias SANTI · Gestión Integral</p>
+              <p className="text-[10px] hidden sm:block" style={{ color: 'var(--text-muted)' }}>Neuropsicología y Terapias SANTI · {L('Comprehensive Management', 'Gestión Integral')}</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useI18n } from '@/lib/i18n-context'
+import { toBCP47 } from '@/lib/i18n'
 
 import {
   Calendar, CalendarDays, Users, CheckCircle2, XCircle,
@@ -13,9 +14,10 @@ import { useToast } from '@/components/Toast'
 
 // ── AppointmentRow ────────────────────────────────────────────────────────────
 function AppointmentRow({ apt }: { apt: any }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const fecha = new Date(apt.appointment_date + 'T00:00:00')
-  const mesCorto = fecha.toLocaleString('es', { month: 'short' }).replace('.', '').toUpperCase()
+  const mesCorto = fecha.toLocaleString(toBCP47(locale), { month: 'short' }).replace('.', '').toUpperCase()
   const dia = fecha.getDate()
   const esHoy = apt.appointment_date === new Date().toISOString().split('T')[0]
 
@@ -43,10 +45,10 @@ function AppointmentRow({ apt }: { apt: any }) {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-          {apt.children?.name || apt.patient_name || 'Paciente'}
+          {apt.children?.name || apt.patient_name || L('Patient', 'Paciente')}
         </p>
         <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {apt.appointment_time?.slice(0, 5) || '—'} · {apt.therapist_name || 'Terapeuta'}
+          {apt.appointment_time?.slice(0, 5) || '—'} · {apt.therapist_name || L('Therapist', 'Terapeuta')}
         </p>
       </div>
 
@@ -61,13 +63,14 @@ function AppointmentRow({ apt }: { apt: any }) {
 
 // ── WeeklyMiniChart ───────────────────────────────────────────────────────────
 function WeeklyMiniChart() {
+  const { locale } = useI18n()
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const DAYS = ['L','M','X','J','V','S','D']
+        const DAYS = locale === 'en' ? ['M','T','W','T','F','S','S'] : ['L','M','X','J','V','S','D']
         const today = new Date()
         const dow = today.getDay()
         const monday = new Date(today)
@@ -94,7 +97,7 @@ function WeeklyMiniChart() {
       } finally { setLoading(false) }
     }
     load()
-  }, [])
+  }, [locale])
 
   if (loading) return (
     <div className="flex justify-center py-4">
@@ -145,7 +148,8 @@ function WeeklyMiniChart() {
 interface Props { onNavigate?: (view: string) => void }
 
 export default function SecretariaHome({ onNavigate }: Props) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [horaActual, setHoraActual] = useState<Date | null>(null)
@@ -195,7 +199,7 @@ export default function SecretariaHome({ onNavigate }: Props) {
 
   const saludo = (() => {
     const h = new Date().getHours()
-    return h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
+    return h < 12 ? L('Good morning', 'Buenos días') : h < 19 ? L('Good afternoon', 'Buenas tardes') : L('Good evening', 'Buenas noches')
   })()
 
   const hoyStr = new Date().toISOString().split('T')[0]
@@ -203,7 +207,7 @@ export default function SecretariaHome({ onNavigate }: Props) {
     .filter(a => a.appointment_date === hoyStr)
   const listaCitas = proximasCitas.length > 0 ? proximasCitas : citasRecientes
 
-  const diaStr = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' })
+  const diaStr = new Date().toLocaleDateString(toBCP47(locale), { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
     <div className="space-y-5 pb-8">
@@ -232,7 +236,7 @@ export default function SecretariaHome({ onNavigate }: Props) {
           </div>
           <div className="text-right flex-shrink-0">
             <p className="text-5xl font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
-              {horaActual ? horaActual.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+              {horaActual ? horaActual.toLocaleTimeString(toBCP47(locale), { hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
               {horaActual ? horaActual.getSeconds() + 's' : ''}
@@ -244,10 +248,10 @@ export default function SecretariaHome({ onNavigate }: Props) {
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {([
-          { label: 'Citas hoy',   value: stats.hoy,         sub: 'Programadas',     icon: Calendar,     bar: '#0284c7', nav: 'agenda' },
-          { label: 'Pendientes',  value: stats.pendientes,  sub: 'Sin confirmar',   icon: AlertCircle,  bar: '#f59e0b', nav: 'agenda' },
-          { label: 'Canceladas',  value: stats.canceladas,  sub: 'Últimos 30 días', icon: XCircle,      bar: '#ef4444', nav: undefined },
-          { label: 'Completadas', value: stats.completadas, sub: 'Últimos 30 días', icon: CheckCircle2, bar: '#10b981', nav: undefined },
+          { label: L('Appointments today', 'Citas hoy'),   value: stats.hoy,         sub: L('Scheduled', 'Programadas'),     icon: Calendar,     bar: '#0284c7', nav: 'agenda' },
+          { label: L('Pending', 'Pendientes'),  value: stats.pendientes,  sub: L('Unconfirmed', 'Sin confirmar'),   icon: AlertCircle,  bar: '#f59e0b', nav: 'agenda' },
+          { label: L('Cancelled', 'Canceladas'),  value: stats.canceladas,  sub: L('Last 30 days', 'Últimos 30 días'), icon: XCircle,      bar: '#ef4444', nav: undefined },
+          { label: L('Completed', 'Completadas'), value: stats.completadas, sub: L('Last 30 days', 'Últimos 30 días'), icon: CheckCircle2, bar: '#10b981', nav: undefined },
         ] as const).map(({ label, value, sub, icon: Icon, bar, nav }) => (
           <button key={label}
             onClick={() => nav && onNavigate?.(nav)}
@@ -280,9 +284,9 @@ export default function SecretariaHome({ onNavigate }: Props) {
           <p className="text-[11px] font-bold mb-4" style={{ color: 'var(--text-muted)' }}>{t("admin.resumen")}</p>
           <div className="flex flex-col gap-4">
             {([
-              { label: 'Pacientes activos', value: stats.pacientes,   icon: Users,        color: '#0284c7' },
-              { label: 'Esta semana',       value: stats.semana,      icon: TrendingUp,   color: '#10b981' },
-              { label: 'Completadas (30d)', value: stats.completadas, icon: CheckCircle2, color: '#0ea5e9' },
+              { label: L('Active patients', 'Pacientes activos'), value: stats.pacientes,   icon: Users,        color: '#0284c7' },
+              { label: L('This week', 'Esta semana'),       value: stats.semana,      icon: TrendingUp,   color: '#10b981' },
+              { label: L('Completed (30d)', 'Completadas (30d)'), value: stats.completadas, icon: CheckCircle2, color: '#0ea5e9' },
             ] as const).map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}12` }}>
@@ -305,7 +309,7 @@ export default function SecretariaHome({ onNavigate }: Props) {
         <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
           <div className="flex items-center gap-2">
             <Clock size={14} style={{ color: '#0284c7' }}/>
-            <h3 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Hoy</h3>
+            <h3 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>{L('Today', 'Hoy')}</h3>
             {citasHoy.length > 0 && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#0284c7', color: '#fff' }}>
                 {citasHoy.length}
@@ -313,7 +317,7 @@ export default function SecretariaHome({ onNavigate }: Props) {
             )}
           </div>
           <button onClick={() => onNavigate?.('agenda')} className="flex items-center gap-1 text-[11px] font-bold hover:opacity-70" style={{ color: '#0284c7' }}>
-            Ver agenda <ChevronRight size={12}/>
+            {L('View schedule', 'Ver agenda')} <ChevronRight size={12}/>
           </button>
         </div>
         {loading ? (
@@ -337,7 +341,7 @@ export default function SecretariaHome({ onNavigate }: Props) {
           <div className="flex items-center gap-2">
             <CalendarDays size={14} style={{ color: 'var(--text-muted)' }}/>
             <h3 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
-              {proximasCitas.length > 0 ? 'Próximas citas' : 'Citas recientes'}
+              {proximasCitas.length > 0 ? L('Upcoming appointments', 'Próximas citas') : L('Recent appointments', 'Citas recientes')}
             </h3>
           </div>
         </div>
@@ -353,10 +357,10 @@ export default function SecretariaHome({ onNavigate }: Props) {
         )}
         <div className="px-5 py-3 flex items-center justify-between" style={{ borderTop: '1px solid var(--card-border)', background: 'var(--muted-bg)' }}>
           <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-            {listaCitas.length > 6 ? `+${listaCitas.length - 6} más` : `${listaCitas.length} citas`}
+            {listaCitas.length > 6 ? `+${listaCitas.length - 6} ${L('more', 'más')}` : `${listaCitas.length} ${L('appointments', 'citas')}`}
           </span>
           <button onClick={() => onNavigate?.('agenda')} className="flex items-center gap-1 text-[12px] font-bold hover:opacity-70" style={{ color: '#0284c7' }}>
-            Ver agenda <ArrowRight size={12}/>
+            {L('View schedule', 'Ver agenda')} <ArrowRight size={12}/>
           </button>
         </div>
       </div>
