@@ -75,7 +75,8 @@ function Input({ className = '', ...props }: React.InputHTMLAttributes<HTMLInput
 
 // ── Sección: Mi Perfil ────────────────────────────────────────────────────────
 function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => void }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
@@ -121,10 +122,10 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
   }
 
   const ROLE_LABEL: Record<string, string> = {
-    jefe: '👑 Jefe / Owner',
-    admin: '🛡️ Administrador',
-    especialista: '🩺 Especialista',
-    terapeuta: '💚 Terapeuta',
+    jefe: '👑 ' + L('Owner', 'Jefe / Owner'),
+    admin: '🛡️ ' + L('Administrator', 'Administrador'),
+    especialista: '🩺 ' + L('Specialist', 'Especialista'),
+    terapeuta: '💚 ' + L('Therapist', 'Terapeuta'),
   }
 
   const initial = form.full_name?.charAt(0)?.toUpperCase() || '?'
@@ -137,7 +138,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
 
   return (
     <div className="space-y-4">
-      <SectionTitle label="Mi Perfil" />
+      <SectionTitle label={L('My Profile', 'Mi Perfil')} />
 
       {/* Avatar & nombre */}
       <Card title={t("admin.fotoNombre")} subtitle={t("admin.tuIdentidad")} icon={User} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
@@ -199,18 +200,18 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Nombre completo">
+          <Field label={L('Full name', 'Nombre completo')}>
             <Input
               value={form.full_name}
               onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
               placeholder={t("pacientes.phNombre")}
             />
           </Field>
-          <Field label="Teléfono">
+          <Field label={L('Phone', 'Teléfono')}>
             <Input
               value={form.phone}
               onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-              placeholder="Ej: +51 987 654 321"
+              placeholder={L('E.g.: +51 987 654 321', 'Ej: +51 987 654 321')}
             />
           </Field>
         </div>
@@ -224,7 +225,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>{t("admin.noEditable")}</span>
         </div>
         <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-          El correo es tu identificador de acceso. Para cambiarlo contacta al administrador del sistema.
+          {L('Your email is your login identifier. To change it, contact the system administrator.', 'El correo es tu identificador de acceso. Para cambiarlo contacta al administrador del sistema.')}
         </p>
       </Card>
 
@@ -235,7 +236,7 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
         className="w-full py-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-sky-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm active:scale-[0.98]"
       >
         {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-        {saving ? 'Guardando…' : 'Guardar cambios'}
+        {saving ? L('Saving…', 'Guardando…') : L('Save changes', 'Guardar cambios')}
       </button>
     </div>
   )
@@ -243,7 +244,8 @@ function SeccionPerfil({ onAvatarUpdate }: { onAvatarUpdate?: (url: string) => v
 
 // ── Sección: Contraseña ───────────────────────────────────────────────────────
 function SeccionSeguridad() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const toast = useToast()
   const [form, setForm] = useState({ nueva: '', confirmar: '' })
@@ -276,17 +278,17 @@ function SeccionSeguridad() {
     }
   }
 
-  const strengthLabels = ['', 'Débil', 'Regular', 'Buena', 'Fuerte']
+  const strengthLabels = locale === 'en' ? ['', 'Weak', 'Fair', 'Good', 'Strong'] : ['', 'Débil', 'Regular', 'Buena', 'Fuerte']
   const strengthColors = ['', 'bg-red-500', 'bg-orange-400', 'bg-amber-400', 'bg-emerald-500']
   const s = calcStrength(form.nueva)
 
   return (
     <div className="space-y-4">
-      <SectionTitle label="Seguridad" />
+      <SectionTitle label={L('Security', 'Seguridad')} />
 
       <Card title={t("common.cambiarPassword")} subtitle={t("admin.mantenSegura")} icon={Lock} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="space-y-4">
-          <Field label="Nueva contraseña">
+          <Field label={L('New password', 'Nueva contraseña')}>
             <div className="relative">
               <Input
                 type={show.nueva ? 'text' : 'password'}
@@ -312,7 +314,7 @@ function SeccionSeguridad() {
             )}
           </Field>
 
-          <Field label="Confirmar nueva contraseña">
+          <Field label={L('Confirm new password', 'Confirmar nueva contraseña')}>
             <div className="relative">
               <Input
                 type={show.confirmar ? 'text' : 'password'}
@@ -343,7 +345,7 @@ function SeccionSeguridad() {
             { label: t('ui2.minimo8'), ok: form.nueva.length >= 8 },
             { label: t('ui2.unaMayuscula'), ok: /[A-Z]/.test(form.nueva) },
             { label: t('ui2.unNumero'), ok: /[0-9]/.test(form.nueva) },
-            { label: 'Un carácter especial (!@#$…)', ok: /[^A-Za-z0-9]/.test(form.nueva) },
+            { label: L('One special character (!@#$…)', 'Un carácter especial (!@#$…)'), ok: /[^A-Za-z0-9]/.test(form.nueva) },
           ].map(r => (
             <div key={r.label} className="flex items-center gap-2 py-0.5">
               <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${r.ok ? 'bg-emerald-500' : isDark ? 'bg-[#21262d]' : 'bg-slate-200'}`}>
@@ -361,7 +363,7 @@ function SeccionSeguridad() {
         className="w-full py-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-sky-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm active:scale-[0.98]"
       >
         {saving ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
-        {saving ? 'Actualizando…' : 'Actualizar contraseña'}
+        {saving ? L('Updating…', 'Actualizando…') : L('Update password', 'Actualizar contraseña')}
       </button>
     </div>
   )
@@ -379,7 +381,7 @@ function StorageBar({ icon: Icon, label, used, cap, accent, unavailable }: {
   icon: any; label: string; used: number | null; cap: number; accent: string; unavailable?: boolean
 }) {
   const { isDark } = useTheme()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const pct = used != null && cap > 0 ? Math.min(100, (used / cap) * 100) : 0
   // Color del relleno según ocupación
   const barColor = pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : accent
@@ -398,7 +400,7 @@ function StorageBar({ icon: Icon, label, used, cap, accent, unavailable }: {
           ) : (
             <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}
                style={{ fontVariantNumeric: 'tabular-nums' }}>
-              <span className="font-bold" style={{ color: barColor }}>{formatBytes(used || 0)}</span> de {formatBytes(cap)} usados
+              <span className="font-bold" style={{ color: barColor }}>{formatBytes(used || 0)}</span> {locale === 'en' ? `of ${formatBytes(cap)} used` : `de ${formatBytes(cap)} usados`}
             </p>
           )}
         </div>
@@ -417,7 +419,7 @@ function StorageBar({ icon: Icon, label, used, cap, accent, unavailable }: {
       {!unavailable && free != null && (
         <p className={`text-[11px] mt-2 font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}
            style={{ fontVariantNumeric: 'tabular-nums' }}>
-          {formatBytes(free)} disponibles
+          {formatBytes(free)} {locale === 'en' ? 'available' : 'disponibles'}
         </p>
       )}
     </div>
@@ -425,7 +427,8 @@ function StorageBar({ icon: Icon, label, used, cap, accent, unavailable }: {
 }
 
 function SeccionAlmacenamiento() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -453,7 +456,7 @@ function SeccionAlmacenamiento() {
 
   return (
     <div className="space-y-4">
-      <SectionTitle label="Almacenamiento" />
+      <SectionTitle label={L('Storage', 'Almacenamiento')} />
 
       <div className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80 shadow-sm'}`}>
         <div className={`px-6 py-5 border-b flex items-center gap-4 ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
@@ -482,9 +485,9 @@ function SeccionAlmacenamiento() {
             </div>
           ) : data ? (
             <>
-              <StorageBar icon={HardDrive} label="Archivos (Storage)" accent="#0284c7"
+              <StorageBar icon={HardDrive} label={L('Files (Storage)', 'Archivos (Storage)')} accent="#0284c7"
                 used={data.storage?.used ?? 0} cap={data.storage?.cap ?? 0} />
-              <StorageBar icon={Database} label="Base de datos" accent="#06b6d4"
+              <StorageBar icon={Database} label={L('Database', 'Base de datos')} accent="#06b6d4"
                 used={data.database?.used ?? null} cap={data.database?.cap ?? 0}
                 unavailable={data.database?.used == null} />
 
@@ -519,17 +522,18 @@ function SeccionAlmacenamiento() {
 
 // ── Sección: Apariencia ───────────────────────────────────────────────────────
 function SeccionApariencia() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark, toggleTheme } = useTheme()
   return (
     <div className="space-y-4">
-      <SectionTitle label="Apariencia" />
+      <SectionTitle label={L('Appearance', 'Apariencia')} />
 
       <Card title={t("admin.temaInterfaz")} subtitle={t("admin.personalizaPanel")} icon={Palette} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="grid grid-cols-2 gap-3">
           {[
-            { id: 'light', label: 'Claro', emoji: '☀️', desc: 'Fondo blanco y colores vivos' },
-            { id: 'dark',  label: 'Oscuro', emoji: '🌙', desc: 'Fondo oscuro, menos fatiga visual' },
+            { id: 'light', label: L('Light', 'Claro'), emoji: '☀️', desc: L('White background and vivid colors', 'Fondo blanco y colores vivos') },
+            { id: 'dark',  label: L('Dark', 'Oscuro'), emoji: '🌙', desc: L('Dark background, less eye strain', 'Fondo oscuro, menos fatiga visual') },
           ].map(t => {
             const isActive = (t.id === 'dark') === isDark
             return (
@@ -617,7 +621,8 @@ function SeccionMoneda() {
 
 // ── Sección: Cuenta ───────────────────────────────────────────────────────────
 function SeccionCuenta() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const toast = useToast()
   const [email, setEmail] = useState('')
@@ -639,17 +644,17 @@ function SeccionCuenta() {
   }
 
   const ROLE_INFO: Record<string, { label: string; color: string; perms: string[] }> = {
-    jefe:        { label: '👑 Jefe / Owner',   color: isDark ? 'bg-yellow-900/20 text-yellow-300 border-yellow-800/40' : 'bg-yellow-50 text-yellow-800 border-yellow-200', perms: ['Todo el sistema', 'Usuarios', 'Configuración', 'Tienda', 'Agenda'] },
-    admin:       { label: '🛡️ Administrador', color: isDark ? 'bg-sky-900/20 text-sky-300 border-sky-800/40'       : 'bg-sky-50 text-sky-800 border-sky-200',         perms: ['Pacientes', 'Agenda', 'Recursos', 'Reportes', 'Análisis Predictivo'] },
-    especialista:{ label: '🩺 Especialista',   color: isDark ? 'bg-sky-900/20 text-sky-300 border-sky-800/40': 'bg-sky-50 text-sky-800 border-sky-200',   perms: ['Pacientes asignados', 'Evaluaciones', 'Análisis Predictivo', 'Recursos'] },
-    terapeuta:   { label: '💚 Terapeuta',       color: isDark ? 'bg-green-900/20 text-green-300 border-green-800/40'  : 'bg-green-50 text-green-800 border-green-200',       perms: ['Pacientes asignados', 'Evaluaciones', 'Recursos'] },
+    jefe:        { label: '👑 ' + L('Owner', 'Jefe / Owner'),   color: isDark ? 'bg-yellow-900/20 text-yellow-300 border-yellow-800/40' : 'bg-yellow-50 text-yellow-800 border-yellow-200', perms: locale === 'en' ? ['Whole system', 'Users', 'Settings', 'Store', 'Schedule'] : ['Todo el sistema', 'Usuarios', 'Configuración', 'Tienda', 'Agenda'] },
+    admin:       { label: '🛡️ ' + L('Administrator', 'Administrador'), color: isDark ? 'bg-sky-900/20 text-sky-300 border-sky-800/40'       : 'bg-sky-50 text-sky-800 border-sky-200',         perms: locale === 'en' ? ['Patients', 'Schedule', 'Resources', 'Reports', 'Predictive Analysis'] : ['Pacientes', 'Agenda', 'Recursos', 'Reportes', 'Análisis Predictivo'] },
+    especialista:{ label: '🩺 ' + L('Specialist', 'Especialista'),   color: isDark ? 'bg-sky-900/20 text-sky-300 border-sky-800/40': 'bg-sky-50 text-sky-800 border-sky-200',   perms: locale === 'en' ? ['Assigned patients', 'Evaluations', 'Predictive Analysis', 'Resources'] : ['Pacientes asignados', 'Evaluaciones', 'Análisis Predictivo', 'Recursos'] },
+    terapeuta:   { label: '💚 ' + L('Therapist', 'Terapeuta'),       color: isDark ? 'bg-green-900/20 text-green-300 border-green-800/40'  : 'bg-green-50 text-green-800 border-green-200',       perms: locale === 'en' ? ['Assigned patients', 'Evaluations', 'Resources'] : ['Pacientes asignados', 'Evaluaciones', 'Recursos'] },
   }
 
   const info = ROLE_INFO[role]
 
   return (
     <div className="space-y-4">
-      <SectionTitle label="Cuenta" />
+      <SectionTitle label={L('Account', 'Cuenta')} />
 
       <Card title={t("admin.infoCuenta")} subtitle={t("admin.detallesAcceso")} icon={Shield} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
         <div className="space-y-3">
@@ -676,11 +681,11 @@ function SeccionCuenta() {
       <Card title={t("admin.sesion")} subtitle={t("admin.administraSesion")} icon={LogOut} iconColor="bg-gradient-to-br from-orange-500 to-red-500">
         <div className="space-y-3">
           <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Al cerrar sesión saldrás del panel y deberás ingresar nuevamente con tu email y contraseña.
+            {L('Signing out will exit the panel and you will need to log in again with your email and password.', 'Al cerrar sesión saldrás del panel y deberás ingresar nuevamente con tu email y contraseña.')}
           </p>
           <button onClick={handleLogout}
             className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-red-600 border-2 border-red-200 bg-red-50 hover:bg-red-100 transition-all w-full justify-center active:scale-[0.98]">
-            <LogOut size={15} /> Cerrar sesión
+            <LogOut size={15} /> {L('Sign out', 'Cerrar sesión')}
           </button>
         </div>
       </Card>

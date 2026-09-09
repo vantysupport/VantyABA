@@ -257,7 +257,16 @@ export default function ChatEspecialistas({
   userAvatarUrl?: string | null
   onAvatarUpdate?: (url: string) => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
+  const roleLabel = (r: string) => {
+    if (locale !== 'en') return r
+    const map: Record<string, string> = {
+      especialista: 'specialist', terapeuta: 'therapist', jefe: 'director',
+      admin: 'administrator', secretaria: 'secretary', padre: 'parent',
+    }
+    return map[String(r || '').toLowerCase()] || r
+  }
   const toast = useToast()
   const { isDark } = useTheme()
   const [activeMainTab, setActiveMainTab] = useState<'equipo' | 'familias'>('equipo')
@@ -330,8 +339,8 @@ export default function ChatEspecialistas({
             .is('read_at', null)
           const last = msgs?.[0]
           let preview = last?.content || null
-          if (last?.message_type === 'file') preview = '📎 Archivo'
-          if (last?.message_type === 'audio') preview = '🎤 Nota de voz'
+          if (last?.message_type === 'file') preview = '📎 ' + L('File', 'Archivo')
+          if (last?.message_type === 'audio') preview = '🎤 ' + L('Voice note', 'Nota de voz')
           return {
             ...p,
             unread: count || 0,
@@ -590,7 +599,7 @@ export default function ChatEspecialistas({
         data: { publicUrl },
       } = supabase.storage.from('chat-files').getPublicUrl(path)
       const { error } = await supabase.from('chat_especialista_admin').insert({
-        content: '🎤 Nota de voz',
+        content: '🎤 ' + L('Voice note', 'Nota de voz'),
         sender_id: userId,
         sender_role: 'jefe',
         sender_name: userName,
@@ -789,7 +798,7 @@ export default function ChatEspecialistas({
 
             <div className="flex items-center justify-between mb-2">
               <h2 className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                <Users size={13} className="text-sky-500" /> Contactos
+                <Users size={13} className="text-sky-500" /> {L('Contacts', 'Contactos')}
               </h2>
             </div>
             <div className="relative">
@@ -821,7 +830,7 @@ export default function ChatEspecialistas({
                     <div className={`px-4 py-2 border-b sticky top-0 z-10 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-slate-100/80 border-slate-200/60'}`}>
                       <p className={`text-[10px] font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                         <span className="w-1.5 h-1.5 bg-sky-500 rounded-full inline-block" />
-                        Administradores
+                        {L('Administrators', 'Administradores')}
                       </p>
                     </div>
                     {filtradosAdmins.map((esp) => (
@@ -848,7 +857,7 @@ export default function ChatEspecialistas({
                               {esp.full_name}
                             </p>
                             <p className="text-[10px] text-sky-400 truncate mt-0.5 font-semibold">
-                              {esp.specialty || (esp.role === 'jefe' ? 'Director(a)' : 'Administrador')}
+                              {esp.specialty || (esp.role === 'jefe' ? L('Director', 'Director(a)') : L('Administrator', 'Administrador'))}
                             </p>
                             {esp.lastMessage && (
                               <p className={`text-[10px] truncate mt-0.5 ${esp.unread > 0 ? (isDark ? 'text-slate-400 font-semibold' : 'text-slate-600 font-semibold') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}>
@@ -873,7 +882,7 @@ export default function ChatEspecialistas({
                     <div className={`px-4 py-2 border-b sticky top-0 z-10 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-slate-100/80 border-slate-200/60'}`}>
                       <p className={`text-[10px] font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                         <span className="w-1.5 h-1.5 bg-sky-500 rounded-full inline-block" />
-                        Especialistas
+                        {L('Specialists', 'Especialistas')}
                       </p>
                     </div>
                     {filtradosEspecialistas.map((esp) => (
@@ -900,7 +909,7 @@ export default function ChatEspecialistas({
                               {esp.full_name}
                             </p>
                             <p className={`text-[10px] truncate mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                              {esp.specialty || esp.role}
+                              {esp.specialty || roleLabel(esp.role)}
                             </p>
                             {esp.lastMessage && (
                               <p className={`text-[10px] truncate mt-0.5 ${esp.unread > 0 ? (isDark ? 'text-slate-400 font-semibold' : 'text-slate-600 font-semibold') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}>

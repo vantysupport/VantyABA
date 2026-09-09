@@ -16,10 +16,10 @@ import { supabase } from '@/lib/supabase'
 import { adminFetch } from '@/lib/admin-fetch'
 
 const ROLES = [
-  { value: 'jefe',        label: 'Director',      description: 'Acceso total al sistema',  icon: Crown,         dotColor: 'bg-sky-500', badgeClass: 'role-director'    },
-  { value: 'especialista',label: 'Especialista',  description: 'Terapeuta / Clínico',      icon: Stethoscope,   dotColor: 'bg-sky-500',   badgeClass: 'role-especialista' },
-  { value: 'padre',       label: 'Padre / Tutor', description: 'Portal de familias',       icon: Heart,         dotColor: 'bg-pink-500',   badgeClass: 'role-padre'       },
-  { value: 'secretaria',  label: 'Secretaria(o)', description: 'Apoyo administrativo',     icon: ClipboardList, dotColor: 'bg-sky-500', badgeClass: 'role-secretaria'  },
+  { value: 'jefe',        label: 'Director',      labelEn: 'Director',       description: 'Acceso total al sistema',  descriptionEn: 'Full system access',       icon: Crown,         dotColor: 'bg-sky-500', badgeClass: 'role-director'    },
+  { value: 'especialista',label: 'Especialista',  labelEn: 'Specialist',     description: 'Terapeuta / Clínico',      descriptionEn: 'Therapist / Clinician',    icon: Stethoscope,   dotColor: 'bg-sky-500',   badgeClass: 'role-especialista' },
+  { value: 'padre',       label: 'Padre / Tutor', labelEn: 'Parent / Guardian', description: 'Portal de familias',    descriptionEn: 'Family portal',            icon: Heart,         dotColor: 'bg-pink-500',   badgeClass: 'role-padre'       },
+  { value: 'secretaria',  label: 'Secretaria(o)', labelEn: 'Secretary',      description: 'Apoyo administrativo',     descriptionEn: 'Administrative support',   icon: ClipboardList, dotColor: 'bg-sky-500', badgeClass: 'role-secretaria'  },
 ]
 
 // Especialidades sugeridas (datalist) — el usuario puede elegir una o escribir la suya.
@@ -43,14 +43,14 @@ function getRoleInfo(role: string) {
 }
 
 function RoleBadge({ role }: { role: string }) {
-  const { t } = useI18n()
+  const { locale } = useI18n()
 
   const info = getRoleInfo(role)
   const Icon = info.icon
   return (
     <span className={`role-badge ${info.badgeClass}`}>
       <Icon size={10} />
-      {info.label}
+      {locale === 'en' ? info.labelEn : info.label}
     </span>
   )
 }
@@ -61,7 +61,7 @@ function RoleSelector({ currentRole, onSelect, disabled, roles: rolesList }: {
   roles?: typeof ROLES
   disabled?: boolean
 }) {
-  const { t } = useI18n()
+  const { locale } = useI18n()
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -94,7 +94,7 @@ function RoleSelector({ currentRole, onSelect, disabled, roles: rolesList }: {
         style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
       >
         <current.icon size={13} />
-        <span>{current.label}</span>
+        <span>{locale === 'en' ? current.labelEn : current.label}</span>
         <ChevronDown size={11} style={{ color: 'var(--text-muted)' }} />
       </button>
       {open && (
@@ -124,8 +124,8 @@ function RoleSelector({ currentRole, onSelect, disabled, roles: rolesList }: {
                   <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.dotColor}`} />
                   <RIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{r.label}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{r.description}</p>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{locale === 'en' ? r.labelEn : r.label}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{locale === 'en' ? r.descriptionEn : r.description}</p>
                   </div>
                   {isSelected && <CheckCircle2 size={13} className="text-sky-500 flex-shrink-0" />}
                 </button>
@@ -214,7 +214,8 @@ function PacientesVinculados({ userId, children, onUnlink }: {
 export default function UserManagementView({ rolesConfig }: {
   rolesConfig?: { jefe?: boolean; especialista?: boolean; secretaria?: boolean; padre?: boolean }
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const toast = useToast()
   const [users, setUsers] = useState<UserData[]>([])
 
@@ -598,7 +599,7 @@ export default function UserManagementView({ rolesConfig }: {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t('usuarios.gestion')}</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{users.length} usuarios registrados</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{users.length} {L('registered users', 'usuarios registrados')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={cargarUsuarios} className="p-2 rounded-xl transition-colors hover:opacity-80"
@@ -616,10 +617,10 @@ export default function UserManagementView({ rolesConfig }: {
       <div className="flex gap-1 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: 'var(--card-border)' }}>
         {[
           { id: 'todos',       label: t('common.todos'),        count: users.length,        limitKey: '',             icon: Users,       color: 'text-slate-500' },
-          { id: 'jefe',        label: 'Directores',   count: totalJefes,          limitKey: 'admin',        icon: Crown,       color: 'text-sky-600' },
-          { id: 'especialista',label: 'Especialistas', count: totalEspecialistas,  limitKey: 'especialista', icon: Stethoscope, color: 'text-sky-600' },
-          { id: 'padre',       label: 'Padres',       count: totalPadres,         limitKey: 'padre',        icon: Heart,       color: 'text-pink-600' },
-          { id: 'secretaria',  label: 'Secretarias', count: totalSecretarias,    limitKey: 'secretaria',   icon: ClipboardList, color: 'text-sky-600' },
+          { id: 'jefe',        label: L('Directors', 'Directores'),   count: totalJefes,          limitKey: 'admin',        icon: Crown,       color: 'text-sky-600' },
+          { id: 'especialista',label: L('Specialists', 'Especialistas'), count: totalEspecialistas,  limitKey: 'especialista', icon: Stethoscope, color: 'text-sky-600' },
+          { id: 'padre',       label: L('Parents', 'Padres'),       count: totalPadres,         limitKey: 'padre',        icon: Heart,       color: 'text-pink-600' },
+          { id: 'secretaria',  label: L('Secretaries', 'Secretarias'), count: totalSecretarias,    limitKey: 'secretaria',   icon: ClipboardList, color: 'text-sky-600' },
         ].map(tab => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -645,11 +646,11 @@ export default function UserManagementView({ rolesConfig }: {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard value={totalActivos}       label="Activos"       icon={UserCheck}   color="bg-emerald-500" />
-        <StatCard value={totalJefes}         label="Directores"    icon={Crown}        color="bg-sky-500" />
-        <StatCard value={totalEspecialistas} label="Especialistas" icon={Stethoscope}  color="bg-sky-500" />
-        <StatCard value={totalPadres}        label="Padres"        icon={Heart}        color="bg-pink-500" />
-        <StatCard value={totalSecretarias}   label="Secretarias"  icon={ClipboardList}color="bg-sky-500" />
+        <StatCard value={totalActivos}       label={L('Active', 'Activos')}       icon={UserCheck}   color="bg-emerald-500" />
+        <StatCard value={totalJefes}         label={L('Directors', 'Directores')}    icon={Crown}        color="bg-sky-500" />
+        <StatCard value={totalEspecialistas} label={L('Specialists', 'Especialistas')} icon={Stethoscope}  color="bg-sky-500" />
+        <StatCard value={totalPadres}        label={L('Parents', 'Padres')}        icon={Heart}        color="bg-pink-500" />
+        <StatCard value={totalSecretarias}   label={L('Secretaries', 'Secretarias')}  icon={ClipboardList}color="bg-sky-500" />
       </div>
 
       {/* Buscador + filtro por especialidad */}
@@ -745,7 +746,7 @@ export default function UserManagementView({ rolesConfig }: {
                   <button
                     onClick={() => handleToggleActive(user)}
                     disabled={isSelf || isDirector}
-                    title={isSelf ? 'No podés desactivarte' : isDirector ? 'No podés desactivar directores' : isActive ? 'Desactivar' : 'Activar'}
+                    title={isSelf ? L('You cannot deactivate yourself', 'No podés desactivarte') : isDirector ? L('You cannot deactivate directors', 'No podés desactivar directores') : isActive ? L('Deactivate', 'Desactivar') : L('Activate', 'Activar')}
                     className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     style={{ color: isActive ? '#10b981' : 'var(--text-muted)' }}>
                     {isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
@@ -944,10 +945,10 @@ export default function UserManagementView({ rolesConfig }: {
               <select value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}
                 className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                 style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}>
-                <option value="jefe">👑 Director — Acceso total</option>
+                <option value="jefe">👑 {L('Director — Full access', 'Director — Acceso total')}</option>
                 <option value="especialista">{t('ui.specialist_role')}</option>
                 <option value="padre">{t('usuarios.rolPadre')}</option>
-                <option value="secretaria">📋 Secretaria(o) — Apoyo administrativo</option>
+                <option value="secretaria">📋 {L('Secretary — Administrative support', 'Secretaria(o) — Apoyo administrativo')}</option>
               </select>
               {createForm.role !== 'padre' && (
                 <input list="specialty-suggestions" placeholder={t("admin.phEspecialidadArea")} value={createForm.specialty}
@@ -976,7 +977,7 @@ export default function UserManagementView({ rolesConfig }: {
               <button onClick={() => setLinkingParent(null)} className="p-1.5 rounded-lg hover:opacity-80" style={{ color: 'var(--text-muted)' }}><X size={16} /></button>
             </div>
             <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>
-              Padre/Tutor: <strong style={{ color: 'var(--text-primary)' }}>{linkingParent.profile?.full_name || linkingParent.email}</strong>
+              {L('Parent/Guardian', 'Padre/Tutor')}: <strong style={{ color: 'var(--text-primary)' }}>{linkingParent.profile?.full_name || linkingParent.email}</strong>
             </p>
             <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
               {t('auto.userManagementView.siElPacienteYaTiene')}
