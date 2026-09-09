@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import { ToastProvider } from '@/components/Toast'
 import { ThemeProvider } from '@/components/ThemeContext'
+import { CurrencyProvider } from '@/components/CurrencyContext'
 import { I18nProvider } from '@/lib/i18n-context'
 import SessionGuard from '@/components/SessionGuard'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -183,12 +184,14 @@ export default async function RootLayout({
         <ErrorBoundary>
           <I18nProvider initialLocale={initialLocale}>
             <ThemeProvider>
-              <ToastProvider>
-                <SessionGuard />
-                <MaintenanceGate>
-                  {children}
-                </MaintenanceGate>
-              </ToastProvider>
+              <CurrencyProvider>
+                <ToastProvider>
+                  <SessionGuard />
+                  <MaintenanceGate>
+                    {children}
+                  </MaintenanceGate>
+                </ToastProvider>
+              </CurrencyProvider>
             </ThemeProvider>
           </I18nProvider>
         </ErrorBoundary>

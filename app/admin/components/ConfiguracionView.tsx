@@ -7,9 +7,11 @@ import {
   User, Lock, Palette, Shield, Eye, EyeOff,
   Save, Loader2, CheckCircle, Camera, Mail, Phone,
   Globe, LogOut, AlertTriangle, HardDrive, Database, RefreshCw,
-  Crown, ArrowUpRight,
+  Crown, ArrowUpRight, Coins,
 } from 'lucide-react'
 import { useTheme } from '@/components/ThemeContext'
+import { useCurrency } from '@/components/CurrencyContext'
+import { CURRENCIES } from '@/lib/currency'
 import { supabase } from '@/lib/supabase'
 import { releaseSessionNow } from '@/lib/session-lock'
 import { useToast } from '@/components/Toast'
@@ -553,6 +555,66 @@ function SeccionApariencia() {
   )
 }
 
+// ── Sección: Moneda del centro ────────────────────────────────────────────────
+function SeccionMoneda() {
+  const { t, locale } = useI18n()
+  const { isDark } = useTheme()
+  const toast = useToast()
+  const { code, setCurrency } = useCurrency()
+  const [saving, setSaving] = useState<string | null>(null)
+  const isEN = locale === 'en'
+
+  const change = async (c: string) => {
+    if (c === code) return
+    setSaving(c)
+    try {
+      await setCurrency(c)
+      toast.success(isEN ? 'Currency updated' : 'Moneda actualizada')
+    } catch { toast.error('Error') } finally { setSaving(null) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionTitle label={isEN ? 'Currency' : 'Moneda'} />
+      <Card
+        title={isEN ? 'Center currency' : 'Moneda del centro'}
+        subtitle={isEN ? 'Applies to prices, payments, reports and receipts' : 'Se aplica a precios, pagos, reportes y recibos'}
+        icon={Coins}
+        iconColor="bg-gradient-to-br from-emerald-500 to-teal-600">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          {Object.values(CURRENCIES).map(cur => {
+            const active = cur.code === code
+            return (
+              <button key={cur.code}
+                onClick={() => change(cur.code)}
+                disabled={saving !== null}
+                className={`relative p-3.5 rounded-2xl border-2 text-left transition-all hover:-translate-y-0.5 disabled:opacity-60 ${active
+                  ? 'border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-100'
+                  : isDark ? 'border-[#30363d] hover:border-[#4a5568]' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
+                <div className="flex items-center gap-2">
+                  <span className={`text-lg font-black ${active ? 'text-emerald-700' : isDark ? 'text-slate-200' : 'text-slate-700'}`}>{cur.symbol}</span>
+                  <span className={`text-xs font-bold ${active ? 'text-emerald-700' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>{cur.code}</span>
+                </div>
+                <p className={`text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{isEN ? cur.name : cur.nombre}</p>
+                {active && (
+                  <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center">
+                    {saving === cur.code ? <Loader2 size={11} className="text-white animate-spin" /> : <CheckCircle size={11} className="text-white" />}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        <p className={`text-[11px] mt-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+          {isEN
+            ? 'Note: changing the currency only changes the symbol shown — it does not convert existing amounts.'
+            : 'Nota: cambiar la moneda solo cambia el símbolo que se muestra — no convierte los montos ya registrados.'}
+        </p>
+      </Card>
+    </div>
+  )
+}
+
 // ── Sección: Cuenta ───────────────────────────────────────────────────────────
 function SeccionCuenta() {
   const { t } = useI18n()
@@ -636,6 +698,7 @@ export default function ConfiguracionView({ onAvatarUpdate }: { onAvatarUpdate?:
       <SeccionAlmacenamiento />
       <SeccionSeguridad />
       <SeccionApariencia />
+      <SeccionMoneda />
       <SeccionCuenta />
     </div>
   )
