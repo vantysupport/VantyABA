@@ -18,11 +18,11 @@ interface Props {
 }
 
 const TIPS_CLINICOS = [
-  { Icon: Target,     texto: 'Registra las conductas objetivo con antecedente, conducta y consecuencia (ABC) para mejorar la calidad de tu análisis ABA.' },
-  { Icon: BarChart3,  texto: 'Cuando un objetivo supera el 80% de dominio por 3 sesiones consecutivas, es momento de proponer un nuevo objetivo al jefe.' },
-  { Icon: Heart,      texto: 'Recuerda preguntar brevemente al padre/madre cómo se ha sentido esta semana. El bienestar del cuidador afecta directamente el progreso del niño.' },
-  { Icon: FileText,   texto: 'Las notas de sesión con observaciones específicas son más útiles que las generales. Detalla cada avance con datos concretos.' },
-  { Icon: Trophy,     texto: 'Celebra los micro-logros con el niño y la familia. Un objetivo nuevo alcanzado, por pequeño que sea, merece reconocimiento.' },
+  { Icon: Target,     texto: 'Registra las conductas objetivo con antecedente, conducta y consecuencia (ABC) para mejorar la calidad de tu análisis ABA.', textoEn: 'Record target behaviors with antecedent, behavior and consequence (ABC) to improve the quality of your ABA analysis.' },
+  { Icon: BarChart3,  texto: 'Cuando un objetivo supera el 80% de dominio por 3 sesiones consecutivas, es momento de proponer un nuevo objetivo al jefe.', textoEn: 'When a goal exceeds 80% mastery for 3 consecutive sessions, it is time to propose a new goal to the director.' },
+  { Icon: Heart,      texto: 'Recuerda preguntar brevemente al padre/madre cómo se ha sentido esta semana. El bienestar del cuidador afecta directamente el progreso del niño.', textoEn: 'Remember to briefly ask the parent how they have felt this week. The caregiver’s well-being directly affects the child’s progress.' },
+  { Icon: FileText,   texto: 'Las notas de sesión con observaciones específicas son más útiles que las generales. Detalla cada avance con datos concretos.', textoEn: 'Session notes with specific observations are more useful than general ones. Detail each advance with concrete data.' },
+  { Icon: Trophy,     texto: 'Celebra los micro-logros con el niño y la familia. Un objetivo nuevo alcanzado, por pequeño que sea, merece reconocimiento.', textoEn: 'Celebrate micro-wins with the child and family. A new goal reached, however small, deserves recognition.' },
 ]
 
 // ── Mismos componentes visuales que DashboardHome del admin ───────────────────
@@ -78,10 +78,11 @@ function KPI({ label, value, sub, icon: Icon, bar, urgent, onClick }: any) {
 }
 
 function EvalRow({ titulo, paciente, fecha, status, onClick }: any) {
+  const { locale } = useI18n()
   const cfg: Record<string, any> = {
-    pending_approval: { label: 'En revisión', color: '#f59e0b', Icon: Clock },
-    approved:         { label: 'Aprobada',    color: '#10b981', Icon: CheckCircle2 },
-    rejected:         { label: 'Rechazada',   color: '#ef4444', Icon: XCircle },
+    pending_approval: { label: locale === 'en' ? 'Under review' : 'En revisión', color: '#f59e0b', Icon: Clock },
+    approved:         { label: locale === 'en' ? 'Approved' : 'Aprobada',    color: '#10b981', Icon: CheckCircle2 },
+    rejected:         { label: locale === 'en' ? 'Rejected' : 'Rechazada',   color: '#ef4444', Icon: XCircle },
   }
   const c = cfg[status] || cfg.pending_approval
   return (
@@ -102,13 +103,13 @@ function EvalRow({ titulo, paciente, fecha, status, onClick }: any) {
 }
 
 function CitaRow({ cita, onClick }: any) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const fecha = new Date((cita.appointment_date) + 'T00:00:00')
   const hoy = new Date().toISOString().split('T')[0]
   const esHoy = cita.appointment_date === hoy
-  const mes = fecha.toLocaleString('es', { month: 'short' }).toUpperCase()
+  const mes = fecha.toLocaleString(toBCP47(locale), { month: 'short' }).toUpperCase()
   const dia = fecha.getDate()
-  const nombre = cita.children?.name || 'Paciente'
+  const nombre = cita.children?.name || (locale === 'en' ? 'Patient' : 'Paciente')
   const hora = cita.appointment_time
   return (
     <div onClick={onClick} className="flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer hover:opacity-80"
@@ -132,6 +133,7 @@ function CitaRow({ cita, onClick }: any) {
 // ── COMPONENTE PRINCIPAL ───────────────────────────────────────────────────────
 export default function EspecialistaHome({ userId, profile, setActiveView }: Props) {
   const { locale, t } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
 
   const [stats, setStats] = useState({ pendientes: 0, aprobadas: 0, rechazadas: 0, citasHoy: 0, totalPacientes: 0, sesionesEstaSemana: 0 })
   const [recientes, setRecientes]         = useState<any[]>([])
@@ -150,7 +152,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
     const update = () => {
       const now = new Date()
       setHoraActual(now)
-      setSaludo(now.getHours() < 12 ? 'Buenos días' : now.getHours() < 19 ? 'Buenas tardes' : 'Buenas noches')
+      setSaludo(now.getHours() < 12 ? L('Good morning', 'Buenos días') : now.getHours() < 19 ? L('Good afternoon', 'Buenas tardes') : L('Good evening', 'Buenas noches'))
       setDiaStr(now.toLocaleDateString(toBCP47(locale), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
     }
     update()
@@ -166,7 +168,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
       const datesArr: string[] = []
       for (let i = 6; i >= 0; i--) {
         const d = new Date(Date.now() - i * 86400000)
-        labels.push(d.toLocaleDateString('es', { weekday: 'short' }).charAt(0).toUpperCase())
+        labels.push(d.toLocaleDateString(toBCP47(locale), { weekday: 'short' }).charAt(0).toUpperCase())
         datesArr.push(d.toISOString().split('T')[0])
       }
       setDiasLabels(labels)
@@ -224,7 +226,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
           <div>
             <p className="text-xs capitalize mb-0.5" style={{ color: 'var(--text-muted)' }}>{diaStr}</p>
             <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              {saludo}, {profile?.role === 'especialista' ? 'Especialista' : profile?.full_name?.split(' ')[0] || 'Bienvenida'} 👋
+              {saludo}, {profile?.role === 'especialista' ? L('Specialist', 'Especialista') : profile?.full_name?.split(' ')[0] || L('Welcome', 'Bienvenida')} 👋
             </h2>
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-xs px-2.5 py-0.5 rounded-full font-medium"
@@ -234,7 +236,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
               {stats.pendientes > 0 && (
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
                   style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
-                  <AlertCircle size={10} className="inline mr-1" />{stats.pendientes} sin sesión (30d)
+                  <AlertCircle size={10} className="inline mr-1" />{stats.pendientes} {L('without session (30d)', 'sin sesión (30d)')}
                 </span>
               )}
             </div>
@@ -250,10 +252,10 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
 
       {/* ── KPIs — mismos estilos que admin ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPI label="Pacientes"     value={loading ? '—' : stats.totalPacientes}     sub="Total activos"      icon={Users}          bar="#0284c7" onClick={() => setActiveView('pacientes')} />
-        <KPI label="Citas"         value={loading ? '—' : stats.sesionesEstaSemana} sub="Últimos 7 días"     icon={Calendar}       bar="#10b981" onClick={() => setActiveView('agenda')} />
-        <KPI label="Evaluaciones"  value={loading ? '—' : total}                   sub="Total registradas"  icon={FileText}       bar="#f59e0b" urgent={stats.pendientes > 0} onClick={() => setActiveView('formularios')} />
-        <KPI label={t('auto.especialistaHome.ultimaSesion')} value={loading ? '—' : (ultimaSesion ?? '—')}   sub="Fecha más reciente" icon={Calendar}       bar="#0ea5e9" onClick={() => setActiveView('agenda')} />
+        <KPI label={L('Patients','Pacientes')}     value={loading ? '—' : stats.totalPacientes}     sub={L('Total active','Total activos')}      icon={Users}          bar="#0284c7" onClick={() => setActiveView('pacientes')} />
+        <KPI label={L('Appointments','Citas')}         value={loading ? '—' : stats.sesionesEstaSemana} sub={L('Last 7 days','Últimos 7 días')}     icon={Calendar}       bar="#10b981" onClick={() => setActiveView('agenda')} />
+        <KPI label={L('Evaluations','Evaluaciones')}  value={loading ? '—' : total}                   sub={L('Total recorded','Total registradas')}  icon={FileText}       bar="#f59e0b" urgent={stats.pendientes > 0} onClick={() => setActiveView('formularios')} />
+        <KPI label={t('auto.especialistaHome.ultimaSesion')} value={loading ? '—' : (ultimaSesion ?? '—')}   sub={L('Most recent date','Fecha más reciente')} icon={Calendar}       bar="#0ea5e9" onClick={() => setActiveView('agenda')} />
       </div>
 
       {/* ── MÉTRICAS MEDIAS ── */}
@@ -292,7 +294,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
               <FileText size={20} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
               <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t("ui.no_recent_evals")}</p>
               <button onClick={() => setActiveView('formularios')} className="text-xs font-bold mt-2" style={{ color: '#0284c7' }}>
-                Crear evaluación →
+                {L('Create evaluation', 'Crear evaluación')} →
               </button>
             </div>
           ) : (
@@ -323,7 +325,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
               <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("especialista.misPacientes")}</p>
             </div>
             <button onClick={() => setActiveView('pacientes')} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: '#0284c7' }}>
-              Ver todos <ArrowUpRight size={10} />
+              {L('View all', 'Ver todos')} <ArrowUpRight size={10} />
             </button>
           </div>
           <div className="p-3 space-y-1.5 overflow-y-auto" style={{ maxHeight: '320px' }}>
@@ -350,7 +352,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{p.name}</p>
-                        {edad !== null && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{edad} año{edad !== 1 ? 's' : ''}</p>}
+                        {edad !== null && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{edad} {locale === 'en' ? (edad !== 1 ? 'years' : 'year') : (edad !== 1 ? 'años' : 'año')}</p>}
                       </div>
                       <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} />
                     </button>
@@ -376,7 +378,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
                 <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("dashboard.citasDeHoy")}</p>
               </div>
               <button onClick={() => setActiveView('agenda')} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: '#0284c7' }}>
-                Ver agenda <ArrowUpRight size={10} />
+                {L('View schedule', 'Ver agenda')} <ArrowUpRight size={10} />
               </button>
             </div>
             <div className="p-3 overflow-y-auto" style={{ maxHeight: '200px' }}>
@@ -387,7 +389,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
                     <Calendar size={24} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
                     <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t("agenda.sinCitas")}</p>
                     <button onClick={() => setActiveView('agenda')} className="mt-2 text-xs font-bold" style={{ color: '#0284c7' }}>
-                      Agendar ahora →
+                      {L('Schedule now', 'Agendar ahora')} →
                     </button>
                   </div>
                 )
@@ -403,7 +405,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
             </div>
             <p className="text-sm leading-relaxed flex items-start gap-2" style={{ color: 'var(--text-primary)' }}>
               {(() => { const TIcon = tip.Icon; return <TIcon size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} /> })()}
-              <span>{tip.texto}</span>
+              <span>{locale === 'en' ? tip.textoEn : tip.texto}</span>
             </p>
           </div>
 
@@ -414,7 +416,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
               <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("especialista.recordatorio")}</p>
             </div>
             <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
-              Tu trabajo hace una diferencia real en la vida de cada familia. ¡Gracias por tu dedicación! 💜
+              {L('Your work makes a real difference in the life of every family. Thank you for your dedication!', 'Tu trabajo hace una diferencia real en la vida de cada familia. ¡Gracias por tu dedicación!')} 💜
             </p>
           </div>
         </div>

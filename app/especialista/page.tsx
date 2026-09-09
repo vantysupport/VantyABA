@@ -49,7 +49,8 @@ function SidebarLink({ icon: Icon, label, active, onClick, small, badge }: any) 
 export default function EspecialistaDashboard() {
   const router = useRouter()
   const toast = useToast()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
 
   const NAV_ITEMS = [
@@ -62,12 +63,12 @@ export default function EspecialistaDashboard() {
   ]
 
   const PAGE_TITLES: Record<string, string> = {
-    inicio:       'Panel Principal',
-    agenda:       'Agenda',
-    pacientes:    'Pacientes',
-    prediccion:   'Análisis Predictivo',
+    inicio:       L('Main Panel', 'Panel Principal'),
+    agenda:       L('Schedule', 'Agenda'),
+    pacientes:    L('Patients', 'Pacientes'),
+    prediccion:   L('Predictive Analysis', 'Análisis Predictivo'),
     evaluaciones: 'Chat',
-    perfil:       'Mi Perfil',
+    perfil:       L('My Profile', 'Mi Perfil'),
   }
 
   const [activeView, setActiveView]                 = useState('inicio')
@@ -493,7 +494,7 @@ export default function EspecialistaDashboard() {
               </div>
               <div>
                 <p className="text-white font-bold text-sm leading-tight flex items-center gap-2">
-                  ARIA <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[9px] font-bold">IA</span>
+                  ARIA <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[9px] font-bold">{L('AI', 'IA')}</span>
                 </p>
                 <div className="flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"/>
@@ -502,13 +503,13 @@ export default function EspecialistaDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={() => setAriaMinimized(m => !m)} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaMinimized ? 'Restaurar' : 'Minimizar'}>
+              <button onClick={() => setAriaMinimized(m => !m)} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaMinimized ? L('Restore', 'Restaurar') : L('Minimize', 'Minimizar')}>
                 <Minus size={15} className="text-white"/>
               </button>
-              <button onClick={() => { setAriaExpanded(x => !x); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaExpanded ? 'Reducir' : 'Ampliar'}>
+              <button onClick={() => { setAriaExpanded(x => !x); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaExpanded ? L('Shrink', 'Reducir') : L('Expand', 'Ampliar')}>
                 {ariaExpanded ? <Minimize2 size={15} className="text-white"/> : <Maximize2 size={15} className="text-white"/>}
               </button>
-              <button onClick={() => { setAriaOpen(false); setAriaExpanded(false); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title="Cerrar">
+              <button onClick={() => { setAriaOpen(false); setAriaExpanded(false); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={L('Close', 'Cerrar')}>
                 <X size={16} className="text-white"/>
               </button>
             </div>
@@ -528,7 +529,7 @@ export default function EspecialistaDashboard() {
       {!ariaOpen && (
         <button onClick={() => setAriaOpen(true)}
           className="fixed bottom-6 right-4 md:right-6 z-[91] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 bg-gradient-to-br from-sky-600 to-cyan-600"
-          title="ARIA — Asistente IA">
+          title={L('ARIA — AI Assistant', 'ARIA — Asistente IA')}>
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="6" y="9" width="16" height="13" rx="3" fill="white" fillOpacity="0.9"/>
             <rect x="9" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
