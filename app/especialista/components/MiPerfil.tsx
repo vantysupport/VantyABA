@@ -33,6 +33,8 @@ function Card({ title, subtitle, icon: Icon, iconColor, children }: {
   )
 }
 
+const L2 = (loc: string, en: string, es: string) => (loc === 'en' ? en : es)
+
 function SectionTitle({ label }: { label: string }) {
   const { isDark } = useTheme()
   return (
@@ -68,7 +70,7 @@ function Input({ className = '', ...props }: React.InputHTMLAttributes<HTMLInput
 
 /* ── Google Calendar ─────────────────────────────────────────────────────────*/
 function GoogleCalendarBlock({ userId, isDark }: { userId: string; isDark: boolean }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const toast = useToast()
   const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [email, setEmail] = useState<string | null>(null)
@@ -87,7 +89,7 @@ function GoogleCalendarBlock({ userId, isDark }: { userId: string; isDark: boole
     if (!userId) return
     check()
     const p = new URLSearchParams(window.location.search)
-    if (p.get('gcal') === 'connected') { toast.success('Google Calendar conectado'); check(); window.history.replaceState({}, '', window.location.pathname) }
+    if (p.get('gcal') === 'connected') { toast.success(L2(locale, 'Google Calendar connected', 'Google Calendar conectado')); check(); window.history.replaceState({}, '', window.location.pathname) }
   }, [userId])
 
   const connect = async () => {
@@ -103,7 +105,7 @@ function GoogleCalendarBlock({ userId, isDark }: { userId: string; isDark: boole
     if (!confirm(t('auto.miPerfil.desconectarGoogleCalendar'))) return
     await fetch(`/api/google-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected'); setEmail(null)
-    toast.success('Google Calendar desconectado')
+    toast.success(L2(locale, 'Google Calendar disconnected', 'Google Calendar desconectado'))
   }
 
   if (status === 'loading') return <div className={`h-12 rounded-xl animate-pulse ${isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`} />
@@ -134,7 +136,7 @@ function GoogleCalendarBlock({ userId, isDark }: { userId: string; isDark: boole
 
 /* ── Outlook Calendar ────────────────────────────────────────────────────────*/
 function OutlookCalendarBlock({ userId, isDark }: { userId: string; isDark: boolean }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const toast = useToast()
   const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [email, setEmail] = useState<string | null>(null)
@@ -153,7 +155,7 @@ function OutlookCalendarBlock({ userId, isDark }: { userId: string; isDark: bool
     if (!userId) return
     check()
     const p = new URLSearchParams(window.location.search)
-    if (p.get('mscal') === 'connected') { toast.success('Outlook Calendar conectado'); check(); window.history.replaceState({}, '', window.location.pathname) }
+    if (p.get('mscal') === 'connected') { toast.success(L2(locale, 'Outlook Calendar connected', 'Outlook Calendar conectado')); check(); window.history.replaceState({}, '', window.location.pathname) }
   }, [userId])
 
   const connect = async () => {
@@ -169,7 +171,7 @@ function OutlookCalendarBlock({ userId, isDark }: { userId: string; isDark: bool
     if (!confirm(t('auto.miPerfil.desconectarOutlookCalendar'))) return
     await fetch(`/api/microsoft-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected'); setEmail(null)
-    toast.success('Outlook Calendar desconectado')
+    toast.success(L2(locale, 'Outlook Calendar disconnected', 'Outlook Calendar desconectado'))
   }
 
   const MSIcon = () => (
@@ -200,7 +202,7 @@ function OutlookCalendarBlock({ userId, isDark }: { userId: string; isDark: bool
       className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left disabled:opacity-50 ${isDark ? 'border-[#30363d] hover:border-sky-700 hover:bg-sky-900/10' : 'border-slate-200 hover:border-sky-300 hover:bg-sky-50'}`}>
       <MSIcon />
       <span className={`text-sm font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-        {busy ? 'Conectando…' : 'Conectar Outlook Calendar'}
+        {busy ? L2(locale,'Connecting…','Conectando…') : L2(locale,'Connect Outlook Calendar','Conectar Outlook Calendar')}
       </span>
       {busy && <Loader2 size={14} className="animate-spin ml-auto" />}
     </button>
@@ -212,7 +214,8 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
   onUpdate?: () => void
   onAvatarUpdate?: (url: string) => void
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
@@ -262,8 +265,8 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
   }
 
   const ROLE_LABEL: Record<string, string> = {
-    jefe: '👑 Jefe / Owner', admin: '🛡️ Administrador',
-    especialista: '🩺 Especialista', terapeuta: '💚 Terapeuta',
+    jefe: '👑 ' + L('Owner', 'Jefe / Owner'), admin: '🛡️ ' + L('Administrator', 'Administrador'),
+    especialista: '🩺 ' + L('Specialist', 'Especialista'), terapeuta: '💚 ' + L('Therapist', 'Terapeuta'),
   }
 
   const initial = form.full_name?.charAt(0)?.toUpperCase() || '?'
@@ -276,7 +279,7 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
 
   return (
     <div className="space-y-4">
-      <SectionTitle label="Mi Perfil" />
+      <SectionTitle label={L('My Profile', 'Mi Perfil')} />
 
       {/* Avatar & nombre */}
       <Card title={t("admin.fotoNombre")} subtitle={t("admin.tuIdentidad")} icon={User} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
@@ -317,7 +320,7 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
             }} />
           </div>
           <div>
-            <p className={`font-bold text-lg ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{form.full_name || 'Sin nombre'}</p>
+            <p className={`font-bold text-lg ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{form.full_name || L('No name', 'Sin nombre')}</p>
             <p className={`text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{form.email}</p>
             {form.role && (
               <span className={`inline-block mt-2 text-xs font-bold px-3 py-1 rounded-full ${isDark ? 'bg-sky-900/30 text-sky-300' : 'bg-sky-50 text-sky-700'}`}>
@@ -328,13 +331,13 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Nombre completo">
+          <Field label={L('Full name', 'Nombre completo')}>
             <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder={t("pacientes.phNombre")} />
           </Field>
-          <Field label="Teléfono">
-            <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Ej: +51 987 654 321" />
+          <Field label={L('Phone', 'Teléfono')}>
+            <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder={L('E.g.: +51 987 654 321', 'Ej: +51 987 654 321')} />
           </Field>
-          <Field label="Especialidad" >
+          <Field label={L('Specialty', 'Especialidad')} >
             <Input value={form.specialty} onChange={e => setForm(f => ({ ...f, specialty: e.target.value }))} placeholder={t("especialista.ejTerapeutaABA")} />
           </Field>
         </div>
@@ -348,14 +351,14 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>{t("admin.noEditable")}</span>
         </div>
         <p className={`text-xs mt-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-          El correo es tu identificador de acceso. Para cambiarlo contacta al administrador del sistema.
+          {L('Your email is your login identifier. To change it, contact the system administrator.', 'El correo es tu identificador de acceso. Para cambiarlo contacta al administrador del sistema.')}
         </p>
       </Card>
 
       <button onClick={handleSave} disabled={saving}
         className="w-full py-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-sky-200/40 disabled:opacity-50 flex items-center justify-center gap-2 text-sm active:scale-[0.98]">
         {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-        {saving ? 'Guardando…' : 'Guardar cambios'}
+        {saving ? L('Saving…', 'Guardando…') : L('Save changes', 'Guardar cambios')}
       </button>
 
       {/* Calendarios */}
@@ -371,7 +374,8 @@ function SeccionPerfil({ onUpdate, onAvatarUpdate }: {
 
 /* ── Sección: Seguridad ──────────────────────────────────────────────────────*/
 function SeccionSeguridad() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const toast = useToast()
   const [form, setForm] = useState({ nueva: '', confirmar: '' })
@@ -404,16 +408,16 @@ function SeccionSeguridad() {
     }
   }
 
-  const strengthLabels = ['', 'Débil', 'Regular', 'Buena', 'Fuerte']
+  const strengthLabels = locale === 'en' ? ['', 'Weak', 'Fair', 'Good', 'Strong'] : ['', 'Débil', 'Regular', 'Buena', 'Fuerte']
   const strengthColors = ['', 'bg-red-500', 'bg-orange-400', 'bg-amber-400', 'bg-emerald-500']
   const s = calcStrength(form.nueva)
 
   return (
     <div className="space-y-4">
-      <SectionTitle label="Seguridad" />
+      <SectionTitle label={L('Security', 'Seguridad')} />
       <Card title={t("common.cambiarPassword")} subtitle={t("admin.mantenSegura")} icon={Lock} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="space-y-4">
-          <Field label="Nueva contraseña">
+          <Field label={L('New password', 'Nueva contraseña')}>
             <div className="relative">
               <Input type={show.nueva ? 'text' : 'password'} value={form.nueva}
                 onChange={e => setForm(f => ({ ...f, nueva: e.target.value }))}
@@ -434,7 +438,7 @@ function SeccionSeguridad() {
               </div>
             )}
           </Field>
-          <Field label="Confirmar nueva contraseña">
+          <Field label={L('Confirm new password', 'Confirmar nueva contraseña')}>
             <div className="relative">
               <Input type={show.confirmar ? 'text' : 'password'} value={form.confirmar}
                 onChange={e => setForm(f => ({ ...f, confirmar: e.target.value }))}
@@ -456,10 +460,10 @@ function SeccionSeguridad() {
         <div className={`mt-4 p-4 rounded-xl border ${isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-slate-50 border-slate-100'}`}>
           <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.requisitos")}</p>
           {[
-            { label: 'Mínimo 8 caracteres',        ok: form.nueva.length >= 8 },
-            { label: 'Al menos una mayúscula',      ok: /[A-Z]/.test(form.nueva) },
-            { label: 'Al menos un número',          ok: /[0-9]/.test(form.nueva) },
-            { label: 'Un carácter especial (!@#$…)',ok: /[^A-Za-z0-9]/.test(form.nueva) },
+            { label: L('Minimum 8 characters', 'Mínimo 8 caracteres'),        ok: form.nueva.length >= 8 },
+            { label: L('At least one uppercase letter', 'Al menos una mayúscula'),      ok: /[A-Z]/.test(form.nueva) },
+            { label: L('At least one number', 'Al menos un número'),          ok: /[0-9]/.test(form.nueva) },
+            { label: L('One special character (!@#$…)', 'Un carácter especial (!@#$…)'),ok: /[^A-Za-z0-9]/.test(form.nueva) },
           ].map(r => (
             <div key={r.label} className="flex items-center gap-2 py-0.5">
               <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${r.ok ? 'bg-emerald-500' : isDark ? 'bg-[#21262d]' : 'bg-slate-200'}`}>
@@ -473,7 +477,7 @@ function SeccionSeguridad() {
       <button onClick={handleChange} disabled={saving || !form.nueva || form.nueva !== form.confirmar}
         className="w-full py-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-sky-200/40 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm active:scale-[0.98]">
         {saving ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
-        {saving ? 'Actualizando…' : 'Actualizar contraseña'}
+        {saving ? L('Updating…', 'Actualizando…') : L('Update password', 'Actualizar contraseña')}
       </button>
     </div>
   )
@@ -481,16 +485,16 @@ function SeccionSeguridad() {
 
 /* ── Sección: Apariencia ─────────────────────────────────────────────────────*/
 function SeccionApariencia() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { isDark, toggleTheme } = useTheme()
   return (
     <div className="space-y-4">
-      <SectionTitle label="Apariencia" />
+      <SectionTitle label={L2(locale, 'Appearance', 'Apariencia')} />
       <Card title={t("admin.temaInterfaz")} subtitle={t("admin.personalizaPanel")} icon={Palette} iconColor="bg-gradient-to-br from-sky-500 to-sky-600">
         <div className="grid grid-cols-2 gap-3">
           {[
-            { id: 'light', label: 'Claro',   Icon: Sun,  desc: 'Fondo blanco y colores vivos' },
-            { id: 'dark',  label: 'Oscuro',  Icon: Moon, desc: 'Fondo oscuro, menos fatiga visual' },
+            { id: 'light', label: L2(locale, 'Light', 'Claro'),   Icon: Sun,  desc: L2(locale, 'White background and vivid colors', 'Fondo blanco y colores vivos') },
+            { id: 'dark',  label: L2(locale, 'Dark', 'Oscuro'),  Icon: Moon, desc: L2(locale, 'Dark background, less eye strain', 'Fondo oscuro, menos fatiga visual') },
           ].map(t => {
             const isActive = (t.id === 'dark') === isDark
             return (
@@ -517,7 +521,8 @@ function SeccionApariencia() {
 
 /* ── Sección: Cuenta ─────────────────────────────────────────────────────────*/
 function SeccionCuenta({ onLogout }: { onLogout?: () => void }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { isDark } = useTheme()
   const toast = useToast()
   const [email, setEmail] = useState('')
@@ -540,14 +545,14 @@ function SeccionCuenta({ onLogout }: { onLogout?: () => void }) {
   }
 
   const ROLE_INFO: Record<string, { label: string; color: string }> = {
-    especialista: { label: '🩺 Especialista', color: isDark ? 'bg-sky-900/20 text-sky-300 border-sky-800/40' : 'bg-sky-50 text-sky-800 border-sky-200' },
-    terapeuta:    { label: '💚 Terapeuta ABA', color: isDark ? 'bg-green-900/20 text-green-300 border-green-800/40'   : 'bg-green-50 text-green-800 border-green-200' },
+    especialista: { label: '🩺 ' + L('Specialist', 'Especialista'), color: isDark ? 'bg-sky-900/20 text-sky-300 border-sky-800/40' : 'bg-sky-50 text-sky-800 border-sky-200' },
+    terapeuta:    { label: '💚 ' + L('ABA Therapist', 'Terapeuta ABA'), color: isDark ? 'bg-green-900/20 text-green-300 border-green-800/40'   : 'bg-green-50 text-green-800 border-green-200' },
   }
   const info = ROLE_INFO[role]
 
   return (
     <div className="space-y-4">
-      <SectionTitle label="Cuenta" />
+      <SectionTitle label={L('Account', 'Cuenta')} />
       <Card title={t("admin.infoCuenta")} subtitle={t("admin.detallesAcceso")} icon={Shield} iconColor="bg-gradient-to-br from-slate-500 to-slate-700">
         <div className="space-y-3">
           <div className={`flex items-center gap-3 p-4 rounded-xl ${isDark ? 'bg-[#0d1117]' : 'bg-slate-50'}`}>
@@ -567,11 +572,11 @@ function SeccionCuenta({ onLogout }: { onLogout?: () => void }) {
       <Card title={t("common.cerrarSesion2")} subtitle={t("admin.salirCuenta")} icon={LogOut} iconColor="bg-gradient-to-br from-orange-500 to-red-500">
         <div className="space-y-3">
           <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Al cerrar sesión saldrás del panel y deberás ingresar nuevamente con tu email y contraseña.
+            {L('Signing out will exit the panel and you will need to log in again with your email and password.', 'Al cerrar sesión saldrás del panel y deberás ingresar nuevamente con tu email y contraseña.')}
           </p>
           <button onClick={handleLogout}
             className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-red-600 border-2 border-red-200 bg-red-50 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-all w-full justify-center active:scale-[0.98]">
-            <LogOut size={15} /> Cerrar sesión
+            <LogOut size={15} /> {L('Sign out', 'Cerrar sesión')}
           </button>
         </div>
       </Card>
