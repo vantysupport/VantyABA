@@ -493,23 +493,23 @@ function SeccionAlmacenamiento() {
 
               {data.database?.used == null && (
                 <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Para mostrar el tamaño de la base de datos, crea la función <code className="font-mono text-[10px] px-1 py-0.5 rounded bg-slate-200/60 dark:bg-[#21262d]">get_db_size()</code> en Supabase (SQL Editor).
+                  {locale === 'en' ? 'To show the database size, create the ' : 'Para mostrar el tamaño de la base de datos, crea la función '}<code className="font-mono text-[10px] px-1 py-0.5 rounded bg-slate-200/60 dark:bg-[#21262d]">get_db_size()</code>{locale === 'en' ? ' function in Supabase (SQL Editor).' : ' en Supabase (SQL Editor).'}
                 </p>
               )}
 
               {/* Acciones de plan */}
               <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-                <a href={`https://wa.me/51924685557?text=${encodeURIComponent('Hola, deseo cambiarme a Pro')}`} target="_blank" rel="noopener noreferrer"
+                <a href={`https://wa.me/51924685557?text=${encodeURIComponent(locale === 'en' ? 'Hi, I would like to upgrade to Pro' : 'Hola, deseo cambiarme a Pro')}`} target="_blank" rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all shadow-lg shadow-sky-200/50 hover:-translate-y-0.5 active:scale-[0.98] bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700">
-                  <Crown size={16} /> Cámbiate a Pro
+                  <Crown size={16} /> {L('Upgrade to Pro', 'Cámbiate a Pro')}
                 </a>
-                <a href={`https://wa.me/51924685557?text=${encodeURIComponent('Hola, deseo aumentar mi espacio de almacenamiento')}`} target="_blank" rel="noopener noreferrer"
+                <a href={`https://wa.me/51924685557?text=${encodeURIComponent(locale === 'en' ? 'Hi, I would like to increase my storage space' : 'Hola, deseo aumentar mi espacio de almacenamiento')}`} target="_blank" rel="noopener noreferrer"
                   className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5 active:scale-[0.98] border-2 ${
                     isDark
                       ? 'border-[#30363d] text-slate-300 hover:border-sky-700 hover:bg-sky-900/20'
                       : 'border-slate-200 text-slate-700 hover:border-sky-300 hover:bg-sky-50'
                   }`}>
-                  <ArrowUpRight size={16} /> Aumentar espacio
+                  <ArrowUpRight size={16} /> {L('Increase space', 'Aumentar espacio')}
                 </a>
               </div>
             </>
