@@ -127,18 +127,39 @@ const CLINICAL_FORMS = [
 ]
 
 // Merge NeuroForms from neurodivergentForms.ts + Clinical forms
-const CLINICAL_FORMS_EN: Record<string, { title: string; subtitle: string }> = {
-  aba: { title: 'ABA Session', subtitle: 'Behavioral session record' },
-  entorno_hogar: { title: 'Home Environment', subtitle: 'Observation of the family environment' },
-  anamnesis: { title: 'Clinical History', subtitle: 'Relevant client data and family context' },
-  ados2: { title: 'ADOS-2', subtitle: 'Diagnostic results record' },
-  vineland3: { title: 'Vineland-3', subtitle: 'Adaptive behavior record' },
-  wiscv: { title: 'WISC-V', subtitle: 'Intelligence record (6-16 years)' },
-  basc3: { title: 'BASC-3', subtitle: 'Behavioral evaluation record' },
-  abllsr: { title: 'ABLLS-R', subtitle: 'Assessment of basic language and learning skills' },
+const CLINICAL_FORMS_EN: Record<string, { title: string; subtitle: string; description: string; tags: string[] }> = {
+  aba: { title: 'ABA Session', subtitle: 'Behavioral session record', description: 'Structured Applied Behavior Analysis session record', tags: ['ABA', 'Session', 'Behavioral'] },
+  entorno_hogar: { title: 'Home Environment', subtitle: 'Observation of the family environment', description: "Analysis of the family environment and its impact on the child's development", tags: ['Home', 'Family', 'Environment'] },
+  anamnesis: { title: 'Clinical History', subtitle: 'Relevant client data and family context', description: 'Complete patient clinical history, family background and early development', tags: ['History', 'Initial', 'Complete'] },
+  ados2: { title: 'ADOS-2', subtitle: 'Diagnostic results record', description: '⚠️ Runs on the official ADOS-2 platform. Here only record the results and scores.', tags: ['ASD', 'ADOS', 'Diagnostic'] },
+  vineland3: { title: 'Vineland-3', subtitle: 'Adaptive behavior record', description: '⚠️ Runs on the official Vineland-3 platform. Here only record composite scores and profile.', tags: ['Adaptive', 'Vineland', 'Functional'] },
+  wiscv: { title: 'WISC-V', subtitle: 'Intelligence record (6-16 years)', description: '⚠️ Runs on the official WISC-V platform. Here only record IQ and percentiles.', tags: ['IQ', 'Intelligence', 'WISC'] },
+  basc3: { title: 'BASC-3', subtitle: 'Behavioral evaluation record', description: '⚠️ Runs on the official BASC-3 platform. Here only record T-scores and scales.', tags: ['Behavioral', 'BASC', 'Emotional'] },
+  abllsr: { title: 'ABLLS-R', subtitle: 'Assessment of basic language and learning skills', description: 'Assessment of Basic Language and Learning Skills - Revised. Assesses cooperation, receptive/expressive language, socialization, academics and ADLs.', tags: ['ABA', 'Language', 'Skills', 'ASD'] },
+}
+// Traducción de tags para formularios clínicos (neurodivergentForms-en no siempre trae tags EN)
+const TAGS_EN: Record<string, string> = {
+  'Sesión': 'Session', 'Conductual': 'Behavioral', 'Hogar': 'Home', 'Familia': 'Family',
+  'Ambiente': 'Environment', 'Historia': 'History', 'Inicial': 'Initial', 'Completo': 'Complete',
+  'Diagnóstico': 'Diagnostic', 'Adaptativo': 'Adaptive', 'Funcional': 'Functional',
+  'Inteligencia': 'Intelligence', 'Emocional': 'Emotional', 'Lenguaje': 'Language',
+  'Habilidades': 'Skills', 'Cognitivo': 'Cognitive', 'Ejecutivo': 'Executive',
+  'Atención': 'Attention', 'Inatención': 'Inattention', 'Hiperactividad': 'Hyperactivity',
+  'Impulsividad': 'Impulsivity', 'Social': 'Social', 'Sensorial': 'Sensory',
+  'Comunicación': 'Communication', 'Autonomía': 'Autonomy', 'Padres': 'Parents',
+  'TEA': 'ASD', 'CI': 'IQ', 'TDAH': 'ADHD',
 }
 function dTitle(fm: any, loc: string) { if (loc !== 'en') return fm.title; if (fm.isClinicalForm) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.title) || fm.title; return CLINICAL_FORMS_EN[fm.id]?.title || fm.title }
 function dSubtitle(fm: any, loc: string) { if (loc !== 'en') return fm.subtitle; if (fm.isClinicalForm) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.subtitle) || fm.subtitle; return CLINICAL_FORMS_EN[fm.id]?.subtitle || fm.subtitle }
+function dDesc(fm: any, loc: string) { if (loc !== 'en') return fm.description; if (fm.isClinicalForm) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.description) || fm.description; return CLINICAL_FORMS_EN[fm.id]?.description || fm.description }
+function dTags(fm: any, loc: string): string[] {
+  const base: string[] = fm.tags || []
+  if (loc !== 'en') return base
+  if (fm.isClinicalForm) { const en = ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.tags; if (en) return en }
+  const fromMap = CLINICAL_FORMS_EN[fm.id]?.tags
+  if (fromMap) return fromMap
+  return base.map(t => TAGS_EN[t] || t)
+}
 
 const ALL_UNIFIED_FORMS = [
   ...CLINICAL_FORMS,
@@ -1356,11 +1377,11 @@ function FormCard({ form, onStart, onSend, catInfo }: any) {
         </div>
 
         {/* Description */}
-        <p className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{form.description}</p>
+        <p className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{dDesc(form, locale)}</p>
 
         {/* Tags + time */}
         <div className="flex flex-wrap gap-1 mb-4">
-          {form.tags?.slice(0, 3).map((tag: string) => (
+          {dTags(form, locale).slice(0, 3).map((tag: string) => (
             <span key={tag} className="px-2 py-0.5 rounded text-[9px] font-semibold"
               style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
               {tag}

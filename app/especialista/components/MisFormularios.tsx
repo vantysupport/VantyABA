@@ -47,6 +47,23 @@ const CLINICAL_FORMS_EN: Record<string, { title: string; subtitle: string; descr
 function dTitle(fm: any, loc: string) { if (loc !== 'en') return fm.title; if (fm.isSoft) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.title) || fm.title; return CLINICAL_FORMS_EN[fm.id]?.title || fm.title }
 function dSubtitle(fm: any, loc: string) { if (loc !== 'en') return fm.subtitle; if (fm.isSoft) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.subtitle) || fm.subtitle; return CLINICAL_FORMS_EN[fm.id]?.subtitle || fm.subtitle }
 function dDesc(fm: any, loc: string) { if (loc !== 'en') return fm.description; if (fm.isSoft) return (ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.description) || fm.description; return CLINICAL_FORMS_EN[fm.id]?.description || fm.description }
+const TAGS_EN: Record<string, string> = {
+  'Sesión': 'Session', 'Conductual': 'Behavioral', 'Hogar': 'Home', 'Familia': 'Family',
+  'Ambiente': 'Environment', 'Historia': 'History', 'Inicial': 'Initial', 'Completo': 'Complete',
+  'Diagnóstico': 'Diagnostic', 'Adaptativo': 'Adaptive', 'Funcional': 'Functional',
+  'Inteligencia': 'Intelligence', 'Emocional': 'Emotional', 'Lenguaje': 'Language',
+  'Habilidades': 'Skills', 'Cognitivo': 'Cognitive', 'Ejecutivo': 'Executive',
+  'Atención': 'Attention', 'Inatención': 'Inattention', 'Hiperactividad': 'Hyperactivity',
+  'Impulsividad': 'Impulsivity', 'Social': 'Social', 'Sensorial': 'Sensory',
+  'Comunicación': 'Communication', 'Autonomía': 'Autonomy', 'Padres': 'Parents',
+  'TEA': 'ASD', 'CI': 'IQ', 'TDAH': 'ADHD',
+}
+function dTags(fm: any, loc: string): string[] {
+  const base: string[] = fm.tags || []
+  if (loc !== 'en') return base
+  if (fm.isSoft) { const en = ALL_FORMS_EN.find((x: any) => x.id === fm.id)?.tags; if (en) return en }
+  return base.map(t => TAGS_EN[t] || t)
+}
 
 const ALL_SPECIALIST_FORMS = [
   ...CLINICAL_FORMS,
@@ -736,7 +753,7 @@ export default function MisFormularios({ userId }: { userId: string }) {
 
                   {/* Tags + time */}
                   <div className="flex flex-wrap gap-1 mb-4">
-                    {(form.tags || []).slice(0, 3).map((tag: string) => (
+                    {dTags(form, locale).slice(0, 3).map((tag: string) => (
                       <span key={tag} className="px-2 py-0.5 rounded text-[9px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
                         {tag}
                       </span>
