@@ -366,9 +366,10 @@ export default function UserManagementView({ rolesConfig }: {
     if (user.id === currentUserId) { toast.error(t('auto.userManagementView.noPuedesEliminarTuPropia')); return }
     const esPadre = user.profile?.role === 'padre'
     const ok = confirm(
-      `¿Eliminar a ${user.profile?.full_name || user.email}?\n` +
-      `Esta acción NO se puede deshacer.` +
-      (esPadre ? `\nSus pacientes quedarán sin familia vinculada (no se borran).` : '')
+      (locale === 'en'
+        ? `Delete ${user.profile?.full_name || user.email}?\nThis action CANNOT be undone.`
+        : `¿Eliminar a ${user.profile?.full_name || user.email}?\nEsta acción NO se puede deshacer.`) +
+      (esPadre ? (locale === 'en' ? `\nTheir patients will be left without a linked family (they are not deleted).` : `\nSus pacientes quedarán sin familia vinculada (no se borran).`) : '')
     )
     if (!ok) return
     setDeletingUser(user.id)
@@ -439,7 +440,7 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success('Tokens actualizados')
+      toast.success(L('Tokens updated', 'Tokens actualizados'))
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, profile: { ...u.profile, tokens: newTokens } } : u))
       setEditingTokensFor(null)
     } catch (err: any) {
@@ -767,8 +768,8 @@ export default function UserManagementView({ rolesConfig }: {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Meta */}
                     <div className="space-y-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                      <p className="flex items-center gap-1.5"><Calendar size={11} /> Creado: {new Date(user.created_at).toLocaleDateString('es')}</p>
-                      <p className="flex items-center gap-1.5"><Clock size={11} /> Último acceso: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString('es') : 'Nunca'}</p>
+                      <p className="flex items-center gap-1.5"><Calendar size={11} /> {L('Created', 'Creado')}: {new Date(user.created_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'es')}</p>
+                      <p className="flex items-center gap-1.5"><Clock size={11} /> {L('Last access', 'Último acceso')}: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'es') : L('Never', 'Nunca')}</p>
                       <p className="flex items-center gap-1.5"><Ticket size={11} /> Tokens: <strong style={{ color: 'var(--text-primary)' }}>{user.profile?.tokens ?? 0}</strong></p>
 
                       {/* Especialidad / clasificación de equipo — solo staff (no padres) */}
@@ -800,7 +801,7 @@ export default function UserManagementView({ rolesConfig }: {
                             <button
                               onClick={() => { setEditingSpecialtyFor(user.id); setNewSpecialty(user.profile?.specialty || '') }}
                               className="ml-1 text-sky-500 hover:underline font-semibold">
-                              {user.profile?.specialty ? 'editar' : 'asignar'}
+                              {user.profile?.specialty ? L('edit', 'editar') : L('assign', 'asignar')}
                             </button>
                           </p>
                         )
@@ -812,7 +813,7 @@ export default function UserManagementView({ rolesConfig }: {
                       <button onClick={() => { setChangingPasswordFor(user); setNewPassword(''); setConfirmPassword('') }}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
                         style={{ background: 'var(--card)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
-                        <Lock size={12} /> Cambiar contraseña
+                        <Lock size={12} /> {L('Change password', 'Cambiar contraseña')}
                       </button>
 
                       <button onClick={() => handleSendResetEmail(user)}
@@ -838,7 +839,7 @@ export default function UserManagementView({ rolesConfig }: {
                         <button onClick={() => { setEditingTokensFor(user.id); setNewTokens(user.profile?.tokens || 0) }}
                           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
                           style={{ background: 'var(--card)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
-                          <Ticket size={12} /> Editar tokens
+                          <Ticket size={12} /> {L('Edit tokens', 'Editar tokens')}
                         </button>
                       )}
 
@@ -846,7 +847,7 @@ export default function UserManagementView({ rolesConfig }: {
                         <button onClick={() => handleDeleteUser(user)} disabled={deletingUser === user.id}
                           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80 disabled:opacity-50"
                           style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: '#dc2626' }}>
-                          {deletingUser === user.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Eliminar
+                          {deletingUser === user.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} {L('Delete', 'Eliminar')}
                         </button>
                       )}
 
@@ -856,13 +857,13 @@ export default function UserManagementView({ rolesConfig }: {
                             const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenRef.current}`, 'x-locale': typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es' }, body: JSON.stringify({ action: 'confirm_email', userId: user.id }) })
                             const json = await res.json()
                             if (json.error) throw new Error(json.error)
-                            toast.success('Email confirmado')
+                            toast.success(L('Email confirmed', 'Email confirmado'))
                             cargarUsuarios()
                           } catch (err: any) { toast.error('Error: ' + err.message) }
                         }}
                           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
                           style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#059669' }}>
-                          <CheckCircle2 size={12} /> Confirmar email
+                          <CheckCircle2 size={12} /> {L('Confirm email', 'Confirmar email')}
                         </button>
                       )}
 
@@ -900,7 +901,7 @@ export default function UserManagementView({ rolesConfig }: {
               <button onClick={() => setChangingPasswordFor(null)} className="p-1.5 rounded-lg hover:opacity-80" style={{ color: 'var(--text-muted)' }}><X size={16} /></button>
             </div>
             <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-              Usuario: <strong style={{ color: 'var(--text-primary)' }}>{changingPasswordFor.profile?.full_name || changingPasswordFor.email}</strong>
+              {L('User', 'Usuario')}: <strong style={{ color: 'var(--text-primary)' }}>{changingPasswordFor.profile?.full_name || changingPasswordFor.email}</strong>
             </p>
             <div className="space-y-3">
               <div className="relative">
@@ -930,12 +931,12 @@ export default function UserManagementView({ rolesConfig }: {
           <div className="rounded-2xl shadow-2xl p-6 w-full max-w-md animate-scale-in" style={{ background: 'var(--card)' }}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <Plus size={18} className="text-sky-500" /> Crear nuevo usuario
+                <Plus size={18} className="text-sky-500" /> {L('Create new user', 'Crear nuevo usuario')}
               </h3>
               <button onClick={() => setShowCreateModal(false)} className="p-1.5 rounded-lg hover:opacity-80" style={{ color: 'var(--text-muted)' }}><X size={16} /></button>
             </div>
             <div className="space-y-3">
-              {['Nombre completo', 'Email', 'Contraseña (mínimo 6 caracteres)'].map((ph, i) => (
+              {[L('Full name', 'Nombre completo'), 'Email', L('Password (minimum 6 characters)', 'Contraseña (mínimo 6 caracteres)')].map((ph, i) => (
                 <input key={i} placeholder={ph} type={i === 2 ? 'password' : i === 1 ? 'email' : 'text'}
                   value={i === 0 ? createForm.full_name : i === 1 ? createForm.email : createForm.password}
                   onChange={e => setCreateForm(f => ({ ...f, [i === 0 ? 'full_name' : i === 1 ? 'email' : 'password']: e.target.value }))}
@@ -991,7 +992,7 @@ export default function UserManagementView({ rolesConfig }: {
               <option value="">{t('usuarios.selPaciente2')}</option>
               {children.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.name}{c.parent_id && c.parent_id !== linkingParent.id ? ' ⚠️ ya tiene tutor' : ''}
+                  {c.name}{c.parent_id && c.parent_id !== linkingParent.id ? (locale === 'en' ? ' ⚠️ already has a guardian' : ' ⚠️ ya tiene tutor') : ''}
                 </option>
               ))}
             </select>
