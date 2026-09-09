@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useI18n } from '@/lib/i18n-context'
+import { useCurrency } from '@/components/CurrencyContext'
 import {
   DollarSign, Plus, Search, Download, TrendingUp, CheckCircle2,
   Clock, XCircle, Loader2, Calendar, Save, X, Package, ChevronDown,
@@ -104,6 +105,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function SecretariaPagos({ profile, enabledTabs }: { profile: any; enabledTabs?: Record<string, boolean> }) {
   const { t, locale } = useI18n()
+  const { symbol, fmt } = useCurrency()
   const toast    = useToast()
   const rtRef    = useRef<any>(null)
   const listRef  = useRef<HTMLDivElement>(null)
@@ -265,7 +267,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   // ─── Eliminar pago ──────────────────────────────────────────────────────────
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const handleDeletePago = async (p: any) => {
-    const monto = `S/ ${Number(p.amount).toFixed(2)}`
+    const monto = fmt(Number(p.amount))
     const nombre = p.children?.name || p.paciente_externo || t('pagos.pacienteGenerico')
     if (!confirm(t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto }))) return
     setDeletingId(p.id)
@@ -288,7 +290,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
   // Eliminar paquete completo (todos los pagos del grupo)
   const handleDeletePaquete = async (g: any) => {
-    const total = `S/ ${g.total.toFixed(2)}`
+    const total = fmt(g.total)
     const cantidad = g.pays.length
     if (!confirm(t('pagos.confirmEliminarPaquete', { child: g.child, cantidad: String(cantidad), total }))) return
     const ids = g.pays.map((p: any) => p.id)
@@ -425,9 +427,9 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
       {/* ── KPIs ──────────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPI label={t('pagos.kpiIngresos')} value={loading ? '—' : `S/ ${stats.total.toFixed(2)}`}     sub={t('pagos.kpiIngresosSub')}    icon={DollarSign}   bar="#10b981" />
+        <KPI label={t('pagos.kpiIngresos')} value={loading ? '—' : fmt(stats.total)}     sub={t('pagos.kpiIngresosSub')}    icon={DollarSign}   bar="#10b981" />
         <KPI label={t('pagos.kpiTransacciones')}     value={loading ? '—' : stats.cobros}                         sub={t('pagos.kpiTransaccionesSub')}  icon={CheckCircle2} bar="#0284c7" />
-        <KPI label={t('pagos.kpiPorCobrar')}        value={loading ? '—' : `S/ ${stats.pendiente.toFixed(2)}`}  sub={t('pagos.kpiPorCobrarSub')}  icon={Clock}        bar="#f59e0b" />
+        <KPI label={t('pagos.kpiPorCobrar')}        value={loading ? '—' : fmt(stats.pendiente)}  sub={t('pagos.kpiPorCobrarSub')}  icon={Clock}        bar="#f59e0b" />
         <KPI label={t('pagos.kpiCancelados')}        value={loading ? '—' : stats.cancelados}                     sub={t('pagos.kpiCanceladosSub')}       icon={XCircle}      bar="#ef4444" />
       </div>
 
@@ -464,8 +466,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                 <BarChart data={stats.porMes} barSize={30}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
                   <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={45} tickFormatter={v => `S/${v}`} />
-                  <Tooltip formatter={(v: any) => [`S/ ${Number(v).toFixed(2)}`, t('pagos.ingresos')]}
+                  <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={45} tickFormatter={v => `${symbol}${v}`} />
+                  <Tooltip formatter={(v: any) => [fmt(Number(v)), t('pagos.ingresos')]}
                     contentStyle={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 12, fontSize: 12, color: 'var(--text-primary)', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
                     labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
                     itemStyle={{ color: 'var(--text-secondary)' }}
@@ -496,7 +498,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       <Pie data={stats.porMetodo} cx="50%" cy="50%" innerRadius={48} outerRadius={75} dataKey="value" paddingAngle={3}>
                         {stats.porMetodo.map((e, i) => <Cell key={i} fill={e.color} />)}
                       </Pie>
-                      <Tooltip formatter={(v: any) => `S/ ${Number(v).toFixed(2)}`}
+                      <Tooltip formatter={(v: any) => fmt(Number(v))}
                         contentStyle={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 10, fontSize: 11, color: 'var(--text-primary)', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
                         labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
                         itemStyle={{ color: 'var(--text-secondary)' }} />
@@ -513,7 +515,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                               <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
                               <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{m.name}</span>
                             </div>
-                            <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>S/{m.value.toFixed(0)}</span>
+                            <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{symbol}{m.value.toFixed(0)}</span>
                           </div>
                           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--muted-bg)' }}>
                             <div style={{ width: `${pct}%`, background: m.color, height: '100%', borderRadius: 999 }} />
@@ -593,7 +595,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                   <ConceptInput value={form.concept} onChange={v => setForm(f => ({ ...f, concept: v }))}
                     onPriceMatch={price => setForm(f => ({ ...f, amount: price }))} />
                 </Field>
-                <Field label={t('pagos.montoSoles') + ' *'}>
+                <Field label={`${locale === 'en' ? 'Amount' : 'Monto'} (${symbol}) *`}>
                   <input type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" className={inputCls} />
                 </Field>
                 <Field label={t('pagos.fechaPago')}>
@@ -769,7 +771,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     <div className="flex items-center justify-between mt-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(59,130,246,0.08)' }}>
                       <p className="text-xs font-bold" style={{ color: '#0284c7' }}>
                         {t('pagos.fechasSeleccionadas', { n: String(pkgDates.length) })}
-                        {pkg.amount && ` · S/ ${(Number(pkg.amount) * pkgDates.length).toFixed(2)} total`}
+                        {pkg.amount && `  ${fmt(Number(pkg.amount) * pkgDates.length)} total`}
                       </p>
                       <button onClick={() => setPkgDates([])}
                         className="text-[10px] font-bold hover:opacity-70" style={{ color: '#ef4444' }}>{t('pagos.limpiar')}</button>
@@ -785,7 +787,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         {t('pagos.vistaPrevia')} {pkg.modo === 'externo' ? (pkg.external_name ? `— ${pkg.external_name}` : '') : (pkg.child_id ? `— ${children.find(c => c.id === pkg.child_id)?.name}` : '')}
                       </p>
                       <p className="text-xs font-bold" style={{ color: '#10b981' }}>
-                        Total: S/ {(Number(pkg.amount || 0) * pkgDates.length).toFixed(2)}
+                        Total: {fmt(Number(pkg.amount || 0) * pkgDates.length)}
                       </p>
                     </div>
                     <div className="max-h-48 overflow-y-auto">
@@ -804,7 +806,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                               <X size={12} />
                             </button>
                             <span className="text-sm font-bold flex-shrink-0" style={{ color: 'var(--text-primary)' }}>
-                              S/ {Number(pkg.amount || 0).toFixed(2)}
+                              {fmt(Number(pkg.amount || 0))}
                             </span>
                           </div>
                         )
@@ -856,12 +858,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{p.children?.name || p.paciente_externo || '—'}</p>
                         <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{new Date(p.created_at).toLocaleDateString('es-PE')}</p>
                       </div>
-                      <p className="md:hidden text-sm font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {Number(p.amount).toFixed(2)}</p>
+                      <p className="md:hidden text-sm font-bold whitespace-nowrap" style={{ color: '#10b981' }}>{fmt(Number(p.amount))}</p>
                     </div>
                     <p className="text-xs md:truncate" style={{ color: 'var(--text-secondary)' }}>
                       <span className="md:hidden font-semibold" style={{ color: 'var(--text-muted)' }}>{t('pagos.conceptoLabel')} </span>{p.concept}
                     </p>
-                    <p className="hidden md:block text-sm font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {Number(p.amount).toFixed(2)}</p>
+                    <p className="hidden md:block text-sm font-bold whitespace-nowrap" style={{ color: '#10b981' }}>{fmt(Number(p.amount))}</p>
                     <p className="text-xs capitalize" style={{ color: 'var(--text-secondary)' }}>
                       <span className="md:hidden font-semibold" style={{ color: 'var(--text-muted)' }}>{t('pagos.metodoLabel')} </span>{t('pagos.method.' + p.payment_method)}
                     </p>
@@ -919,7 +921,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
               <div className="px-5 py-3 flex items-center justify-between" style={{ background: 'var(--muted-bg)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('pagos.registros', { n: String(filtered.length) })}</p>
                 <p className="text-sm font-bold" style={{ color: '#10b981' }}>
-                  Total: S/ {filtered.filter(p => p.status === 'paid').reduce((a, p) => a + Number(p.amount), 0).toFixed(2)}
+                  Total: {fmt(filtered.filter(p => p.status === 'paid').reduce((a, p) => a + Number(p.amount), 0))}
                 </p>
               </div>
             </div>
@@ -956,7 +958,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-                    <p className="text-base sm:text-xl font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {g.total.toFixed(2)}</p>
+                    <p className="text-base sm:text-xl font-bold whitespace-nowrap" style={{ color: '#10b981' }}>{fmt(g.total)}</p>
                     {/* Recibo del paquete completo */}
                     <button
                       onClick={e => {
@@ -991,7 +993,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                           style={{ borderBottom: pi < g.pays.length-1 ? '1px solid var(--card-border)' : 'none', background: 'var(--muted-bg)' }}>
                           <span className="text-xs font-mono font-bold w-20 flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{lbl}</span>
                           <span className="text-xs flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>{p.concept}</span>
-                          <span className="text-sm font-bold flex-shrink-0" style={{ color: '#10b981' }}>S/ {Number(p.amount).toFixed(2)}</span>
+                          <span className="text-sm font-bold flex-shrink-0" style={{ color: '#10b981' }}>{fmt(Number(p.amount))}</span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0" style={{ background: st.bg, color: st.color }}>{t('pagos.status.' + p.status)}</span>
                           <button
                             onClick={() => handleDeletePago(p)}
@@ -1006,7 +1008,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     })}
                     <div className="flex items-center justify-between px-6 py-3" style={{ borderTop: '1px solid var(--card-border)' }}>
                       <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>Total {g.monthLabel}</span>
-                      <span className="text-lg font-bold" style={{ color: '#10b981' }}>S/ {g.total.toFixed(2)}</span>
+                      <span className="text-lg font-bold" style={{ color: '#10b981' }}>{fmt(g.total)}</span>
                     </div>
                   </div>
                 )}
@@ -1091,7 +1093,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       </button>
                     </div>
                   </div>
-                  <p className="text-2xl font-bold pl-2" style={{ color: COLORS[i % COLORS.length] }}>S/ {Number(r.amount).toFixed(2)}</p>
+                  <p className="text-2xl font-bold pl-2" style={{ color: COLORS[i % COLORS.length] }}>{fmt(Number(r.amount))}</p>
                   <div className="flex items-center gap-3 mt-2 pl-2">
                     <span className="text-[11px] px-2 py-0.5 rounded-full font-bold" style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)' }}>{r.duration_min} min</span>
                     {r.description && <span className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>{r.description}</span>}

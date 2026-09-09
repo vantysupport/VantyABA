@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n-context'
+import { useCurrency } from '@/components/CurrencyContext'
 import {
   Sparkles, Plus, Edit3, Trash2, Save, X, Image as ImageIcon, Loader2,
   Clock, Upload, Eye, EyeOff, Palette, Tag, DollarSign, Wifi, MapPin, Layers, Search,
@@ -252,6 +253,7 @@ function TerapiaCard({
   t, onEdit, onDelete, onToggle,
 }: { t: Terapia; onEdit: () => void; onDelete: () => void; onToggle: () => void }) {
   const { t: tr, locale } = useI18n()
+  const { symbol } = useCurrency()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const c = colorDe(t.color_tema)
   const ModIcon = MODALIDADES.find(m => m.id === t.modalidad)?.icon || MapPin
@@ -362,7 +364,7 @@ function TerapiaCard({
             </p>
             {t.precio != null ? (
               <div className="flex items-baseline gap-1">
-                <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>S/.</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{symbol}</span>
                 <span className="text-2xl font-bold" style={{ color: c.accent }}>
                   {Number(t.precio).toFixed(0)}
                 </span>
@@ -384,6 +386,7 @@ function EditorModal({
   editing, setEditing, saving, uploading, onSubirImagen, onGuardar, onClose,
 }: any) {
   const { t: tr, locale } = useI18n()
+  const { symbol } = useCurrency()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const c = colorDe(editing?.color_tema)
 
@@ -503,9 +506,9 @@ function EditorModal({
 
           {/* PRECIO + DURACIÓN */}
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label={L('Price (Soles)','Precio (Soles)')}>
+            <Field label={`${L('Price','Precio')} (${symbol})`}>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold pointer-events-none" style={{ color: 'var(--text-muted)' }}>S/.</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold pointer-events-none" style={{ color: 'var(--text-muted)' }}>{symbol}</span>
                 <input type="number" step="0.01" value={editing.precio ?? ''}
                   onChange={e => setEditing({ ...editing, precio: e.target.value === '' ? null : Number(e.target.value) })}
                   placeholder="0.00"

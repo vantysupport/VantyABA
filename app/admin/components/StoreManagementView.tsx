@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { useTheme } from '@/components/ThemeContext'
+import { useCurrency } from '@/components/CurrencyContext'
 
 interface Product {
   id: string; nombre: string; descripcion: string; precio_soles: number
@@ -49,6 +50,7 @@ const EMPTY_FORM = {
 function ProductModal({ product, onClose, onSaved }: { product: Product|null; onClose:()=>void; onSaved:()=>void }) {
   const { t, locale } = useI18n()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
+  const { symbol } = useCurrency()
   const toast = useToast(); const { isDark } = useTheme()
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<any>(product ? {
@@ -191,7 +193,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
             <div>
               <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.precioSoles")}</label>
               <div className="relative">
-                <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>S/</span>
+                <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{symbol}</span>
                 <input type="number" min="0" step="0.50" value={form.precio_soles}
                   onChange={e => setForm((f:any) => ({ ...f, precio_soles: e.target.value }))}
                   placeholder="0.00" className={inp + ' pl-10'} />
@@ -259,6 +261,7 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
 function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>void; onToggle:()=>void|Promise<void>; onDelete:()=>void|Promise<void>; key?:any }) {
   const { t, locale } = useI18n()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
+  const { symbol } = useCurrency()
   const { isDark } = useTheme()
   const lowStock = p.tipo==='fisico' && p.stock<=3
 
@@ -308,7 +311,7 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
         <p className={`text-xs leading-relaxed line-clamp-2 mb-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{p.descripcion||L('No description','Sin descripción')}</p>
 
         <div className={`flex items-center justify-between mb-4 pb-4 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-          <span className={`text-2xl font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>S/ {Number(p.precio_soles).toFixed(2)}</span>
+          <span className={`text-2xl font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>{symbol} {Number(p.precio_soles).toFixed(2)}</span>
           <p className={`text-xs font-bold ${
             p.tipo==='digital' ? (isDark ? 'text-sky-400' : 'text-sky-600') :
             p.stock===0 ? 'text-red-500' : p.stock<=3 ? 'text-orange-500' :
@@ -341,6 +344,7 @@ function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>
 
 export default function StoreManagementView() {
   const toast = useToast(); const { isDark } = useTheme(); const { locale, t } = useI18n()
+  const { symbol } = useCurrency()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [tab, setTab] = useState<'productos'|'pedidos'>('productos')
   const [products, setProducts] = useState<Product[]>([])
@@ -439,7 +443,7 @@ export default function StoreManagementView() {
           { label:L('Active','Activos'),    value: stats.activos,  sub:L('Visible to parents','Visibles para padres'),      icon: BadgeCheck,    grad:'from-emerald-500 to-emerald-600',txt: isDark?'text-emerald-400':'text-emerald-600' },
           { label:L('Low stock','Stock bajo'), value: stats.stockBajo,sub:L('≤ 3 units','≤ 3 unidades'),              icon: AlertTriangle, grad: stats.stockBajo>0?'from-orange-500 to-orange-600':'from-slate-400 to-slate-500', txt: stats.stockBajo>0?(isDark?'text-orange-400':'text-orange-600'):(isDark?'text-slate-500':'text-slate-400') },
           { label:L('Pending','Pendientes'), value: stats.pendientes,sub:L('To attend','Por atender'),              icon: ShoppingCart,  grad: stats.pendientes>0?'from-amber-500 to-amber-600':'from-slate-400 to-slate-500',  txt: stats.pendientes>0?(isDark?'text-amber-400':'text-amber-600'):(isDark?'text-slate-500':'text-slate-400') },
-          { label:L('Revenue','Ingresos'),   value:`S/ ${stats.revenue.toFixed(2)}`, sub:L('Completed orders','Pedidos completados'), icon:TrendingUp,grad:'from-sky-500 to-sky-600', txt:isDark?'text-sky-400':'text-sky-600' },
+          { label:L('Revenue','Ingresos'),   value:`${symbol} ${stats.revenue.toFixed(2)}`, sub:L('Completed orders','Pedidos completados'), icon:TrendingUp,grad:'from-sky-500 to-sky-600', txt:isDark?'text-sky-400':'text-sky-600' },
         ].map(({ label, value, icon: Icon, grad, txt, sub }) => (
           <div key={label} className={`rounded-2xl p-4 border transition-all hover:shadow-lg hover:-translate-y-0.5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80 shadow-sm'}`}>
             <div className={`w-10 h-10 rounded-xl mb-3 flex items-center justify-center bg-gradient-to-br ${grad} shadow-md`}>
@@ -568,7 +572,7 @@ export default function StoreManagementView() {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className={`text-xl font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>S/ {Number(order.total_soles).toFixed(2)}</p>
+                        <p className={`text-xl font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>{symbol} {Number(order.total_soles).toFixed(2)}</p>
                         <p className={`text-[10px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('auto.storeManagementView.totalDelPedido')}</p>
                       </div>
                       <div className={`p-2 rounded-xl transition-all ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}>
@@ -588,9 +592,9 @@ export default function StoreManagementView() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className={`font-bold text-sm truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{item.product_nombre}</p>
-                                  <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>x{item.cantidad} · S/ {Number(item.precio_unitario).toFixed(2)} c/u</p>
+                                  <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>x{item.cantidad} · {symbol} {Number(item.precio_unitario).toFixed(2)} c/u</p>
                                 </div>
-                                <p className={`font-bold shrink-0 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>S/ {Number(item.subtotal).toFixed(2)}</p>
+                                <p className={`font-bold shrink-0 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{symbol} {Number(item.subtotal).toFixed(2)}</p>
                               </div>
                             ))}
                           </div>
@@ -631,7 +635,7 @@ export default function StoreManagementView() {
                         </div>
 
                         {order.parent_phone && (
-                          <a href={`https://wa.me/51${order.parent_phone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hola! Su pedido está ${ESTADO_CFG[order.estado]?.label?.toLowerCase()}. Total: S/ ${Number(order.total_soles).toFixed(2)} — Neuropsicología y Terapias SANTI`)}`}
+                          <a href={`https://wa.me/51${order.parent_phone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hola! Su pedido está ${ESTADO_CFG[order.estado]?.label?.toLowerCase()}. Total: ${symbol} ${Number(order.total_soles).toFixed(2)} — Neuropsicología y Terapias SANTI`)}`}
                             target="_blank" rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-green-200 hover:-translate-y-0.5 active:scale-95">
                             <Phone size={15}/> {L('Contact via WhatsApp','Contactar por WhatsApp')}

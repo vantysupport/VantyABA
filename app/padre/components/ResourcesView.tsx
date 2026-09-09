@@ -1,6 +1,7 @@
 'use client'
 
 import { useI18n } from '@/lib/i18n-context'
+import { useCurrency } from '@/components/CurrencyContext'
 import { useState, useEffect, useCallback } from 'react'
 import {
   Book, Video, FileText, Link as LinkIcon, Image as ImageIcon, Music,
@@ -37,6 +38,7 @@ const ESTADO_CFG: Record<string,any> = {
 // ── Carrito ────────────────────────────────────────────────────────────────
 function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
   const { t } = useI18n()
+  const { symbol } = useCurrency()
   const total = cart.reduce((s: number, i: CartItem) => s + i.product.precio_soles * i.cantidad, 0)
   const [nota, setNota] = useState('')
   const [placing, setPlacing] = useState(false)
@@ -78,7 +80,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
                   </div>
                   <div style={{ flex:1,minWidth:0 }}>
                     <p style={{ fontWeight:700,fontSize:13,color:'var(--c-text-primary)',margin:'0 0 4px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{item.product.nombre}</p>
-                    <p style={{ fontSize:12,color:'#0284c7',fontWeight:800,margin:0 }}>S/ {(item.product.precio_soles*item.cantidad).toFixed(2)}</p>
+                    <p style={{ fontSize:12,color:'#0284c7',fontWeight:800,margin:0 }}>{symbol} {(item.product.precio_soles*item.cantidad).toFixed(2)}</p>
                   </div>
                   <div style={{ display:'flex',alignItems:'center',gap:6 }}>
                     <button onClick={()=>onUpdate(item.product.id,item.cantidad-1)} style={{ width:26,height:26,borderRadius:8,background:'var(--c-border)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}><Minus size={12} color="var(--c-text-muted)"/></button>
@@ -93,7 +95,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
                 <input value={nota} onChange={e=>setNota(e.target.value)} placeholder={t("familias.notaCentro")} style={{ width:'100%',padding:'10px 14px',background:'var(--c-surface)',border:'1.5px solid var(--c-border)',borderRadius:12,fontSize:13,outline:'none',marginBottom:12,boxSizing:'border-box',fontFamily:'inherit' }}/>
                 <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12 }}>
                   <span style={{ fontSize:14,color:'var(--c-text-muted)' }}>{t("common.total")}</span>
-                  <span style={{ fontSize:20,fontWeight:900,color:'var(--c-text-primary)' }}>S/ {total.toFixed(2)}</span>
+                  <span style={{ fontSize:20,fontWeight:900,color:'var(--c-text-primary)' }}>{symbol} {total.toFixed(2)}</span>
                 </div>
                 <button onClick={handleCheckout} disabled={placing} style={{ width:'100%',padding:'14px',background:'linear-gradient(135deg,#0284c7,#0284c7)',color:'#ffffff',border:'none',borderRadius:14,fontSize:14,fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8 }}>
                   {placing?<Loader2 size={16} style={{ animation:'spin 1s linear infinite' }}/>:<ShoppingBag size={16}/>}
@@ -138,6 +140,7 @@ interface Props { profile: any }
 export default function ResourcesView({ profile }: Props) {
   const { isDark } = useTheme()
   const { t } = useI18n()
+  const { symbol } = useCurrency()
   const [activeTab, setActiveTab] = useState<'biblioteca'|'tienda'>('biblioteca')
   // Biblioteca
   const [resources, setResources] = useState<Resource[]>([])
@@ -375,7 +378,7 @@ export default function ResourcesView({ profile }: Props) {
                           <div style={{ flex:1,minWidth:0 }}>
                             <p style={{ fontWeight:800,fontSize:14,color:'var(--c-text-primary)',margin:'0 0 2px' }}>{p.nombre}</p>
                             <p style={{ fontSize:12,color:'var(--c-text-muted)',margin:'0 0 6px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{p.descripcion}</p>
-                            <p style={{ fontSize:16,fontWeight:900,color:'#0284c7',margin:0 }}>S/ {p.precio_soles.toFixed(2)}</p>
+                            <p style={{ fontSize:16,fontWeight:900,color:'#0284c7',margin:0 }}>{symbol} {p.precio_soles.toFixed(2)}</p>
                           </div>
                           <button onClick={()=>addToCart(p)} disabled={p.stock===0} style={{ padding:'10px 16px',background:justAdded?'#f0fdf4':inCart?'#eff6ff':'linear-gradient(135deg,#0284c7,#0284c7)',color:justAdded?'#16a34a':inCart?'#0284c7':'var(--c-card)',border:justAdded?'1.5px solid #bbf7d0':inCart?'1.5px solid #bfdbfe':'none',borderRadius:12,fontSize:12,fontWeight:800,cursor:p.stock===0?'not-allowed':'pointer',flexShrink:0,fontFamily:'inherit' }}>
                             {justAdded?'✓ Agregado':inCart?'En carrito':'Agregar'}
@@ -398,7 +401,7 @@ export default function ResourcesView({ profile }: Props) {
                           <div style={{ width:44,height:44,background:'var(--c-surface)',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}><ShoppingBag size={20} color="var(--c-text-placeholder)"/></div>
                           <div style={{ flex:1,minWidth:0 }}>
                             <p style={{ fontWeight:700,fontSize:13,color:'var(--c-text-primary)',margin:'0 0 2px' }}>{p.nombre}</p>
-                            <p style={{ fontSize:14,fontWeight:900,color:'#0284c7',margin:0 }}>S/ {p.precio_soles.toFixed(2)}</p>
+                            <p style={{ fontSize:14,fontWeight:900,color:'#0284c7',margin:0 }}>{symbol} {p.precio_soles.toFixed(2)}</p>
                           </div>
                           <button onClick={()=>addToCart(p)} disabled={p.stock===0} style={{ padding:'8px 14px',background:justAdded?'#f0fdf4':inCart?'#f5f3ff':'var(--c-surface)',color:justAdded?'#16a34a':inCart?'#0284c7':'var(--c-text-primary)',border:`1.5px solid ${justAdded?'#bbf7d0':inCart?'#ddd6fe':'var(--c-border)'}`,borderRadius:10,fontSize:12,fontWeight:700,cursor:p.stock===0?'not-allowed':'pointer',flexShrink:0,fontFamily:'inherit' }}>
                             {justAdded?'✓':inCart?'En carrito':'+ Agregar'}
@@ -420,7 +423,7 @@ export default function ResourcesView({ profile }: Props) {
               {cartCount>0&&(
                 <div style={{ position:'sticky',bottom:16,zIndex:40 }}>
                   <button onClick={()=>setShowCart(true)} style={{ width:'100%',padding:'14px 20px',background:'linear-gradient(135deg,#0284c7,#0284c7)',color:'#ffffff',border:'none',borderRadius:18,fontSize:14,fontWeight:800,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 8px 24px rgba(2,132,199,.4)',fontFamily:'inherit' }}>
-                    <ShoppingCart size={18}/> Ver carrito · {cartCount} producto{cartCount!==1?'s':''} · S/ {cart.reduce((s,i)=>s+i.product.precio_soles*i.cantidad,0).toFixed(2)}
+                    <ShoppingCart size={18}/> Ver carrito · {cartCount} producto{cartCount!==1?'s':''} · {symbol} {cart.reduce((s,i)=>s+i.product.precio_soles*i.cantidad,0).toFixed(2)}
                   </button>
                 </div>
               )}
@@ -448,7 +451,7 @@ export default function ResourcesView({ profile }: Props) {
                       </div>
                     ))}
                     <div style={{ display:'flex',justifyContent:'flex-end',marginTop:10 }}>
-                      <span style={{ fontSize:16,fontWeight:900,color:'var(--c-text-primary)' }}>S/ {order.total_soles?.toFixed(2)}</span>
+                      <span style={{ fontSize:16,fontWeight:900,color:'var(--c-text-primary)' }}>{symbol} {order.total_soles?.toFixed(2)}</span>
                     </div>
                   </div>
                 )

@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { useCurrency } from '@/components/CurrencyContext'
 
 const MESES     = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const MESES_L   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -49,6 +50,7 @@ function KPIBig({ label, value, sub, icon: Icon, bar, delta, deltaLabel }: any) 
 
 // ── Tooltip personalizado ─────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
+  const { symbol } = useCurrency()
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-2xl px-4 py-3 shadow-xl" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
@@ -58,7 +60,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
           <span style={{ color: 'var(--text-muted)' }}>{p.name}:</span>
           <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
-            {p.dataKey === 'sesiones' ? p.value : `S/ ${Number(p.value).toFixed(2)}`}
+            {p.dataKey === 'sesiones' ? p.value : `${symbol} ${Number(p.value).toFixed(2)}`}
           </span>
         </div>
       ))}
@@ -74,6 +76,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
   const MESL = isEN ? MESES_L_EN : MESES_L
   const dateLoc = isEN ? 'en-US' : 'es-PE'
   const toast = useToast()
+  const { symbol } = useCurrency()
   const [loading, setLoading]         = useState(true)
   const [tab, setTab] = useState<'overview' | 'pacientes' | 'servicios'>('overview')
   const reportesTabs = ([
@@ -222,7 +225,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
     }
   }
 
-  const fmt = (n: number) => `S/ ${n.toLocaleString(dateLoc, { minimumFractionDigits: 2 })}`
+  const fmt = (n: number) => `${symbol} ${n.toLocaleString(dateLoc, { minimumFractionDigits: 2 })}`
 
   // Filtered porMes for selected month
   const chartData = mesFilter !== null ? data.porMes.filter((_, i) => i === mesFilter) : data.porMes
@@ -336,7 +339,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
                       <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={50} tickFormatter={v => `S/${v}`} />
+                      <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={50} tickFormatter={v => `${symbol}${v}`} />
                       <Tooltip content={<CustomTooltip />} />
                       <Area type="monotone" dataKey="ingresos" name={L('Collected','Cobrado')}   stroke="#10b981" strokeWidth={2.5} fill="url(#gIngresos)"  dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
                       <Area type="monotone" dataKey="pendiente" name={L('Pending','Pendiente')} stroke="#f59e0b" strokeWidth={2} fill="url(#gPendiente)" dot={{ r: 3, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
@@ -365,7 +368,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                             <Pie data={data.porMetodo} cx="50%" cy="50%" innerRadius={42} outerRadius={68} dataKey="value" paddingAngle={3}>
                               {data.porMetodo.map((e, i) => <Cell key={i} fill={e.color} />)}
                             </Pie>
-                            <Tooltip formatter={(v: any) => `S/ ${Number(v).toFixed(2)}`}
+                            <Tooltip formatter={(v: any) => `${symbol} ${Number(v).toFixed(2)}`}
                               contentStyle={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 10, fontSize: 11, color: 'var(--text-primary)', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
                               labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
                               itemStyle={{ color: 'var(--text-secondary)' }} />
@@ -451,9 +454,9 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                         <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', opacity: m.ingresos + m.pendiente === 0 ? 0.4 : 1 }}>
                           <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{MESL[i]}</td>
                           <td className="px-3 sm:px-5 py-3" style={{ color: 'var(--text-muted)' }}>{m.sesiones}</td>
-                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {m.ingresos.toFixed(2)}</td>
-                          <td className="px-3 sm:px-5 py-3 font-medium whitespace-nowrap" style={{ color: '#f59e0b' }}>S/ {m.pendiente.toFixed(2)}</td>
-                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>S/ {(m.ingresos + m.pendiente).toFixed(2)}</td>
+                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#10b981' }}>{symbol} {m.ingresos.toFixed(2)}</td>
+                          <td className="px-3 sm:px-5 py-3 font-medium whitespace-nowrap" style={{ color: '#f59e0b' }}>{symbol} {m.pendiente.toFixed(2)}</td>
+                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{symbol} {(m.ingresos + m.pendiente).toFixed(2)}</td>
                           <td className="px-3 py-3">
                             {(m.ingresos + m.pendiente) > 0 && (
                               <button
@@ -481,9 +484,9 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                       <tr style={{ background: 'var(--muted-bg)', borderTop: '2px solid var(--card-border)' }}>
                         <td className="px-3 sm:px-5 py-3 font-bold text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{L('Total','Total')} {anio}</td>
                         <td className="px-3 sm:px-5 py-3 font-bold" style={{ color: 'var(--text-primary)' }}>{data.sesionesAnio}</td>
-                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#10b981' }}>S/ {data.totalAnio.toFixed(2)}</td>
-                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#f59e0b' }}>S/ {data.totalPendiente.toFixed(2)}</td>
-                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>S/ {(data.totalAnio + data.totalPendiente).toFixed(2)}</td>
+                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#10b981' }}>{symbol} {data.totalAnio.toFixed(2)}</td>
+                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#f59e0b' }}>{symbol} {data.totalPendiente.toFixed(2)}</td>
+                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{symbol} {(data.totalAnio + data.totalPendiente).toFixed(2)}</td>
                         <td />
                       </tr>
                     </tfoot>
@@ -516,7 +519,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1.5">
                             <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>{p.name}</p>
-                            <p className="text-sm font-bold ml-2 flex-shrink-0" style={{ color: '#10b981' }}>S/ {p.ingresos.toFixed(2)}</p>
+                            <p className="text-sm font-bold ml-2 flex-shrink-0" style={{ color: '#10b981' }}>{symbol} {p.ingresos.toFixed(2)}</p>
                           </div>
                           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--card)' }}>
                             <div style={{ width: `${pct}%`, background: COLORS[i % COLORS.length], height: '100%', borderRadius: '999px', transition: 'width 0.6s ease' }} />
@@ -550,7 +553,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                           <Pie data={data.porServicio} cx="50%" cy="50%" innerRadius={50} outerRadius={85} dataKey="value" paddingAngle={3}>
                             {data.porServicio.map((e, i) => <Cell key={i} fill={e.color} />)}
                           </Pie>
-                          <Tooltip formatter={(v: any) => `S/ ${Number(v).toFixed(2)}`}
+                          <Tooltip formatter={(v: any) => `${symbol} ${Number(v).toFixed(2)}`}
                             contentStyle={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 10, fontSize: 11, color: 'var(--text-primary)', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
                             labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
                             itemStyle={{ color: 'var(--text-secondary)' }} />
@@ -572,7 +575,7 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
                         <p className="text-xs font-medium flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>{s.name}</p>
                         <div className="text-right">
-                          <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>S/ {s.value.toFixed(2)}</p>
+                          <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{symbol} {s.value.toFixed(2)}</p>
                           <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{s.count} {L('payments','cobros')}</p>
                         </div>
                       </div>

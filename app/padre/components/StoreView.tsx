@@ -1,6 +1,7 @@
 'use client'
 
 import { useI18n } from '@/lib/i18n-context'
+import { useCurrency } from '@/components/CurrencyContext'
 import { toBCP47 } from '@/lib/i18n'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -46,6 +47,7 @@ const ESTADO_CFG: Record<string, any> = {
 function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
   const total = cart.reduce((s: number, i: CartItem) => s + i.product.precio_soles * i.cantidad, 0)
   const { t, locale } = useI18n()
+  const { symbol } = useCurrency()
   const [nota, setNota] = useState('')
   const [placing, setPlacing] = useState(false)
   const [done, setDone] = useState(false)
@@ -108,7 +110,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm leading-tight truncate" style={{ color: "var(--c-text-primary)" }}>{p.nombre}</p>
-                    <p className="text-xs text-sky-600 dark:text-sky-400 font-bold mt-0.5">S/ {(p.precio_soles * cantidad).toFixed(2)}</p>
+                    <p className="text-xs text-sky-600 dark:text-sky-400 font-bold mt-0.5">{symbol} {(p.precio_soles * cantidad).toFixed(2)}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button onClick={() => onUpdate(p.id, cantidad - 1)}
@@ -148,7 +150,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
             <div className="p-5 space-y-3" style={{ borderTop: "1px solid var(--c-border)" }}>
               <div className="flex justify-between items-center">
                 <span className="font-bold" style={{ color: "var(--c-text-secondary)" }}>{t('ui.total_to_pay')}</span>
-                <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">S/ {total.toFixed(2)}</span>
+                <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">{symbol} {total.toFixed(2)}</span>
               </div>
               <button onClick={handleCheckout} disabled={placing}
                 className="w-full py-4 bg-sky-600 hover:bg-sky-700 text-white font-bold text-base rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-sky-200">
@@ -169,6 +171,7 @@ function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
 // ── Vista principal de la tienda ──────────────────────────────────────────────
 export default function StoreView({ profile }: { profile: any }) {
   const { t, locale } = useI18n()
+  const { symbol } = useCurrency()
   const [view, setView] = useState<'catalogo' | 'mis-pedidos'>('catalogo')
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -454,14 +457,14 @@ export default function StoreView({ profile }: { profile: any }) {
                       </div>
                       <div className="flex-1">
                         <p className="font-bold text-sm text-slate-800 dark:text-slate-100">{item.product_nombre}</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">x{item.cantidad} · S/ {Number(item.precio_unitario).toFixed(2)} c/u</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">x{item.cantidad} · {symbol} {Number(item.precio_unitario).toFixed(2)} c/u</p>
                       </div>
-                      <p className="font-bold text-slate-700 dark:text-slate-200">S/ {Number(item.subtotal).toFixed(2)}</p>
+                      <p className="font-bold text-slate-700 dark:text-slate-200">{symbol} {Number(item.subtotal).toFixed(2)}</p>
                     </div>
                   ))}
                   <div className="pt-3 border-t border-slate-100 dark:border-[#21262d] flex items-center justify-between">
                     <span className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500 font-medium">{t("tienda.totalPagado")}</span>
-                    <span className="text-xl font-bold text-sky-600 dark:text-sky-400">S/ {Number(order.total_soles).toFixed(2)}</span>
+                    <span className="text-xl font-bold text-sky-600 dark:text-sky-400">{symbol} {Number(order.total_soles).toFixed(2)}</span>
                   </div>
                   {order.notas && (
                     <p className="text-xs text-slate-400 dark:text-slate-500 italic">Tu nota: "{order.notas}"</p>
@@ -489,6 +492,7 @@ export default function StoreView({ profile }: { profile: any }) {
 // ── Tarjeta de producto ───────────────────────────────────────────────────────
 function ProductCard({ product: p, onAdd, onDetail, justAdded, inCart, featured }: any) {
   const { t } = useI18n()
+  const { symbol } = useCurrency()
   const sinStock = p.tipo === 'fisico' && p.stock === 0
   return (
     <div className="rounded-2xl border-2 overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 cursor-pointer" style={{ background: "var(--c-card)", borderColor: featured ? "rgba(251,191,36,0.4)" : "var(--c-border)" }}>
@@ -518,7 +522,7 @@ function ProductCard({ product: p, onAdd, onDetail, justAdded, inCart, featured 
         <p className="font-bold text-xs sm:text-sm leading-tight mb-1 line-clamp-2" style={{ color: "var(--c-text-primary)" }} onClick={() => onDetail(p)}>{p.nombre}</p>
         <p className="text-[10px] sm:text-xs line-clamp-2 mb-2 sm:mb-3 leading-relaxed" style={{ color: "var(--c-text-muted)" }}>{p.descripcion}</p>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm sm:text-lg font-bold text-sky-500">S/ {Number(p.precio_soles).toFixed(2)}</span>
+          <span className="text-sm sm:text-lg font-bold text-sky-500">{symbol} {Number(p.precio_soles).toFixed(2)}</span>
           <button onClick={() => !sinStock && onAdd(p)} disabled={sinStock}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${justAdded ? 'bg-emerald-600 text-white scale-95' : sinStock ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-200'}`}>
             {justAdded ? <><CheckCircle size={13} /> {t('ui.added_short')}</> : <><ShoppingCart size={13} /> {inCart > 0 ? `${t('ui.in_cart')} (${inCart})` : t('common.agregar')}</>}
@@ -532,6 +536,7 @@ function ProductCard({ product: p, onAdd, onDetail, justAdded, inCart, featured 
 // ── Detalle de producto (modal) ───────────────────────────────────────────────
 function ProductDetail({ product: p, onClose, onAdd, inCart, justAdded }: any) {
   const { t } = useI18n()
+  const { symbol } = useCurrency()
   const sinStock = p.tipo === 'fisico' && p.stock === 0
   return (
     <div style={{ position:'fixed', inset:0, zIndex:50, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'flex-end', justifyContent:'center', padding:0 }} onClick={onClose}>
@@ -557,7 +562,7 @@ function ProductDetail({ product: p, onClose, onAdd, inCart, justAdded }: any) {
         <div style={{ padding:'16px 20px 20px', overflowY:'auto', flex:1 }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:8 }}>
             <h3 style={{ fontWeight:900, fontSize:17, color:'var(--c-text-primary)', margin:0, lineHeight:1.3, flex:1 }}>{p.nombre}</h3>
-            <span style={{ fontWeight:900, fontSize:20, color:'#0284c7', flexShrink:0 }}>S/ {Number(p.precio_soles).toFixed(2)}</span>
+            <span style={{ fontWeight:900, fontSize:20, color:'#0284c7', flexShrink:0 }}>{symbol} {Number(p.precio_soles).toFixed(2)}</span>
           </div>
 
           <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12 }}>
