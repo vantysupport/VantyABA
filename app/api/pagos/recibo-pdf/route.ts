@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getCentroMoneda } from '@/lib/centro-moneda'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,8 +17,8 @@ function fmtDate(iso: string, lang: string = 'es') {
   return new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-function fmtCurrency(n: number, lang: string = 'es') {
-  return `S/\u00a0${n.toLocaleString(lang === 'en' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function fmtCurrency(n: number, lang: string = 'es', symbol: string = 'S/') {
+  return `${symbol}\u00a0${n.toLocaleString(lang === 'en' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 // ── Fetch center config ───────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ async function getCenterInfo() {
 // ── PDF generation (pure JS, no jsPDF import needed server-side) ──────────────
 // We generate an HTML template and return it as a self-printing page.
 // The client will open this in a new tab and the browser handles PDF via print.
-function generateReceiptHTML(payment: any, center: any, child: any, parentProfile: any, reciboNum: string, lang: string = 'es') {
+function generateReceiptHTML(payment: any, center: any, child: any, parentProfile: any, reciboNum: string, lang: string = 'es', symbol: string = 'S/') {
   const isEN = lang === 'en'
   const L = (en: string, es: string) => (isEN ? en : es)
   const statusLabels: Record<string, string> = isEN ? {
@@ -250,8 +251,8 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
                 ${payment.notes ? `<span class="sub">${payment.notes}</span>` : ''}
               </td>
               <td class="c">1</td>
-              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount), lang)}</span></td>
-              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount), lang)}</span></td>
+              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount), lang, symbol)}</span></td>
+              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount), lang, symbol)}</span></td>
             </tr>
           </tbody>
         </table>
@@ -262,7 +263,7 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
             <p class="lbl">${L('Total','Total')}</p>
             <p style="font-size:11px;color:#6b7280;margin-top:2px">${L('Includes all items','Incluye todos los conceptos')}</p>
           </div>
-          <p class="val">${fmtCurrency(Number(payment.amount), lang)}</p>
+          <p class="val">${fmtCurrency(Number(payment.amount), lang, symbol)}</p>
         </div>
 
         <!-- MÉTODO DE PAGO -->
@@ -351,13 +352,14 @@ export async function GET(req: NextRequest) {
 
     // 3. Get center info
     const center = await getCenterInfo()
+    const cur = await getCentroMoneda()
 
     // 4. Get child and parent info
     const child         = payment.children
     const parentProfile = (child as any)?.profiles
 
     // 5. Generate HTML receipt
-    const html = generateReceiptHTML(payment, center, child, parentProfile, reciboNum, lang)
+    const html = generateReceiptHTML(payment, center, child, parentProfile, reciboNum, lang, cur.symbol)
 
     return new NextResponse(html, {
       headers: {

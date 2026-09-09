@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { callGroqSimple, GROQ_MODELS, GroqExhaustedError } from '@/lib/groq-client'
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildAIContext } from '@/lib/ai-context-builder';
+import { getCentroMoneda } from '@/lib/centro-moneda';
 
 
 // Helper: reintentar con backoff exponencial ante rate limit
@@ -82,10 +83,11 @@ export async function POST(req: Request) {
       .order('destacado', { ascending: false })
       .limit(6);   // menos productos = menos tokens por llamada (el detalle va solo en el sugerido)
 
+    const cur = await getCentroMoneda()
     const productosTexto = productos && productos.length > 0
       ? `\nPRODUCTOS EN TIENDA (sugiere UNO solo si ayuda a la tarea en casa):\n` +
         productos.map((p, i) =>
-          `${i + 1}. ID:"${p.id}" | "${p.nombre}" | S/${p.precio_soles} | ${p.tipo}`
+          `${i + 1}. ID:"${p.id}" | "${p.nombre}" | ${cur.symbol}${p.precio_soles} | ${p.tipo}`
         ).join('\n')
       : '';
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import ExcelJS from 'exceljs'
+import { getCentroMoneda } from '@/lib/centro-moneda'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
 
   if (status !== 'all') query = query.eq('status', status)
 
+  const cur = await getCentroMoneda()
   const { data: pays, error } = await query
   if (error) return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : error.message }, { status: 500 })
 
@@ -86,7 +88,7 @@ export async function GET(req: NextRequest) {
   ws.addRow([]) // spacer
 
   // ── Header row ─────────────────────────────────────────────────────────────
-  const headers = ['Paciente', 'Concepto', 'Monto (S/)', 'Método', 'Estado', 'Fecha']
+  const headers = ['Paciente', 'Concepto', `Monto (${cur.symbol})`, 'Método', 'Estado', 'Fecha']
   const headerRow = ws.addRow(headers)
   headerRow.height = 20
   headerRow.eachCell(cell => {
@@ -125,7 +127,7 @@ export async function GET(req: NextRequest) {
 
     // Amount in green
     const amountCell = row.getCell(3)
-    amountCell.numFmt = '"S/ "#,##0.00'
+    amountCell.numFmt = `"${cur.symbol} "#,##0.00`
     amountCell.font = { size: 10, bold: true, color: { argb: 'FF059669' } }
 
     // Status with color
@@ -149,7 +151,7 @@ export async function GET(req: NextRequest) {
   summaryData.forEach(([label, , value]) => {
     const row = ws.addRow([label, '', value, '', '', ''])
     row.getCell(1).font = { bold: true, size: 10, color: { argb: 'FF374151' } }
-    row.getCell(3).numFmt = '"S/ "#,##0.00'
+    row.getCell(3).numFmt = `"${cur.symbol} "#,##0.00`
     row.getCell(3).font = { bold: true, size: 11, color: { argb: 'FF059669' } }
     row.getCell(3).alignment = { horizontal: 'right' }
   })

@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import ExcelJS from 'exceljs'
+import { getCentroMoneda } from '@/lib/centro-moneda'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -137,6 +138,9 @@ export async function GET(req: NextRequest) {
       getCenterInfo(),
     ])
 
+    const cur = await getCentroMoneda()
+    const numFmtMoney = `"${cur.symbol} "#,##0.00`
+
     const all   = pays || []
     const paid  = all.filter(p => p.status === 'paid')
     const pend  = all.filter(p => p.status === 'pending')
@@ -253,7 +257,7 @@ export async function GET(req: NextRequest) {
       r.getCell(1).font = { name: 'Calibri', size: 10, bold: true, color: { argb: kpiColors[i] } }
       r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: kpiBgs[i] } }
       r.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
-      r.getCell(2).numFmt = '"S/ "#,##0.00'
+      r.getCell(2).numFmt = numFmtMoney
       r.getCell(2).font   = { name: 'Calibri', size: 11, bold: true, color: { argb: kpiColors[i] } }
       r.getCell(2).fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: kpiBgs[i] } }
       r.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -297,7 +301,7 @@ export async function GET(req: NextRequest) {
       r.getCell(2).font  = { name: 'Calibri', size: 10, color: { argb: C.mid } }
       r.getCell(2).fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }
       r.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }
-      r.getCell(3).numFmt = '"S/ "#,##0.00'
+      r.getCell(3).numFmt = numFmtMoney
       r.getCell(3).font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.green } }
       r.getCell(3).fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }
       r.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -332,7 +336,7 @@ export async function GET(req: NextRequest) {
       r.getCell(1).font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.dark } }
       r.getCell(1).fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }
       r.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' }
-      r.getCell(3).numFmt = '"S/ "#,##0.00'
+      r.getCell(3).numFmt = numFmtMoney
       r.getCell(3).font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.green } }
       r.getCell(3).fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }
       r.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -367,7 +371,7 @@ export async function GET(req: NextRequest) {
     ws2Title.alignment = { horizontal: 'center', vertical: 'middle' }
     ws2.getRow(1).height = 30
 
-    const ws2Headers = [L('Date','Fecha'), L('Day','Día'), L('Patient','Paciente'), L('Concept','Concepto'), L('Method','Método'), L('Amount (S/)','Monto (S/)'), L('Status','Estado')]
+    const ws2Headers = [L('Date','Fecha'), L('Day','Día'), L('Patient','Paciente'), L('Concept','Concepto'), L('Method','Método'), L(`Amount (${cur.symbol})`,`Monto (${cur.symbol})`), L('Status','Estado')]
     ws2.getRow(2).values = ws2Headers
     ws2.getRow(2).height = 20
     ws2.getRow(2).eachCell(c => {
@@ -396,7 +400,7 @@ export async function GET(req: NextRequest) {
         c.border = { bottom: { style: 'hair', color: { argb: C.gray3 } } }
       })
 
-      r.getCell(6).numFmt = '"S/ "#,##0.00'
+      r.getCell(6).numFmt = numFmtMoney
       r.getCell(6).font   = { name: 'Calibri', size: 10, bold: true, color: { argb: C.green } }
       r.getCell(7).fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: st.fill } }
       r.getCell(7).font   = { name: 'Calibri', size: 9, bold: true, color: { argb: st.font } }
@@ -415,12 +419,12 @@ export async function GET(req: NextRequest) {
     tCellA.alignment = { horizontal: 'center', vertical: 'middle' }
     const tCellF = totalsRow.getCell(6)
     tCellF.value = totalAll
-    tCellF.numFmt = '"S/ "#,##0.00'
+    tCellF.numFmt = numFmtMoney
     tCellF.font  = { name: 'Calibri', size: 11, bold: true, color: { argb: C.white } }
     tCellF.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
     tCellF.alignment = { horizontal: 'right', vertical: 'middle' }
     const tCellG = totalsRow.getCell(7)
-    tCellG.value = STATUS_LBL['paid'] + `: S/ ${paid.reduce((a,p)=>a+Number(p.amount),0).toFixed(2)}`
+    tCellG.value = STATUS_LBL['paid'] + `: ${cur.symbol} ${paid.reduce((a,p)=>a+Number(p.amount),0).toFixed(2)}`
     tCellG.font  = { name: 'Calibri', size: 10, bold: true, color: { argb: C.white } }
     tCellG.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
     tCellG.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -472,7 +476,7 @@ export async function GET(req: NextRequest) {
       r.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }
       r.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }
       ;[3,4,5].forEach(col => {
-        r.getCell(col).numFmt = '"S/ "#,##0.00'
+        r.getCell(col).numFmt = numFmtMoney
         r.getCell(col).font   = { name: 'Calibri', size: 10, bold: col === 5, color: { argb: col === 3 ? C.green : col === 4 ? C.amber : C.dark } }
         r.getCell(col).fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }
         r.getCell(col).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -489,7 +493,7 @@ export async function GET(req: NextRequest) {
       c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.navy } }
       c.alignment = { horizontal: 'center', vertical: 'middle' }
     })
-    ;[3,4,5].forEach(col => { gt.getCell(col).numFmt = '"S/ "#,##0.00'; gt.getCell(col).alignment = { horizontal: 'right', vertical: 'middle' } })
+    ;[3,4,5].forEach(col => { gt.getCell(col).numFmt = numFmtMoney; gt.getCell(col).alignment = { horizontal: 'right', vertical: 'middle' } })
 
     // ── Generate buffer ────────────────────────────────────────────────────────
     const buffer = await wb.xlsx.writeBuffer()

@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getCentroMoneda } from '@/lib/centro-moneda'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,8 +20,8 @@ function fmtShort(iso: string) {
   const d = new Date(iso)
   return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`
 }
-function fmtMoney(n: number, lang: string = 'es') {
-  return `S/ ${n.toLocaleString(lang === 'en' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function fmtMoney(n: number, lang: string = 'es', symbol: string = 'S/') {
+  return `${symbol} ${n.toLocaleString(lang === 'en' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 function padNum(n: number) { return String(n).padStart(4, '0') }
 
@@ -69,6 +70,7 @@ export async function GET(req: NextRequest) {
     if (error || !payments?.length) return NextResponse.json({ error: 'Sin pagos encontrados' }, { status: 404 })
 
     const center        = await getCenterInfo()
+    const cur = await getCentroMoneda()
     const child         = payments[0].children
     const parentProfile = (child as any)?.profiles
 
@@ -237,7 +239,7 @@ export async function GET(req: NextRequest) {
             <td style="font-size:12.5px;color:#111827;font-weight:600">${concept}</td>
             <td class="ac" style="font-size:12px;color:#374151;text-transform:capitalize">${p.payment_method}</td>
             <td class="ac"><span class="sdot" style="background:${st.bg};color:${st.color}">${st.label}</span></td>
-            <td class="ar">${fmtMoney(Number(p.amount), lang)}</td>
+            <td class="ar">${fmtMoney(Number(p.amount), lang, cur.symbol)}</td>
           </tr>`
         }).join('')}
       </tbody>
@@ -246,16 +248,16 @@ export async function GET(req: NextRequest) {
     <div class="sumbox">
       <div class="srow">
         <span class="slbl">${L('Paid sessions','Sesiones pagadas')} (${paid.length})</span>
-        <span class="sval" style="color:#059669">${fmtMoney(totalPaid, lang)}</span>
+        <span class="sval" style="color:#059669">${fmtMoney(totalPaid, lang, cur.symbol)}</span>
       </div>
       ${pending.length > 0 ? `
       <div class="srow">
         <span class="slbl">${L('Pending sessions','Sesiones pendientes')} (${pending.length})</span>
-        <span class="sval" style="color:#b45309">${fmtMoney(totalPend, lang)}</span>
+        <span class="sval" style="color:#b45309">${fmtMoney(totalPend, lang, cur.symbol)}</span>
       </div>` : ''}
       <div class="srow">
         <span class="stlbl">${L('Package total','Total del paquete')}</span>
-        <span class="stval">${fmtMoney(total, lang)}</span>
+        <span class="stval">${fmtMoney(total, lang, cur.symbol)}</span>
       </div>
     </div>
 

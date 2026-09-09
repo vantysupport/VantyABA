@@ -1,6 +1,7 @@
 // app/api/facturacion/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getCentroMoneda } from '@/lib/centro-moneda'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -93,14 +94,15 @@ async function notificarFactura(childId: string, factura: any, tipo: string) {
     const { data: padres } = await supabaseAdmin.from('parent_accounts').select('user_id').eq('child_id', childId)
     if (!padres || padres.length === 0) return
 
+    const cur = await getCentroMoneda()
     const mensajes: Record<string, any> = {
       nueva: {
         titulo: 'Nueva factura emitida',
-        mensaje: `Se emitio la factura ${factura.numero} por S/ ${factura.monto} - ${factura.concepto}. Fecha de vencimiento: ${factura.fecha_vencimiento || 'Sin fecha'}.`
+        mensaje: `Se emitio la factura ${factura.numero} por ${cur.symbol} ${factura.monto} - ${factura.concepto}. Fecha de vencimiento: ${factura.fecha_vencimiento || 'Sin fecha'}.`
       },
       pagado: {
         titulo: 'Pago registrado - Gracias',
-        mensaje: `Se registro el pago de la factura ${factura.numero} por S/ ${factura.monto}. Gracias!`
+        mensaje: `Se registro el pago de la factura ${factura.numero} por ${cur.symbol} ${factura.monto}. Gracias!`
       }
     }
 
