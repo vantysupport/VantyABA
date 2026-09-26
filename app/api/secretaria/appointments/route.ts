@@ -7,6 +7,7 @@ import { notifyAsync, notifyParentDirect } from '@/lib/notifications'
 import { sendEmail, buildEmailCita, buildEmailAdmin } from '@/lib/email'
 import { getCentroBranding, type CentroBranding } from '@/lib/centro-branding'
 import { internalApiHeaders } from '@/lib/calendar-integration'
+import { sincronizarCalendarios } from '@/lib/calendar-sync'
 import { getLocaleFromRequest } from '@/lib/lang'
 import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { avisarCitaFamilia } from '@/lib/avisos'
@@ -256,8 +257,11 @@ export async function PATCH(req: NextRequest) {
     if (error) throw error
     const childName = (apt as any).children?.name || 'Paciente'
     const tipo = accion === 'status_changed' && updates.status === 'cancelled' ? 'cancelada' : 'actualizada'
+    const cambioHorario = updates.appointment_date !== undefined || updates.appointment_time !== undefined
 
     await Promise.all([
+      // Calendarios conectados: borrar el evento si se canceló, moverlo si cambió el horario
+      tipo === 'cancelada' ? sincronizarCalendarios(id, 'cancelar') : cambioHorario ? sincronizarCalendarios(id, 'actualizar') : null,
       notificarPadre(apt.child_id, tipo, apt, en),
       notificarAdmins(accion || 'updated', apt, childName, secretaria_name || 'Secretaria', en),
     ])
@@ -281,6 +285,8 @@ export async function DELETE(req: NextRequest) {
     if (!(await rowInCentro('appointments', id, caller.centroId))) return notFound()
     const { data: apt } = await supabaseAdmin
       .from('appointments').select('*, children(name)').eq('id', id).eq('centro_id', caller.centroId).maybeSingle()
+    // Quitar el evento de los calendarios conectados antes de borrar la cita
+    await sincronizarCalendarios(id, 'cancelar')
     const { error } = await supabaseAdmin.from('appointments').delete().eq('id', id).eq('centro_id', caller.centroId)
     if (error) throw error
     if (apt) {

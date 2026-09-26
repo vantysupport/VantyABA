@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getApiCaller, unauthorized, forbidden } from '@/lib/api-auth'
 import { getLocaleFromRequest } from '@/lib/lang'
 import { avisarEquipo } from '@/lib/avisos'
+import { sincronizarCalendarios } from '@/lib/calendar-sync'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,6 +49,8 @@ export async function POST(req: NextRequest) {
   }
   const { error } = await supabaseAdmin.from('appointments').update(cambios).eq('id', id)
   if (error) return NextResponse.json({ error: 'no_guardado' }, { status: 500 })
+  // Si la familia canceló, el evento sale de los calendarios conectados (centro y familia)
+  if (accion === 'cancelar') await sincronizarCalendarios(id, 'cancelar')
 
   // Aviso al equipo: dirección del centro y especialista asignado
   const en = getLocaleFromRequest(req) === 'en'

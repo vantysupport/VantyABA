@@ -244,9 +244,11 @@ export async function POST(req: NextRequest) {
       console.log('[GCal] ✅ Event created:', gcalData.id, gcalData.htmlLink)
 
       if (appointmentId) {
+        // Se guarda también de quién es el calendario, para poder mover o borrar el evento después
+        const { data: aptMeta } = await supabaseAdmin.from('appointments').select('metadata').eq('id', appointmentId).maybeSingle()
         await supabaseAdmin
           .from('appointments')
-          .update({ google_calendar_event_id: gcalData.id })
+          .update({ google_calendar_event_id: gcalData.id, metadata: { ...((aptMeta?.metadata ?? {}) as Record<string, unknown>), gcal_owner: userId } })
           .eq('id', appointmentId)
       }
 

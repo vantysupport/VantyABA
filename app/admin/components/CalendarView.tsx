@@ -249,8 +249,8 @@ function MonthlyCalendarView() {
       // Contar calendarios externos sincronizados
       const sync = json.calendarSync || {}
       const synced: string[] = []
-      if (sync.google?.ok && sync.google?.updated) synced.push('Google')
-      if (sync.microsoft?.ok && sync.microsoft?.updated) synced.push('Outlook')
+      if (sync.google?.ok && (sync.google?.updated || sync.google?.created)) synced.push('Google')
+      if (sync.microsoft?.ok && (sync.microsoft?.updated || sync.microsoft?.created)) synced.push('Outlook')
       if (sync.parentGoogle?.ok && sync.parentGoogle?.updated) synced.push('Google padre')
       if (sync.parentMicrosoft?.ok && sync.parentMicrosoft?.updated) synced.push('Outlook padre')
 

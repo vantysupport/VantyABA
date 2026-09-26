@@ -226,9 +226,11 @@ export async function POST(req: NextRequest) {
       const msData = await msRes.json()
 
       if (appointmentId) {
+        // Se guarda también de quién es el calendario, para poder mover o borrar el evento después
+        const { data: aptMeta } = await supabaseAdmin.from('appointments').select('metadata').eq('id', appointmentId).maybeSingle()
         await supabaseAdmin
           .from('appointments')
-          .update({ microsoft_calendar_event_id: msData.id })
+          .update({ microsoft_calendar_event_id: msData.id, metadata: { ...((aptMeta?.metadata ?? {}) as Record<string, unknown>), ms_owner: userId } })
           .eq('id', appointmentId)
       }
 

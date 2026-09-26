@@ -6,6 +6,8 @@ import { notifyAsync, notifyParentDirect } from '@/lib/notifications'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { internalApiHeaders } from '@/lib/calendar-integration'
 import { after } from 'next/server'
+import { sincronizarCalendarios } from '@/lib/calendar-sync'
+import { enviarCorreoCitaFamilia } from '@/lib/cita-correo'
 import { avisarCitaFamilia, avisarFamilia } from '@/lib/avisos'
 
 // Helper: notificar al padre de un paciente
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
     ).catch(err => console.error('[notif fire-and-forget]', err))
 
     // Aviso en el portal y en el celular de cada familia
-    after(() => Promise.all((data || []).map((apt: any) => avisarCitaFamilia(apt, 'nueva'))))
+    after(() => Promise.all((data || []).flatMap((apt: any) => [avisarCitaFamilia(apt, 'nueva'), enviarCorreoCitaFamilia(apt, 'nueva', getLocaleFromRequest(request) === 'en')])))
 
     // Responder inmediatamente — las notificaciones corren en background
     return NextResponse.json({ data })
@@ -198,113 +200,21 @@ export async function PATCH(request: NextRequest) {
           : { pose: 'pensando' },
         metadata: { appointment_id: id },
       })
+      if (aprobada) after(() => enviarCorreoCitaFamilia(data, 'actualizada', getLocaleFromRequest(request) === 'en'))
     } else if (status === 'cancelled') {
-      after(() => avisarCitaFamilia(data, 'cancelada'))
+      after(() => Promise.all([avisarCitaFamilia(data, 'cancelada'), enviarCorreoCitaFamilia(data, 'cancelada', getLocaleFromRequest(request) === 'en')]))
     } else if (appointment_date !== undefined || appointment_time !== undefined) {
-      after(() => avisarCitaFamilia(data, 'actualizada'))
+      after(() => Promise.all([avisarCitaFamilia(data, 'actualizada'), enviarCorreoCitaFamilia(data, 'actualizada', getLocaleFromRequest(request) === 'en')]))
     }
 
-    // ── Sincronizar cambio de fecha/hora con calendarios externos ──
+    // ── Calendarios externos (Google / Outlook): mover o borrar el evento según el cambio ──
     const timeChanged = appointment_date !== undefined || appointment_time !== undefined
-    let calendarSync: any = { google: null, microsoft: null, parentGoogle: null, parentMicrosoft: null }
+    const cancelada = status === 'cancelled' || status === 'cancelada'
+    const calendarSync = cancelada
+      ? await sincronizarCalendarios(id, 'cancelar')
+      : timeChanged ? await sincronizarCalendarios(id, 'actualizar') : null
 
-    if (timeChanged) {
-      const newDate = appointment_date ?? data.appointment_date
-      const newTime = (appointment_time ?? data.appointment_time)
-      const timeOnly = String(newTime).slice(0, 5)
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-
-      // Cargar event IDs y owners
-      const { data: apt } = await supabaseAdmin
-        .from('appointments')
-        .select('google_calendar_event_id, microsoft_calendar_event_id, parent_google_calendar_event_id, parent_microsoft_calendar_event_id, created_by, child_id')
-        .eq('id', id)
-        .single()
-
-      // 1. Google del especialista/admin
-      if (apt?.google_calendar_event_id && apt?.created_by) {
-        try {
-          const r = await fetch(`${baseUrl}/api/google-calendar`, {
-            method: 'POST',
-            headers: internalApiHeaders(),
-            body: JSON.stringify({
-              action: 'update-event',
-              userId: apt.created_by,
-              eventId: apt.google_calendar_event_id,
-              appointment_date: newDate,
-              appointment_time: timeOnly,
-              notifyAttendees: true,
-            }),
-          })
-          calendarSync.google = await r.json().catch(() => null)
-        } catch (e: any) { calendarSync.google = { error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : (e?.message || "error") } }
-      }
-
-      // 2. Microsoft del especialista/admin
-      if (apt?.microsoft_calendar_event_id && apt?.created_by) {
-        try {
-          const r = await fetch(`${baseUrl}/api/microsoft-calendar`, {
-            method: 'POST',
-            headers: internalApiHeaders(),
-            body: JSON.stringify({
-              action: 'update-event',
-              userId: apt.created_by,
-              eventId: apt.microsoft_calendar_event_id,
-              appointment_date: newDate,
-              appointment_time: timeOnly,
-            }),
-          })
-          calendarSync.microsoft = await r.json().catch(() => null)
-        } catch (e: any) { calendarSync.microsoft = { error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : (e?.message || "error") } }
-      }
-
-      // 3. Google del PADRE
-      if (apt?.parent_google_calendar_event_id && apt?.child_id) {
-        try {
-          const { data: child } = await supabaseAdmin
-            .from('children').select('parent_id').eq('id', apt.child_id).single()
-          if (child?.parent_id) {
-            const r = await fetch(`${baseUrl}/api/google-calendar`, {
-              method: 'POST',
-              headers: internalApiHeaders(),
-              body: JSON.stringify({
-                action: 'update-event',
-                userId: child.parent_id,
-                eventId: apt.parent_google_calendar_event_id,
-                appointment_date: newDate,
-                appointment_time: timeOnly,
-                notifyAttendees: true,
-              }),
-            })
-            calendarSync.parentGoogle = await r.json().catch(() => null)
-          }
-        } catch (e: any) { calendarSync.parentGoogle = { error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : (e?.message || "error") } }
-      }
-
-      // 4. Microsoft del PADRE
-      if (apt?.parent_microsoft_calendar_event_id && apt?.child_id) {
-        try {
-          const { data: child } = await supabaseAdmin
-            .from('children').select('parent_id').eq('id', apt.child_id).single()
-          if (child?.parent_id) {
-            const r = await fetch(`${baseUrl}/api/microsoft-calendar`, {
-              method: 'POST',
-              headers: internalApiHeaders(),
-              body: JSON.stringify({
-                action: 'update-event',
-                userId: child.parent_id,
-                eventId: apt.parent_microsoft_calendar_event_id,
-                appointment_date: newDate,
-                appointment_time: timeOnly,
-              }),
-            })
-            calendarSync.parentMicrosoft = await r.json().catch(() => null)
-          }
-        } catch (e: any) { calendarSync.parentMicrosoft = { error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : (e?.message || "error") } }
-      }
-    }
-
-    return NextResponse.json({ data, calendarSync: timeChanged ? calendarSync : undefined })
+    return NextResponse.json({ data, calendarSync: calendarSync ?? undefined })
   } catch (error: any) {
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : error.message }, { status: 500 })
   }
@@ -328,98 +238,11 @@ export async function DELETE(request: NextRequest) {
 
     // Si era una cita futura y activa, la familia recibe el aviso de cancelación
     if (apt && apt.status !== 'completed' && apt.status !== 'cancelled' && String(apt.appointment_date) >= new Date().toISOString().slice(0, 10)) {
-      after(() => avisarCitaFamilia(apt, 'cancelada'))
+      after(() => Promise.all([avisarCitaFamilia(apt, 'cancelada'), enviarCorreoCitaFamilia(apt, 'cancelada', getLocaleFromRequest(request) === 'en')]))
     }
 
-    // 2. Borrar en Google Calendar si hay event ID
-    if (apt?.google_calendar_event_id && apt?.created_by) {
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/google-calendar`, {
-          method: 'POST',
-          headers: internalApiHeaders(),
-          body: JSON.stringify({
-            action:  'delete-event',
-            userId:  apt.created_by,
-            eventId: apt.google_calendar_event_id,
-          }),
-        })
-      } catch { /* silent — no bloquear el borrado de DB */ }
-    }
-
-    // 3. Borrar en Microsoft Calendar si hay event ID
-    if (apt?.microsoft_calendar_event_id && apt?.created_by) {
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/microsoft-calendar`, {
-          method: 'POST',
-          headers: internalApiHeaders(),
-          body: JSON.stringify({
-            action:  'delete-event',
-            userId:  apt.created_by,
-            eventId: apt.microsoft_calendar_event_id,
-          }),
-        })
-      } catch { /* silent */ }
-    }
-
-    // 4. Borrar eventos del PADRE en Google Calendar
-    if (apt?.parent_google_calendar_event_id && apt?.child_id) {
-      try {
-        // Buscar parent_id del niño
-        const { data: child } = await supabaseAdmin
-          .from('children').select('parent_id').eq('id', apt.child_id).single()
-        if (child?.parent_id) {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/google-calendar`, {
-            method: 'POST',
-            headers: internalApiHeaders(),
-            body: JSON.stringify({
-              action:  'delete-event',
-              userId:  child.parent_id,
-              eventId: apt.parent_google_calendar_event_id,
-            }),
-          })
-        }
-      } catch { /* silent */ }
-    }
-
-    // 5. Borrar eventos del PADRE en Microsoft Calendar
-    if (apt?.parent_microsoft_calendar_event_id && apt?.child_id) {
-      try {
-        const { data: child } = await supabaseAdmin
-          .from('children').select('parent_id').eq('id', apt.child_id).single()
-        if (child?.parent_id) {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/microsoft-calendar`, {
-            method: 'POST',
-            headers: internalApiHeaders(),
-            body: JSON.stringify({
-              action:  'delete-event',
-              userId:  child.parent_id,
-              eventId: apt.parent_microsoft_calendar_event_id,
-            }),
-          })
-        }
-      } catch { /* silent */ }
-    }
-
-    // 5b. Notificar al padre SOLO si la cita no estaba ya completada/realizada
-    // (borrar un historial completado no debe generar "cita cancelada")
-    if (apt?.child_id) {
-      try {
-        const { data: childData } = await supabaseAdmin
-          .from('appointments')
-          .select('appointment_date, appointment_time, appointment_type, status, children(name)')
-          .eq('id', id).maybeSingle()
-        const aptStatus = (childData as any)?.status || ''
-        const esCompletada = ['completed', 'realizada', 'done', 'completada'].includes(aptStatus)
-        if (!esCompletada) {
-          const childName = (childData as any)?.children?.name || 'Paciente'
-          notificarPadre(apt.child_id, 'cita_cancelada', {
-            fecha:    (childData as any)?.appointment_date || '',
-            hora:     (childData as any)?.appointment_time || '',
-            paciente: childName,
-          })
-        }
-      } catch { /* silent */ }
-    }
+    // 2. Quitar el evento de los calendarios conectados (centro y familia) antes de borrar la cita
+    await sincronizarCalendarios(id, 'cancelar')
 
     // 6. Borrar la cita en DB
     const { error } = await supabaseAdmin.from('appointments').delete().eq('id', id).eq('centro_id', caller.centroId)

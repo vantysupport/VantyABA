@@ -12,9 +12,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Give Supabase time to process the OAuth tokens from the URL hash/params
-        await new Promise(r => setTimeout(r, 800))
-
+        // Sin espera fija: la sesión suele estar lista al instante; si no, se canjea el código y se reintenta
         let session = (await supabase.auth.getSession()).data.session
 
         // If no session, try manual code exchange
@@ -105,19 +103,23 @@ export default function AuthCallbackPage() {
   }, [router])
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
-      color: '#fff', fontFamily: 'system-ui, sans-serif', gap: 16
-    }}>
-      <div style={{
-        width: 48, height: 48, border: '4px solid rgba(255,255,255,.2)',
-        borderTop: '4px solid #fff', borderRadius: '50%',
-        animation: 'spin 1s linear infinite'
-      }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-      <p style={{ fontSize: 16, opacity: .8 }}>{t('auto.page.iniciandoSesion')}</p>
+    <div className="v-scope relative flex min-h-[100dvh] flex-col items-center justify-center gap-5 overflow-hidden bg-v-bg px-4 text-center">
+      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(40rem 22rem at 50% 30%, var(--v-glow-1), transparent 70%)' }} />
+      <div className="relative">
+        <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-v-accent/15" />
+        <span className="relative grid size-24 place-items-center rounded-full bg-v-elevated shadow-v">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/aria/pose-1.webp" alt="" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+        </span>
+      </div>
+      <div className="relative space-y-1.5">
+        <p className="v-headline text-xl text-v-text">{t('auto.page.iniciandoSesion')}</p>
+        <p className="text-sm text-v-muted">Vanty ABA</p>
+      </div>
+      <div className="relative h-1 w-40 overflow-hidden rounded-full bg-v-fill">
+        <span className="v-brand absolute inset-y-0 left-0 w-1/3 rounded-full" style={{ animation: 'vanty-cargando 1.1s ease-in-out infinite' }} />
+      </div>
+      <style>{`@keyframes vanty-cargando { 0% { transform: translateX(-100%) } 100% { transform: translateX(300%) } }`}</style>
     </div>
   )
 }
