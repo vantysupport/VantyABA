@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { invalidarDocumento } from '@/lib/registrar-documento'
 import { getApiCaller, hasRole, ROLES, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { patronIlikeSeguro, esUUID } from '@/lib/seguridad-filtros'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -30,13 +31,18 @@ export async function GET(req: NextRequest) {
       .order('fecha_emision', { ascending: false })
       .limit(limit)
 
-    if (childId)        query = query.eq('child_id', childId)
+    if (childId) {
+      if (!esUUID(childId)) return NextResponse.json({ error: 'child_id inválido' }, { status: 400 })
+      query = query.eq('child_id', childId)
+    }
     if (tipo)           query = query.eq('tipo', tipo)
     if (valido === '1') query = query.eq('valido', true)
     if (valido === '0') query = query.eq('valido', false)
     if (q) {
-      // OR sobre código o nombre del paciente
-      query = query.or(`codigo_doc.ilike.%${q}%,paciente_nombre.ilike.%${q}%,file_name.ilike.%${q}%`)
+      // OR sobre código o nombre del paciente. El valor se entrecomilla para que comas,
+      // paréntesis y puntos del usuario no se interpreten como operadores de PostgREST.
+      const v = patronIlikeSeguro(q.slice(0, 100))
+      query = query.or(`codigo_doc.ilike.${v},paciente_nombre.ilike.${v},file_name.ilike.${v}`)
     }
 
     const { data, error } = await query

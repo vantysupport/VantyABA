@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { esUUID } from '@/lib/seguridad-filtros'
 
 export async function GET(request: NextRequest) {
   const caller = await getApiCaller(request)
@@ -26,9 +27,11 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (childId) {
+      if (!esUUID(childId)) return NextResponse.json({ error: 'child_id inválido' }, { status: 400 })
       // Resources for a specific child OR global
       query = query.or(`child_id.eq.${childId},is_global.eq.true`)
     } else if (parentId) {
+      if (!esUUID(parentId)) return NextResponse.json({ error: 'parent_id inválido' }, { status: 400 })
       // Legacy: resources for parent_id OR global
       query = query.or(`parent_id.eq.${parentId},is_global.eq.true`)
     } else if (global === 'true') {
