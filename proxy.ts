@@ -121,7 +121,13 @@ export async function proxy(req: NextRequest) {
     if (!isApi && hasLocale) {
       const u = req.nextUrl.clone()
       u.pathname = pathname
-      return NextResponse.rewrite(u)
+      // El idioma de la URL manda: la página se genera en ese idioma aunque no haya cookie
+      // (los buscadores entran sin cookies y deben ver /en en inglés)
+      const h = new Headers(req.headers)
+      h.set('x-vanty-locale', locale)
+      const otras = (h.get('cookie') || '').split(/;\s*/).filter(c => c && !c.startsWith('vanty_locale='))
+      h.set('cookie', [...otras, `vanty_locale=${locale}`].join('; '))
+      return NextResponse.rewrite(u, { request: { headers: h } })
     }
     return NextResponse.next()
   }
@@ -273,6 +279,6 @@ export async function proxy(req: NextRequest) {
 // Matcher: a qué rutas se aplica el middleware
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|mp3|wav|ogg|m4a|glb|gltf)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|mp3|wav|ogg|m4a|glb|gltf|txt|xml|html|json|webmanifest)$).*)',
   ],
 }

@@ -8,16 +8,17 @@ import {
   Copyright, Scale, PauseCircle, RefreshCw, Landmark, Mail, Stethoscope, KeyRound, HeartHandshake,
 } from 'lucide-react'
 import { PLATFORM_NAME } from '@/lib/branding'
+import { localeServidor, metadatosPagina } from '@/lib/seo'
 import LegalPage, { Lista, Destacado, type SeccionLegal } from '@/components/legal/LegalPage'
 
 // Nombre comercial completo de la plataforma en los documentos legales
 const P = `${PLATFORM_NAME} ABA`
 
 export async function generateMetadata() {
-  const en = (await cookies()).get('vanty_locale')?.value === 'en'
-  return en
-    ? { title: `Terms of Service · ${P}`, description: `Conditions of use of the ${P} clinical-management platform.` }
-    : { title: `Términos de Servicio · ${P}`, description: `Condiciones de uso de la plataforma de gestión clínica ${P}.` }
+  const en = (await localeServidor()) === 'en'
+  return metadatosPagina(en
+    ? { ruta: '/terminos', en, title: `Terms of Service · ${P}`, description: `Conditions of use of the ${P} clinical-management platform.` }
+    : { ruta: '/terminos', en, title: `Términos de Servicio · ${P}`, description: `Condiciones de uso de la plataforma de gestión clínica ${P}.` })
 }
 
 function secciones(en: boolean): SeccionLegal[] {

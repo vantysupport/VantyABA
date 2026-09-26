@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import { ToastProvider } from '@/components/Toast'
 import { ThemeProvider } from '@/components/ThemeContext'
@@ -15,7 +14,7 @@ import { ConfirmarHost } from '@/components/ui/confirmar'
 import { PLATFORM_NAME } from '@/lib/branding'
 import "./globals.css";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
+import { SITIO, localeServidor } from '@/lib/seo'
 
 // Sistema de dos tipografías:
 //  • CUERPO → Plus Jakarta Sans (var --font-sans): legible, profesional.
@@ -44,7 +43,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  ...(SITE_URL ? { metadataBase: new URL(SITE_URL) } : {}),
+  metadataBase: new URL(SITIO),
   title: `${PLATFORM_NAME} | Gestión clínica para centros de terapia`,
   description: "Plataforma de gestión clínica para centros de terapia ABA, neuropsicología y desarrollo infantil: expedientes, agenda, informes con IA y portal para familias.",
   keywords: "gestión clínica, software terapia ABA, centros de terapia, TEA, TDAH, neurodesarrollo, portal familias",
@@ -62,7 +61,7 @@ export const metadata: Metadata = {
     description: "Plataforma de gestión clínica para centros de terapia, con IA y portal para familias.",
     type: "website",
     locale: "es_PE",
-    ...(SITE_URL ? { url: SITE_URL } : {}),
+    url: SITIO,
     siteName: PLATFORM_NAME,
     images: [{ url: "/images/og-image.jpg", width: 1200, height: 630, alt: `${PLATFORM_NAME} - Gestión clínica` }],
   },
@@ -73,9 +72,9 @@ export const metadata: Metadata = {
     images: ["/images/og-image.jpg"],
   },
   robots: { index: true, follow: true },
-  ...(SITE_URL ? { alternates: { canonical: SITE_URL } } : {}),
   icons: {
     icon: [
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
       { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
@@ -91,9 +90,7 @@ export default async function RootLayout({
   // El middleware (proxy.ts) setea `vanty_locale` según el prefijo /en o /es de
   // la URL. Lo leemos en el servidor para renderizar ya en el idioma correcto
   // (sin "flash" de español) y para el atributo <html lang>.
-  const cookieStore = await cookies()
-  const cookieLocale = cookieStore.get('vanty_locale')?.value
-  const initialLocale = cookieLocale === 'en' ? 'en' : 'es'
+  const initialLocale = await localeServidor()
   return (
     <html lang={initialLocale} translate="no" className={`notranslate ${jakarta.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>

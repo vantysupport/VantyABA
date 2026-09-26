@@ -9,12 +9,13 @@ import {
   RefreshCw, Mail, KeyRound, Lock, ServerCog, BadgeCheck, Ban,
 } from 'lucide-react'
 import { PLATFORM_NAME } from '@/lib/branding'
+import { localeServidor, metadatosPagina } from '@/lib/seo'
 
 export async function generateMetadata() {
-  const en = (await cookies()).get('vanty_locale')?.value === 'en'
-  return en
-    ? { title: `Privacy Policy · ${P}`, description: `How ${P} protects the personal and clinical data of the families served by the centers that use the platform.` }
-    : { title: `Política de Privacidad · ${P}`, description: `Cómo ${P} protege los datos personales y clínicos de las familias atendidas en los centros que usan la plataforma.` }
+  const en = (await localeServidor()) === 'en'
+  return metadatosPagina(en
+    ? { ruta: '/privacidad', en, title: `Privacy Policy · ${P}`, description: `How ${P} protects the personal and clinical data of the families served by the centers that use the platform.` }
+    : { ruta: '/privacidad', en, title: `Política de Privacidad · ${P}`, description: `Cómo ${P} protege los datos personales y clínicos de las familias atendidas en los centros que usan la plataforma.` })
 }
 
 // Nombre comercial completo de la plataforma en los documentos legales
