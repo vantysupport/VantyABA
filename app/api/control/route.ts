@@ -72,7 +72,7 @@ const PLAN_GATES: Record<string, string[]> = {
   has_financial_reports: ['reportes_financieros', 'pagos'],
 }
 // Cerebro IA completo (aprender, biblioteca, estadísticas) solo en el plan Fundador: es la base
-// curada que comparten todas las clínicas. Los planes públicos solo consultan CIE-11 / DSM-5.
+// curada que comparten todas las clínicas. Los planes públicos solo consultan la CIE-11.
 const SOLO_FUNDADOR = ['cerebro_aprender', 'cerebro_biblioteca']
 
 export async function GET() {

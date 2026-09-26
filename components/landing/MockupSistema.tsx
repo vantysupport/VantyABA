@@ -59,7 +59,7 @@ export function MockupSistema({ en, celular = true }: { en: boolean; celular?: b
     { Icon: CalendarDays, t: L('Schedule', 'Agenda') },
     { Icon: Users, t: L('Patients', 'Pacientes'), on: true },
     { Icon: Zap, t: L('Predictive analysis', 'Análisis Predictivo') },
-    { Icon: Stethoscope, t: 'CIE-11 / DSM-5' },
+    { Icon: Stethoscope, t: 'CIE-11' },
     { Icon: DollarSign, t: L('Payments', 'Pagos') },
     { Icon: BarChart3, t: L('Financial reports', 'Reportes Financieros') },
     { Icon: BookOpen, t: L('Extra resources', 'Recursos Adicionales') },

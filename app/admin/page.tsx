@@ -277,13 +277,17 @@ export default function AdminDashboard() {
       .catch(() => { /* silently fallback to defaults */ })
   }, [])
 
+  // El "Cerebro IA" completo es del plan Fundador; los demás planes solo tienen el buscador CIE-11
+  const cerebroCompleto = features.cerebro_aprender !== false || features.cerebro_biblioteca !== false
+  const nombreCerebro = cerebroCompleto ? t('nav.cerebro') : (locale === 'en' ? 'ICD-11 diagnoses' : 'Diagnósticos CIE-11')
+
   // ── Nav items filtered by features ─────────────────────────────────────────
   const NAV_ITEMS = [
     { id: 'inicio',       icon: LayoutDashboard, label: t('nav.inicio'),          roles: ['jefe','admin','especialista','terapeuta'], featureKey: null },
     { id: 'agenda',       icon: Calendar,        label: t('nav.agenda'),          roles: ['jefe','admin'],                            featureKey: 'agenda' },
     { id: 'ninos',        icon: Users,           label: t('nav.pacientes'),       roles: ['jefe','admin','especialista','terapeuta'], featureKey: 'ninos' },
     { id: 'inteligencia', icon: Zap,             label: t('nav.hub'),             roles: ['jefe','admin','especialista'],             featureKey: 'inteligencia' },
-    { id: 'cerebro',      icon: Database,        label: t('nav.cerebro'),         roles: ['jefe','admin'],                            featureKey: 'cerebro' },
+    { id: 'cerebro',      icon: cerebroCompleto ? Database : Stethoscope, label: nombreCerebro,         roles: ['jefe','admin'],                            featureKey: 'cerebro' },
     { id: 'pagos',        icon: DollarSign,      label: t('nav.pagos'),                  roles: ['jefe','admin'],                            featureKey: 'pagos' },
     { id: 'reportes-financieros', icon: BarChart3, label: t('nav.reportesFinancieros'), roles: ['jefe'],                                   featureKey: 'reportes_financieros' },
     { id: 'recursos-adicionales', icon: BookOpen, label: t('nav.recursosAdicionales'),  roles: ['jefe','admin','especialista','terapeuta','secretaria'], featureKey: 'recursos_adicionales' },
@@ -307,7 +311,7 @@ export default function AdminDashboard() {
     reportes: t('nav.historial'), recursos: t('nav.recursos'), 'recursos-adicionales': t('nav.recursosAdicionales'),
     mensajes: t('mensajes.titulo'), usuarios: t('nav.usuarios'),
     importar: t('nav.importarCSV'), vadi: t('nav.aria'),
-    cerebro: t('nav.cerebro'), inteligencia: t('nav.hub'),
+    cerebro: nombreCerebro, inteligencia: t('nav.hub'),
     pagos: t('nav.pagosFacturacion'), 'reportes-financieros': t('nav.reportesFinancieros'),
     'chat-especialistas': t('nav.chatEquipo'), config: t('nav.miperfil'),
   }

@@ -104,18 +104,27 @@ export async function GET(req: NextRequest) {
 
     const resolved = SIGLAS[q.toLowerCase().trim()] || q
     try {
-      const url = new URL('https://id.who.int/icd/release/11/2024-01/mms/search')
-      url.searchParams.set('q', resolved)
-      url.searchParams.set('useFlexisearch', 'true')
-      url.searchParams.set('flatResults', 'true')
-      url.searchParams.set('highlightingEnabled', 'false')
-      url.searchParams.set('includeKeywordResult', 'true')
+      // Primero búsqueda exacta (relevante); la aproximada ("flexisearch") solo si la exacta trae poco,
+      // porque devuelve coincidencias lejanas (p. ej. "biogénesis peroxisomal" al buscar autismo).
+      const buscar = async (flexible: boolean) => {
+        const url = new URL('https://id.who.int/icd/release/11/2024-01/mms/search')
+        url.searchParams.set('q', resolved)
+        url.searchParams.set('useFlexisearch', String(flexible))
+        url.searchParams.set('flatResults', 'true')
+        url.searchParams.set('highlightingEnabled', 'false')
+        url.searchParams.set('includeKeywordResult', 'true')
+        const res = await fetch(url.toString(), { headers: WHO_HEADERS(token, lang), cache: 'no-store' })
+        if (!res.ok) throw new Error(`Search ${res.status}`)
+        const data = await res.json()
+        const ents = (data.destinationEntities || []) as any[]
+        // Descartar coincidencias con puntaje muy inferior al mejor resultado
+        const top = Math.max(0, ...ents.map(e => Number(e.score) || 0))
+        return ents.filter(e => !top || (Number(e.score) || 0) >= top * 0.45)
+      }
+      let ents = await buscar(false)
+      if (ents.length < 3) ents = await buscar(true)
 
-      const res = await fetch(url.toString(), { headers: WHO_HEADERS(token, lang), cache: 'no-store' })
-      if (!res.ok) return NextResponse.json({ results: [], fallback: true, error: `Search ${res.status}` })
-
-      const data = await res.json()
-      const results = (data.destinationEntities || []).slice(0, 30).map((e: any) => ({
+      const results = ents.slice(0, 30).map((e: any) => ({
         id: e.id, code: e.theCode || '', title: e.title || '', chapter: e.chapter || '',
       }))
       return NextResponse.json({ results, fallback: false })

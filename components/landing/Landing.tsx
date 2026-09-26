@@ -99,7 +99,7 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
       t: L('ABA programs and evaluations in one place', 'Programas ABA y evaluaciones en un solo lugar'),
       d: L('Record session data, track goals and mastery criteria, and run evaluations with ready-made templates. The initial evaluation is shared: whoever fills it first, family or team, leaves it on record for everyone.',
            'Registra datos de cada sesión, sigue objetivos y criterios de dominio, y aplica evaluaciones con plantillas listas. La evaluación inicial es compartida: quien la llene primero, familia o equipo, la deja como constancia para todos.'),
-      puntos: [L('Session data and goals', 'Datos de sesión y objetivos'), L('ICD-11 / DSM-5 search', 'Buscador CIE-11 / DSM-5'), L('Signed clinical documents', 'Documentos clínicos firmados')] },
+      puntos: [L('Session data and goals', 'Datos de sesión y objetivos'), L('ICD-11 diagnosis search', 'Buscador de diagnósticos CIE-11'), L('Signed clinical documents', 'Documentos clínicos firmados')] },
     { img: '/landing/aria.webp', Icon: Sparkles, corto: 'ARIA',
       t: L('ARIA, the clinical AI of your center', 'ARIA, la IA clínica de tu centro'),
       d: L('ARIA writes reports, suggests goals, answers the team with the clinical knowledge base and guides families with activities to practice at home, always in plain language.',

@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useI18n } from '@/lib/i18n-context'
 import {
-  Search, X, Loader2, Copy, Check, ChevronRight, ChevronLeft,
-  AlertCircle, ExternalLink, Star, Wifi, WifiOff, Home, Tag,
-  BookOpen, GitBranch, ArrowLeft
+  Search, X, Loader2, Copy, Check, ChevronRight, AlertCircle, ExternalLink, Star, Tag,
+  BookOpen, GitBranch, ArrowLeft, ArrowUp, Clock, Stethoscope, FileText, CheckCircle2, XCircle,
 } from 'lucide-react'
 
 type Result = { id?: string; code: string; title: string; chapter?: string; isLeaf?: boolean }
@@ -129,7 +128,6 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
       const res   = await fetch(`/api/cie11?action=detail&code=${encodeURIComponent(param)}&lang=${locale}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data  = await res.json()
-      console.log('[CIE-11] detail response:', data)
       if (data.fallback || data.error) throw new Error(data.error || 'fallback')
       setSelected({
         code:               data.code       || r.code,
@@ -171,319 +169,256 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
   }
 
 
+  // Para un centro ABA, primero lo del capítulo 06 (trastornos mentales y del neurodesarrollo)
+  const ordenados = [...results].sort((a, b) => Number(b.chapter === '06') - Number(a.chapter === '06'))
+
+  const seccion = 'text-[11px] font-semibold uppercase tracking-wider text-v-subtle flex items-center gap-1.5'
+
   return (
     <div className="space-y-4">
 
-      {/* ── ESTADO API ── */}
-      {apiOk === true && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
-          <Wifi size={13}/> {L('Connected to official WHO API — full ICD-11 (17,000+ diagnoses)','Conectado a API oficial OMS — CIE-11 completo (+17.000 diagnósticos en español)')}
-        </div>
-      )}
-      {apiOk === false && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
-          <WifiOff size={13}/> {t("admin.usandoBaseLocal")}<code className="bg-amber-100 px-1 rounded">WHO_ICD_CLIENT_ID</code> y <code className="bg-amberity-100 px-1 rounded">WHO_ICD_CLIENT_SECRET</code> para acceso completo.
-        </div>
-      )}
-
-      {/* ── BUSCADOR ── */}
-      <div className="relative">
-        <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
-        <input
-          ref={inputRef}
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && q.trim().length >= 2 && doSearch(q)}
-          placeholder={t("admin.phBuscarDiag")}
-          className="w-full pl-10 pr-10 py-3.5 rounded-xl text-sm font-medium border-2 outline-none focus:border-sky-500 transition-colors shadow-sm"
-          style={{ background:'var(--input-bg)', borderColor:'var(--input-border)', color:'var(--text-primary)' }}
-          autoComplete="off"
-        />
-        {loading
-          ? <Loader2 size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-sky-500"/>
-          : q && <button onClick={clear} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-slate-400 hover:text-slate-600 transition-all"><X size={15}/></button>
-        }
-      </div>
-
-      {/* ── CHIPS ── */}
-      {q.length === 0 && !selected && (
-        <div className="space-y-2">
-          {history.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 items-center">
-              <span className="text-[10px] font-bold text-slate-400">{t("admin.recientes")}</span>
-              {history.map(h => (
-                <button key={h} onClick={() => setQ(h)}
-                  className="px-2.5 py-1 rounded-full text-xs font-bold border bg-slate-50 border-slate-200 text-slate-500 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700 transition-all">
-                  🕐 {h}
-                </button>
-              ))}
+      {/* ── CABECERA + BUSCADOR ── */}
+      <section className="relative overflow-hidden rounded-v border border-v-border bg-v-elevated p-4 shadow-v sm:p-5">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(36rem 12rem at 0% 0%, var(--v-glow-1), transparent 70%)' }} />
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="v-brand grid size-11 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><Stethoscope size={20} /></span>
+            <div className="min-w-0">
+              <h2 className="v-headline text-lg leading-tight text-v-text sm:text-xl">{L('Diagnosis finder', 'Buscador de diagnósticos')}</h2>
+              <p className="mt-0.5 text-xs text-v-muted">{L('WHO ICD-11 classification — search by name, code (6A02) or acronym', 'Clasificación CIE-11 de la OMS — busca por nombre, código (6A02) o sigla')}</p>
             </div>
-          )}
-          <div className="flex flex-wrap gap-1.5 items-center">
-            <span className="text-[10px] font-bold text-slate-400">{t("admin.explorar")}</span>
-            {CHIPS.map(c => {
-              const label = locale === 'en' ? c.en : c.es
-              return (
-              <button key={c.es} onClick={() => setQ(label)}
-                className="px-2.5 py-1 rounded-full text-xs font-bold border transition-all hover:bg-sky-50 hover:border-sky-300 hover:text-sky-700"
-                style={{ background:'var(--card)', borderColor:'var(--card-border)', color:'var(--text-secondary)' }}>
-                {label}
-              </button>
-              )
-            })}
           </div>
+          {apiOk !== null && (
+            <span title={apiOk ? L('Data from the public WHO ICD-11 API', 'Datos de la API pública de la CIE-11 de la OMS') : L('Using the local base', 'Usando la base local')}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${apiOk ? 'bg-v-success/12 text-v-success' : 'bg-v-warning/15 text-v-warning'}`}>
+              <span className={`size-1.5 rounded-full ${apiOk ? 'bg-v-success' : 'bg-v-warning'}`} />
+              {apiOk ? L('Updated', 'Actualizado') : L('Local base', 'Base local')}
+            </span>
+          )}
         </div>
-      )}
 
-      {/* ── PANEL DETALLE ── */}
+        <div className="relative mt-4">
+          <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-v-subtle" />
+          <input
+            ref={inputRef}
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && q.trim().length >= 2 && doSearch(q)}
+            placeholder={t('admin.phBuscarDiag')}
+            className="h-12 w-full rounded-full border border-v-border bg-v-bg pl-11 pr-11 text-sm font-medium text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft"
+            autoComplete="off"
+          />
+          {loading
+            ? <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-v-accent" />
+            : q && <button onClick={clear} aria-label={L('Clear', 'Borrar')} className="absolute right-2.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-v-muted hover:bg-v-fill"><X size={15} /></button>}
+        </div>
+
+        {q.length === 0 && !selected && (
+          <div className="relative mt-3 space-y-2">
+            {history.length > 0 && (
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                {history.map(h => (
+                  <button key={h} onClick={() => setQ(h)}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-v-fill px-3 py-1.5 text-xs font-semibold text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent">
+                    <Clock size={11} /> {h}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              {CHIPS.map(c => {
+                const label = locale === 'en' ? c.en : c.es
+                return (
+                  <button key={c.es} onClick={() => setQ(label)}
+                    className="rounded-full border border-v-border px-3 py-1.5 text-xs font-semibold text-v-muted transition-colors hover:border-v-accent/40 hover:bg-v-accent-soft hover:text-v-accent">
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ── DETALLE ── */}
       {selected && (
-        <div ref={detailRef} className="rounded-2xl border overflow-hidden shadow-sm" style={{ background:'var(--card)', borderColor:'var(--card-border)' }}>
-
-          {/* Breadcrumb */}
-          <div className="px-4 py-2.5 border-b flex items-center gap-1.5 text-xs flex-wrap" style={{ background:'var(--muted-bg)', borderColor:'var(--card-border)' }}>
-            <button onClick={() => { setSelected(null); setBreadcrumb([]) }}
-              className="flex items-center gap-1 text-sky-600 hover:underline font-semibold">
-              <Home size={11}/> {L('Home','Inicio')}
+        <section ref={detailRef} className="overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v">
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-v-border bg-v-fill/60 px-4 py-2.5 text-xs">
+            <button onClick={() => { setSelected(null); setBreadcrumb([]) }} className="inline-flex items-center gap-1 font-semibold text-v-accent hover:underline">
+              <ArrowLeft size={12} /> {L('Results', 'Resultados')}
             </button>
             {breadcrumb.map((bc, i) => (
-              <span key={i} className="flex items-center gap-1">
-                <ChevronRight size={11} className="text-slate-300"/>
-                <button onClick={goBack} className="text-sky-600 hover:underline font-semibold">{bc.code}</button>
+              <span key={i} className="inline-flex items-center gap-1">
+                <ChevronRight size={11} className="text-v-subtle" />
+                <button onClick={goBack} className="font-semibold text-v-accent hover:underline">{bc.code}</button>
               </span>
             ))}
-            <ChevronRight size={11} className="text-slate-300"/>
-            <span className="font-bold text-slate-600">{selected.code}</span>
+            <ChevronRight size={11} className="text-v-subtle" />
+            <span className="font-semibold text-v-text">{selected.code}</span>
+            {detailLoading && <Loader2 size={12} className="ml-auto animate-spin text-v-accent" />}
           </div>
 
-          <div className="p-5 space-y-4">
-
-            {detailLoading && (
-              <div className="flex items-center gap-2 py-2 text-xs text-slate-400">
-                <Loader2 size={14} className="animate-spin text-sky-400"/> {L('Loading detail from WHO API...','Cargando detalle desde API OMS...')}
-              </div>
-            )}
-            {true && (<>
-
-              {/* Código + Título */}
-              <div className="flex items-start gap-3">
-                <span className="px-3 py-1.5 rounded-xl text-sm font-bold bg-teal-500 text-white flex-shrink-0">{selected.code}</span>
-                <div className="flex-1">
-                  <h2 className="font-bold text-lg leading-tight" style={{ color:'var(--text-primary)' }}>{selected.title}</h2>
-                  {selected.parent && (
-                    <p className="text-xs mt-1 font-semibold" style={{ color:'var(--text-muted)' }}>
-                      {L('Chapter','Capítulo')}: {chapterName(selected.parent.code, locale) || selected.parent.title}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Definición */}
-              {selected.definition && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-teal-600 flex items-center gap-1.5">
-                    <BookOpen size={11}/> {L('Definition','Definición')}
-                  </p>
-                  <p className="text-sm leading-relaxed" style={{ color:'var(--text-secondary)' }}>
-                    {selected.definition}
-                  </p>
-                </div>
-              )}
-
-              {/* Criterios diagnósticos OMS */}
-              {selected.diagnosticCriteria && (
-                <div className="p-3 rounded-xl bg-teal-50 border border-teal-200">
-                  <p className="text-[10px] font-bold text-teal-700 mb-1.5 flex items-center gap-1.5">
-                    🩺 {L('Diagnostic criteria (WHO ICD-11)','Criterios diagnósticos (OMS CIE-11)')}
-                  </p>
-                  <p className="text-xs leading-relaxed text-teal-900 whitespace-pre-line">{selected.diagnosticCriteria}</p>
-                </div>
-              )}
-
-              {/* Nota de codificación */}
-              {selected.codingNote && (
-                <div className="p-3 rounded-xl bg-sky-50 border border-sky-100">
-                  <p className="text-[10px] font-bold text-sky-600 mb-1">📋 {L('Coding note','Nota de codificación')}</p>
-                  <p className="text-xs leading-relaxed text-sky-800">{selected.codingNote}</p>
-                </div>
-              )}
-
-              {/* Términos índice / sinónimos */}
-              {selected.indexTerms.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold flex items-center gap-1.5" style={{ color:'var(--text-muted)' }}>
-                    <Tag size={11}/> {L('Included terms / synonyms','Términos incluidos / sinónimos')}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selected.indexTerms.map((t, i) => (
-                      <span key={i} className="px-2.5 py-1 rounded-full text-xs bg-sky-50 text-sky-700 border border-sky-100 font-medium">{t}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Inclusions */}
-              {selected.inclusions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-emerald-700 flex items-center gap-1.5">
-                    ✓ {L('Includes','Incluye')}
-                  </p>
-                  <ul className="space-y-1">
-                    {selected.inclusions.map((inc, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm" style={{ color:'var(--text-secondary)' }}>
-                        <span className="text-emerald-500 mt-0.5 flex-shrink-0">•</span> {inc}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Exclusiones */}
-              {selected.exclusions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-red-600 flex items-center gap-1.5">
-                    ✕ {L('Exclusions','Exclusiones')}
-                  </p>
-                  <ul className="space-y-1">
-                    {selected.exclusions.map((exc, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-red-700">
-                        <span className="mt-0.5 flex-shrink-0">•</span> {exc}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Subcategorías / Hijos */}
-              {selected.children.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold flex items-center gap-1.5" style={{ color:'var(--text-muted)' }}>
-                    <GitBranch size={11}/> {L('Subcategories / Children','Subcategorías / Hijos')}
-                  </p>
-                  <div className="space-y-1.5">
-                    {selected.children.map((child, i) => (
-                      <button key={i} onClick={() => loadDetail(child)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all hover:border-teal-400 hover:bg-teal-50 group"
-                        style={{ borderColor:'var(--card-border)', background:'var(--muted-bg)' }}>
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-teal-500 text-white flex-shrink-0">{child.code}</span>
-                        <span className="text-sm font-semibold flex-1" style={{ color:'var(--text-primary)' }}>
-                          {child.title || (L('View subcategory ','Ver subcategoría ')+child.code)}
-                        </span>
-                        <ChevronRight size={14} className="text-slate-300 group-hover:text-teal-500 transition-colors flex-shrink-0"/>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Categoría Padre */}
-              {selected.parent && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold flex items-center gap-1.5" style={{ color:'var(--text-muted)' }}>
-                    ↑ {L('Parent category','Categoría Padre')}
-                  </p>
-                  <button onClick={() => loadDetail(selected.parent!)}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all hover:border-sky-400 hover:bg-sky-50 group"
-                    style={{ borderColor:'var(--card-border)', background:'var(--muted-bg)' }}>
-                    <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-400 text-white flex-shrink-0">{selected.parent.code}</span>
-                    <span className="text-sm font-semibold flex-1" style={{ color:'var(--text-primary)' }}>{selected.parent.title}</span>
-                    <ChevronRight size={14} className="text-slate-300 group-hover:text-sky-500 flex-shrink-0"/>
-                  </button>
-                </div>
-              )}
-
-              {/* Acciones */}
-              <div className="flex flex-wrap gap-2 pt-2 border-t" style={{ borderColor:'var(--card-border)' }}>
-                <button onClick={() => copiar(selected.code, 'code')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border transition-all hover:bg-slate-50"
-                  style={{ borderColor:'var(--card-border)', color:'var(--text-secondary)' }}>
-                  {copied === 'code' ? <Check size={14} className="text-emerald-500"/> : <Copy size={14}/>}
-                  {L('Copy code','Copiar código')}
-                </button>
-                <button onClick={() => copiar(`${selected.title}\nCIE-11: ${selected.code}\n${selected.definition}`, 'full')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-sky-600 text-white hover:bg-sky-700 transition-colors">
-                  {copied === 'full' ? <Check size={14}/> : <Copy size={14}/>}
-                  {L('Copy for ARIA','Copiar para ARIA')}
-                </button>
-                {showAsignar && onAsignar && (
-                  <button onClick={() => onAsignar(selected)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
-                    <Star size={14}/> {L('Assign to patient','Asignar al paciente')}
-                  </button>
-                )}
-                <a href={selected.browserUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold border transition-all hover:bg-slate-50"
-                  style={{ borderColor:'var(--card-border)', color:'var(--text-secondary)' }}>
-                  <ExternalLink size={14}/> {L('View on WHO ICD-11','Ver en OMS CIE-11')}
-                </a>
-              </div>
-
-            </>)}
-          </div>
-        </div>
-      )}
-
-      {/* ── LISTA RESULTADOS ── */}
-      {!selected && (
-        <div className="space-y-2">
-
-          {q.length >= 2 && !loading && (
-            <p className="text-xs font-bold" style={{ color:'var(--text-muted)' }}>
-              {results.length === 0
-                ? L(`No results for "${q}"`, `Sin resultados para "${q}"`)
-                : (locale === 'en'
-                    ? `${results.length} result${results.length !== 1 ? 's' : ''} — click to see full detail`
-                    : `${results.length} resultado${results.length !== 1 ? 's' : ''} — haz clic para ver el detalle completo`)}
-            </p>
-          )}
-
-          <div className="space-y-2 max-h-[65vh] overflow-y-auto pr-1">
-
-            {/* Skeleton */}
-            {loading && [1,2,3,4].map(i => (
-              <div key={i} className="rounded-xl border p-4 animate-pulse" style={{ background:'var(--card)', borderColor:'var(--card-border)' }}>
-                <div className="flex items-center gap-3">
-                  <div className="h-7 w-16 rounded-lg bg-slate-200"/>
-                  <div className="h-4 rounded bg-slate-200 flex-1"/>
-                </div>
-              </div>
-            ))}
-
-            {/* Sin resultados */}
-            {!loading && q.length >= 2 && results.length === 0 && (
-              <div className="text-center py-12">
-                <AlertCircle size={36} className="mx-auto mb-3 text-slate-200"/>
-                <p className="text-sm font-semibold mb-1" style={{ color:'var(--text-muted)' }}>{L('No results for', 'Sin resultados para')} "{q}"</p>
-                <p className="text-xs mb-4" style={{ color:'var(--text-muted)' }}>{t("admin.intentaCodigoCIE")}</p>
-                <button onClick={clear} className="px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 text-white hover:bg-sky-700 transition-colors">{t("admin.nuevaBusqueda")}</button>
-              </div>
-            )}
-
-            {/* Resultados */}
-            {!loading && results.map(r => (
-              <button key={r.id || r.code} onClick={() => loadDetail(r)}
-                className="w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all hover:border-teal-400 hover:shadow-sm hover:bg-teal-50/30 group"
-                style={{ background:'var(--card)', borderColor:'var(--card-border)' }}>
-                <span className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-500 text-white flex-shrink-0 min-w-[60px] text-center">
-                  {r.code}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold leading-snug" style={{ color:'var(--text-primary)' }}>{r.title}</p>
-                  {r.chapter && (
-                    <p className="text-[10px] mt-0.5 font-medium" style={{ color:'var(--text-muted)' }}>
-                      {chapterName(r.chapter, locale) || (L('Chapter ','Capítulo ')+r.chapter)}
-                    </p>
-                  )}
-                </div>
-                <ChevronRight size={15} className="text-slate-300 group-hover:text-teal-500 transition-colors flex-shrink-0"/>
+          <div className="space-y-5 p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <button onClick={() => copiar(selected.code, 'code')} title={L('Copy code', 'Copiar código')}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-v-sm bg-v-accent-soft px-3 py-1.5 font-mono text-sm font-bold text-v-accent">
+                {selected.code} {copied === 'code' ? <Check size={13} /> : <Copy size={12} className="opacity-60" />}
               </button>
-            ))}
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-semibold leading-snug text-v-text">{selected.title}</h3>
+                {selected.parent && (
+                  <p className="mt-1 text-xs text-v-muted">{chapterName(selected.parent.code, locale) || selected.parent.title}</p>
+                )}
+              </div>
+            </div>
+
+            {selected.definition && (
+              <div className="space-y-1.5">
+                <p className={seccion}><BookOpen size={12} /> {L('Definition', 'Definición')}</p>
+                <p className="text-sm leading-relaxed text-v-text/90">{selected.definition}</p>
+              </div>
+            )}
+
+            {selected.diagnosticCriteria && (
+              <div className="rounded-v-sm border border-v-accent/20 bg-v-accent-soft/50 p-3.5">
+                <p className={`${seccion} mb-1.5 !text-v-accent`}><Stethoscope size={12} /> {L('Diagnostic criteria (WHO ICD-11)', 'Criterios diagnósticos (OMS CIE-11)')}</p>
+                <p className="whitespace-pre-line text-xs leading-relaxed text-v-text/90">{selected.diagnosticCriteria}</p>
+              </div>
+            )}
+
+            {selected.codingNote && (
+              <div className="rounded-v-sm bg-v-fill p-3.5">
+                <p className={`${seccion} mb-1`}><FileText size={12} /> {L('Coding note', 'Nota de codificación')}</p>
+                <p className="text-xs leading-relaxed text-v-muted">{selected.codingNote}</p>
+              </div>
+            )}
+
+            {selected.indexTerms.length > 0 && (
+              <div className="space-y-2">
+                <p className={seccion}><Tag size={12} /> {L('Included terms / synonyms', 'Términos incluidos / sinónimos')}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selected.indexTerms.map((term, i) => (
+                    <span key={i} className="rounded-full bg-v-fill px-2.5 py-1 text-xs font-medium text-v-text/80">{term}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(selected.inclusions.length > 0 || selected.exclusions.length > 0) && (
+              <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+                {selected.inclusions.length > 0 && (
+                  <div className="rounded-v-sm border border-v-border p-3.5">
+                    <p className={`${seccion} mb-2 !text-v-success`}><CheckCircle2 size={12} /> {L('Includes', 'Incluye')}</p>
+                    <ul className="space-y-1">
+                      {selected.inclusions.map((inc, i) => <li key={i} className="text-sm text-v-text/90">{inc}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {selected.exclusions.length > 0 && (
+                  <div className="rounded-v-sm border border-v-border p-3.5">
+                    <p className={`${seccion} mb-2 !text-v-danger`}><XCircle size={12} /> {L('Excludes', 'Excluye')}</p>
+                    <ul className="space-y-1">
+                      {selected.exclusions.map((exc, i) => <li key={i} className="text-sm text-v-text/90">{exc}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(selected.children.length > 0 || selected.parent) && (
+              <div className="space-y-2">
+                <p className={seccion}><GitBranch size={12} /> {L('Related categories', 'Categorías relacionadas')}</p>
+                <div className="overflow-hidden rounded-v-sm border border-v-border">
+                  {selected.parent && (
+                    <button onClick={() => loadDetail(selected.parent!)} className="flex w-full items-center gap-3 border-b border-v-border px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-v-fill">
+                      <ArrowUp size={14} className="shrink-0 text-v-subtle" />
+                      <span className="shrink-0 font-mono text-xs font-bold text-v-muted">{selected.parent.code}</span>
+                      <span className="min-w-0 flex-1 text-sm text-v-text">{selected.parent.title}</span>
+                    </button>
+                  )}
+                  {selected.children.map((child, i) => (
+                    <button key={i} onClick={() => loadDetail(child)} className="group flex w-full items-center gap-3 border-b border-v-border px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-v-fill">
+                      <span className="w-14 shrink-0 font-mono text-xs font-bold text-v-accent">{child.code}</span>
+                      <span className="min-w-0 flex-1 text-sm text-v-text">{child.title || (L('View subcategory ', 'Ver subcategoría ') + child.code)}</span>
+                      <ChevronRight size={14} className="shrink-0 text-v-subtle transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 border-t border-v-border pt-4">
+              <button onClick={() => copiar(`${selected.title}\nCIE-11: ${selected.code}\n${selected.definition}`, 'full')}
+                className="v-brand inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
+                {copied === 'full' ? <Check size={14} /> : <Copy size={14} />} {L('Copy for ARIA', 'Copiar para ARIA')}
+              </button>
+              {showAsignar && onAsignar && (
+                <button onClick={() => onAsignar(selected)} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-v-success px-4 text-sm font-semibold text-white">
+                  <Star size={14} /> {L('Assign to patient', 'Asignar al paciente')}
+                </button>
+              )}
+              <a href={selected.browserUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex h-10 items-center gap-1.5 rounded-full border border-v-border px-4 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill">
+                <ExternalLink size={14} /> {L('View on WHO', 'Ver en la OMS')}
+              </a>
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* PIE */}
-      <p className="text-[10px] text-center" style={{ color:'var(--text-muted)' }}>
-        {L('ICD-11 — International Classification of Diseases, 11th revision · WHO 2024','CIE-11 — Clasificación Internacional de Enfermedades, 11.ª revisión · OMS 2024')}
+      {/* ── RESULTADOS ── */}
+      {!selected && q.trim().length >= 2 && (
+        <section className="overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v">
+          <div className="flex items-center justify-between gap-2 border-b border-v-border px-4 py-2.5">
+            <p className="text-xs font-semibold text-v-muted">
+              {loading ? L('Searching…', 'Buscando…')
+                : results.length === 0 ? L(`No results for "${q}"`, `Sin resultados para "${q}"`)
+                : L(`${results.length} result${results.length !== 1 ? 's' : ''}`, `${results.length} resultado${results.length !== 1 ? 's' : ''}`)}
+            </p>
+            {!loading && results.length > 0 && <p className="hidden text-[11px] text-v-subtle sm:block">{L('Tap one to see the full detail', 'Toca uno para ver el detalle completo')}</p>}
+          </div>
+
+          {loading ? (
+            <div className="divide-y divide-v-border">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="h-6 w-16 animate-pulse rounded-v-sm bg-v-fill" />
+                  <div className="h-4 flex-1 animate-pulse rounded bg-v-fill" />
+                </div>
+              ))}
+            </div>
+          ) : results.length === 0 ? (
+            <div className="px-4 py-10 text-center">
+              <span className="mx-auto grid size-11 place-items-center rounded-full bg-v-fill text-v-subtle"><AlertCircle size={20} /></span>
+              <p className="mt-3 text-sm font-semibold text-v-text">{L('Nothing found', 'No encontramos nada')}</p>
+              <p className="mt-1 text-xs text-v-muted">{t('admin.intentaCodigoCIE')}</p>
+            </div>
+          ) : (
+            <ul className="max-h-[62vh] divide-y divide-v-border overflow-y-auto">
+              {ordenados.map(r => {
+                const neuro = r.chapter === '06'
+                return (
+                  <li key={r.id || r.code}>
+                    <button onClick={() => loadDetail(r)} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-v-fill">
+                      <span className={`w-[4.5rem] shrink-0 rounded-v-sm py-1 text-center font-mono text-xs font-bold ${neuro ? 'bg-v-accent-soft text-v-accent' : 'bg-v-fill text-v-muted'}`}>{r.code || '—'}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium leading-snug text-v-text">{r.title}</span>
+                        {r.chapter && <span className="mt-0.5 block text-[11px] text-v-subtle">{chapterName(r.chapter, locale) || (L('Chapter ', 'Capítulo ') + r.chapter)}</span>}
+                      </span>
+                      <ChevronRight size={15} className="shrink-0 text-v-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-v-accent" />
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* Atribución exigida por la licencia de la CIE-11 (CC BY-ND 3.0 IGO) */}
+      <p className="mx-auto max-w-2xl text-center text-[10px] leading-relaxed text-v-subtle">
+        {L('ICD-11 content © World Health Organization, used under the CC BY-ND 3.0 IGO license and shown unmodified. Vanty ABA is not affiliated with or endorsed by WHO. Reference tool: it does not replace clinical judgment.',
+           'Contenido de la CIE-11 © Organización Mundial de la Salud, usado bajo licencia CC BY-ND 3.0 IGO y mostrado sin modificaciones. Vanty ABA no está afiliado ni respaldado por la OMS. Herramienta de consulta: no reemplaza el juicio clínico.')}
       </p>
     </div>
   )

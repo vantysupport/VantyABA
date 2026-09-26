@@ -176,7 +176,7 @@ export function ExtrasBento({ en }: { en: boolean }) {
       <Tarjeta Icon={Bell} t={L('Notifications', 'Notificaciones')} d={L('Email reminders and summaries so no session is missed.', 'Recordatorios y resúmenes por correo para no perder ninguna sesión.')} delay={0.05}>
         <Avisos en={en} />
       </Tarjeta>
-      <Tarjeta Icon={Stethoscope} t="CIE-11 / DSM-5" d={L('Quick diagnosis search with codes.', 'Búsqueda rápida de diagnósticos con códigos.')} delay={0.1}>
+      <Tarjeta Icon={Stethoscope} t={L('ICD-11', 'CIE-11')} d={L('Quick WHO ICD-11 diagnosis search with codes.', 'Búsqueda rápida en la CIE-11 de la OMS, con códigos.')} delay={0.1}>
         <Buscador en={en} />
       </Tarjeta>
       <Tarjeta Icon={ShieldCheck} t={L('Clinical-grade security', 'Seguridad clínica')} d={L('Data isolated per center, 2FA and audit trail.', 'Datos aislados por centro, 2FA y auditoría.')} delay={0.15}>

@@ -30,7 +30,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
   // If active tab got disabled, jump to first available
   const activeTab: Tab = cerebroTabs.find(t => t.id === tab) ? tab : (cerebroTabs[0]?.id ?? 'aprender')
   const tieneTab = (id: Tab) => cerebroTabs.some(t => t.id === id)
-  // Planes públicos: solo consulta CIE-11 / DSM-5 (el Cerebro completo es del plan Fundador)
+  // Planes públicos: solo consulta CIE-11 (el Cerebro completo es del plan Fundador)
   const soloConsulta = !tieneTab('aprender') && !tieneTab('biblioteca')
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -779,7 +779,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
     <div className="space-y-4 w-full">
 
       {/* Header */}
-      <div className={`rounded-2xl border p-4 md:p-5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200 shadow-sm'}`}>
+      {!soloConsulta && <div className={`rounded-2xl border p-4 md:p-5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200 shadow-sm'}`}>
         {/* Top row: icon + title */}
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center flex-shrink-0">
@@ -793,8 +793,8 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
         {/* Stats row: 3 equal columns (solo plan Fundador) */}
         {soloConsulta ? (
           <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            {L('Search ICD-11 and DSM-5 diagnoses. ARIA and the reports of your center use the shared Vanty clinical knowledge base.',
-               'Consulta diagnósticos CIE-11 y DSM-5. ARIA y los informes de tu centro usan la base de conocimiento clínico compartida de Vanty.')}
+            {L('Search the WHO ICD-11 classification. ARIA and the reports of your center use the shared Vanty clinical knowledge base.',
+               'Consulta la clasificación CIE-11 de la OMS. ARIA y los informes de tu centro usan la base de conocimiento clínico compartida de Vanty.')}
           </p>
         ) : <div className="grid grid-cols-3 gap-2">
           {[
@@ -808,7 +808,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
             </div>
           ))}
         </div>}
-      </div>
+      </div>}
 
       {/* Tabs */}
       {!soloConsulta && <div className={`flex rounded-2xl p-1.5 border gap-1.5 overflow-x-auto scrollbar-hide ${isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-50 border-slate-200'}`}>
@@ -825,7 +825,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
             ? isDark ? 'bg-[#161b22] text-sky-400 shadow border border-[#30363d]' : 'bg-white text-sky-700 shadow border border-slate-200'
             : isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
           <Stethoscope size={13} />
-          <span className="hidden sm:inline">{L('ICD-11 / DSM-5', 'CIE-11 / DSM-5')}</span>
+          <span className="hidden sm:inline">{L('ICD-11', 'CIE-11')}</span>
           <span className="sm:hidden">{L('ICD-11', 'CIE-11')}</span>
         </button>
         {tieneTab('biblioteca') && <button onClick={() => setTab('biblioteca')}
@@ -1037,20 +1037,9 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
         </div>
       )}
 
-      {/* ══ TAB: CIE-11 / DSM-5 ══ */}
+      {/* ══ TAB: CIE-11 ══ */}
       {activeTab === 'diagnosticos' && (
         <div className="space-y-4">
-          <div className={`rounded-2xl p-4 border ${isDark ? 'bg-sky-900/20 border-sky-800/30' : 'bg-sky-50 border-sky-100'}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">🏥</span>
-              <span className={`font-bold text-sm ${isDark ? 'text-sky-300' : 'text-sky-800'}`}>{t("admin.buscadorDiagnosticos")}</span>
-            </div>
-            <p className="text-xs text-sky-600">
-              {locale === 'en'
-                ? <>Search by name, ICD-11 code (e.g. <b>6A02</b>), ICD-10 (e.g. <b>F84</b>), DSM-5 or synonym. Click the codes to copy them directly.</>
-                : <>Busca por nombre, código CIE-11 (ej: <b>6A02</b>), ICD-10 (ej: <b>F84</b>), DSM-5 o sinónimo. Haz clic en los códigos para copiarlos directamente.</>}
-            </p>
-          </div>
           <DiagnosticoBuscador />
         </div>
       )}
