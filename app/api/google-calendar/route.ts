@@ -20,7 +20,9 @@ export async function GET(req: NextRequest) {
   // Return OAuth URL for client to redirect to
   if (action === 'auth-url') {
     const scopes = [
-      'https://www.googleapis.com/auth/calendar',
+      // Solo eventos (crear/mover/borrar las citas) y el correo de la cuenta conectada: el mínimo necesario
+      'https://www.googleapis.com/auth/calendar.events',
+      'https://www.googleapis.com/auth/userinfo.email',
     ].join(' ')
 
     // Only for the signed-in user's own profile; the state is signed so the callback can trust it.
