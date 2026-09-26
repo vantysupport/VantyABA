@@ -41,3 +41,9 @@ santi.zip
 messages.zip
 
 /.cache/
+
+# Herramientas locales del editor/asistente (no se publican)
+.claude/
+.claude-flow/
+.agents/
+CLAUDE.md
