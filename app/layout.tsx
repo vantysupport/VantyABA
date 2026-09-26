@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import { ToastProvider } from '@/components/Toast'
 import { ThemeProvider } from '@/components/ThemeContext'
@@ -13,9 +13,16 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import MaintenanceGate from '@/components/MaintenanceGate'
 import { ConfirmarHost } from '@/components/ui/confirmar'
 import { PLATFORM_NAME } from '@/lib/branding'
+import { localeServidor } from '@/lib/locale-server'
+import { SITE_URL, alternativasIdioma, esIndexable, urlLocalizada } from '@/lib/seo'
 import "./globals.css";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
+/** Idioma y ruta lógica que fija el proxy al reescribir /es/... y /en/... */
+async function rutaActual() {
+  const locale = await localeServidor()
+  const path = (await headers()).get('x-vanty-path') || '/'
+  return { locale, path }
+}
 
 // Sistema de dos tipografías:
 //  • CUERPO → Plus Jakarta Sans (var --font-sans): legible, profesional.
@@ -43,8 +50,8 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-export const metadata: Metadata = {
-  ...(SITE_URL ? { metadataBase: new URL(SITE_URL) } : {}),
+const baseMetadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: `${PLATFORM_NAME} | Gestión clínica para centros de terapia`,
   description: "Plataforma de gestión clínica para centros de terapia ABA, neuropsicología y desarrollo infantil: expedientes, agenda, informes con IA y portal para familias.",
   keywords: "gestión clínica, software terapia ABA, centros de terapia, TEA, TDAH, neurodesarrollo, portal familias",
@@ -62,7 +69,8 @@ export const metadata: Metadata = {
     description: "Plataforma de gestión clínica para centros de terapia, con IA y portal para familias.",
     type: "website",
     locale: "es_PE",
-    ...(SITE_URL ? { url: SITE_URL } : {}),
+    alternateLocale: ["en_US"],
+    url: SITE_URL,
     siteName: PLATFORM_NAME,
     images: [{ url: "/images/og-image.jpg", width: 1200, height: 630, alt: `${PLATFORM_NAME} - Gestión clínica` }],
   },
@@ -72,8 +80,6 @@ export const metadata: Metadata = {
     description: "Plataforma de gestión clínica para centros de terapia, con IA y portal para familias.",
     images: ["/images/og-image.jpg"],
   },
-  robots: { index: true, follow: true },
-  ...(SITE_URL ? { alternates: { canonical: SITE_URL } } : {}),
   icons: {
     icon: [
       { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
@@ -83,17 +89,35 @@ export const metadata: Metadata = {
   },
 };
 
+// Cada página pública declara su propia URL canónica y sus versiones es/en;
+// los paneles y enlaces privados llevan noindex.
+export async function generateMetadata(): Promise<Metadata> {
+  const { locale, path } = await rutaActual()
+  const indexable = esIndexable(path)
+  return {
+    ...baseMetadata,
+    robots: indexable
+      ? { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 } }
+      : { index: false, follow: false },
+    ...(indexable ? { alternates: { canonical: urlLocalizada(path, locale), languages: alternativasIdioma(path) } } : {}),
+    openGraph: {
+      ...baseMetadata.openGraph,
+      locale: locale === 'en' ? 'en_US' : 'es_PE',
+      alternateLocale: [locale === 'en' ? 'es_PE' : 'en_US'],
+      url: urlLocalizada(path, locale),
+    },
+  }
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // El middleware (proxy.ts) setea `vanty_locale` según el prefijo /en o /es de
-  // la URL. Lo leemos en el servidor para renderizar ya en el idioma correcto
+  // El middleware (proxy.ts) pasa el idioma del prefijo /en o /es de la URL
+  // (y setea la cookie `vanty_locale`). Lo leemos en el servidor para renderizar ya en el idioma correcto
   // (sin "flash" de español) y para el atributo <html lang>.
-  const cookieStore = await cookies()
-  const cookieLocale = cookieStore.get('vanty_locale')?.value
-  const initialLocale = cookieLocale === 'en' ? 'en' : 'es'
+  const { locale: initialLocale } = await rutaActual()
   return (
     <html lang={initialLocale} translate="no" className={`notranslate ${jakarta.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>

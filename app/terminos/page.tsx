@@ -2,7 +2,7 @@
 // Términos de Servicio de la plataforma Vanty (nivel plataforma, multi-centro).
 // Bilingüe (ES/EN): el idioma se toma de la cookie `vanty_locale`.
 
-import { cookies } from 'next/headers'
+import { localeServidor } from '@/lib/locale-server'
 import {
   FileCheck2, LayoutGrid, UserCog, ShieldAlert, FolderLock, Sparkles, EyeOff, CreditCard, Activity,
   Copyright, Scale, PauseCircle, RefreshCw, Landmark, Mail, Stethoscope, KeyRound, HeartHandshake,
@@ -14,7 +14,7 @@ import LegalPage, { Lista, Destacado, type SeccionLegal } from '@/components/leg
 const P = `${PLATFORM_NAME} ABA`
 
 export async function generateMetadata() {
-  const en = (await cookies()).get('vanty_locale')?.value === 'en'
+  const en = (await localeServidor()) === 'en'
   return en
     ? { title: `Terms of Service · ${P}`, description: `Conditions of use of the ${P} clinical-management platform.` }
     : { title: `Términos de Servicio · ${P}`, description: `Condiciones de uso de la plataforma de gestión clínica ${P}.` }
@@ -120,7 +120,7 @@ function secciones(en: boolean): SeccionLegal[] {
 }
 
 export default async function TerminosPage() {
-  const en = (await cookies()).get('vanty_locale')?.value === 'en'
+  const en = (await localeServidor()) === 'en'
   const L = (e: string, s: string) => (en ? e : s)
   return (
     <LegalPage

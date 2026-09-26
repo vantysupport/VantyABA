@@ -2,7 +2,7 @@
 // Política de Privacidad de la plataforma Vanty (nivel plataforma, multi-centro).
 // Bilingüe (ES/EN): el idioma se toma de la cookie `vanty_locale` que fija el middleware.
 
-import { cookies } from 'next/headers'
+import { localeServidor } from '@/lib/locale-server'
 import LegalPage, { Lista, Destacado, type SeccionLegal } from '@/components/legal/LegalPage'
 import {
   Building2, Database, Target, Scale, Share2, ShieldCheck, Sparkles, Baby, UserCheck, LogIn, Archive,
@@ -11,7 +11,7 @@ import {
 import { PLATFORM_NAME } from '@/lib/branding'
 
 export async function generateMetadata() {
-  const en = (await cookies()).get('vanty_locale')?.value === 'en'
+  const en = (await localeServidor()) === 'en'
   return en
     ? { title: `Privacy Policy · ${P}`, description: `How ${P} protects the personal and clinical data of the families served by the centers that use the platform.` }
     : { title: `Política de Privacidad · ${P}`, description: `Cómo ${P} protege los datos personales y clínicos de las familias atendidas en los centros que usan la plataforma.` }
@@ -160,7 +160,7 @@ function secciones(en: boolean): SeccionLegal[] {
 }
 
 export default async function PrivacidadPage() {
-  const en = (await cookies()).get('vanty_locale')?.value === 'en'
+  const en = (await localeServidor()) === 'en'
   const L = (e: string, s: string) => (en ? e : s)
   return (
     <LegalPage

@@ -121,7 +121,11 @@ export async function proxy(req: NextRequest) {
     if (!isApi && hasLocale) {
       const u = req.nextUrl.clone()
       u.pathname = pathname
-      return NextResponse.rewrite(u)
+      // Idioma y ruta lógica para el servidor (metadata SEO: canonical, hreflang, noindex)
+      const h = new Headers(req.headers)
+      h.set('x-vanty-locale', locale)
+      h.set('x-vanty-path', pathname)
+      return NextResponse.rewrite(u, { request: { headers: h } })
     }
     return NextResponse.next()
   }
@@ -273,6 +277,8 @@ export async function proxy(req: NextRequest) {
 // Matcher: a qué rutas se aplica el middleware
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|mp3|wav|ogg|m4a|glb|gltf)$).*)',
+    // robots.txt, sitemap.xml y el archivo de verificación de Google Search Console
+    // van sin prefijo de idioma: no deben redirigirse a /es/...
+    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|manifest\\.json|google[0-9a-f]+\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|mp3|wav|ogg|m4a|glb|gltf)$).*)',
   ],
 }
