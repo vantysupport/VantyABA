@@ -13,9 +13,9 @@ export async function POST(req: NextRequest) {
     const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim()
     if (!token) return NextResponse.json({ error: 'no_auth' }, { status: 401 })
 
-    const { data: u, error: ue } = await supabaseAdmin.auth.getUser(token)
-    if (ue || !u?.user) return NextResponse.json({ error: 'invalid' }, { status: 401 })
-    const uid = u.user.id
+    const { data: u, error: ue } = await supabaseAdmin.auth.getClaims(token)
+    if (ue || !u?.claims?.sub) return NextResponse.json({ error: 'invalid' }, { status: 401 })
+    const uid = u.claims.sub as string
 
     let sessionId = ''
     try { const b = await req.json(); sessionId = (b?.sessionId as string) || '' } catch {}

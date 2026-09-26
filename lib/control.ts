@@ -1,4 +1,5 @@
 // lib/control.ts — utilidades de cliente para el panel de control.
+import { jsonCompartido } from '@/lib/pedido-compartido'
 //  • logClientError: registra un error en el servidor (a prueba de fallos).
 //  • getControlStatus: lee el estado público (mantenimiento + límites).
 // Nunca lanza: si algo falla, devuelve valores seguros (la app sigue funcionando).
@@ -38,9 +39,8 @@ export async function logClientError(message: string, detail = '', source = 'cli
 
 export async function getControlStatus(): Promise<ControlStatus> {
   try {
-    const r = await fetch('/api/control', { cache: 'no-store' })
-    if (!r.ok) return { maintenance: false, maintenance_msg: '', limits: {} }
-    const j = await r.json()
+    const { ok, data: j } = await jsonCompartido('/api/control')
+    if (!ok) return { maintenance: false, maintenance_msg: '', limits: {} }
     return {
       maintenance: !!j?.maintenance,
       maintenance_msg: j?.maintenance_msg || '',

@@ -21,56 +21,64 @@ export async function GET(req: NextRequest) {
   const fechaInicio = new Date()
   fechaInicio.setDate(fechaInicio.getDate() - diasAtras)
   const fechaInicioStr = fechaInicio.toISOString().split('T')[0]
+  const inicioMes = new Date()
+  inicioMes.setDate(1)
+  const hace30str = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+  const centro = caller.centroId
 
   try {
-    // ── SESIONES HOY ─────────────────────────────────────────
-    const { data: sesionesHoy } = await supabaseAdmin
-      .from('agenda_sesiones')
-      .select('id, estado, hora_inicio, hora_fin, tipo')
-      .eq('centro_id', caller.centroId)
-      .eq('fecha', hoy)
+    // Todas las consultas son independientes: salen en paralelo (antes iban una tras otra, ~5 s)
+    const [
+      { data: sesionesHoy },
+      { count: totalPacientes },
+      { count: pacientesNuevosMes },
+      { data: alertas },
+      { data: sesionesPeriodo },
+      { data: tareas },
+      { count: formPendientes },
+      { data: ultimasSesiones },
+      { data: allChildren },
+      { data: conSesAgenda },
+      { data: conSesABA },
+      { data: conSesV2 },
+      { data: conSesPrograma },
+      { data: proximasSesiones },
+      { data: alertasRecientes },
+      { data: ingresosMes },
+      facturasPendientes,
+    ] = await Promise.all([
+      supabaseAdmin.from('agenda_sesiones').select('id, estado, hora_inicio, hora_fin, tipo, terapeuta_id').eq('centro_id', centro).eq('fecha', hoy),
+      supabaseAdmin.from('children').select('*', { count: 'exact', head: true }).eq('centro_id', centro),
+      supabaseAdmin.from('children').select('*', { count: 'exact', head: true }).eq('centro_id', centro).gte('created_at', inicioMes.toISOString()),
+      supabaseAdmin.from('agente_alertas').select('id, prioridad, tipo, created_at').eq('centro_id', centro).eq('resuelta', false).order('prioridad', { ascending: true }).limit(100),
+      supabaseAdmin.from('agenda_sesiones').select('fecha, estado').eq('centro_id', centro).gte('fecha', fechaInicioStr).lte('fecha', hoy),
+      supabaseAdmin.from('tareas_hogar').select('id, completada, fecha_asignada').eq('centro_id', centro).eq('activa', true).gte('fecha_asignada', fechaInicioStr),
+      supabaseAdmin.from('parent_forms').select('*', { count: 'exact', head: true }).eq('centro_id', centro).eq('status', 'pending'),
+      supabaseAdmin.from('registro_aba').select('datos').eq('centro_id', centro).gte('fecha_sesion', fechaInicioStr).limit(50),
+      supabaseAdmin.from('children').select('id, name').eq('centro_id', centro).order('name'),
+      supabaseAdmin.from('agenda_sesiones').select('child_id').eq('centro_id', centro).in('estado', ['realizada', 'completada']).gte('fecha', hace30str),
+      supabaseAdmin.from('registro_aba').select('child_id').eq('centro_id', centro).gte('fecha_sesion', hace30str),
+      supabaseAdmin.from('aba_sessions_v2').select('child_id').eq('centro_id', centro).gte('session_date', hace30str),
+      supabaseAdmin.from('sesiones_datos_aba').select('child_id').eq('centro_id', centro).gte('fecha', hace30str),
+      supabaseAdmin.from('agenda_sesiones').select('*, children(name, diagnosis)').eq('centro_id', centro).gte('fecha', hoy).in('estado', ['programada', 'confirmada'])
+        .order('fecha', { ascending: true }).order('hora_inicio', { ascending: true }).limit(5),
+      // Trae más alertas para que los logros (prioridad baja) no queden cortados por el cupo
+      supabaseAdmin.from('agente_alertas').select('*, children(name)').eq('centro_id', centro).eq('resuelta', false).order('created_at', { ascending: false }).limit(30),
+      supabaseAdmin.from('facturas').select('monto, estado').eq('centro_id', centro).gte('fecha_emision', inicioMes.toISOString().split('T')[0]).eq('estado', 'pagado'),
+      supabaseAdmin.from('facturas').select('*', { count: 'exact', head: true }).eq('centro_id', centro).eq('estado', 'pendiente'),
+    ])
 
+    // ── SESIONES HOY ─────────────────────────────────────────
     const totalHoy       = sesionesHoy?.length || 0
     const realizadasHoy  = sesionesHoy?.filter(s => s.estado === 'realizada').length || 0
     const canceladasHoy  = sesionesHoy?.filter(s => s.estado === 'cancelada').length || 0
     const programadasHoy = sesionesHoy?.filter(s => s.estado === 'programada' || s.estado === 'confirmada').length || 0
 
-    // ── PACIENTES ────────────────────────────────────────────
-    const { count: totalPacientes } = await supabaseAdmin
-      .from('children')
-      .select('*', { count: 'exact', head: true })
-      .eq('centro_id', caller.centroId)
-
-    // Pacientes nuevos este mes
-    const inicioMes = new Date()
-    inicioMes.setDate(1)
-    const { count: pacientesNuevosMes } = await supabaseAdmin
-      .from('children')
-      .select('*', { count: 'exact', head: true })
-      .eq('centro_id', caller.centroId)
-      .gte('created_at', inicioMes.toISOString())
-
     // ── ALERTAS ──────────────────────────────────────────────
-    const { data: alertas } = await supabaseAdmin
-      .from('agente_alertas')
-      .select('id, prioridad, tipo, created_at')
-      .eq('centro_id', caller.centroId)
-      .eq('resuelta', false)
-      .order('prioridad', { ascending: true })
-      .limit(100)
-
     const alertasUrgentes = alertas?.filter(a => a.prioridad === 1).length || 0
     const alertasTotal    = alertas?.length || 0
 
-    // ── SESIONES DEL PERIODO ──────────────────────────────────
-    const { data: sesionesPeriodo } = await supabaseAdmin
-      .from('agenda_sesiones')
-      .select('fecha, estado')
-      .eq('centro_id', caller.centroId)
-      .gte('fecha', fechaInicioStr)
-      .lte('fecha', hoy)
-
-    // Agrupar por fecha para gráfico
+    // ── SESIONES DEL PERIODO (para gráfico) ───────────────────
     const porFecha: Record<string, { total: number; realizadas: number; canceladas: number }> = {}
     sesionesPeriodo?.forEach(s => {
       if (!porFecha[s.fecha]) porFecha[s.fecha] = { total: 0, realizadas: 0, canceladas: 0 }
@@ -81,32 +89,11 @@ export async function GET(req: NextRequest) {
     const graficaSesiones = Object.entries(porFecha).map(([fecha, data]) => ({ fecha, ...data }))
 
     // ── TAREAS HOGAR ─────────────────────────────────────────
-    const { data: tareas } = await supabaseAdmin
-      .from('tareas_hogar')
-      .select('id, completada, fecha_asignada')
-      .eq('centro_id', caller.centroId)
-      .eq('activa', true)
-      .gte('fecha_asignada', fechaInicioStr)
-
     const tareasTotal       = tareas?.length || 0
     const tareasCompletadas = tareas?.filter(t => t.completada).length || 0
     const tareasCompletitudPct = tareasTotal > 0 ? Math.round((tareasCompletadas / tareasTotal) * 100) : 0
 
-    // ── FORMULARIOS PENDIENTES ────────────────────────────────
-    const { count: formPendientes } = await supabaseAdmin
-      .from('parent_forms')
-      .select('*', { count: 'exact', head: true })
-      .eq('centro_id', caller.centroId)
-      .eq('status', 'pending')
-
     // ── PROGRESO PROMEDIO PACIENTES ───────────────────────────
-    const { data: ultimasSesiones } = await supabaseAdmin
-      .from('registro_aba')
-      .select('datos')
-      .eq('centro_id', caller.centroId)
-      .gte('fecha_sesion', fechaInicioStr)
-      .limit(50)
-
     let sumaLogro = 0
     let countLogro = 0
     ultimasSesiones?.forEach(s => {
@@ -122,20 +109,6 @@ export async function GET(req: NextRequest) {
     const progresoPromedio = countLogro > 0 ? Math.round(sumaLogro / countLogro) : 0
 
     // ── PACIENTES SIN SESIÓN (30d) ────────────────────────────
-    // FIX: calculado aquí con supabaseAdmin para bypasear RLS y ver todos los pacientes
-    const hace30str = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
-    const { data: allChildren } = await supabaseAdmin
-      .from('children')
-      .select('id, name')
-      .eq('centro_id', caller.centroId)
-      .order('name')
-
-    const [{ data: conSesAgenda }, { data: conSesABA }, { data: conSesV2 }, { data: conSesPrograma }] = await Promise.all([
-      supabaseAdmin.from('agenda_sesiones').select('child_id').eq('centro_id', caller.centroId).in('estado', ['realizada', 'completada']).gte('fecha', hace30str),
-      supabaseAdmin.from('registro_aba').select('child_id').eq('centro_id', caller.centroId).gte('fecha_sesion', hace30str),
-      supabaseAdmin.from('aba_sessions_v2').select('child_id').eq('centro_id', caller.centroId).gte('session_date', hace30str),
-      supabaseAdmin.from('sesiones_datos_aba').select('child_id').eq('centro_id', caller.centroId).gte('fecha', hace30str),
-    ])
     const conSesionSet = new Set([
       ...(conSesAgenda || []).map(s => s.child_id),
       ...(conSesABA || []).map(s => s.child_id),
@@ -144,56 +117,16 @@ export async function GET(req: NextRequest) {
     ])
     const pacientesSinSesion30d = (allChildren || []).filter(n => !conSesionSet.has(n.id))
 
-    // ── PRÓXIMAS SESIONES ─────────────────────────────────────
-    const { data: proximasSesiones } = await supabaseAdmin
-      .from('agenda_sesiones')
-      .select('*, children(name, diagnosis)')
-      .eq('centro_id', caller.centroId)
-      .gte('fecha', hoy)
-      .in('estado', ['programada', 'confirmada'])
-      .order('fecha', { ascending: true })
-      .order('hora_inicio', { ascending: true })
-      .limit(5)
-
-    // ── ALERTAS RECIENTES DETALLADAS ──────────────────────────
-    // Trae más alertas para que los logros (prioridad baja) no queden cortados
-    // por el cupo cuando hay varias negativas. El cliente las ordena y limita.
-    const { data: alertasRecientes } = await supabaseAdmin
-      .from('agente_alertas')
-      .select('*, children(name)')
-      .eq('centro_id', caller.centroId)
-      .eq('resuelta', false)
-      .order('created_at', { ascending: false })
-      .limit(30)
-
-    // ── TERAPEUTAS CON CARGA HOY ──────────────────────────────
-    const { data: terapeutasCarga } = await supabaseAdmin
-      .from('agenda_sesiones')
-      .select('terapeuta_id, estado')
-      .eq('centro_id', caller.centroId)
-      .eq('fecha', hoy)
-
+    // ── TERAPEUTAS CON CARGA HOY (de las mismas sesiones de hoy) ──
     const cargaTerapeutas: Record<string, { total: number; realizadas: number }> = {}
-    terapeutasCarga?.forEach(s => {
+    sesionesHoy?.forEach(s => {
       if (!cargaTerapeutas[s.terapeuta_id]) cargaTerapeutas[s.terapeuta_id] = { total: 0, realizadas: 0 }
       cargaTerapeutas[s.terapeuta_id].total++
       if (s.estado === 'realizada') cargaTerapeutas[s.terapeuta_id].realizadas++
     })
 
     // ── INGRESOS DEL MES ──────────────────────────────────────
-    const { data: ingresosMes } = await supabaseAdmin
-      .from('facturas')
-      .select('monto, estado')
-      .eq('centro_id', caller.centroId)
-      .gte('fecha_emision', inicioMes.toISOString().split('T')[0])
-      .eq('estado', 'pagado')
-
     const totalIngresosMes = ingresosMes?.reduce((acc, f) => acc + Number(f.monto), 0) || 0
-    const facturasPendientes = await supabaseAdmin
-      .from('facturas')
-      .select('*', { count: 'exact', head: true })
-      .eq('centro_id', caller.centroId)
-      .eq('estado', 'pendiente')
 
     return NextResponse.json({
       // Resumen del día

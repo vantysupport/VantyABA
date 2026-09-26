@@ -10,7 +10,8 @@ export async function getCentroMoneda(centroId?: string | null): Promise<Currenc
     let id = centroId ?? null
     if (!id) {
       const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: claimsData } = await supabase.auth.getClaims() // firma verificada localmente
+      const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
       if (user) {
         const { data } = await supabaseAdmin.from('profiles').select('centro_id').eq('id', user.id).maybeSingle()
         id = data?.centro_id ?? null

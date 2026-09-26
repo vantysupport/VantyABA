@@ -49,6 +49,7 @@ import AdminPagos from './components/AdminPagos'
 import AdminReportesFinancieros from './components/AdminReportesFinancieros'
 import { AriaSaludo } from '@/components/ui/aria-saludo'
 import PushNotificationBanner from '@/components/PushNotificationBanner'
+import { jsonCompartido } from '@/lib/pedido-compartido'
 
 // ── Features & Roles types (mirrors control/route.ts) ────────────────────────
 type FeaturesConfig = {
@@ -268,9 +269,9 @@ export default function AdminDashboard() {
   const [rolesConfig, setRolesConfig] = useState<RolesConfig>({ jefe: true, especialista: true, secretaria: true, padre: true })
 
   useEffect(() => {
-    fetch('/api/control', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(j => {
+    jsonCompartido('/api/control')
+      .then(({ data: j }) => {
+        if (!j) return
         if (j.features) setFeatures({ ...DEFAULT_FEATURES, ...j.features })
         if (j.roles_config) setRolesConfig(rc => ({ ...rc, ...j.roles_config }))
       })

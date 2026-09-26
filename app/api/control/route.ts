@@ -80,7 +80,8 @@ export async function GET() {
   const features: FeaturesConfig = { ...((data?.features as FeaturesConfig) ?? {}) }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: claimsData } = await supabase.auth.getClaims() // firma verificada localmente
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
   if (user) {
     const { data: profile } = await supabaseAdmin
       .from('profiles')

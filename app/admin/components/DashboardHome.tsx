@@ -67,6 +67,23 @@ function SectionHeader({ concept, title, count, children }: any) {
   )
 }
 
+// Marcador de carga: evita mostrar "no hay nada" antes de que lleguen los datos
+function Esqueleto({ filas = 3 }: { filas?: number }) {
+  return (
+    <div className="space-y-2.5 px-4 py-4" aria-busy="true">
+      {Array.from({ length: filas }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <span className="size-9 shrink-0 animate-pulse rounded-full bg-v-fill" />
+          <span className="flex-1 space-y-1.5">
+            <span className="block h-3 w-3/5 animate-pulse rounded bg-v-fill" />
+            <span className="block h-2.5 w-2/5 animate-pulse rounded bg-v-fill" />
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function EmptyState({ icon: Icon, text, action, onAction, tone = 'text-v-subtle' }: any) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
@@ -140,7 +157,7 @@ function Ring({ value, total, size = 64 }: { value: number; total: number; size?
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
-function KPI({ label, value, sub, concept, urgent, onClick, index = 0 }: any) {
+function KPI({ label, value, sub, concept, urgent, onClick, index = 0, cargando = false }: any) {
   const { icon: Icon, tone } = CONCEPT[concept as keyof typeof CONCEPT]
   return (
     <motion.button
@@ -161,10 +178,10 @@ function KPI({ label, value, sub, concept, urgent, onClick, index = 0 }: any) {
         </span>
       </div>
       <p className={`relative mt-3 text-[2.6rem] font-bold leading-none tracking-tight tabular-nums ${urgent ? 'text-v-warning' : 'text-v-text'}`}>
-        <CountUp value={value} />
+        {cargando ? <span className="inline-block h-[2.6rem] w-16 animate-pulse rounded-v-sm bg-v-fill align-middle" /> : <CountUp value={value} />}
       </p>
       <div className="relative mt-2 flex items-center justify-between">
-        <p className="text-xs text-v-subtle">{sub}</p>
+        <p className="text-xs text-v-subtle">{cargando ? <span className="inline-block h-3 w-24 animate-pulse rounded bg-v-fill" /> : sub}</p>
         <ArrowUpRight size={14} className="text-v-subtle opacity-0 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-v-accent group-hover:opacity-100" />
       </div>
     </motion.button>
@@ -306,44 +323,9 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
-      // 1. API de métricas (usa agenda_sesiones, agente_alertas, etc.)
-      const resM = await fetch('/api/dashboard/metricas?periodo=7d', { cache: 'no-store' })
-      const dataM = resM.ok ? await resM.json() : null
-      setMetricas(dataM)
-
-      // Próximas citas — fechas de hoy en adelante, no canceladas ni completadas.
-      // No filtramos por hora del día: si una cita de hoy es de las 3pm y son las 5pm,
-      // sigue siendo "del día de hoy" mientras no esté en estado terminal.
+      // Todo en paralelo: antes cada consulta esperaba a la anterior (~10 s en total)
       const hoyStr = new Date().toISOString().split('T')[0]
       const estadosTerminados = ['cancelled', 'cancelada', 'completed', 'completada', 'done', 'realizada']
-      const { data: citasDirectas } = await supabase
-        .from('appointments')
-        .select('*, children(name)')
-        .gte('appointment_date', hoyStr)
-        .not('status', 'in', `(${estadosTerminados.join(',')})`)
-        .order('appointment_date').order('appointment_time')
-        .limit(6)
-
-      if (citasDirectas && citasDirectas.length > 0) {
-        setProximasCitas(citasDirectas)
-      } else if (dataM?.proximasSesiones?.length > 0) {
-        // Fallback: agenda_sesiones via API métricas
-        setProximasCitas(dataM.proximasSesiones)
-      } else {
-        setProximasCitas([])
-      }
-
-      // Sesiones hoy desde appointments
-      const { data: aptsHoy } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('appointment_date', hoyStr)
-        .neq('status', 'cancelled')
-      setSesHoyCount(aptsHoy?.length ?? dataM?.hoy?.sesiones?.total ?? 0)
-
-      // (alertas se construyen al final junto con sin_sesion)
-
-      // 2. Sesiones por día — usa appointments (misma fuente que el calendario)
       const labels: string[] = []
       const datesArr: string[] = []
       for (let i = 6; i >= 0; i--) {
@@ -353,60 +335,63 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
       }
       setDiasLabels(labels)
 
-      // Fuente primaria: appointments (misma tabla que el CalendarView)
-      const { data: aptsSemanales } = await supabase
-        .from('appointments')
-        .select('appointment_date, status')
-        .gte('appointment_date', datesArr[0])
-        .lte('appointment_date', datesArr[6])
-        .neq('status', 'cancelled')
+      const [
+        dataM,
+        { data: citasDirectas },
+        { data: aptsHoy },
+        { data: aptsSemanales },
+        { data: sesABASemana },
+        childrenData,
+        { data: progData },
+        { count: countProgramas },
+        { data: sesAgenda },
+        { data: sesABARecientes },
+      ] = await Promise.all([
+        // Métricas del servidor (agenda_sesiones, alertas, pacientes sin sesión…)
+        fetch('/api/dashboard/metricas?periodo=7d', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
+        // Próximas citas: de hoy en adelante, sin estados terminales
+        supabase.from('appointments').select('*, children(name)').gte('appointment_date', hoyStr)
+          .not('status', 'in', `(${estadosTerminados.join(',')})`).order('appointment_date').order('appointment_time').limit(6),
+        // Sesiones de hoy
+        supabase.from('appointments').select('id').eq('appointment_date', hoyStr).neq('status', 'cancelled'),
+        // Sesiones por día de la semana (misma fuente que el calendario)
+        supabase.from('appointments').select('appointment_date, status').gte('appointment_date', datesArr[0]).lte('appointment_date', datesArr[6]).neq('status', 'cancelled'),
+        supabase.from('registro_aba').select('fecha_sesion').gte('fecha_sesion', datesArr[0]),
+        // Pacientes vía API (supabaseAdmin): la RLS del cliente ocultaría pacientes de otros especialistas
+        adminFetch('/api/admin/children').then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
+        supabase.from('programas_aba').select('id, titulo, child_id, estado, criterio_dominio_pct, fase_actual, sesiones_datos_aba(porcentaje_exito, fecha)')
+          .eq('estado', 'activo').order('updated_at', { ascending: false }),
+        supabase.from('programas_aba').select('id', { count: 'exact', head: true }).eq('estado', 'activo'),
+        supabase.from('agenda_sesiones').select('id, child_id, fecha, hora_inicio, estado, tipo, children(name)')
+          .in('estado', ['realizada', 'completada', 'confirmada']).order('fecha', { ascending: false }).limit(8),
+        supabase.from('registro_aba').select('child_id, fecha_sesion, datos').order('fecha_sesion', { ascending: false }).limit(8),
+      ])
+      setMetricas(dataM)
 
+      // Próximas citas (fallback: agenda_sesiones de las métricas)
+      if (citasDirectas && citasDirectas.length > 0) setProximasCitas(citasDirectas)
+      else if (dataM?.proximasSesiones?.length > 0) setProximasCitas(dataM.proximasSesiones)
+      else setProximasCitas([])
+
+      setSesHoyCount(aptsHoy?.length ?? dataM?.hoy?.sesiones?.total ?? 0)
+
+      // Gráfico semanal: appointments → agenda_sesiones (métricas) → registro_aba
+      const map: Record<string, number> = {}
+      datesArr.forEach(d => { map[d] = 0 })
       if (aptsSemanales && aptsSemanales.length > 0) {
-        const map: Record<string, number> = {}
-        datesArr.forEach(d => { map[d] = 0 })
         aptsSemanales.forEach((a: any) => { if (map[a.appointment_date] !== undefined) map[a.appointment_date]++ })
-        setSesSemanales(Object.values(map))
       } else if (dataM?.graficas?.sesionesXFecha?.length > 0) {
-        // Fallback: API métricas (agenda_sesiones)
-        const map: Record<string, number> = {}
-        datesArr.forEach(d => { map[d] = 0 })
-        dataM.graficas.sesionesXFecha.forEach((s: any) => { if (map[s.fecha] !== undefined) map[s.fecha] = s.total })
-        setSesSemanales(Object.values(map))
+        dataM.graficas.sesionesXFecha.forEach((x: any) => { if (map[x.fecha] !== undefined) map[x.fecha] = x.total })
       } else {
-        // Último fallback: registro_aba
-        const { data: sesABA } = await supabase
-          .from('registro_aba')
-          .select('fecha_sesion')
-          .gte('fecha_sesion', datesArr[0])
-        const map: Record<string, number> = {}
-        datesArr.forEach(d => { map[d] = 0 })
-        ;(sesABA || []).forEach((s: any) => { if (map[s.fecha_sesion] !== undefined) map[s.fecha_sesion]++ })
-        setSesSemanales(Object.values(map))
+        ;(sesABASemana || []).forEach((x: any) => { if (map[x.fecha_sesion] !== undefined) map[x.fecha_sesion]++ })
       }
+      setSesSemanales(Object.values(map))
 
-      // 3. Children map — usa /api/admin/children (supabaseAdmin, bypassa RLS)
-      // FIX: No usar supabase browser client aquí porque la RLS de children filtra
-      // solo los pacientes del usuario autenticado, ocultando pacientes de otros especialistas.
-      const childrenResp = await adminFetch('/api/admin/children')
-      const childrenData = childrenResp.ok ? await childrenResp.json() : { data: [] }
-      const todosNinos: any[] = childrenData.data || []
+      const todosNinos: any[] = childrenData?.data || []
       const ninosMap: Record<string, string> = {}
       todosNinos.forEach((n: any) => { ninosMap[n.id] = n.name })
 
-      // Programas ABA activos con último porcentaje
-      const { data: progData } = await supabase
-        .from('programas_aba')
-        .select('id, titulo, child_id, estado, criterio_dominio_pct, fase_actual, sesiones_datos_aba(porcentaje_exito, fecha)')
-        .eq('estado', 'activo')
-        .order('updated_at', { ascending: false })
-
-      // Contar total de programas ABA activos
-      const { count: countProgramas } = await supabase
-        .from('programas_aba')
-        .select('id', { count: 'exact', head: true })
-        .eq('estado', 'activo')
       setTotalProgramasAba(countProgramas || 0)
-
       if (progData && progData.length > 0) {
         const enriquecidos = progData.map((p: any) => {
           const seses = (p.sesiones_datos_aba || []).sort((a: any, b: any) => b.fecha?.localeCompare(a.fecha || '') || 0)
@@ -417,34 +402,18 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
         setProgramasActivos(enriquecidos)
       }
 
-      // Actividad reciente — agenda_sesiones realizadas (primary) + registro_aba (fallback)
-      const { data: sesAgenda } = await supabase
-        .from('agenda_sesiones')
-        .select('id, child_id, fecha, hora_inicio, estado, tipo, children(name)')
-        .in('estado', ['realizada', 'completada', 'confirmada'])
-        .order('fecha', { ascending: false })
-        .limit(8)
-
-      let actividadFinal: any[] = []
-      if (sesAgenda && sesAgenda.length > 0) {
-        actividadFinal = sesAgenda.map((s: any) => ({
-          nombrePaciente: s.children?.name || ninosMap[s.child_id] || 'Paciente',
-          objetivo: s.tipo || 'Sesión terapéutica',
-          fecha_sesion: s.fecha,
-        }))
-      } else {
-        // Fallback: registro_aba
-        const { data: sesABA } = await supabase
-          .from('registro_aba')
-          .select('child_id, fecha_sesion, datos')
-          .order('fecha_sesion', { ascending: false })
-          .limit(8)
-        actividadFinal = (sesABA || []).map((s: any) => ({
-          nombrePaciente: ninosMap[s.child_id] || 'Paciente',
-          objetivo: s.datos?.objetivo_principal || s.datos?.objetivo || 'Sesión ABA',
-          fecha_sesion: s.fecha_sesion,
-        }))
-      }
+      // Actividad reciente — agenda_sesiones (primario) o registro_aba (respaldo)
+      const actividadFinal: any[] = sesAgenda && sesAgenda.length > 0
+        ? sesAgenda.map((x: any) => ({
+            nombrePaciente: x.children?.name || ninosMap[x.child_id] || 'Paciente',
+            objetivo: x.tipo || 'Sesión terapéutica',
+            fecha_sesion: x.fecha,
+          }))
+        : (sesABARecientes || []).map((x: any) => ({
+            nombrePaciente: ninosMap[x.child_id] || 'Paciente',
+            objetivo: x.datos?.objetivo_principal || x.datos?.objetivo || 'Sesión ABA',
+            fecha_sesion: x.fecha_sesion,
+          }))
       setActividadReciente(actividadFinal)
 
       // 4. Pacientes sin sesión — viene del API de métricas (supabaseAdmin, bypassa RLS)
@@ -570,6 +539,8 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
   }, [cargar])
 
   // Derived stats
+  // Primera carga (aún sin métricas): se muestran marcadores, no ceros ni "no hay nada"
+  const primeraCarga = loading && metricas === null
   const totalSesHoy = sesHoyCount || metricas?.hoy?.sesiones?.total || 0
   const realizadasHoy = metricas?.hoy?.sesiones?.realizadas ?? 0
   const totalPacientes = metricas?.pacientes?.total ?? 0
@@ -646,10 +617,10 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
 
       {/* ── KPIs ── */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-        <KPI index={0} label={t('pacientes.titulo')} value={totalPacientes} sub={t('dashboard.totalRegistrados')} concept="pacientes" onClick={() => navigateTo('ninos')} />
-        <KPI index={1} label={t('dashboard.sesionesHoy')} value={totalSesHoy} sub={`${realizadasHoy} ${t('dashboard.realizadasLbl')}`} concept="sesiones" onClick={() => navigateTo('agenda')} />
-        <KPI index={2} label={t('dashboard.sinSesion30d')} value={sinSesion.length} sub={t('dashboard.requierenSeguimiento')} concept="sinSesion" urgent={sinSesion.length > 0} onClick={() => navigateTo('ninos')} />
-        <KPI index={3} label={t('nav.programas')} value={totalProgramasAba} sub={t('programas.activos')} concept="programas" onClick={() => navigateTo('ninos')} />
+        <KPI index={0} label={t('pacientes.titulo')} value={totalPacientes} sub={t('dashboard.totalRegistrados')} concept="pacientes" cargando={primeraCarga} onClick={() => navigateTo('ninos')} />
+        <KPI index={1} label={t('dashboard.sesionesHoy')} value={totalSesHoy} sub={`${realizadasHoy} ${t('dashboard.realizadasLbl')}`} concept="sesiones" cargando={primeraCarga} onClick={() => navigateTo('agenda')} />
+        <KPI index={2} label={t('dashboard.sinSesion30d')} value={sinSesion.length} sub={t('dashboard.requierenSeguimiento')} concept="sinSesion" cargando={primeraCarga} urgent={sinSesion.length > 0} onClick={() => navigateTo('ninos')} />
+        <KPI index={3} label={t('nav.programas')} value={totalProgramasAba} sub={t('programas.activos')} concept="programas" cargando={primeraCarga} onClick={() => navigateTo('ninos')} />
       </div>
 
       {/* ── MÉTRICAS MEDIAS ── */}
@@ -729,7 +700,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
               })}
             </div>
           ) : (
-            <EmptyState icon={ClipboardList} text={t('auto.dashboardHome.sinProgramasActivos')} action={t('vanty.home.createProgram')} onAction={() => navigateTo('ninos')} />
+            primeraCarga ? <Esqueleto /> : <EmptyState icon={ClipboardList} text={t('auto.dashboardHome.sinProgramasActivos')} action={t('vanty.home.createProgram')} onAction={() => navigateTo('ninos')} />
           )}
         </Section>
       </div>
@@ -756,7 +727,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
                 ))}
               </AnimatePresence>
             ) : (
-              <EmptyState icon={CheckCircle2} tone="text-v-success" text={t('dashboard.sinAlertas')} />
+              primeraCarga ? <Esqueleto /> : <EmptyState icon={CheckCircle2} tone="text-v-success" text={t('dashboard.sinAlertas')} />
             )}
           </div>
         </Section>
@@ -779,7 +750,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
           <div className="flex-1 space-y-1 overflow-y-auto px-2 pb-3" style={{ maxHeight: 360, scrollbarWidth: 'thin' }}>
             {proximasCitas.length > 0
               ? proximasCitas.map((c, i) => <CitaRow key={c.id ?? i} cita={c} index={i} />)
-              : <EmptyState icon={Calendar} text={t('agenda.sinCitas')} action={t('agenda.agendarAhora')} onAction={() => navigateTo('agenda')} />}
+              : primeraCarga ? <Esqueleto /> : <EmptyState icon={Calendar} text={t('agenda.sinCitas')} action={t('agenda.agendarAhora')} onAction={() => navigateTo('agenda')} />}
           </div>
         </Section>
       </div>

@@ -12,8 +12,8 @@ export async function requireRole(
 ): Promise<{ ok: boolean; reason: string; role?: string }> {
   const token = req.headers.get('authorization')?.replace('Bearer ', '').trim()
   if (!token) return { ok: false, reason: 'sin token' }
-  const { data: u, error } = await supabaseAdmin.auth.getUser(token)
-  const uid = u?.user?.id
+  const { data: u, error } = await supabaseAdmin.auth.getClaims(token)
+  const uid = u?.claims?.sub as string | undefined
   if (error || !uid) return { ok: false, reason: 'sesión inválida o expirada' }
   const { data: prof } = await supabaseAdmin.from('profiles').select('role').eq('id', uid).maybeSingle()
   const role = (prof as { role?: string } | null)?.role

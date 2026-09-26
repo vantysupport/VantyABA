@@ -138,62 +138,42 @@ export default function EspecialistaDashboard() {
   useEffect(() => { loadProfile() }, [])
 
   useEffect(() => {
+    // Citas de hoy y mensajes sin leer: consultas independientes, en paralelo.
+    // Los canales en tiempo real se guardan aquí para cerrarlos al desmontar.
+    const canales: ReturnType<typeof supabase.channel>[] = []
+    let cancelado = false
     const fetchCitasHoy = async () => {
       const hoy = new Date().toISOString().split('T')[0]
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const { data } = await supabase
-        .from('appointments')
-        .select('*, children(name)')
-        .eq('appointment_date', hoy)
-        .eq('specialist_id', session.user.id)
-        .order('appointment_time', { ascending: true })
-      if (data) setCitasHoy(data)
-
-      // Load initial chat unread count — solo mensajes recientes no leídos
+      if (!session || cancelado) return
+      const uid = session.user.id
       const hace7dias = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      const { count } = await supabase
-        .from('chat_especialista_admin')
-        .select('id', { count: 'exact', head: true })
-        .eq('recipient_id', session.user.id)
-        .is('read_at', null)
-        .gte('created_at', hace7dias)
+      const [{ data }, { count }, { count: famCount }] = await Promise.all([
+        supabase.from('appointments').select('*, children(name)').eq('appointment_date', hoy).eq('specialist_id', uid).order('appointment_time', { ascending: true }),
+        // Chat del equipo: solo mensajes recientes no leídos
+        supabase.from('chat_especialista_admin').select('id', { count: 'exact', head: true }).eq('recipient_id', uid).is('read_at', null).gte('created_at', hace7dias),
+        // Chat con familias: mensajes de padres no leídos
+        supabase.from('chat_familias').select('id', { count: 'exact', head: true }).eq('sender_role', 'padre').not('read_by', 'cs', `{${uid}}`),
+      ])
+      if (cancelado) return
+      if (data) setCitasHoy(data)
       setChatUnread(count || 0)
-
-      // Realtime: new messages → increment badge (team chat)
-      const channel = supabase
-        .channel('esp-chat-unread')
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_especialista_admin',
-          filter: `recipient_id=eq.${session.user.id}`,
-        }, () => {
-          setChatUnread(prev => prev + 1)
-        })
-        .subscribe()
-
-      // Familias unread: mensajes de padres no leídos
-      const { count: famCount } = await supabase
-        .from('chat_familias')
-        .select('id', { count: 'exact', head: true })
-        .eq('sender_role', 'padre')
-        .not('read_by', 'cs', `{${session.user.id}}`)
       setFamiliasUnread(famCount || 0)
 
-      const chFam = supabase
-        .channel('esp-familias-unread')
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'chat_familias',
-        }, (payload: any) => {
-          if (payload.new.sender_role === 'padre' && payload.new.sender_id !== session.user.id) {
-            setFamiliasUnread(prev => prev + 1)
-          }
-        }).subscribe()
-
-      return () => { supabase.removeChannel(channel); supabase.removeChannel(chFam) }
+      canales.push(
+        supabase.channel('esp-chat-unread')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_especialista_admin', filter: `recipient_id=eq.${uid}` },
+            () => setChatUnread(prev => prev + 1))
+          .subscribe(),
+        supabase.channel('esp-familias-unread')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_familias' }, (payload: any) => {
+            if (payload.new.sender_role === 'padre' && payload.new.sender_id !== uid) setFamiliasUnread(prev => prev + 1)
+          })
+          .subscribe(),
+      )
     }
     fetchCitasHoy()
+    return () => { cancelado = true; canales.forEach(c => supabase.removeChannel(c)) }
   }, [])
 
   const handleLogout = async () => { await releaseSessionNow(); await supabase.auth.signOut(); router.push('/login') }

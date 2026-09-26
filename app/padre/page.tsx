@@ -189,38 +189,17 @@ export default function ParentDashboard() {
 
         setProfile(parent)
 
-        // --- CONTAR FORMULARIOS PENDIENTES ---
-        if (parent?.id) {
-          const today = new Date().toISOString().split('T')[0]
-          const { data: pendingForms } = await supabase
-            .from('parent_forms')
-            .select('id, deadline, status')
-            .eq('parent_id', parent.id)
-            .not('status', 'in', '("completed","expired")')
-          const count = (pendingForms || []).filter((f: any) =>
-            !f.deadline || f.deadline >= today
-          ).length
-          setPendingFormsCount(count)
-        }
-        // -------------------------------------
-
-        // --- CARGAR NOTIFICACIONES REALES ---
-        if (session?.user?.id) {
-            const { data: notis } = await supabase
-                .from('notifications')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .order('created_at', { ascending: false })
-            
-            if (notis) setNotifications(notis)
-        }
-        // ------------------------------------
-
-        const { data: children } = await supabase
-            .from('children')
-            .select('*')
-            .eq('parent_id', parent.id)
-            .order('created_at', { ascending: true })
+        // Formularios pendientes, avisos e hijos: consultas independientes, en paralelo
+        const today = new Date().toISOString().split('T')[0]
+        const [{ data: pendingForms }, { data: notis }, { data: children }] = await Promise.all([
+          supabase.from('parent_forms').select('id, deadline, status').eq('parent_id', parent.id).not('status', 'in', '("completed","expired")'),
+          session?.user?.id
+            ? supabase.from('notifications').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false })
+            : Promise.resolve({ data: null }),
+          supabase.from('children').select('*').eq('parent_id', parent.id).order('created_at', { ascending: true }),
+        ])
+        setPendingFormsCount((pendingForms || []).filter((f: any) => !f.deadline || f.deadline >= today).length)
+        if (notis) setNotifications(notis)
 
         if (children && children.length > 0) {
             setMyChildren(children)

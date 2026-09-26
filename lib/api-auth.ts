@@ -19,17 +19,19 @@ export async function getApiCaller(req: Request): Promise<ApiCaller | null> {
   let userId: string | null = null
   let email: string | null = null
 
+  // getClaims verifica la firma del JWT localmente (claves ES256 del proyecto, en caché): evita un viaje
+  // al servidor de Auth por cada llamada a la API. Un token vencido o con firma inválida no pasa.
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
   if (token) {
-    const { data } = await supabaseAdmin.auth.getUser(token)
-    userId = data?.user?.id ?? null
-    email = data?.user?.email ?? null
+    const { data } = await supabaseAdmin.auth.getClaims(token)
+    userId = (data?.claims?.sub as string | undefined) ?? null
+    email = (data?.claims?.email as string | undefined) ?? null
   }
   if (!userId) {
     const supabase = await createClient()
-    const { data } = await supabase.auth.getUser()
-    userId = data?.user?.id ?? null
-    email = data?.user?.email ?? null
+    const { data } = await supabase.auth.getClaims()
+    userId = (data?.claims?.sub as string | undefined) ?? null
+    email = (data?.claims?.email as string | undefined) ?? null
   }
   if (!userId) return null
 

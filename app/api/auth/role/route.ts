@@ -7,12 +7,12 @@ import { forbidden, unauthorized } from '@/lib/api-auth'
 async function authUserId(req: NextRequest): Promise<string | null> {
   const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
   if (token) {
-    const { data } = await supabaseAdmin.auth.getUser(token)
-    if (data?.user?.id) return data.user.id
+    const { data } = await supabaseAdmin.auth.getClaims(token)
+    if (data?.claims?.sub) return data.claims.sub as string
   }
   const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-  return data?.user?.id ?? null
+  const { data } = await supabase.auth.getClaims()
+  return (data?.claims?.sub as string | undefined) ?? null
 }
 
 export async function GET(req: NextRequest) {

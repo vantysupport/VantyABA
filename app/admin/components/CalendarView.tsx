@@ -152,17 +152,16 @@ function MonthlyCalendarView() {
       const fin = new Date(inicio.getTime() + 45 * 60 * 1000)
       return ahora > fin
     })
-    for (const cita of vencidas) {
-      try {
-        await fetch('/api/admin/appointments', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'x-locale': typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es' },
-          body: JSON.stringify({ id: cita.id, status: 'completed' , locale: localStorage.getItem('vanty_locale') || 'es' }),
-        })
-      } catch {}
-    }
-    if (vencidas.length > 0) return true
-    return false
+    // Todas a la vez (antes una por una) y se devuelven los ids marcados para actualizar la vista sin recargar
+    const loc = typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es'
+    const hechas = await Promise.all(vencidas.map(cita =>
+      fetch('/api/admin/appointments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-locale': loc },
+        body: JSON.stringify({ id: cita.id, status: 'completed', locale: loc }),
+      }).then(r => (r.ok ? cita.id as string : null)).catch(() => null)
+    ))
+    return new Set(hechas.filter(Boolean) as string[])
   }, [])
 
   const cargarCitas = useCallback(async () => {
@@ -172,16 +171,11 @@ function MonthlyCalendarView() {
       const json = await res.json()
       if (json.error) throw new Error(json.error)
       const citas = json.data || []
-      // Marcar como completadas las que ya pasaron 45 min
-      const huboCambios = await limpiarCitasVencidas(citas)
-      if (huboCambios) {
-        // Recargar para obtener estados actualizados
-        const res2 = await fetch('/api/admin/appointments')
-        const json2 = await res2.json()
-        setApts(json2.data || [])
-      } else {
-        setApts(citas)
-      }
+      // Mostrar ya lo que llegó; las que pasaron 45 min se marcan como completadas en segundo plano
+      setApts(citas)
+      setIsLoading(false)
+      const completadas = await limpiarCitasVencidas(citas)
+      if (completadas.size > 0) setApts(prev => prev.map(a => completadas.has(a.id) ? { ...a, status: 'completed' } : a))
     } catch (err:any) { toast.error('Error: ' + err.message) }
     finally { setIsLoading(false) }
   }, [limpiarCitasVencidas])

@@ -186,7 +186,10 @@ export async function proxy(req: NextRequest) {
     },
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getClaims verifica la firma del token localmente (claves ES256 del proyecto, en caché) en vez de
+  // consultar el servidor de Auth en cada petición; también renueva la sesión si el token venció.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
 
   // An account with a verified second factor must pass it before using the app (optional for centers, mandatory for the console).
   let mfaPending = false

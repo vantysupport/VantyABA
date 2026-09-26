@@ -10,6 +10,7 @@
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useI18n } from '@/lib/i18n-context'
+import { jsonCompartido } from '@/lib/pedido-compartido'
 
 const PANELES = /^\/(?:es\/|en\/)?(admin|especialista|secretaria|padre)(\/|$)/
 const CHEQUEO_MS = 60_000
@@ -32,9 +33,8 @@ export default function SuscripcionGuard() {
 
     const revisar = async () => {
       try {
-        const r = await fetch('/api/suscripcion', { cache: 'no-store' })
-        if (!r.ok) return // sin centro (programador) o sin sesión: no aplica
-        const d = await r.json()
+        const { ok, data: d } = await jsonCompartido('/api/suscripcion')
+        if (!ok || !d) return // sin centro (programador) o sin sesión: no aplica
         if (cancelado) return
         if (d.bloqueo) return salir(d.bloqueo)
         // Programar la revisión justo al vencer la prueba o la gracia del pago (si es dentro de 24 h)

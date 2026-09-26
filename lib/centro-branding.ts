@@ -77,7 +77,8 @@ const centroIdForChild = cache(async (childId: string): Promise<string | null> =
 const centroIdForSessionUser = cache(async (): Promise<string | null> => {
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: claimsData } = await supabase.auth.getClaims() // firma verificada localmente
+    const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
     if (!user) return null
     const { data } = await supabaseAdmin.from('profiles').select('centro_id').eq('id', user.id).maybeSingle()
     return (data?.centro_id as string | null) ?? null

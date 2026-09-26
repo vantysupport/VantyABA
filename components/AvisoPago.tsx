@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { AlertTriangle, CalendarClock, X, CreditCard } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
+import { jsonCompartido } from '@/lib/pedido-compartido'
 
 type Pago = { fase: 'ok' | 'por_vencer' | 'gracia' | 'vencido'; dias: number | null; vence: string | null; pausa: string | null }
 const CLAVE = 'vanty_aviso_pago_oculto'
@@ -22,9 +23,8 @@ export default function AvisoPago() {
   const [oculto, setOculto] = useState(false)
 
   useEffect(() => {
-    fetch('/api/suscripcion', { cache: 'no-store' })
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => {
+    jsonCompartido('/api/suscripcion')
+      .then(({ data: d }) => {
         if (!d?.esDueno) return
         setPago(d.pago)
         const p = (d.planes || []).find((x: any) => x.id === d.planId)

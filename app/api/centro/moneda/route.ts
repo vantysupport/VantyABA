@@ -7,7 +7,8 @@ import { normalizeCurrency } from '@/lib/currency'
 
 async function callerCentro() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: claimsData } = await supabase.auth.getClaims() // firma verificada localmente
+  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
   if (!user) return null
   const { data } = await supabaseAdmin.from('profiles').select('role, centro_id, centros(currency)').eq('id', user.id).maybeSingle()
   return data as { role: string | null; centro_id: string | null; centros: { currency: string } | null } | null
