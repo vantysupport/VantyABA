@@ -5,7 +5,7 @@ import { verifyOAuthState } from '@/lib/calendar-integration'
 
 const MS_CLIENT_ID     = process.env.MICROSOFT_CALENDAR_CLIENT_ID     || ''
 const MS_CLIENT_SECRET = process.env.MICROSOFT_CALENDAR_CLIENT_SECRET || ''
-const MS_TENANT        = process.env.MICROSOFT_TENANT_ID || '3e32a281-36d9-4099-8105-e9460f1ab7a7'
+const MS_TENANT        = process.env.MICROSOFT_TENANT_ID || 'common'
 const REDIRECT_URI     = process.env.NEXT_PUBLIC_APP_URL
   ? `${process.env.NEXT_PUBLIC_APP_URL}/api/microsoft-calendar/callback`
   : 'http://localhost:3000/api/microsoft-calendar/callback'
