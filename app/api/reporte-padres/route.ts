@@ -6,7 +6,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { notifyAsync, sendWspToParent, buildParentMessage, notifyParentDirect } from '@/lib/notifications'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
 import { getCentroBranding } from '@/lib/centro-branding'
@@ -261,31 +260,6 @@ Dirígete a los padres como "ustedes" o por "familia".`
         created_at: new Date().toISOString()
       })
     } catch { /* no bloquear */ }
-
-    // WhatsApp al admin — nuevo informe disponible
-    const pName = (reporte as any)?.paciente_nombre || childId
-    notifyAsync({
-      tipo: 'informe_nuevo',
-      vars: {
-        paciente: pName,
-        periodo: `${fechaInicioStr} → ${hoy}`,
-      },
-      centro,
-    })
-
-    // WhatsApp directo al padre — informe listo
-    try {
-      const { data: pLink } = await supabaseAdmin
-        .from('parent_accounts').select('user_id').eq('child_id', childId).maybeSingle()
-      if (pLink?.user_id) {
-        const { data: pProf } = await supabaseAdmin
-          .from('profiles').select('phone, wsp_notif').eq('id', pLink.user_id).maybeSingle()
-        if ((pProf as any)?.phone && (pProf as any)?.wsp_notif !== false) {
-          const msg = buildParentMessage('informe_nuevo', { paciente: pName, periodo: `${fechaInicioStr} → ${hoy}` }, centro)
-          sendWspToParent((pProf as any).phone, msg).catch(() => {})
-        }
-      }
-    } catch { /* silencioso */ }
 
     return NextResponse.json(reporte)
 

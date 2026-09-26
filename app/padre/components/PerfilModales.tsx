@@ -100,7 +100,7 @@ export function EditarPerfilModal({ profile, onClose, onSaved }: { profile: any;
         <Campo Icon={User} label={L('Full name', 'Nombre completo')}>
           <input value={nombre} onChange={e => setNombre(e.target.value)} required className={inputClass} />
         </Campo>
-        <Campo Icon={Smartphone} label={L('WhatsApp number', 'Número de WhatsApp')} hint={L('You will receive appointment, report and message alerts.', 'Recibirás avisos de citas, informes y mensajes.')}>
+        <Campo Icon={Smartphone} label={L('Phone', 'Teléfono')} hint={L('So the center can contact you.', 'Para que el centro pueda contactarte.')}>
           <input type="tel" value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="+51 999 888 777" className={inputClass} />
         </Campo>
         <Campo Icon={Mail} label={L('Email (cannot be changed)', 'Correo (no editable)')}>

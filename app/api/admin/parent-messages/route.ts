@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
-import { sendWspToParent, buildParentMessage } from '@/lib/notifications'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { internalApiHeaders } from '@/lib/calendar-integration'
 
@@ -125,21 +124,6 @@ export async function PATCH(request: NextRequest) {
         // Non-critical — log but don't fail the approval
         console.error('Push notification error (non-critical):', pushErr)
       }
-
-      // 📱 WhatsApp directo al padre cuando el admin aprueba el mensaje
-      try {
-        const { data: pProf } = await supabaseAdmin
-          .from('profiles').select('phone, wsp_notif').eq('id', record.parent_id).maybeSingle()
-        if ((pProf as any)?.phone && (pProf as any)?.wsp_notif !== false) {
-          const terapeutaNombre = (record as any).profiles?.full_name || 'Tu terapeuta'
-          const preview = messageToSend.length > 120 ? messageToSend.slice(0, 117) + '...' : messageToSend
-          const msg = buildParentMessage('mensaje_terapeuta', {
-            terapeuta: terapeutaNombre,
-            preview,
-          }, await getCentroBranding({ childId: record.child_id }))
-          sendWspToParent((pProf as any).phone, msg).catch(() => {})
-        }
-      } catch { /* silencioso */ }
 
       return NextResponse.json({ data })
 

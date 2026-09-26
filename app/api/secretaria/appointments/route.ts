@@ -1,9 +1,8 @@
 // app/api/secretaria/appointments/route.ts
-// Notifica al PADRE (in-app + WhatsApp + EMAIL + CALENDAR) Y al ADMIN (in-app + EMAIL)
+// Notifica al PADRE (in-app + push + EMAIL + CALENDAR) Y al ADMIN (in-app + EMAIL)
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { notifyAsync, notifyParentDirect } from '@/lib/notifications'
 import { sendEmail, buildEmailCita, buildEmailAdmin } from '@/lib/email'
 import { getCentroBranding, type CentroBranding } from '@/lib/centro-branding'
 import { internalApiHeaders } from '@/lib/calendar-integration'
@@ -126,7 +125,7 @@ async function notificarPadre(childId: string, tipo: 'nueva' | 'cancelada' | 'ac
 
     const { data: parentProfile } = await supabaseAdmin
       .from('profiles')
-      .select('phone, email, wsp_notif, google_calendar_email, microsoft_calendar_email')
+      .select('email, google_calendar_email, microsoft_calendar_email')
       .eq('id', child.parent_id)
       .maybeSingle()
 
@@ -144,16 +143,6 @@ async function notificarPadre(childId: string, tipo: 'nueva' | 'cancelada' | 'ac
     const { subject, html } = buildEmailCita(tipo, citaVars, centro.name, en)
     if (emailPadre) await sendEmail(emailPadre, subject, html, centro.name)
     await sendEmail(centroEmail(centro), subject, html, centro.name)
-
-    // WhatsApp
-    const wspTipo = tipo === 'cancelada' ? 'cita_cancelada' : 'cita_confirmada'
-    const wspVars = { fecha, hora, paciente: childName, tipo: apt.modalidad || servicio, ...(apt.video_link ? { link: apt.video_link } : {}) }
-    notifyAsync({ tipo: wspTipo, vars: wspVars, centro })
-    try {
-      if (parentProfile?.wsp_notif !== false) {
-        await notifyParentDirect(parentProfile?.phone ?? null, wspTipo, wspVars, centro)
-      }
-    } catch { /* silencioso */ }
 
   } catch (e) { console.error('[notif padre] error:', e) }
 }

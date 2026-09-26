@@ -143,9 +143,8 @@ Roles disponibles:
 
 Para AGREGAR usuario: Usuarios → "+ Nuevo Usuario" → completar datos → asignar rol → enviar invitación
 
-=== WHATSAPP INTEGRACIÓN ===
-Configuración → WhatsApp → escanear código QR con el teléfono del centro
-Una vez conectado: mensajes automáticos a familias sobre citas y recordatorios
+=== AVISOS A FAMILIAS ===
+Las familias reciben los avisos de citas y recordatorios por correo, en la campana del portal y como notificación en el celular (si la activan). Vanty no envía mensajes de WhatsApp.
 
 === PREGUNTAS FRECUENTES ===
 ¿Cómo cambio el idioma? → Mi Perfil → selector de idioma (arriba del menú)

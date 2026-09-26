@@ -1,7 +1,6 @@
 // app/api/agenda/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { notifyAsync, notifyParentDirect } from '@/lib/notifications'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { avisarCitaFamilia } from '@/lib/avisos'
@@ -103,34 +102,10 @@ export async function POST(req: NextRequest) {
       // Crear notificación para el padre
       await crearNotificacionCita(child_id, data, 'nueva')
 
-      // Notificar al padre (si tiene WSP) + al admin
       const childName = (data as any).children?.name || 'Paciente'
       const centro = await getCentroBranding({ childId: child_id })
       const { data: parentLink } = await supabaseAdmin
         .from('parent_accounts').select('user_id').eq('child_id', child_id).maybeSingle()
-      if (parentLink?.user_id) {
-        const { data: parentProf } = await supabaseAdmin
-          .from('profiles').select('phone, wsp_notif').eq('id', parentLink.user_id).maybeSingle()
-        if ((parentProf as any)?.phone && (parentProf as any)?.wsp_notif !== false) {
-          // Notificar directo al padre via microservicio Baileys — incluir link si es virtual
-          await notifyParentDirect((parentProf as any).phone, 'cita_confirmada', {
-            fecha, hora: hora_inicio, paciente: childName,
-            tipo: modalidad === 'virtual' ? 'Virtual 📹' : (tipo || 'Presencial'),
-            ...(meeting_link ? { link: meeting_link } : {}),
-          }, centro)
-        }
-      }
-      // Notificar al admin también
-      await notifyAsync({
-        tipo: 'cita_confirmada',
-        vars: {
-          fecha, hora: hora_inicio, paciente: childName,
-          tipo: modalidad === 'virtual' ? 'Virtual 📹' : (tipo || 'Presencial'),
-          ...(meeting_link ? { link: meeting_link } : {}),
-        },
-        centro,
-      })
-
       // ── Agregar al Google / Microsoft Calendar del padre (si tiene OAuth) ──
       try {
         if (parentLink?.user_id) {
@@ -171,58 +146,6 @@ export async function POST(req: NextRequest) {
       if (estado === 'cancelada' && data.children) {
         await crearNotificacionCita((data.children as any).id, data, 'cancelada')
 
-        const cancelFecha = (data as any).fecha || ''
-        const cancelHora  = (data as any).hora_inicio || ''
-        const cancelNombre = (data.children as any).name || 'Paciente'
-        const cancelChildId = (data.children as any).id
-        const centro = await getCentroBranding({ childId: cancelChildId })
-
-        // WhatsApp al admin
-        notifyAsync({
-          tipo: 'cita_cancelada',
-          vars: { fecha: cancelFecha, hora: cancelHora, paciente: cancelNombre },
-          centro,
-        })
-
-        // WhatsApp directo al padre via Baileys
-        try {
-          const { data: pLink } = await supabaseAdmin
-            .from('parent_accounts').select('user_id').eq('child_id', cancelChildId).maybeSingle()
-          if (pLink?.user_id) {
-            const { data: pProf } = await supabaseAdmin
-              .from('profiles').select('phone, wsp_notif').eq('id', pLink.user_id).maybeSingle()
-            if ((pProf as any)?.phone && (pProf as any)?.wsp_notif !== false) {
-              notifyParentDirect((pProf as any).phone, 'cita_cancelada', {
-                fecha: cancelFecha, hora: cancelHora, paciente: cancelNombre,
-              }, centro)
-            }
-          }
-        } catch { /* silencioso */ }
-      }
-
-      // ── Notificar "sesión iniciada" cuando el terapeuta marca como confirmada ──
-      if (estado === 'confirmada' && data.children) {
-        const inicioFecha  = (data as any).fecha || ''
-        const inicioHora   = (data as any).hora_inicio || ''
-        const inicioNombre = (data.children as any).name || 'Paciente'
-        const inicioChildId = (data.children as any).id
-        const centro = await getCentroBranding({ childId: inicioChildId })
-        const meetingLink  = (data as any).meeting_link || null
-
-        try {
-          const { data: pLink } = await supabaseAdmin
-            .from('parent_accounts').select('user_id').eq('child_id', inicioChildId).maybeSingle()
-          if (pLink?.user_id) {
-            const { data: pProf } = await supabaseAdmin
-              .from('profiles').select('phone, wsp_notif').eq('id', pLink.user_id).maybeSingle()
-            if ((pProf as any)?.phone && (pProf as any)?.wsp_notif !== false) {
-              notifyParentDirect((pProf as any).phone, 'sesion_iniciada', {
-                fecha: inicioFecha, hora: inicioHora, paciente: inicioNombre,
-                ...(meetingLink ? { link: meetingLink } : {}),
-              }, centro)
-            }
-          }
-        } catch { /* silencioso */ }
       }
 
       return NextResponse.json({ data })

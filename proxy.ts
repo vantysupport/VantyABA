@@ -14,6 +14,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { rateLimit, RATE_LIMITS, getClientIP } from './lib/rate-limit'
 import { motivoBloqueo } from './lib/estado-centro'
+import { isInternalApiCall } from './lib/calendar-integration'
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 const I18N_LOCALES = ['en', 'es'] as const
@@ -166,6 +167,10 @@ export async function proxy(req: NextRequest) {
 
   // 0b. Rutas explícitamente públicas → seguir sin tocar (ya con rewrite de idioma)
   if (isPublicPath(pathname)) return res
+
+  // 0c. Llamadas internas servidor→servidor a las rutas de calendario (mover/borrar eventos al editar o
+  // cancelar citas): no traen cookie de sesión; van firmadas con HMAC y la ruta vuelve a verificar la firma.
+  if ((pathname.startsWith('/api/google-calendar') || pathname.startsWith('/api/microsoft-calendar')) && isInternalApiCall(req)) return res
 
   // 1. Crear cliente Supabase para leer la sesión desde cookies
   const supabase = createServerClient(

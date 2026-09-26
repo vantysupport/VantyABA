@@ -2,7 +2,6 @@ import { getLocaleFromRequest } from '@/lib/lang'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
-import { notifyAsync, notifyParentDirect } from '@/lib/notifications'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { internalApiHeaders } from '@/lib/calendar-integration'
 import { after } from 'next/server'
@@ -10,25 +9,6 @@ import { sincronizarCalendarios } from '@/lib/calendar-sync'
 import { enviarCorreoCitaFamilia } from '@/lib/cita-correo'
 import { avisarCitaFamilia, avisarFamilia } from '@/lib/avisos'
 
-// Helper: notificar al padre de un paciente
-async function notificarPadre(childId: string, tipo: 'cita_confirmada' | 'cita_cancelada', vars: Record<string, string>) {
-  try {
-    const centro = await getCentroBranding({ childId })
-    const { data: parentLink } = await supabaseAdmin
-      .from('parent_accounts').select('user_id').eq('child_id', childId).maybeSingle()
-    if (parentLink?.user_id) {
-      const { data: parentProf } = await supabaseAdmin
-        .from('profiles').select('phone').eq('id', parentLink.user_id).maybeSingle()
-      if ((parentProf as any)?.phone) {
-        await notifyParentDirect((parentProf as any).phone, tipo, vars, centro)
-      }
-    }
-    // También notificar al admin del centro
-    await notifyAsync({ tipo, vars, centro })
-  } catch (err) {
-    console.error('[notificarPadre] Error:', err)
-  }
-}
 
 export async function GET(request: NextRequest) {
   const caller = await getApiCaller(request)
@@ -100,23 +80,6 @@ export async function POST(request: NextRequest) {
       .select('*, children(name)')
 
     if (error) throw error
-
-    // Notificar al padre — fire-and-forget para no bloquear la respuesta al cliente
-    // (cada notificación puede tardar hasta 8 s por el timeout de Baileys)
-    Promise.all(
-      (data || []).map((apt: any) => {
-        if (!apt.child_id) return Promise.resolve()
-        const childName = apt.children?.name || 'Paciente'
-        const fecha     = apt.appointment_date || ''
-        const hora      = apt.appointment_time || ''
-        const modalidad = apt.modalidad === 'virtual' ? 'Virtual 📹' : (apt.appointment_type || 'Presencial')
-        const videoLink = apt.video_link || apt.videoLink || null
-        return notificarPadre(apt.child_id, 'cita_confirmada', {
-          fecha, hora, paciente: childName, tipo: modalidad,
-          ...(videoLink ? { link: videoLink } : {}),
-        })
-      })
-    ).catch(err => console.error('[notif fire-and-forget]', err))
 
     // Aviso en el portal y en el celular de cada familia
     after(() => Promise.all((data || []).flatMap((apt: any) => [avisarCitaFamilia(apt, 'nueva'), enviarCorreoCitaFamilia(apt, 'nueva', getLocaleFromRequest(request) === 'en')])))

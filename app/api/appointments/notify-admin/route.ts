@@ -1,7 +1,6 @@
 // app/api/appointments/notify-admin/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { notifyAsync } from '@/lib/notifications'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 
@@ -30,19 +29,6 @@ export async function POST(request: NextRequest) {
       status_changed: 'Estado de cita cambiado',
     }
     const label = actionLabels[action] || 'Cambio en cita'
-
-    notifyAsync({
-      centro,
-      tipo: action === 'cancelled' ? 'cita_cancelada' : 'cita_confirmada',
-      vars: {
-        fecha: appointment?.appointment_date || '',
-        hora: appointment?.appointment_time?.slice(0, 5) || '',
-        paciente: childName || 'Paciente',
-        tipo: appointment?.service_type || 'Terapia',
-        secretaria: secretariaName || 'Secretaria',
-        accion: label,
-      },
-    })
 
     if (adminIds.length > 0) {
       const dateFormatted = appointment?.appointment_date
