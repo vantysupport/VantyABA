@@ -5,6 +5,8 @@
 // plan de tratamiento, pronóstico y firmas profesionales
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 
@@ -60,9 +62,14 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { childId, terapeuta = 'Terapeuta del Centro', periodoMeses = 3 } = await req.json()
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    const centro = await getCentroBranding({ childId })
 
     const hoy = new Date()
     const fechaInicio = new Date(hoy)
@@ -186,7 +193,7 @@ Usa terminología DSM-5 y CIE-10. Tono objetivo, formal y basado en evidencia. N
     const reporte = {
       tipo: 'INFORME_SEGURO_CONTINUIDAD',
       numero_referencia: `SAN-${childId.slice(0, 8).toUpperCase()}-${hoy.getFullYear()}${String(hoy.getMonth()+1).padStart(2,'0')}`,
-      centro: 'Centro Neuropsicología y Terapias SANTI',
+      centro: centro.name,
       paciente: {
         nombre,
         diagnostico,
@@ -223,6 +230,7 @@ Usa terminología DSM-5 y CIE-10. Tono objetivo, formal y basado en evidencia. N
     try {
       await supabaseAdmin.from('reportes_seguros').insert({
         child_id: childId,
+        centro_id: centro.id,
         numero_referencia: reporte.numero_referencia,
         periodo_inicio: fechaInicioStr,
         periodo_fin: fechaHoyStr,

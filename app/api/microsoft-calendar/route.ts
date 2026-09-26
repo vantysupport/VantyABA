@@ -1,8 +1,10 @@
 // app/api/microsoft-calendar/route.ts
 // Handles Microsoft (Outlook) Calendar OAuth and event sync
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { logServerError } from '@/lib/log-server-error'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { authorizeCalendarGet, authorizeCalendarPost, internalApiHeaders, signOAuthState } from '@/lib/calendar-integration'
 
 const MS_CLIENT_ID     = process.env.MICROSOFT_CALENDAR_CLIENT_ID     || ''
 const MS_CLIENT_SECRET = process.env.MICROSOFT_CALENDAR_CLIENT_SECRET || ''
@@ -17,7 +19,10 @@ export async function GET(req: NextRequest) {
   const action = searchParams.get('action')
 
   if (action === 'auth-url') {
-    const userId = searchParams.get('userId') || ''
+    // Only for the signed-in user's own profile; the state is signed so the callback can trust it.
+    const authz = await authorizeCalendarGet(req, searchParams.get('userId'), true)
+    if ('error' in authz) return authz.error
+    const userId = authz.userId
     const role   = searchParams.get('role')   || 'admin'
     const scopes = [
       'openid', 'profile', 'email', 'offline_access',
@@ -30,7 +35,7 @@ export async function GET(req: NextRequest) {
       redirect_uri:  REDIRECT_URI,
       scope:         scopes,
       response_mode: 'query',
-      state:         `${userId}:${role}`,
+      state:         signOAuthState(userId, role),
     })
 
     const url = `https://login.microsoftonline.com/${MS_TENANT}/oauth2/v2.0/authorize?${params}`
@@ -38,8 +43,10 @@ export async function GET(req: NextRequest) {
   }
 
   if (action === 'status') {
-    const userId = searchParams.get('userId')
-    if (!userId) return NextResponse.json({ connected: false })
+    // Own status, or (staff) a calendar owner of the same centro. Never returns tokens.
+    const authz = await authorizeCalendarGet(req, searchParams.get('userId'), false)
+    if ('error' in authz) return authz.error
+    const userId = authz.userId
 
     const { data } = await supabaseAdmin
       .from('profiles')
@@ -54,8 +61,10 @@ export async function GET(req: NextRequest) {
   }
 
   if (action === 'disconnect') {
-    const userId = searchParams.get('userId')
-    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+    // A user may only revoke their own calendar.
+    const authz = await authorizeCalendarGet(req, searchParams.get('userId'), true)
+    if ('error' in authz) return authz.error
+    const userId = authz.userId
 
     await supabaseAdmin
       .from('profiles')
@@ -78,17 +87,26 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { action, userId, appointmentId, appointment } = body
 
+    // Internal calls (signed header) or staff acting on a same-centro calendar; synced data must be the owner's centro.
+    const gate = await authorizeCalendarPost(req, userId, {
+      appointmentId: action === 'sync-appointment' ? appointmentId : null,
+      childId: action === 'sync-appointment' ? appointment?.childId : null,
+    })
+    if (gate) return gate
+
     if (action === 'sync-appointment') {
       console.log('[MSCal] sync-appointment → appointmentId:', appointmentId, '| childId:', appointment?.childId)
       const { data: profile } = await supabaseAdmin
         .from('profiles')
-        .select('microsoft_calendar_token, microsoft_calendar_refresh_token, microsoft_calendar_email')
+        .select('microsoft_calendar_token, microsoft_calendar_refresh_token, microsoft_calendar_email, centro_id')
         .eq('id', userId)
         .single()
 
       if (!profile?.microsoft_calendar_token) {
         return NextResponse.json({ ok: false, error: 'Microsoft Calendar not connected' })
       }
+      // Server-to-server call (no session): the calendar owner's center, else the patient's.
+      const centro = await getCentroBranding({ centroId: profile.centro_id ?? null, childId: appointment?.childId ?? null })
 
       // Refresh token if needed
       let accessToken = profile.microsoft_calendar_token
@@ -122,7 +140,7 @@ export async function POST(req: NextRequest) {
       if (!parentEmail && appointment.childId) {
         const { data: child } = await supabaseAdmin
           .from('children')
-          .select('profiles!children_parent_id_fkey(email)')
+          .select('profiles!fk_children_parent(email)')
           .eq('id', appointment.childId)
           .single()
         parentEmail = (child?.profiles as any)?.email || null
@@ -159,7 +177,7 @@ export async function POST(req: NextRequest) {
         recurrencia ? `🔁 Cita recurrente (${recurrencia === 'weekly' ? 'Semanal' : 'Quincenal'}, ${recurrenciaSemanas} semanas)` : null,
         notes ? `📝 Notas: ${notes}` : null,
         esVirtual && videoLink ? `<br/>🔗 <a href="${videoLink}">Unirse a la videollamada</a>` : null,
-        '<br/>🏫 Centro Neuropsicología y Terapias SANTI',
+        `<br/>🏫 Centro ${centro.name}`,
       ].filter(Boolean).join('<br/>')
 
       const attendees = []
@@ -176,7 +194,7 @@ export async function POST(req: NextRequest) {
           contentType: 'HTML',
           content: `
             <b>${modality === 'virtual' ? '📹 Sesión Virtual' : '📍 Sesión Presencial'}</b><br/>
-            Centro: Neuropsicología y Terapias SANTI<br/>
+            Centro: ${centro.name}<br/>
             Paciente: ${patientName}<br/>
             ${notes ? `📝 ${notes}` : ''}
           `,
@@ -321,7 +339,7 @@ export async function POST(req: NextRequest) {
                 isReminderOn: true,
                 reminderMinutesBeforeStart: 60,
                 ...(esVirtual && videoLink ? {
-                  location: { displayName: '📹 Videollamada SANTI', uniqueId: videoLink, uniqueIdType: 'locationStore' },
+                  location: { displayName: `📹 Videollamada ${centro.name}`, uniqueId: videoLink, uniqueIdType: 'locationStore' },
                 } : {}),
               }
 
@@ -375,7 +393,7 @@ export async function POST(req: NextRequest) {
     if (action === 'sync-all') {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
-        .select('microsoft_calendar_token, microsoft_calendar_refresh_token')
+        .select('microsoft_calendar_token, microsoft_calendar_refresh_token, centro_id')
         .eq('id', userId)
         .single()
 
@@ -387,6 +405,7 @@ export async function POST(req: NextRequest) {
       const { data: apts } = await supabaseAdmin
         .from('appointments')
         .select('*, children(name)')
+        .eq('centro_id', profile.centro_id)
         .gte('appointment_date', today)
         .neq('status', 'cancelled')
         .is('microsoft_calendar_event_id', null)
@@ -396,7 +415,7 @@ export async function POST(req: NextRequest) {
       for (const apt of apts || []) {
         const syncRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/microsoft-calendar`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: internalApiHeaders(),
           body: JSON.stringify({
             action: 'sync-appointment',
             userId,

@@ -1,10 +1,13 @@
 // app/api/parent-chat/route.ts
 // Chat IA exclusivo para padres - respuestas en lenguaje accesible
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroq, callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildParentChatContext } from '@/lib/ai-context-builder'
-import { checkAriaRateLimit } from '@/lib/aria-rate-limit'
+import { checkAriaRateLimit, devolverAria } from '@/lib/aria-rate-limit'
+import { getApiCaller, canAccessChild, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { reglaIdiomaRespuesta } from '@/lib/idioma-ia'
 
 // Forzar ejecución dinámica — el contexto del paciente cambia constantemente
 // (sesiones registradas, alertas nuevas, fichas, etc.) y no debe cachearse.
@@ -39,6 +42,8 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const body = await req.json()
 
@@ -53,16 +58,24 @@ export async function POST(req: NextRequest) {
     if (!mensaje || !childId) {
       return NextResponse.json({ error: 'Faltan campos requeridos: mensaje y childId' }, { status: 400 })
     }
+    if (parentUserId && parentUserId !== caller.id) return forbidden()
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    const { data: childCentro } = await supabaseAdmin.from('children').select('centro_id').eq('id', childId).maybeSingle()
 
     // Rate limiting de ARIA (configurable por el programador en /control).
     // Clave por familia: parentUserId si viene, si no el childId.
-    const rl = await checkAriaRateLimit(String(parentUserId || childId))
+    // Tokens de ARIA por padre y por día: la clave es siempre el usuario que llama (el padre)
+    const claveAria = caller.role === 'padre' ? caller.id : String(parentUserId || childId)
+    const rl = await checkAriaRateLimit(claveAria, 'padres', childCentro?.centro_id ?? null)
     if (!rl.allowed) {
+      const en = (req.headers.get('x-locale') || 'es').startsWith('en')
+      const min = rl.retryAfterMinutes || 0
+      const tiempo = min >= 60 ? `${Math.floor(min / 60)} h ${min % 60} min` : `${min} min`
+      const msg = en
+        ? `You have used all your ARIA messages for today. You can ask again in ${tiempo}. If it's urgent, please contact the center.`
+        : `Ya usaste todos tus mensajes de ARIA de hoy. Podrás volver a preguntar en ${tiempo}. Si es urgente, comunícate con el centro.`
       // El frontend muestra data.text como respuesta de ARIA → ahí va el aviso.
-      return NextResponse.json(
-        { text: rl.message, error: rl.message, rateLimited: true, retryAfterMinutes: rl.retryAfterMinutes },
-        { status: 429 },
-      )
+      return NextResponse.json({ text: msg, error: msg, rateLimited: true, retryAfterMinutes: rl.retryAfterMinutes }, { status: 429 })
     }
 
     // Verificar acceso del padre solo si se provee parentUserId
@@ -102,6 +115,7 @@ export async function POST(req: NextRequest) {
       try {
         await supabaseAdmin.from('chat_padres').insert({
           child_id: childId,
+          centro_id: childCentro?.centro_id ?? null,
           parent_user_id: parentUserId,
           rol: 'user',
           mensaje
@@ -110,13 +124,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Generar respuesta IA
-    const respuesta = await generarRespuestaPadre(mensaje, contexto, historialOrdenado, nombrePadre, req.headers.get('x-locale') || 'es')
+    const respuesta = await generarRespuestaPadre(mensaje, contexto, historialOrdenado, nombrePadre, (await getCentroBranding({ childId })).name, req.headers.get('x-locale') || 'es', childCentro?.centro_id ?? null)
+    // Si la IA no respondió (p. ej. límite por minuto del proveedor), el mensaje no cuenta como token
+    const iaFallo = !!(contexto as any)?._iaFallo
+    if (iaFallo) await devolverAria(claveAria, 'padres', !!rl.extra)
 
     // Guardar respuesta
     if (parentUserId) {
       try {
         await supabaseAdmin.from('chat_padres').insert({
           child_id: childId,
+          centro_id: childCentro?.centro_id ?? null,
           parent_user_id: parentUserId,
           rol: 'assistant',
           mensaje: respuesta
@@ -130,6 +148,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       respuesta,
       text: respuesta,
+      iaFallo,
       _debug: (contexto as any)?._debug || null,
     })
   } catch (e: any) {
@@ -142,6 +161,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const childId      = searchParams.get('child_id')
   const parentUserId = searchParams.get('parent_user_id')
+
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (caller.role === 'padre' && parentUserId !== caller.id) return forbidden()
+  if (!(await canAccessChild(caller, childId))) return notFound()
 
   try {
     const { data } = await supabaseAdmin
@@ -705,15 +729,17 @@ async function generarRespuestaPadre(
   contexto: any,
   historial: any[],
   nombrePadre: string,
-  locale = 'es'
+  centroNombre: string,
+  locale = 'es',
+  centroId: string | null = null
 ): Promise<string> {
+  const centro = { name: centroNombre }
   // 🧠 Buscar en Cerebro IA (libros clínicos) contexto relevante para la pregunta
-  const knowledgeCtx = await buildParentChatContext(mensaje, '')
+  const knowledgeCtx = await buildParentChatContext(mensaje, '', centroId)
 
-  const userLocale = locale
-  const localeNamesPC: Record<string,string> = { es:'español', en:'English', pt:'português', fr:'français', de:'Deutsch', it:'italiano' }
-  const langNote = userLocale !== 'es' ? `\n\n[RESPONDE SIEMPRE EN: ${localeNamesPC[userLocale] || 'español'}. No uses español si el idioma es diferente.]` : ''
-  const systemPrompt = `Eres ARIA, el asistente virtual del Centro Neuropsicología y Terapias SANTI para familias.
+  // Idioma de la respuesta = idioma de la app (aunque los datos del expediente estén en español)
+  const reglaIdioma = reglaIdiomaRespuesta(locale)
+  const systemPrompt = `Eres ARIA, el asistente virtual del centro ${centro.name} para familias.
 Eres cálida, paciente, positiva y muy accesible. Conoces en detalle el caso de ${contexto.nombre}.
 Tenés acceso a TODOS los datos del expediente del niño — usalos siempre que correspondan.
 
@@ -824,11 +850,15 @@ Usa este conocimiento para enriquecer tus respuestas, siempre en lenguaje simple
 
   // Build chat messages for Groq
   const groqMessages = [
-    { role: 'system' as const, content: systemPrompt },
+    { role: 'system' as const, content: `${systemPrompt}
+
+${reglaIdioma}` },
     ...historial.map(h => ({
       role: h.rol as 'user' | 'assistant',
       content: h.mensaje,
     })),
+    // Se repite justo antes de la pregunta: el historial puede venir en otro idioma
+    { role: 'system' as const, content: reglaIdioma },
     { role: 'user' as const, content: mensaje },
   ]
 
@@ -842,29 +872,29 @@ Usa este conocimiento para enriquecer tus respuestas, siempre en lenguaje simple
     if (respuesta && respuesta.trim().length > 10) return respuesta
 
     // FIX: Fallback a callGroqSimple si callGroq falla o retorna vacío
-    const fallback = await callGroqSimple(systemPrompt, mensaje, {
+    const fallback = await callGroqSimple(`${systemPrompt}
+
+${reglaIdioma}`, mensaje, {
       model: GROQ_MODELS.SMART,
       temperature: 0.5,
       maxTokens: 1200,
     })
 
-    return fallback || generarRespuestaFallback(contexto, mensaje)
+    if (fallback) return fallback
+    contexto._iaFallo = true
+    return generarRespuestaFallback(contexto, mensaje, locale)
   } catch (err: any) {
     console.error('Error Groq en parent-chat:', err.message)
-    return generarRespuestaFallback(contexto, mensaje)
+    contexto._iaFallo = true
+    return generarRespuestaFallback(contexto, mensaje, locale)
   }
 }
 
 // FIX: respuesta de fallback con datos reales cuando la IA falla
-function generarRespuestaFallback(contexto: any, mensaje: string): string {
-  const msgLower = mensaje.toLowerCase()
-  if (msgLower.includes('tarea') || msgLower.includes('actividad') || msgLower.includes('casa')) {
-    return contexto.tieneTareasActivas
-      ? `Hola! ${contexto.nombre} tiene actividades pendientes para realizar en casa. Puedes verlas en la sección "Tareas" de la app. La constancia en casa hace una gran diferencia en su progreso. 💪`
-      : `Actualmente ${contexto.nombre} no tiene actividades pendientes asignadas. ¡Sigue así, han hecho un gran trabajo! Tu terapeuta asignará nuevas actividades pronto.`
+function generarRespuestaFallback(contexto: any, mensaje: string, locale = 'es'): string {
+  if (String(locale).startsWith('en')) {
+    return `I'm receiving a lot of questions right now and couldn't answer this one. Please try again in a minute — this message did not use any of your ARIA tokens. If it's urgent, contact the center directly.`
   }
-  if (msgLower.includes('cita') || msgLower.includes('sesion') || msgLower.includes('sesión')) {
-    return `${contexto.proximaCita}. Si necesitas cambiar la cita, puedes hacerlo desde la sección Agenda de la app o contactar directamente al centro.`
-  }
-  return `Gracias por tu mensaje sobre ${contexto.nombre}. En este momento tengo dificultades técnicas para responder. Por favor, intenta nuevamente en unos minutos o contacta directamente al terapeuta del centro.`
+  return `En este momento estoy recibiendo muchas consultas y no pude responder esta. Inténtalo de nuevo en un minuto: este mensaje no usó ninguno de tus tokens de ARIA. Si es urgente, comunícate directamente con el centro.`
 }
+

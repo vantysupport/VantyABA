@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -262,16 +263,20 @@ async function generarAlertasParaNiño(childId: string): Promise<AlertaGenerada[
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json().catch(() => ({}))
     const childId: string | undefined = body?.child_id
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
 
     // Lista de niños a procesar: uno específico o todos
     let childIds: string[] = []
     if (childId) {
       childIds = [childId]
     } else {
-      const { data: children } = await supabaseAdmin.from('children').select('id')
+      const { data: children } = await supabaseAdmin.from('children').select('id').eq('centro_id', caller.centroId)
       childIds = (children || []).map((c: any) => c.id)
     }
 
@@ -329,7 +334,7 @@ export async function POST(req: NextRequest) {
             .eq('resuelta', false)
             .maybeSingle()
           if (!yaExiste) {
-            await supabaseAdmin.from('agente_alertas').insert({ ...alerta, resuelta: false })
+            await supabaseAdmin.from('agente_alertas').insert({ ...alerta, resuelta: false, centro_id: caller.centroId })
             totalAlertas++
           }
         }

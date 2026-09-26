@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
 
     const { data: link } = await supabaseAdmin
       .from('booking_links').select('*').eq('token', token).maybeSingle()
-    if (!link) return NextResponse.json({ error: 'Link no encontrado' }, { status: 404 })
+    // Public by design: the token is the credential; everything below is scoped to the link's centro.
+    if (!link || !link.centro_id) return NextResponse.json({ error: 'Link no encontrado' }, { status: 404 })
     if (!link.active) return NextResponse.json({ error: 'Este link ya no está activo.' }, { status: 410 })
     if (link.expires_at && new Date(link.expires_at) < new Date()) {
       return NextResponse.json({ error: 'Este link de reserva ya venció.' }, { status: 410 })
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { data: config } = await supabaseAdmin
-      .from('booking_config').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle()
+      .from('booking_config').select('*').eq('centro_id', link.centro_id).order('updated_at', { ascending: false }).limit(1).maybeSingle()
     if (!config) return NextResponse.json({ error: 'El centro aún no configuró su disponibilidad.' }, { status: 400 })
 
     const dur = Number(config.session_duration_min) || 45
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
 
     let qApt = supabaseAdmin.from('appointments')
       .select('appointment_date, appointment_time, specialist_id, status')
+      .eq('centro_id', link.centro_id)
       .gte('appointment_date', desde)
       .lte('appointment_date', hasta)
     const { data: apts } = await qApt

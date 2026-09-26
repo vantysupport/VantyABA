@@ -1,0 +1,9 @@
+Modelos 3D de árboles para el "Modo Bosque" del portal de familias.
+
+Origen: Poly Haven (https://polyhaven.com) — licencia CC0 (dominio público, uso libre sin atribución obligatoria).
+  cerezo.glb  ← jacaranda_tree (follaje convertido a rosado)
+  manzano.glb ← tree_small_02 (las manzanas se agregan en el código)
+  roble.glb   ← island_tree_02
+  pino.glb    ← fir_tree_01 (variante a)
+
+Comprimidos para la web: menos hojas y polígonos, texturas 512 px WebP y geometría meshopt.

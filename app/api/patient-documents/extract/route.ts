@@ -11,9 +11,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { extractTextFromPdf } from '@/lib/knowledge-base'
-import { GoogleGenAI } from '@google/genai'
+import { groqVision } from '@/lib/groq-vision'
 import JSZip from 'jszip'
+import { storageObjectOf, r2Key } from '@/lib/file-url'
+import { r2Buffer } from '@/lib/r2'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -37,30 +40,13 @@ async function extractDocx(buffer: ArrayBuffer): Promise<string> {
   return text
 }
 
-// ─── Imagen → OCR con Gemini Vision ──────────────────────────────────────
-async function extractImageWithGemini(buffer: ArrayBuffer, mimeType: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY no configurada — no se puede OCR imágenes')
-  const ai = new GoogleGenAI({ apiKey })
-  const base64 = Buffer.from(buffer).toString('base64')
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.5-flash',
-    contents: [{
-      role: 'user',
-      parts: [
-        { inlineData: { mimeType, data: base64 } },
-        {
-          text: `Esta es una imagen relacionada con un paciente de un centro de neuropsicología.
-Tu tarea: extrae TODA la información útil que veas — texto manuscrito o impreso, datos médicos, gráficos, esquemas, tablas, sellos, fechas, firmas, observaciones.
-Si es una foto de un documento, transcribe el contenido completo.
-Si es una foto del niño/a o de una actividad, describí brevemente qué se ve (sin describir rasgos personales, solo el contexto clínico relevante).
-Responde SOLO con el contenido extraído, sin comentarios previos.`,
-        },
-      ],
-    }],
-  })
-  return response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+// ─── Imagen → OCR con la visión de Groq ─────────────────────────────────
+async function extractImageWithVision(buffer: ArrayBuffer, mimeType: string): Promise<string> {
+  return groqVision([{ data: buffer, mime: mimeType }], () => `Esta es una imagen relacionada con un paciente de un centro de neuropsicología.
+Extrae TODA la información útil que veas: texto manuscrito o impreso, datos médicos, gráficos, esquemas, tablas, sellos, fechas, firmas, observaciones.
+Si es una foto de un documento, transcribe el contenido completo en su idioma original (español o inglés).
+Si es una foto del niño/a o de una actividad, describe brevemente qué se ve (sin describir rasgos personales, solo el contexto clínico relevante).
+Responde SOLO con el contenido extraído, sin comentarios previos.`)
 }
 
 // ─── TXT/Markdown/CSV → directo ──────────────────────────────────────────
@@ -94,17 +80,17 @@ async function extraerSegunTipo(buffer: ArrayBuffer, fileName: string, fileType:
     return { texto: '', nota: 'Formato .doc (Word 97-2003) no soportado. Convierte a .docx o PDF.' }
   }
 
-  // Imágenes → Gemini Vision OCR
+  // Imágenes → OCR con IA
   if (/\.(jpg|jpeg|png|webp|heic|heif|gif|bmp)$/i.test(name) || type.startsWith('image/')) {
     const mime = type.startsWith('image/') ? type : (
       name.endsWith('.png') ? 'image/png' :
       name.endsWith('.webp') ? 'image/webp' : 'image/jpeg'
     )
     try {
-      const texto = await extractImageWithGemini(buffer, mime)
+      const texto = await extractImageWithVision(buffer, mime)
       return { texto }
     } catch (e: any) {
-      return { texto: '', nota: `OCR falló: ${e?.message || 'sin acceso a Gemini'}` }
+      return { texto: '', nota: `OCR falló: ${e?.message || 'IA no disponible'}` }
     }
   }
 
@@ -120,14 +106,18 @@ async function extraerSegunTipo(buffer: ArrayBuffer, fileName: string, fileType:
 // ─── Procesar un documento ──────────────────────────────────────────────
 async function procesarDocumento(doc: any): Promise<{ ok: boolean; chars: number; error?: string }> {
   try {
-    // Bajar archivo del storage (file_url es signed URL pero también podemos parsearlo)
+    // El bucket es privado: se descarga con la clave de servicio a partir de bucket/ruta del file_url guardado.
+    const obj = storageObjectOf(doc.file_url)
+    if (!obj) throw new Error('Documento sin file_url')
     let fileBuffer: ArrayBuffer
-    if (doc.file_url) {
-      const res = await fetch(doc.file_url)
-      if (!res.ok) throw new Error(`Storage HTTP ${res.status}`)
-      fileBuffer = await res.arrayBuffer()
+    if (obj.r2) {
+      const buf = await r2Buffer(r2Key(obj.bucket, obj.path))
+      if (!buf) throw new Error('Archivo no encontrado')
+      fileBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer
     } else {
-      throw new Error('Documento sin file_url')
+      const { data: blob, error: dlErr } = await supabaseAdmin.storage.from(obj.bucket).download(obj.path)
+      if (dlErr || !blob) throw new Error(`Storage: ${dlErr?.message || 'no encontrado'}`)
+      fileBuffer = await blob.arrayBuffer()
     }
 
     const { texto, nota } = await extraerSegunTipo(fileBuffer, doc.file_name || '', doc.file_type || null)
@@ -169,6 +159,9 @@ async function procesarDocumento(doc: any): Promise<{ ok: boolean; chars: number
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { document_id, child_id, only_pending, all_pending, limit } = body
@@ -181,6 +174,7 @@ export async function POST(req: NextRequest) {
         .eq('id', document_id)
         .maybeSingle()
       if (!doc) return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 })
+      if (doc.centro_id !== caller.centroId) return notFound()
 
       const result = await procesarDocumento(doc)
       return NextResponse.json({ ...result, document_id })
@@ -188,6 +182,7 @@ export async function POST(req: NextRequest) {
 
     // ─── Modo 2: pendientes de un paciente ──────────────────────────
     if (child_id) {
+      if (!(await canAccessChild(caller, child_id))) return notFound()
       let q = supabaseAdmin.from('patient_documents').select('*').eq('child_id', child_id)
       if (only_pending) q = q.in('extraction_status', ['pending', 'failed'])
       const { data: docs } = await q.limit(50)
@@ -204,6 +199,7 @@ export async function POST(req: NextRequest) {
       const { data: docs } = await supabaseAdmin
         .from('patient_documents')
         .select('*')
+        .eq('centro_id', caller.centroId)
         .in('extraction_status', ['pending'])
         .limit(limit || 30)
 

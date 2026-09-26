@@ -3,6 +3,8 @@ export const maxDuration = 60;
 import { NextRequest, NextResponse } from 'next/server';
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext, parseAIJson } from '@/lib/ai-context-builder';
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 
 // ============================================================================
 // INTERFACES (Tipado fuerte para seguridad)
@@ -70,6 +72,9 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
 
     // 2. Parseo del Body (aceptamos todos los campos)
@@ -115,8 +120,11 @@ export async function POST(request: NextRequest) {
 
     // Cargar contexto completo: RAG + historial + centro
     const childId = body.childId || ''
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
+    const bloqueo = await sinTokens(caller.centroId, String(userLocale).startsWith('en'))
+    if (bloqueo) return bloqueo
     const homeQuery = `entorno hogar familia ABA ambiente terapéutico ${comportamiento_observado || ''}`
-    const ctx = await buildAIContext(childId, body.childName, body.childAge ? String(body.childAge) : undefined, homeQuery)
+    const ctx = await buildAIContext(childId, body.childName, body.childAge ? String(body.childAge) : undefined, homeQuery, caller.centroId)
     const nombreNino = ctx.childName
     const historialTexto = (ctx.fullContext || '').slice(0, 12000)  // tope duro: evita exceder tokens en pacientes con mucho expediente
 
@@ -243,7 +251,7 @@ export async function POST(request: NextRequest) {
       IMPORTANTE: El "mensaje_padres_entorno" es el campo MÁS IMPORTANTE. Debe ser un mensaje completo y positivo.
     `;
 
-    console.log('🤖 Enviando contexto a Gemini para análisis de entorno...');
+    console.log('🤖 Enviando contexto a la IA para análisis de entorno...');
 
     // 4. Inicialización de Gemini
     // 5. Ejecución del Modelo
@@ -253,7 +261,7 @@ export async function POST(request: NextRequest) {
         { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 2000 }
       );
 
-    console.log('✅ Respuesta recibida de Gemini');
+    console.log('✅ Respuesta recibida de la IA');
     
     // Verificar que la respuesta tenga texto
     const responseText = response;
@@ -276,6 +284,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 8. Retorno Exitoso
+    await descontarToken(caller.centroId)
     return NextResponse.json({
       impresion_general: analysisData.impresion_general,
       mensaje_padres_entorno: analysisData.mensaje_padres_entorno,

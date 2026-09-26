@@ -1,10 +1,12 @@
 'use client'
+import { useAvisos, AvisosLista, vistaDeAviso } from '@/components/AvisosCampana'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   LayoutDashboard, Users, LogOut, Calendar, FileText,
   User, Loader2, Menu, X, Stethoscope, MessageCircle,
@@ -22,31 +24,32 @@ import MisFormularios from './components/MisFormularios'
 import LocaleSelector from '@/app/components/LocaleSelector'
 import { ThemeToggleButton, useTheme } from '@/components/ThemeContext'
 import ARIAAgentChat from '@/app/admin/components/ARIAAgentChat'
+import { AriaGlyph } from '@/components/ui/aria-glyph'
 import InteligenciaHubView from '@/app/admin/components/InteligenciaHubView'
+import { AriaSaludo } from '@/components/ui/aria-saludo'
+import PushNotificationBanner from '@/components/PushNotificationBanner'
 
-function SidebarLink({ icon: Icon, label, active, onClick, small, badge }: any) {
+function SidebarLink({ icon: Icon, label, active, onClick, badge, index = 0 }: any) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group text-left
-        ${active
-          ? 'bg-gradient-to-r from-sky-600 to-sky-700 text-white shadow-lg shadow-sky-200/50 dark:shadow-sky-900/50'
-          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200'
-        } ${small ? 'text-xs' : 'text-sm'}`}
-    >
-      <Icon size={small ? 15 : 17} className={`flex-shrink-0 transition-colors ${active ? 'text-white' : 'text-slate-400 group-hover:text-sky-500'}`} />
-      <span className={`font-semibold truncate flex-1 ${small ? 'text-xs' : ''}`}>{label}</span>
-      {badge > 0 && (
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0
-          ${active ? 'bg-white/20 text-white' : 'bg-red-500 text-white'}`}>
-          {badge}
-        </span>
+    <motion.button onClick={onClick}
+      initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.03 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      whileTap={{ scale: 0.97 }}
+      className={`group relative flex w-full items-center gap-3 rounded-v-sm px-3 py-2.5 text-left text-sm font-medium transition-colors ${active ? 'text-white' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+      {active && (
+        <motion.span layoutId="esp-nav-active" transition={{ type: 'spring', stiffness: 420, damping: 34 }} className="v-brand absolute inset-0 overflow-hidden rounded-v-sm">
+          <span className="v-sweep block size-full" style={{ ['--v-sweep-duration' as string]: '5s' }} />
+        </motion.span>
       )}
-    </button>
+      <Icon size={18} className={`relative z-[2] shrink-0 transition-transform duration-200 group-hover:scale-110 ${active ? 'text-white' : 'text-v-subtle group-hover:text-v-accent'}`} />
+      <span className="relative z-[2] min-w-0 flex-1 truncate">{label}</span>
+      {badge > 0 && <span className={`relative z-[2] grid min-w-5 shrink-0 place-items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? 'bg-white/25 text-white' : 'bg-v-danger text-white'}`}>{badge}</span>}
+    </motion.button>
   )
 }
 
 export default function EspecialistaDashboard() {
+  const { name: centroNombre, logoUrl } = useCentroBranding()
   const router = useRouter()
   const toast = useToast()
   const { t, locale } = useI18n()
@@ -72,7 +75,16 @@ export default function EspecialistaDashboard() {
   }
 
   const [activeView, setActiveView]                 = useState('inicio')
+
+  // Enlace directo desde una notificación push: ?vista=agenda
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('vista')
+    if (!v) return
+    setActiveView(v)
+    const u = new URL(window.location.href); u.searchParams.delete('vista'); window.history.replaceState(null, '', u.toString())
+  }, [])
   const [profile, setProfile]                       = useState<any>(null)
+  const { avisos, marcarLeido } = useAvisos(profile?.id)
   const [loading, setLoading]                       = useState(true)
   const [sidebarOpen, setSidebarOpen]               = useState(false)
   const [showProfileMenu, setShowProfileMenu]       = useState(false)
@@ -233,7 +245,7 @@ export default function EspecialistaDashboard() {
           </div>
         </div>
         <div className="text-center">
-          <p className="font-bold text-slate-800 text-sm">{t('auto.page.neuropsicologiaYTerapiasSanti')}</p>
+          <p className="font-bold text-slate-800 text-sm">{centroNombre}</p>
           <p className="text-xs text-slate-400 mt-0.5">{t('especialista.cargandoPanel')}</p>
         </div>
         <Loader2 size={18} className="animate-spin text-sky-500" />
@@ -247,162 +259,116 @@ export default function EspecialistaDashboard() {
   return (
     <div className="flex h-screen bg-[#f8f8fb] font-sans overflow-hidden">
 
-      {/* ── SIDEBAR ── */}
-      <aside className={`
-        fixed md:static z-40 h-full w-[215px] flex flex-col sidebar-transition
-        border-r transition-transform duration-300
-        ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'} shadow-sm
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}>
-
-        {/* Logo */}
-        <div className={`flex items-center gap-3 px-4 h-[60px] border-b flex-shrink-0
-          ${isDark ? 'border-[#21262d]' : 'border-slate-100/80'}`}>
-          <div
-            className="relative w-10 h-10 flex-shrink-0 rounded-full shadow-md overflow-hidden"
-            style={{ background: '#ffffff', padding: '3px', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
-          >
-            <Image src="/images/logo.png" alt="Logo" fill className="object-contain" />
+      {/* ── SIDEBAR (fija en escritorio, cajón deslizable en tablet/celular) ── */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div key="overlay" className="fixed inset-0 z-30 bg-[#081426]/45 backdrop-blur-sm lg:hidden"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSidebarOpen(false)} />
+        )}
+      </AnimatePresence>
+      <aside className={`v-scope fixed z-40 flex h-full w-[256px] shrink-0 flex-col border-r border-v-border bg-v-elevated shadow-v-lg transition-transform duration-300 lg:static lg:shadow-none
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        {/* Centro */}
+        <div className="flex items-center gap-3 px-4 pb-4 pt-5">
+          <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-[30%] shadow-v ring-1 ring-v-border" style={{ backgroundColor: '#ffffff' }}>
+            {logoUrl
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={logoUrl} alt="" className="size-full object-contain p-1" />
+              : <span className="text-base font-bold text-v-accent">{(centroNombre || 'V').charAt(0)}</span>}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 text-[13px] font-semibold leading-tight text-v-text">{centroNombre}</p>
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-semibold text-v-accent"><Stethoscope size={10} /> {L('Specialist', 'Especialista')}</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className={`font-bold text-[13px] leading-tight truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-              {t('auto.page.neuropsicologiaYTerapiasSanti2')}
-            </p>
-            <p className={`text-[10px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              {t('auto.page.panelClinico')}
-            </p>
-          </div>
-          <button onClick={() => setSidebarOpen(false)}
-            className="ml-auto md:hidden text-slate-400 hover:text-slate-600">
-            <X size={16} />
-          </button>
+          <button onClick={() => setSidebarOpen(false)} aria-label={L('Close menu', 'Cerrar menú')} className="grid size-8 shrink-0 place-items-center rounded-full text-v-muted hover:bg-v-fill lg:hidden"><X size={16} /></button>
         </div>
+        <div className="mx-4 h-px bg-v-border" />
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
-          {NAV_ITEMS.map(item => (
-            <SidebarLink
-              key={item.id}
-              icon={item.icon}
-              label={item.label}
-              active={activeView === item.id}
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+          <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-v-subtle">{L('Workspace', 'Espacio de trabajo')}</p>
+          {NAV_ITEMS.map((item, i) => (
+            <SidebarLink key={item.id} index={i} icon={item.icon} label={item.label} active={activeView === item.id}
               onClick={() => { setActiveView(item.id); setSidebarOpen(false) }}
-              badge={item.id === 'evaluaciones' ? chatUnread + familiasUnread : 0}
-            />
+              badge={item.id === 'evaluaciones' ? chatUnread + familiasUnread : 0} />
           ))}
         </nav>
 
-        {/* User footer */}
-        <div className={`p-3 border-t flex-shrink-0 ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-          <div
-            className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors
-              ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-50'}`}
-            onClick={() => setActiveView('perfil')}
-          >
-            <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-sky-700 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-              ) : userInitial}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs font-bold truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                {userName}
-              </p>
-              <p className={`text-[10px] truncate ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                {profile?.email || profile?.specialty || ''}
-              </p>
-            </div>
-            <Settings size={14} className="text-slate-400 flex-shrink-0" />
-          </div>
+        {/* Usuario */}
+        <div className="border-t border-v-border p-3">
+          <button onClick={() => { setActiveView('perfil'); setSidebarOpen(false) }} className="group flex w-full items-center gap-3 rounded-v-sm p-2 text-left transition-colors hover:bg-v-fill">
+            <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-v-accent-soft text-sm font-semibold text-v-accent">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="size-full object-cover" /> : userInitial}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-v-text">{userName}</span>
+              <span className="block truncate text-[11px] text-v-subtle">{profile?.email || profile?.specialty || ''}</span>
+            </span>
+            <Settings size={15} className="shrink-0 text-v-subtle transition-transform group-hover:rotate-45" />
+          </button>
+          <p className="mt-2 px-2 text-[10px] text-v-subtle">powered by <span className="v-brand-text font-bold">Vanty ABA</span></p>
         </div>
       </aside>
 
-      {/* Mobile overlay - removed, sidebar is desktop only */}
-
       {/* ── MAIN ── */}
-      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
 
-        {/* Topbar */}
-        <header className={`h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 border-b
-          ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200'}`}>
-          <div className="flex items-center gap-2 md:gap-3">
-            <button onClick={() => setSidebarOpen(true)} className={`md:hidden p-2 rounded-lg transition-colors
-              ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}>
-              <Menu size={18} />
-            </button>
-            <div>
-              <h1 className={`text-sm md:text-base font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
-                {PAGE_TITLES[activeView] || 'Panel'}
-              </h1>
-              <p className={`text-[10px] hidden sm:block ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                {t('auto.page.neuropsicologiaYTerapiasSanti3', { v1: String(t('especialista.titulo')) })}
-              </p>
+        {/* Encabezado */}
+        <header className="v-scope relative z-40 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-v-border bg-v-elevated/90 px-3 backdrop-blur-xl sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button onClick={() => setSidebarOpen(true)} aria-label={L('Open menu', 'Abrir menú')} className="grid size-9 shrink-0 place-items-center rounded-full text-v-muted hover:bg-v-fill lg:hidden"><Menu size={18} /></button>
+            <div className="min-w-0">
+              <h1 className="truncate text-[15px] font-semibold tracking-tight text-v-text">{PAGE_TITLES[activeView] || 'Panel'}</h1>
+              <p className="truncate text-[11px] text-v-subtle" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{centroNombre} · {L('Specialist panel', 'Panel del especialista')}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1">
             <LocaleSelector compact={true} />
-            <ThemeToggleButton />
+            <ThemeToggleButton className="!h-9 !w-9 !rounded-full" />
             <div className="relative">
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className={`p-2 rounded-lg relative transition-colors
-                  ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
-              >
-                <Bell size={18} />
-                {(citasHoy.length > 0 || chatUnread > 0) && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-                )}
+              <button onClick={() => setShowNotifications(!showNotifications)} aria-label={L('Notifications', 'Notificaciones')}
+                className="relative grid size-9 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-text">
+                <Bell size={17} />
+                {(citasHoy.length > 0 || chatUnread > 0 || avisos.length > 0) && <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-v-danger ring-2 ring-v-elevated" />}
               </button>
-              {showNotifications && (
-                <div className={`absolute right-0 top-11 w-72 rounded-2xl shadow-2xl border p-4 z-50
-                  ${isDark ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                      {t('auto.page.notificaciones')}
-                    </p>
-                    <button onClick={() => setShowNotifications(false)}>
-                      <X size={16} className="text-slate-400" />
-                    </button>
-                  </div>
-                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                    {/* Mensajes no leídos */}
-                    {chatUnread > 0 && (
-                      <div className="space-y-1.5">
-                        <p className={`text-[10px] font-bold px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                          Chat Equipo
-                        </p>
-                        <button
-                          onClick={() => { setActiveView('evaluaciones'); setShowNotifications(false) }}
-                          className={`w-full flex items-start gap-3 p-3 rounded-xl text-left transition-colors
-                            ${isDark ? 'bg-sky-900/20 hover:bg-sky-900/30' : 'bg-sky-50 hover:bg-sky-100'}`}>
-                          <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1.5 flex-shrink-0" />
-                          <p className={`text-xs font-medium ${isDark ? 'text-sky-300' : 'text-sky-700'}`}>
-                            {t('auto.page.mensajeSinLeer', { v1: String(chatUnread), v2: String(chatUnread !== 1 ? 's' : '') })}
-                          </p>
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                    className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v-lg">
+                    <div className="flex items-center justify-between border-b border-v-border px-4 py-3">
+                      <p className="text-sm font-semibold text-v-text">{L('Notifications', 'Notificaciones')}</p>
+                      <button onClick={() => setShowNotifications(false)} aria-label={L('Close', 'Cerrar')} className="grid size-7 place-items-center rounded-full text-v-muted hover:bg-v-fill"><X size={15} /></button>
+                    </div>
+                    <div className="max-h-72 space-y-2 overflow-y-auto p-3">
+                      <AvisosLista avisos={avisos} onAbrir={a => { marcarLeido(a.id); const v = vistaDeAviso(a.tipo, 'especialista'); if (v) setActiveView(v); setShowNotifications(false) }} />
+                      {chatUnread > 0 && (
+                        <button onClick={() => { setActiveView('evaluaciones'); setShowNotifications(false) }}
+                          className="flex w-full items-center gap-3 rounded-v-sm bg-v-accent-soft/60 p-3 text-left hover:bg-v-accent-soft">
+                          <span className="grid size-8 shrink-0 place-items-center rounded-[30%] bg-v-elevated text-v-accent"><MessageCircle size={15} /></span>
+                          <span className="text-xs font-semibold text-v-text">{chatUnread} {chatUnread === 1 ? L('unread message', 'mensaje sin leer') : L('unread messages', 'mensajes sin leer')}</span>
                         </button>
-                      </div>
-                    )}
-                    {citasHoy.length > 0 ? (
-                      <>
-                        <p className={`text-[10px] font-bold px-1 mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                          {t('auto.page.citasDeHoy')}
-                        </p>
-                        {citasHoy.map(c => (
-                          <div key={c.id} className={`flex items-start gap-3 p-3 rounded-xl
-                            ${isDark ? 'bg-sky-900/20' : 'bg-sky-50'}`}>
-                            <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1.5 flex-shrink-0" />
-                            <p className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                              {c.children?.name} · {c.appointment_time?.slice(0,5)}
-                            </p>
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      chatUnread === 0 && <p className="text-xs text-slate-400 text-center py-4">{t("especialista.sinNotificaciones")}</p>
-                    )}
-                  </div>
-                </div>
-              )}
+                      )}
+                      {citasHoy.length > 0 && (
+                        <>
+                          <p className="px-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-v-subtle">{L('Appointments today', 'Citas de hoy')}</p>
+                          {citasHoy.map(c => (
+                            <button key={c.id} onClick={() => { setActiveView('agenda'); setShowNotifications(false) }} className="flex w-full items-center gap-3 rounded-v-sm border border-v-border p-2.5 text-left hover:border-v-accent/40">
+                              <span className="v-brand grid h-8 w-12 shrink-0 place-items-center rounded-v-sm text-[11px] font-bold tabular-nums" style={{ boxShadow: 'none' }}>{c.appointment_time?.slice(0, 5)}</span>
+                              <span className="truncate text-xs font-semibold text-v-text">{c.children?.name}</span>
+                            </button>
+                          ))}
+                        </>
+                      )}
+                      {chatUnread === 0 && citasHoy.length === 0 && avisos.length === 0 && (
+                        <div className="py-6 text-center">
+                          <span className="mx-auto grid size-10 place-items-center rounded-full bg-v-fill text-v-subtle"><Bell size={17} /></span>
+                          <p className="mt-2 text-xs text-v-muted">{L('You are all caught up', 'No tienes notificaciones')}</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </header>
@@ -423,11 +389,13 @@ export default function EspecialistaDashboard() {
           </div>
         ) : (
           <div className={`flex-1 overflow-y-auto admin-content ${isDark ? 'bg-[#0d1117]' : 'bg-[#f8f8fb]'}`}>
-            <div className="px-5 pt-5 pb-6">
+            <div className="px-2.5 pb-24 pt-3 sm:px-4 md:px-5 md:pb-6 md:pt-5">
               {renderView()}
             </div>
           </div>
         )}
+        <AriaSaludo />
+        <PushNotificationBanner userId={profile?.id || null} rol="especialista" />
       </main>
 
       {/* ── MOBILE BOTTOM NAV ── */}
@@ -480,18 +448,7 @@ export default function EspecialistaDashboard() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-sky-600 to-cyan-600 flex-shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <svg width="18" height="18" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="6" y="9" width="16" height="13" rx="3" fill="white" fillOpacity="0.9"/>
-                  <rect x="9" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
-                  <rect x="16" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
-                  <rect x="11" y="17" width="6" height="1.5" rx="0.75" fill="#0284c7"/>
-                  <rect x="13" y="6" width="2" height="4" rx="1" fill="white" fillOpacity="0.9"/>
-                  <circle cx="14" cy="5.5" r="1.5" fill="white"/>
-                  <rect x="2" y="12" width="2.5" height="5" rx="1.25" fill="white" fillOpacity="0.7"/>
-                  <rect x="23.5" y="12" width="2.5" height="5" rx="1.25" fill="white" fillOpacity="0.7"/>
-                </svg>
-              </div>
+              <span className="relative size-8 shrink-0 rounded-full ring-2 ring-white/40"><AriaGlyph /></span>
               <div>
                 <p className="text-white font-bold text-sm leading-tight flex items-center gap-2">
                   ARIA <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[9px] font-bold">{L('AI', 'IA')}</span>
@@ -530,16 +487,7 @@ export default function EspecialistaDashboard() {
         <button onClick={() => setAriaOpen(true)}
           className="fixed bottom-6 right-4 md:right-6 z-[91] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 bg-gradient-to-br from-sky-600 to-cyan-600"
           title={L('ARIA — AI Assistant', 'ARIA — Asistente IA')}>
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="6" y="9" width="16" height="13" rx="3" fill="white" fillOpacity="0.9"/>
-            <rect x="9" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
-            <rect x="16" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
-            <rect x="11" y="17" width="6" height="1.5" rx="0.75" fill="#0284c7"/>
-            <rect x="13" y="6" width="2" height="4" rx="1" fill="white" fillOpacity="0.9"/>
-            <circle cx="14" cy="5.5" r="1.5" fill="white"/>
-            <rect x="2" y="12" width="2.5" height="5" rx="1.25" fill="white" fillOpacity="0.7"/>
-            <rect x="23.5" y="12" width="2.5" height="5" rx="1.25" fill="white" fillOpacity="0.7"/>
-          </svg>
+          <AriaGlyph className="ring-2 ring-white/60" />
           <span className="pointer-events-none absolute inset-0 rounded-full bg-sky-400 animate-ping opacity-20"/>
         </button>
       )}

@@ -55,7 +55,7 @@ export default function AprobacionesEspecialista() {
     try {
       let q = supabase
         .from('specialist_submissions')
-        .select('*, children(name), profiles!specialist_submissions_specialist_id_fkey(full_name, specialty)')
+        .select('*, children(name), profiles!fk_ss_specialist(full_name, specialty)')
         .order('created_at', { ascending: false })
       if (filtro !== 'all') q = q.eq('status', filtro)
       const { data, error } = await q
@@ -69,7 +69,7 @@ export default function AprobacionesEspecialista() {
         if (pendientes.length > 0) {
           // Recargar
           const { data: data2 } = await supabase.from('specialist_submissions')
-            .select('*, children(name), profiles!specialist_submissions_specialist_id_fkey(full_name, specialty)')
+            .select('*, children(name), profiles!fk_ss_specialist(full_name, specialty)')
             .order('created_at', { ascending: false })
           setSubmissions(data2 || [])
           return

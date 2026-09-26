@@ -8,6 +8,8 @@ export const maxDuration = 60;
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
+import { getApiCaller, canAccessChild, unauthorized, notFound } from '@/lib/api-auth'
+import { puedeGenerarPractica, consumirPractica } from '@/lib/tokens-padres'
 
 
 // i18n: responder en el idioma del usuario
@@ -23,37 +25,64 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
-    const { childId, accion = 'generar_plan', locale = 'es' } = await req.json()
+    const body = await req.json()
+    const { childId, accion = 'generar_plan', locale = 'es' } = body
     // accion: 'generar_plan' | 'registrar_actividad' | 'obtener_historial'
 
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
 
     if (accion === 'registrar_actividad') {
-      const { actividadId, completada, nota } = await req.json()
+      const { actividadId, completada, nota } = body
       const { error } = await supabaseAdmin
         .from('engagement_actividades')
         .update({ completada, nota_padre: nota, fecha_completada: new Date().toISOString() })
         .eq('id', actividadId)
+        .eq('child_id', childId)
       if (error) throw error
       return NextResponse.json({ success: true })
     }
 
     if (accion === 'actualizar_completadas') {
-      const { planId, actividades, completadas_pct } = await req.json()
+      const { planId, actividades, completadas_pct } = body
       if (!planId) return NextResponse.json({ error: 'planId requerido' }, { status: 400 })
+      // Solo se copia el estado "hecha" por posición: el cliente puede estar viendo una
+      // traducción y no debe sobrescribir el texto original del plan.
+      const { data: actual } = await supabaseAdmin.from('engagement_planes').select('actividades').eq('id', planId).eq('child_id', childId).maybeSingle()
+      const originales: any[] = Array.isArray(actual?.actividades) ? actual!.actividades : []
+      const marcadas = originales.map((a, i) => ({ ...a, completada: !!(actividades as any[])?.[i]?.completada }))
       const { error } = await supabaseAdmin
         .from('engagement_planes')
-        .update({ actividades, completadas_pct })
+        .update({ actividades: marcadas, completadas_pct })
         .eq('id', planId)
+        .eq('child_id', childId)
       if (error) throw error
       return NextResponse.json({ success: true })
+    }
+
+    // Tokens de familia: cada padre genera un número de planes al mes según el plan del centro
+    const esPadre = caller.role === 'padre'
+    if (esPadre) {
+      const t = await puedeGenerarPractica(caller.id, caller.centroId)
+      if (!t.ok) {
+        const en = locale === 'en'
+        return NextResponse.json({
+          code: 'tokens_padre',
+          usados: t.usados, max: t.max,
+          error: en
+            ? `You have used your ${t.max} practice plans for this month. New ones will be available next month.`
+            : `Ya usaste tus ${t.max} planes de práctica de este mes. Tendrás nuevos el próximo mes.`,
+        }, { status: 402 })
+      }
     }
 
     // Cargar datos del niño
     const { data: child } = await supabaseAdmin
       .from('children')
-      .select('name, age, diagnosis')
+      .select('name, age, diagnosis, centro_id')
       .eq('id', childId)
       .single()
 
@@ -156,11 +185,14 @@ Responde ÚNICAMENTE con JSON válido, sin markdown, sin explicaciones:
 
     const payload = {
       child_id: childId,
+      centro_id: (child as any)?.centro_id,
       semana: semanaNum,
       anio,
       actividades: plan.actividades,
       mensaje_motivacional: plan.mensaje_motivacional,
       completadas_pct: 0,
+      idioma: String(locale).toLowerCase().startsWith('en') ? 'en' : 'es',
+      traducciones: {},
     }
 
     // 1. ¿Ya existe un plan para esta (child_id, semana, anio)?
@@ -203,6 +235,8 @@ Responde ÚNICAMENTE con JSON válido, sin markdown, sin explicaciones:
       }, { status: 500 })
     }
 
+    if (esPadre) await consumirPractica(caller.id, caller.centroId)
+
     return NextResponse.json({
       success: true,
       plan: {
@@ -223,6 +257,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const childId = searchParams.get('child_id')
   if (!childId) return NextResponse.json({ error: 'child_id requerido' }, { status: 400 })
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!(await canAccessChild(caller, childId))) return notFound()
 
   const semanaNum = getWeekNumber(new Date())
   const anio = new Date().getFullYear()
@@ -250,6 +287,9 @@ export async function GET(req: NextRequest) {
     plan = planReciente
   }
 
+  const loc = (searchParams.get('locale') || 'es').toLowerCase().startsWith('en') ? 'en' : 'es'
+  if (plan && (plan.idioma || 'es') !== loc) plan = await traducirPlan(plan, loc)
+
   const { data: historial } = await supabaseAdmin
     .from('engagement_planes')
     .select('semana, anio, completadas_pct, created_at')
@@ -258,6 +298,38 @@ export async function GET(req: NextRequest) {
     .limit(8)
 
   return NextResponse.json({ plan, historial: historial || [] })
+}
+
+// Traduce el texto del plan (títulos, descripciones, materiales, días, mensaje) al otro idioma.
+// Se hace una sola vez con el modelo rápido y queda guardado en `traducciones`.
+async function traducirPlan(plan: any, loc: 'es' | 'en') {
+  const acts: any[] = Array.isArray(plan.actividades) ? plan.actividades : []
+  const mezclar = (t: any) => ({
+    ...plan,
+    mensaje_motivacional: t.mensaje_motivacional || plan.mensaje_motivacional,
+    actividades: acts.map((a, i) => ({ ...a, ...(t.actividades?.[i] || {}), area: a.area, dificultad: a.dificultad, duracion_minutos: a.duracion_minutos, completada: a.completada })),
+  })
+  const guardada = plan.traducciones?.[loc]
+  if (guardada?.actividades?.length === acts.length) return mezclar(guardada)
+  try {
+    const fuente = {
+      mensaje_motivacional: plan.mensaje_motivacional || '',
+      actividades: acts.map(a => ({ titulo: a.titulo, descripcion: a.descripcion, por_que_importa: a.por_que_importa, materiales_necesarios: a.materiales_necesarios || [], dias_recomendados: a.dias_recomendados || [] })),
+    }
+    const idioma = loc === 'en' ? 'English' : 'español'
+    const raw = await callGroqSimple(
+      `You are a professional translator for a children's therapy app. Translate every text value of the JSON into ${idioma}, keeping a warm tone for parents. Keep exactly the same keys, structure and number of items. Return ONLY the JSON.`,
+      JSON.stringify(fuente),
+      { model: GROQ_MODELS.FAST, temperature: 0.2, maxTokens: 2500 },
+    )
+    const t = JSON.parse(raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
+    if (!Array.isArray(t.actividades) || t.actividades.length !== acts.length) return plan
+    await supabaseAdmin.from('engagement_planes').update({ traducciones: { ...(plan.traducciones || {}), [loc]: t } }).eq('id', plan.id)
+    return mezclar(t)
+  } catch (e) {
+    console.warn('[engagement-padres] no se pudo traducir el plan:', (e as Error).message)
+    return plan
+  }
 }
 
 function getWeekNumber(d: Date): number {

@@ -9,6 +9,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
+import { esCentroFundador } from '@/lib/knowledge-base'
 import { generateEmbedding } from '@/lib/knowledge-base'
 import { ABLLSR_SECCIONES } from '@/app/api/knowledge/data/abllsr-protocolo'
 
@@ -27,7 +29,10 @@ const PRESETS: Record<string, PresetData> = Object.fromEntries(
 
 
 // ─── GET: listar presets disponibles (para la UI del Cerebro IA) ──────────
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const presets = ABLLSR_SECCIONES.map(s => ({
     preset: s.preset,
     letra: s.letra,
@@ -50,6 +55,10 @@ function formatChunk(item: any, fuente: string, area: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.admins)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const { preset, force } = await req.json()
     if (!preset || !PRESETS[preset]) {
@@ -66,6 +75,7 @@ export async function POST(req: NextRequest) {
       .from('knowledge_documents')
       .select('id, total_chunks')
       .eq('titulo', data.titulo)
+      .eq('centro_id', caller.centroId)
       .maybeSingle()
 
     if (existente && !force) {
@@ -78,8 +88,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (existente && force) {
-      await supabaseAdmin.from('knowledge_chunks').delete().eq('document_id', existente.id)
-      await supabaseAdmin.from('knowledge_documents').delete().eq('id', existente.id)
+      await supabaseAdmin.from('knowledge_chunks').delete().eq('document_id', existente.id).eq('centro_id', caller.centroId)
+      await supabaseAdmin.from('knowledge_documents').delete().eq('id', existente.id).eq('centro_id', caller.centroId)
     }
 
     // 2. Crear documento
@@ -91,6 +101,7 @@ export async function POST(req: NextRequest) {
         descripcion: `${data.descripcion}\n\n[Fuente: ${data.fuente} · Área: ${data.area} · ${data.items.length} ítems · preset:${preset}]`,
         procesado: false,
         total_chunks: 0,
+        centro_id: caller.centroId,
       })
       .select()
       .single()
@@ -118,6 +129,7 @@ export async function POST(req: NextRequest) {
           try {
             await supabaseAdmin.from('knowledge_chunks').insert({
               document_id: docId,
+              centro_id: caller.centroId,
               chunk_index: chunkIdx,
               contenido,
               embedding: embeddingValue,

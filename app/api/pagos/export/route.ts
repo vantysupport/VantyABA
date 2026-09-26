@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import ExcelJS from 'exceljs'
 import { getCentroMoneda } from '@/lib/centro-moneda'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
+import { cobradoDe, saldoDe } from '@/lib/pagos'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,16 +33,21 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status') || 'all'
   const search = searchParams.get('search') || ''
 
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.billing)) return forbidden()
+
   let query = supabase
     .from('payments')
     .select('*, children(name)')
+    .eq('centro_id', caller.centroId)
     .gte('created_at', desde)
     .order('created_at', { ascending: false })
     .limit(500)
 
   if (status !== 'all') query = query.eq('status', status)
 
-  const cur = await getCentroMoneda()
+  const cur = await getCentroMoneda(caller.centroId)
   const { data: pays, error } = await query
   if (error) return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : error.message }, { status: 500 })
 
@@ -50,8 +58,9 @@ export async function GET(req: NextRequest) {
   })
 
   // Build workbook
+  const centro = await getCentroBranding({ centroId: caller.centroId })
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'Neuropsicología y Terapias SANTI'
+  wb.creator = centro.name
   wb.created = new Date()
 
   const ws = wb.addWorksheet('Pagos y Facturación', {
@@ -71,7 +80,7 @@ export async function GET(req: NextRequest) {
   // ── Title row ──────────────────────────────────────────────────────────────
   ws.mergeCells('A1:F1')
   const titleCell = ws.getCell('A1')
-  titleCell.value = 'Pagos y Facturación — Neuropsicología y Terapias SANTI'
+  titleCell.value = `Pagos y Facturación — ${centro.name}`
   titleCell.font = { bold: true, size: 14, color: { argb: 'FF1e3a5f' } }
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
   titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFf0f6ff' } }
@@ -139,10 +148,9 @@ export async function GET(req: NextRequest) {
 
   // ── Summary rows ───────────────────────────────────────────────────────────
   ws.addRow([])
-  const paid = filtered.filter(p => p.status === 'paid')
-  const pending = filtered.filter(p => p.status === 'pending')
-  const totalPaid = paid.reduce((a, p) => a + Number(p.amount), 0)
-  const totalPending = pending.reduce((a, p) => a + Number(p.amount), 0)
+  // Los parciales suman su adelanto a lo pagado y su saldo a lo pendiente (lib/pagos)
+  const totalPaid = filtered.reduce((a, p) => a + cobradoDe(p), 0)
+  const totalPending = filtered.reduce((a, p) => a + saldoDe(p), 0)
 
   const summaryData = [
     ['Total Pagado', '', totalPaid, '', '', ''],

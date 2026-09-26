@@ -1,6 +1,7 @@
 // app/api/microsoft-calendar/callback/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { verifyOAuthState } from '@/lib/calendar-integration'
 
 const MS_CLIENT_ID     = process.env.MICROSOFT_CALENDAR_CLIENT_ID     || ''
 const MS_CLIENT_SECRET = process.env.MICROSOFT_CALENDAR_CLIENT_SECRET || ''
@@ -15,13 +16,15 @@ export async function GET(req: NextRequest) {
   const stateRaw  = searchParams.get('state') || ''
   const error     = searchParams.get('error')
 
-  // state puede ser "userId:role" (nuevo) o solo "userId" (legacy)
-  const [userId, stateRole] = stateRaw.includes(':')
-    ? stateRaw.split(':')
-    : [stateRaw, null]
+  // state is signed by /api/*-calendar?action=auth-url for the signed-in user; unsigned/expired states are rejected
+  // so nobody can attach their own calendar account to another user's profile.
+  const verified = verifyOAuthState(stateRaw)
+  const userId = verified?.userId ?? null
+  const stateRole = verified?.role ?? null
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const errorDest = stateRole === 'padre' ? '/padre' : '/admin'
+  const panelDe = (r: string | null | undefined) => r === 'padre' ? '/padre' : r === 'especialista' ? '/especialista' : r === 'secretaria' ? '/secretaria' : '/admin'
+  const errorDest = panelDe(stateRole)
 
   if (error || !code || !userId) {
     return NextResponse.redirect(`${appUrl}${errorDest}?mscal=error`)
@@ -73,7 +76,7 @@ export async function GET(req: NextRequest) {
       .single()
 
     const role = stateRole || updatedProfile?.role || 'admin'
-    const destination = role === 'padre' ? '/padre' : '/admin'
+    const destination = panelDe(role)
     return NextResponse.redirect(
       `${appUrl}${destination}?mscal=connected&email=${encodeURIComponent(msEmail || '')}`
     )

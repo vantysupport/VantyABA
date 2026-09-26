@@ -1,3 +1,4 @@
+import { PLATFORM_NAME } from '@/lib/branding'
 // lib/whatsapp.ts
 // Sistema de notificaciones WhatsApp — Baileys (WhatsApp Web)
 // El microservicio corre en Railway/Render, escaneas QR una vez y queda conectado.
@@ -12,18 +13,19 @@ export type WspTipo =
 export type WspLocale = 'es'
 
 // ── Templates de mensajes ─────────────────────────────────────────────────────
-export function wspTemplate(tipo: WspTipo, vars: Record<string, string> = {}): string {
+/** `centroNombre`: name of the center the message is about (getCentroBranding().name). */
+export function wspTemplate(tipo: WspTipo, vars: Record<string, string>, centroNombre: string): string {
   const v = vars
-  const centro = process.env.CENTRO_NOMBRE || 'Neuropsicología y Terapias SANTI'
+  const centro = centroNombre
   const T: Record<WspTipo, string> = {
-    cita_confirmada:   `✅ *Cita confirmada — ${centro}*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}\n📍 ${v.tipo || 'Presencial'}${v.link ? `\n🔗 Videollamada: ${v.link}` : ''}\n\nVe los detalles en tu portal SANTI 💜`,
-    cita_cancelada:    `❌ *Cita cancelada — ${centro}*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}\n\nLamentamos el inconveniente. Contactá a recepción para reagendar.\n_SANTI_ 💜`,
-    sesion_iniciada:   `🟢 *¡Tu sesión está comenzando! — ${centro}*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}${v.link ? `\n\n🔗 *Únete ahora:*\n${v.link}` : ''}\n\n¡El terapeuta te está esperando! 💜\n_SANTI_`,
-    formulario_nuevo:  `📋 *Nuevo formulario — ${centro}*\nTipo: ${v.tipo || 'Formulario'}\nPaciente: ${v.paciente}\n\nRevisalo en tu portal 👆\n_SANTI_ 💜`,
-    informe_nuevo:     `📊 *Nuevo informe disponible — ${centro}*\nPaciente: ${v.paciente}${v.periodo ? `\nPeríodo: ${v.periodo}` : ''}\n\nYa podés verlo en SANTI 👆\n_${centro}_ 💜`,
-    alerta_clinica:    `⚠️ *Alerta — ${centro}*\nPaciente: ${v.paciente}\n${v.descripcion || ''}\n_SANTI_ 💜`,
-    mensaje_terapeuta: `💬 *Mensaje de tu terapeuta — ${centro}*\n👤 ${v.terapeuta || 'Tu terapeuta'}\n\n"${v.preview || ''}"\n\nRespondé en SANTI 👆\n_${centro}_ 💜`,
-    recurso_nuevo:     `📚 *Nuevo recurso — ${centro}*\n${v.titulo || ''}${v.descripcion ? `\n${v.descripcion}` : ''}\n\nEncontralo en la Biblioteca 📖\n_SANTI_ 💜`,
+    cita_confirmada:   `✅ *Cita confirmada — ${centro}*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}\n📍 ${v.tipo || 'Presencial'}${v.link ? `\n🔗 Videollamada: ${v.link}` : ''}\n\nVe los detalles en tu portal ${PLATFORM_NAME} 💜`,
+    cita_cancelada:    `❌ *Cita cancelada — ${centro}*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}\n\nLamentamos el inconveniente. Contactá a recepción para reagendar.\n_${centro}_ 💜`,
+    sesion_iniciada:   `🟢 *¡Tu sesión está comenzando! — ${centro}*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}${v.link ? `\n\n🔗 *Únete ahora:*\n${v.link}` : ''}\n\n¡El terapeuta te está esperando! 💜\n_${centro}_`,
+    formulario_nuevo:  `📋 *Nuevo formulario — ${centro}*\nTipo: ${v.tipo || 'Formulario'}\nPaciente: ${v.paciente}\n\nRevisalo en tu portal 👆\n_${centro}_ 💜`,
+    informe_nuevo:     `📊 *Nuevo informe disponible — ${centro}*\nPaciente: ${v.paciente}${v.periodo ? `\nPeríodo: ${v.periodo}` : ''}\n\nYa podés verlo en ${PLATFORM_NAME} 👆\n_${centro}_ 💜`,
+    alerta_clinica:    `⚠️ *Alerta — ${centro}*\nPaciente: ${v.paciente}\n${v.descripcion || ''}\n_${centro}_ 💜`,
+    mensaje_terapeuta: `💬 *Mensaje de tu terapeuta — ${centro}*\n👤 ${v.terapeuta || 'Tu terapeuta'}\n\n"${v.preview || ''}"\n\nRespondé en ${PLATFORM_NAME} 👆\n_${centro}_ 💜`,
+    recurso_nuevo:     `📚 *Nuevo recurso — ${centro}*\n${v.titulo || ''}${v.descripcion ? `\n${v.descripcion}` : ''}\n\nEncontralo en la Biblioteca 📖\n_${centro}_ 💜`,
     custom:            v.mensaje || '',
   }
   return T[tipo] ?? v.mensaje ?? ''
@@ -57,10 +59,11 @@ export async function sendWhatsApp(to: string, message: string): Promise<boolean
 export async function notifyParent(
   parentPhone: string | null | undefined,
   tipo: WspTipo,
-  vars: Record<string, string> = {}
+  vars: Record<string, string>,
+  centroNombre: string
 ): Promise<void> {
   if (!parentPhone) return
-  const message = wspTemplate(tipo, vars)
+  const message = wspTemplate(tipo, vars, centroNombre)
   sendWhatsApp(parentPhone, message).catch(() => {})
 }
 
@@ -68,9 +71,10 @@ export async function notifyParent(
 export async function broadcastWhatsApp(
   phones: string[],
   tipo: WspTipo,
-  vars: Record<string, string> = {}
+  vars: Record<string, string>,
+  centroNombre: string
 ): Promise<{ sent: number; failed: number }> {
-  const message = wspTemplate(tipo, vars)
+  const message = wspTemplate(tipo, vars, centroNombre)
   const results = await Promise.allSettled(
     phones.map(phone => sendWhatsApp(phone, message))
   )

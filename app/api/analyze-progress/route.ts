@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 
 // i18n: responder en el idioma del usuario
@@ -17,6 +18,9 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: Request) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     // 1. Validación de entrada
     const body = await req.json()
@@ -26,6 +30,7 @@ export async function POST(req: Request) {
     if (!childId) {
       return NextResponse.json({ error: "Falta el ID del paciente (childId)" }, { status: 400 });
     }
+    if (!(await canAccessChild(caller, childId))) return notFound()
 
 
     // 2. Obtener sesiones con FECHA
@@ -34,7 +39,7 @@ export async function POST(req: Request) {
       .select('fecha_sesion, datos') 
       .eq('child_id', childId)
       .order('fecha_sesion', { ascending: false })
-      .limit(10);
+      .limit(3); // solo las 3 últimas: menos tokens de IA
 
     if (dbError) throw new Error(dbError.message);
 
@@ -61,7 +66,7 @@ export async function POST(req: Request) {
 
       const _query = 'progreso ABA análisis avance habilidades'
 
-      const _kb = await buildAIContext(undefined, undefined, undefined, _query)
+      const _kb = await buildAIContext(undefined, undefined, undefined, _query, caller.centroId)
 
       _cerebroCtx = _kb.knowledgeContext
 

@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -20,12 +21,16 @@ const TABLAS_PERMITIDAS_DELETE = new Set([
 ])
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const childId = searchParams.get('child_id')
 
   if (!childId) {
     return NextResponse.json({ error: 'child_id requerido' }, { status: 400 })
   }
+  if (!(await canAccessChild(caller, childId))) return notFound()
 
   try {
     // Nombre del niño para el reporte
@@ -104,6 +109,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.admins)) return forbidden()
   try {
     const { id, table } = await req.json()
 
@@ -115,10 +123,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Tabla no permitida. Solo: ${[...TABLAS_PERMITIDAS_DELETE].join(', ')}` }, { status: 400 })
     }
 
+    if (!(await rowInCentro(table, id, caller.centroId))) return notFound()
+
     const { error } = await supabaseAdmin
       .from(table)
       .delete()
       .eq('id', id)
+      .eq('centro_id', caller.centroId)
 
     if (error) throw error
 

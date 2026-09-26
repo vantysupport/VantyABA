@@ -1,4 +1,5 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 import { useI18n } from '@/lib/i18n-context'
 // components/portal-padres/PortalPadres.tsx
 import { useState } from 'react'
@@ -13,6 +14,7 @@ interface PortalPadresProps {
 }
 
 export default function PortalPadres({ childId, parentUserId, childName }: PortalPadresProps) {
+  const { name: centroNombre } = useCentroBranding()
   const { t, locale } = useI18n()
   const [tab, setTab] = useState<'inicio' | 'chat' | 'tareas' | 'progreso' | 'citas'>('inicio')
 
@@ -29,7 +31,7 @@ export default function PortalPadres({ childId, parentUserId, childName }: Porta
 
       {/* Header del portal */}
       <div className="bg-blue-700 text-white px-4 pt-8 pb-16">
-        <p className="text-blue-200 text-sm">Centro Neuropsicología y Terapias SANTI</p>
+        <p className="text-blue-200 text-sm">{centroNombre}</p>
         <h1 className="text-2xl font-bold mt-1">Hola 👋</h1>
         <p className="text-blue-100 mt-1">Seguimiento de <span className="font-semibold">{childName}</span></p>
       </div>

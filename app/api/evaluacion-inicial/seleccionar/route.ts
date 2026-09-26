@@ -6,12 +6,15 @@
 // Estado pasa a 'terapia_seleccionada' (esperando respuesta del especialista).
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-function generarDocumentoInternoMD(eval_: any, child: any, terapias: any[]) {
+function generarDocumentoInternoMD(eval_: any, child: any, terapias: any[], centroNombre: string) {
+  const centro = { name: centroNombre }
   const fecha = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
   const areas = eval_.recomendacion_areas || {}
 
@@ -85,11 +88,13 @@ ${terapiasMd || '_(ninguna)_'}
 
 ---
 
-*Documento generado automáticamente — SANTI · ${fecha}*
+*Documento generado automáticamente — ${centro.name} · ${fecha}*
 `
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { evaluacion_id, terapia_ids, mensaje_al_especialista } = await req.json()
 
@@ -105,10 +110,12 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     if (e1) throw e1
     if (!eval_) return NextResponse.json({ error: 'Evaluación no encontrada' }, { status: 404 })
+    if (!(await canAccessChild(caller, eval_.child_id))) return notFound()
 
     const { data: terapias } = await supabaseAdmin
       .from('terapias_catalogo')
       .select('*')
+      .eq('centro_id', eval_.centro_id || '')
       .in('id', terapia_ids)
     if (!terapias || terapias.length === 0) {
       return NextResponse.json({ error: 'Terapias no encontradas' }, { status: 404 })
@@ -122,7 +129,7 @@ export async function POST(req: NextRequest) {
     if (!child) return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
 
     // 2. Generar documento INTERNO (solo para el especialista)
-    const documentoMd = generarDocumentoInternoMD(eval_, child, terapias)
+    const documentoMd = generarDocumentoInternoMD(eval_, child, terapias, (await getCentroBranding({ childId: eval_.child_id })).name)
 
     // 3. Actualizar evaluación
     const ahora = new Date().toISOString()
@@ -147,6 +154,7 @@ export async function POST(req: NextRequest) {
         .from('profiles')
         .select('id')
         .in('role', ['admin', 'jefe', 'especialista'])
+        .eq('centro_id', eval_.centro_id || '')
 
       const nombresTerapias = terapias.map(t => t.nombre).join(', ')
       const notis = (equipo || []).map((e: any) => ({
@@ -157,6 +165,7 @@ export async function POST(req: NextRequest) {
         }`,
         type: 'evaluacion_inicial',
         is_read: false,
+        centro_id: eval_.centro_id,
         created_at: ahora,
       }))
       if (notis.length > 0) await supabaseAdmin.from('notifications').insert(notis)

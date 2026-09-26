@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { sendWspToParent, buildParentMessage } from '@/lib/notifications'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { internalApiHeaders } from '@/lib/calendar-integration'
 
 export async function GET(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'pending_approval'
@@ -11,10 +17,11 @@ export async function GET(request: NextRequest) {
       .from('parent_message_approvals')
       .select(`
         *,
-        children!parent_message_approvals_child_id_fkey(name, birth_date),
-        profiles!parent_message_approvals_parent_id_fkey(full_name, email)
+        children!fk_pma_child(name, birth_date),
+        profiles!fk_pma_parent(full_name, email)
       `)
       .eq('status', status)
+      .eq('centro_id', caller.centroId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -25,9 +32,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await request.json()
     const { child_id, parent_id, source, source_title, ai_message, ai_analysis, session_data } = body
+    if (!(await canAccessChild(caller, child_id))) return notFound()
+    if (parent_id && !(await rowInCentro('profiles', parent_id, caller.centroId))) return notFound()
 
     const { data, error } = await supabaseAdmin
       .from('parent_message_approvals')
@@ -37,6 +49,7 @@ export async function POST(request: NextRequest) {
         edited_message: ai_message,
         ai_analysis, session_data,
         status: 'pending_approval',
+        centro_id: caller.centroId,
         created_at: new Date().toISOString(),
       }])
       .select()
@@ -49,9 +62,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await request.json()
     const { id, edited_message, action } = body
+    if (!(await rowInCentro('parent_message_approvals', id, caller.centroId))) return notFound()
 
     if (action === 'approve') {
       const { data: record, error: fetchError } = await supabaseAdmin
@@ -72,6 +89,7 @@ export async function PATCH(request: NextRequest) {
         title: `📋 Mensaje sobre ${childName}`,
         message: messageToSend,
         type: 'parent_message',
+        centro_id: caller.centroId,
         metadata: {
           source: record.source,
           source_title: record.source_title,
@@ -95,7 +113,7 @@ export async function PATCH(request: NextRequest) {
         const childName = (record as any).children?.name || 'tu hijo/a'
         await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/push`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: internalApiHeaders(),
           body: JSON.stringify({
             userId: record.parent_id,
             title: `📋 Mensaje sobre ${childName}`,
@@ -118,7 +136,7 @@ export async function PATCH(request: NextRequest) {
           const msg = buildParentMessage('mensaje_terapeuta', {
             terapeuta: terapeutaNombre,
             preview,
-          })
+          }, await getCentroBranding({ childId: record.child_id }))
           sendWspToParent((pProf as any).phone, msg).catch(() => {})
         }
       } catch { /* silencioso */ }
@@ -147,9 +165,13 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { id } = await request.json()
-    const { error } = await supabaseAdmin.from('parent_message_approvals').delete().eq('id', id)
+    if (!(await rowInCentro('parent_message_approvals', id, caller.centroId))) return notFound()
+    const { error } = await supabaseAdmin.from('parent_message_approvals').delete().eq('id', id).eq('centro_id', caller.centroId)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (error: any) {

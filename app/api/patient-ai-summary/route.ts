@@ -13,8 +13,9 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { buildAIContext } from '@/lib/ai-context-builder'
 import { callGroqSimple, GROQ_MODELS, GroqExhaustedError } from '@/lib/groq-client'
 import { getLangInstruction } from '@/lib/lang'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
-const SYSTEM = 'Eres una neuropsicóloga clínica del Centro SANTI, experta en ABA, TEA, TDAH y neurodesarrollo infantil. Escribes resúmenes clínicos claros, precisos y bien redactados para el equipo terapéutico.'
+const SYSTEM = 'Eres una neuropsicóloga clínica, experta en ABA, TEA, TDAH y neurodesarrollo infantil. Escribes resúmenes clínicos claros, precisos y bien redactados para el equipo terapéutico.'
 
 // Prosa concisa: ~250-400 palabras, secciones cortas en negrita, SIN tablas ni <br>.
 const FORMATO = `
@@ -35,8 +36,12 @@ async function guardar(childId: string, summary: string, source: string, lang: s
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const childId = new URL(req.url).searchParams.get('childId')
   if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+  if (!(await canAccessChild(caller, childId))) return notFound()
   const { data } = await supabaseAdmin
     .from('children').select('ai_summary, ai_summary_updated_at, ai_summary_source, ai_summary_lang').eq('id', childId).maybeSingle()
   return NextResponse.json({
@@ -48,11 +53,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { childId, action = 'generate', newContent = '', summary: manualSummary = '' } = body
     const userLocale = body.locale || req.headers.get('x-locale') || 'es'
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
 
     // ── Edición manual: guardar verbatim ──────────────────────────────────────
     if (action === 'save') {
@@ -104,7 +113,7 @@ ${FORMATO}` + getLangInstruction(userLocale)
     // paciente (que suele venir con lo más reciente primero) y un poco del centro,
     // y dejamos fuera el RAG pesado. El resultado se mantiene actualizado luego con
     // las actualizaciones incrementales.
-    const ctx = await buildAIContext(childId, undefined, undefined, '')
+    const ctx = await buildAIContext(childId, undefined, undefined, '', caller.centroId)
     const HIST_MAX = 13000   // ~3200 tokens
     const centro = (ctx.centroContext || '').slice(0, 1200)
     const hist = (ctx.historialTexto || '').slice(0, HIST_MAX)

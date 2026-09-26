@@ -1,7 +1,11 @@
 // app/api/knowledge/buscar-libro/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const query = searchParams.get('q')?.trim()
   if (!query) return NextResponse.json({ error: 'query requerido' }, { status: 400 })

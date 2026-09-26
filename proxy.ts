@@ -1,4 +1,4 @@
-// 🔒 Proxy / Middleware global de seguridad SANTI
+// 🔒 Proxy / Middleware global de seguridad Vanty
 // ⚠️  Next.js 16+ con Turbopack: este archivo se llama proxy.ts (antes middleware.ts)
 // ════════════════════════════════════════════════════════════════════════════
 // Se ejecuta en EDGE antes de cualquier ruta y aplica 4 capas:
@@ -13,10 +13,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { rateLimit, RATE_LIMITS, getClientIP } from './lib/rate-limit'
+import { motivoBloqueo } from './lib/estado-centro'
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 const I18N_LOCALES = ['en', 'es'] as const
 const I18N_DEFAULT = 'es'
+type CentroStanding = { status: string; trial_ends_at: string | null; paid_until: string | null } | null
 function detectLocale(req: NextRequest): string {
   const cookie = req.cookies.get('vanty_locale')?.value
   if (cookie === 'en' || cookie === 'es') return cookie
@@ -34,6 +36,8 @@ const PUBLIC_PATHS = [
   '/verificar',                  // verificación pública de documentos por QR
   '/auth/callback',
   '/landing',
+  '/precios',
+  '/crear-centro',
   '/mfa-required',               // página de enrollment 2FA (requiere sesión pero salta los role checks)
 ]
 
@@ -42,13 +46,19 @@ const PUBLIC_API_PATHS = [
   '/api/auth',                   // callbacks de auth
   '/api/health',                 // health check
   '/api/verificar-documento',    // verificación pública por QR
+  '/api/control',                // estado público + log_error; las acciones exigen programador con 2FA en la ruta
+  '/api/centro/moneda',          // GET devuelve PEN sin sesión; POST exige admin del centro en la ruta
+  '/api/centro/branding',        // GET: sólo el centro del propio usuario o el fallback de la plataforma
+  '/api/invitaciones/aceptar',   // la cuenta aún no tiene centro: la ruta valida el token de sesión y la invitación
+  '/api/cobros/lemon/webhook',   // la pasarela no tiene sesión: la ruta valida la firma HMAC
+  '/api/cron/avisos',            // tarea programada sin sesión: la ruta exige CRON_SECRET
 ]
 
 // Rutas por rol → si user.role === X, puede acceder a estas raíces
 const ROLE_ROUTES: Record<string, string[]> = {
   jefe:          ['/admin'],
   admin:         ['/admin'],
-  especialista:  ['/especialista', '/admin'], // los especialistas pueden ver /admin (mismo panel filtrado)
+  especialista:  ['/especialista'], // tiene su propio panel; /admin lo redirige ahí
   terapeuta:     ['/admin'],
   secretaria:    ['/secretaria'],
   padre:         ['/padre'],
@@ -57,6 +67,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true
   if (pathname.startsWith('/verificar/')) return true   // verificación con código
+  if (pathname.startsWith('/invitar/')) return true
   if (pathname.startsWith('/auth/')) return true
   // Archivos estáticos / assets
   if (pathname.startsWith('/_next/')) return true
@@ -71,6 +82,7 @@ function isPublicApiPath(pathname: string): boolean {
 // Mapeo de paths críticos → su preset de rate limit
 function pickRateLimit(pathname: string): typeof RATE_LIMITS[keyof typeof RATE_LIMITS] | null {
   if (pathname === '/api/auth/signin' || pathname.startsWith('/api/auth/v1/token')) return RATE_LIMITS.LOGIN
+  if (pathname === '/api/invitaciones/aceptar') return RATE_LIMITS.LOGIN
   if (pathname.startsWith('/api/parent-chat')) return RATE_LIMITS.AI_CHAT
   if (pathname.startsWith('/api/admin-chat')) return RATE_LIMITS.AI_CHAT
   if (pathname.startsWith('/api/vanty-agent')) return RATE_LIMITS.AI_CHAT
@@ -78,6 +90,7 @@ function pickRateLimit(pathname: string): typeof RATE_LIMITS[keyof typeof RATE_L
   if (pathname.startsWith('/api/reporte-')) return RATE_LIMITS.REPORT_GENERATION
   if (pathname.startsWith('/api/knowledge/ocr')) return RATE_LIMITS.OCR
   if (pathname.startsWith('/verificar/')) return RATE_LIMITS.PUBLIC_VERIFY
+  if (pathname.startsWith('/invitar/')) return RATE_LIMITS.PUBLIC_VERIFY
   if (pathname.startsWith('/api/')) return RATE_LIMITS.API_GENERIC
   return null
 }
@@ -169,6 +182,13 @@ export async function proxy(req: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // An account with a verified second factor must pass it before using the app (optional for centers, mandatory for the console).
+  let mfaPending = false
+  if (user) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    mfaPending = aal?.nextLevel === 'aal2' && aal.currentLevel !== 'aal2'
+  }
+
   // 2. Endpoints API
   if (pathname.startsWith('/api/')) {
     if (isPublicApiPath(pathname)) return res
@@ -178,7 +198,18 @@ export async function proxy(req: NextRequest) {
         { status: 401 },
       )
     }
-    // Usuario autenticado → dejar pasar (el endpoint hace validaciones de role internamente)
+    if (mfaPending && !pathname.startsWith('/api/session/')) {
+      return NextResponse.json({ error: 'mfa_required' }, { status: 401 })
+    }
+    // Admission control for tenant APIs; the endpoint still does its own role checks.
+    // /api/suscripcion and /api/cobros stay open: an expired center needs them to pick a plan and pay.
+    if (!pathname.startsWith('/api/session/') && !pathname.startsWith('/api/suscripcion') && !pathname.startsWith('/api/cobros/')) {
+      const { data: p } = await supabase.from('profiles').select('role, centros(status, trial_ends_at, paid_until)').eq('id', user.id).maybeSingle()
+      const c = (p?.centros ?? null) as unknown as CentroStanding
+      if (p?.role !== 'programador' && motivoBloqueo(c)) {
+        return NextResponse.json({ error: 'centro_inactive' }, { status: 403 })
+      }
+    }
     return res
   }
 
@@ -195,11 +226,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
+  if (mfaPending) return NextResponse.redirect(pageUrl('/mfa-required'))
+
   // 4. Validar role para esta ruta
   // Leemos el perfil completo (resiliente a columnas mfa_* que pueden no existir todavía)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select('*, centros(status, trial_ends_at, paid_until)')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -219,10 +252,19 @@ export async function proxy(req: NextRequest) {
     // El usuario está logueado pero quiere entrar a un panel que no le corresponde.
     // Redirigir a SU panel propio (con prefijo de idioma) en vez de tirar 403.
     const homeForRole =
-      role === 'jefe' || role === 'admin' || role === 'terapeuta' || role === 'especialista' ? '/admin'
+      role === 'programador' ? '/control'
+      : role === 'especialista' ? '/especialista'
+      : role === 'jefe' || role === 'admin' || role === 'terapeuta' ? '/admin'
       : role === 'secretaria' ? '/secretaria'
       : '/padre'
     return NextResponse.redirect(pageUrl(homeForRole))
+  }
+
+  // 5. Admission control: the tenant must exist and be in good standing.
+  const centro = ((profile as { centros?: unknown } | null)?.centros ?? null) as CentroStanding
+  const reason = motivoBloqueo(centro)
+  if (reason) {
+    return NextResponse.redirect(pageUrl(`/suscripcion?motivo=${reason}`))
   }
 
   return res
@@ -231,6 +273,6 @@ export async function proxy(req: NextRequest) {
 // Matcher: a qué rutas se aplica el middleware
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|mp3|wav|ogg|m4a|glb|gltf)$).*)',
   ],
 }

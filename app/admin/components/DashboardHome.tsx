@@ -9,66 +9,165 @@ import {
   Activity, Brain, Calendar, ChevronRight, Clock,
   FileText, Users, AlertTriangle, Sparkles,
   Bell, ArrowUpRight, MessageCircle, TrendingUp,
-  CheckCircle2, AlertCircle, Zap, BarChart3,
-  ClipboardList, Target, X, Trophy, RefreshCw
+  CheckCircle2, AlertCircle, Zap,
+  ClipboardList, X, Trophy, RefreshCw, ArrowRight, CalendarCheck
 } from 'lucide-react'
+import { AnimatePresence, animate, motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
 
-// ─── Bar chart ────────────────────────────────────────────────────────────────
-function BarChart({ values, labels, color }: { values: number[]; labels: string[]; color: string }) {
-  const max = Math.max(...values, 1)
+// ─── Concepts: one icon and one tone each, used everywhere on the page ─────────
+const CONCEPT = {
+  pacientes: { icon: Users, tone: 'bg-v-accent-soft text-v-accent' },
+  sesiones:  { icon: CalendarCheck, tone: 'bg-v-success/15 text-v-success' },
+  sinSesion: { icon: AlertTriangle, tone: 'bg-v-warning/15 text-v-warning' },
+  programas: { icon: ClipboardList, tone: 'bg-v-accent-soft text-v-accent' },
+  alertas:   { icon: Bell, tone: 'bg-v-warning/15 text-v-warning' },
+  citas:     { icon: Calendar, tone: 'bg-v-accent-soft text-v-accent' },
+  logro:     { icon: Trophy, tone: 'bg-v-success/15 text-v-success' },
+  urgente:   { icon: AlertCircle, tone: 'bg-v-danger/10 text-v-danger' },
+} as const
+
+// ─── Animated number ──────────────────────────────────────────────────────────
+function CountUp({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0)
+  useEffect(() => {
+    const controls = animate(0, value, { duration: 1.1, ease: [0.22, 1, 0.36, 1], onUpdate: v => setDisplay(Math.round(v)) })
+    return () => controls.stop()
+  }, [value])
+  return <>{display}</>
+}
+
+// ─── Card shell ───────────────────────────────────────────────────────────────
+const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
+
+function Section({ index = 0, className = '', children }: { index?: number; className?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-end gap-1 h-10">
-      {values.map((v, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1">
-          <div className="w-full rounded-sm transition-all"
-            style={{ height: `${Math.max(2, (v / max) * 36)}px`, background: i === values.length - 1 ? color : `${color}55` }} />
-          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{labels[i]}</span>
-        </div>
-      ))}
+    <motion.section
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.06 * index, type: 'spring', stiffness: 180, damping: 24 }}
+      className={`${cardClass} ${className}`}
+    >
+      {children}
+    </motion.section>
+  )
+}
+
+function SectionHeader({ concept, title, count, children }: any) {
+  const { icon: Icon, tone } = CONCEPT[concept as keyof typeof CONCEPT]
+  return (
+    <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className={`grid size-8 shrink-0 place-items-center rounded-[30%] ${tone}`}><Icon size={15} /></span>
+        <p className="truncate text-[15px] font-semibold tracking-tight text-v-text">{title}</p>
+        {count > 0 && <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tone}`}>{count}</span>}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">{children}</div>
     </div>
   )
 }
 
-// ─── Donut ────────────────────────────────────────────────────────────────────
-function Donut({ value, total, color, size = 56 }: any) {
+function EmptyState({ icon: Icon, text, action, onAction, tone = 'text-v-subtle' }: any) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+      <motion.span
+        animate={{ y: [0, -4, 0] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        className="grid size-12 place-items-center rounded-full bg-v-fill"
+      >
+        <Icon size={20} className={tone} />
+      </motion.span>
+      <p className="mt-3 text-sm text-v-muted">{text}</p>
+      {action && (
+        <button onClick={onAction} className="mt-3 inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-3.5 py-1.5 text-xs font-semibold text-v-accent transition-transform hover:scale-105 active:scale-95">
+          {action} <ArrowRight size={12} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Bar chart ────────────────────────────────────────────────────────────────
+function BarChart({ values, labels }: { values: number[]; labels: string[] }) {
+  const max = Math.max(...values, 1)
+  return (
+    <div className="flex h-36 items-end gap-2 sm:gap-3">
+      {values.map((v, i) => {
+        const isToday = i === values.length - 1
+        return (
+          <div key={i} className="group flex h-full flex-1 flex-col items-center justify-end gap-2">
+            <span className={`text-[11px] font-semibold tabular-nums ${v > 0 ? 'text-v-muted' : 'text-transparent'} group-hover:text-v-text`}>{v}</span>
+            <motion.div
+              className={`w-full max-w-10 rounded-t-lg rounded-b-sm ${isToday ? 'bg-v-success' : 'bg-v-success/20 group-hover:bg-v-success/40'}`}
+              initial={{ height: 4 }}
+              animate={{ height: Math.max(4, (v / max) * 100) }}
+              transition={{ delay: 0.2 + i * 0.05, type: 'spring', stiffness: 140, damping: 18 }}
+            />
+            <span className={`text-[11px] font-medium ${isToday ? 'font-semibold text-v-success' : 'text-v-subtle'}`}>{labels[i]}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Ring ─────────────────────────────────────────────────────────────────────
+function Ring({ value, total, size = 64 }: { value: number; total: number; size?: number }) {
   const pct = total > 0 ? value / total : 0
-  const r = size / 2 - 5
+  const r = size / 2 - 6
   const circ = 2 * Math.PI * r
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--muted-bg)" strokeWidth="5" />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5"
-        strokeDasharray={`${pct * circ} ${circ}`} strokeLinecap="round"
-        transform={`rotate(-90 ${size/2} ${size/2})`} style={{ transition: 'stroke-dasharray 0.8s ease' }} />
-      <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="middle"
-        fill="var(--text-primary)" fontSize={size * 0.18} fontWeight="bold">
-        {Math.round(pct * 100)}%
-      </text>
-    </svg>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <defs>
+          <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--v-brand-from)" />
+            <stop offset="100%" stopColor="var(--v-brand-to)" />
+          </linearGradient>
+        </defs>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--v-fill)" strokeWidth="6" />
+        <motion.circle
+          cx={size / 2} cy={size / 2} r={r} fill="none" stroke="url(#ring-grad)" strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={circ}
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: circ * (1 - pct) }}
+          transition={{ delay: 0.3, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center text-xs font-bold tabular-nums text-v-text">{Math.round(pct * 100)}%</span>
+    </div>
   )
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
-function KPI({ label, value, sub, icon: Icon, bar, urgent, onClick }: any) {
+function KPI({ label, value, sub, concept, urgent, onClick, index = 0 }: any) {
+  const { icon: Icon, tone } = CONCEPT[concept as keyof typeof CONCEPT]
   return (
-    <div onClick={onClick}
-      className={`group rounded-2xl p-5 relative overflow-hidden transition-all duration-300 ${onClick ? 'cursor-pointer hover:-translate-y-1' : ''}`}
-      style={{
-        background: `linear-gradient(157deg, ${bar}0d 0%, var(--card) 44%)`,
-        border: urgent ? `1px solid ${bar}45` : '1px solid var(--card-border)',
-        boxShadow: 'var(--shadow-sm)',
-      }}>
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-[11px] font-semibold tracking-wide" style={{ color: 'var(--text-muted)' }}>{label}</p>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
-          style={{ background: `${bar}1a`, color: bar }}>
-          <Icon size={17} strokeWidth={2} />
-        </div>
+    <motion.button
+      onClick={onClick}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.08 + index * 0.06, type: 'spring', stiffness: 200, damping: 22 }}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.98 }}
+      className={`group relative overflow-hidden p-5 text-left ${cardClass} ${urgent ? 'ring-1 ring-v-warning/40' : ''}`}
+    >
+      <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-36 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+        style={{ background: 'var(--v-glow-1)' }} />
+      <div className="relative flex items-start justify-between">
+        <p className="text-xs font-medium text-v-muted">{label}</p>
+        <span className={`grid size-10 place-items-center rounded-[30%] transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${tone}`}>
+          <Icon size={18} />
+        </span>
       </div>
-      <p className="font-extrabold leading-none mb-1.5 tabular-nums tracking-tight" style={{ fontSize: '2.7rem', color: urgent ? bar : 'var(--text-primary)' }}>{value}</p>
-      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>
-    </div>
+      <p className={`relative mt-3 text-[2.6rem] font-bold leading-none tracking-tight tabular-nums ${urgent ? 'text-v-warning' : 'text-v-text'}`}>
+        <CountUp value={value} />
+      </p>
+      <div className="relative mt-2 flex items-center justify-between">
+        <p className="text-xs text-v-subtle">{sub}</p>
+        <ArrowUpRight size={14} className="text-v-subtle opacity-0 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-v-accent group-hover:opacity-100" />
+      </div>
+    </motion.button>
   )
 }
 
@@ -90,10 +189,8 @@ function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: a
     return 2
   })()
 
-  // Color de la barra: verde para logros, rojo/ámbar/azul para alertas negativas
-  const bar = esLogro
-    ? '#10b981'
-    : prioridadNum === 1 ? '#ef4444' : prioridadNum === 2 ? '#f59e0b' : '#0284c7'
+  const kind = esLogro ? 'logro' : tipoStr.startsWith('sin_sesion') ? 'sinSesion' : prioridadNum === 1 ? 'urgente' : 'alertas'
+  const { icon: Icon, tone } = CONCEPT[kind]
 
   // Etiqueta legible del tipo
   const tipoLabel = (() => {
@@ -107,48 +204,40 @@ function AlertaRow({ tipo, paciente, mensaje, prioridad, onClick, onDismiss }: a
   })()
 
   return (
-    <div
-      className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl transition-all"
-      style={{
-        background: esLogro ? 'rgba(16,185,129,0.06)' : 'var(--muted-bg)',
-        border: '1px solid var(--card-border)',
-      }}>
-      {esLogro ? (
-        <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
-          style={{ background: 'rgba(16,185,129,0.15)' }}>
-          <Trophy size={14} style={{ color: '#10b981' }} />
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 40 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+      className="group flex items-center gap-3 rounded-v-sm px-3 py-3 transition-colors hover:bg-v-fill"
+    >
+      <span className={`grid size-9 shrink-0 place-items-center rounded-full ${tone}`}><Icon size={15} /></span>
+      <button onClick={onClick} className="min-w-0 flex-1 text-left">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-semibold text-v-text">{paciente || mensajeL}</p>
+          {tipo && <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${tone}`}>{tipoLabel}</span>}
         </div>
-      ) : (
-        <div className="flex-shrink-0 w-2 h-2 rounded-full" style={{ background: bar }} />
-      )}
-      <button onClick={onClick} className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity">
-        {tipo && (
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[9px] font-semibold"
-              style={{ color: esLogro ? '#10b981' : 'var(--text-muted)' }}>
-              {tipoLabel}
-            </span>
-          </div>
-        )}
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{paciente || mensajeL}</p>
-        {paciente && mensajeL && <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{mensajeL}</p>}
+        {paciente && mensajeL && <p className="mt-0.5 line-clamp-2 text-xs text-v-muted">{mensajeL}</p>}
       </button>
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} onClick={onClick} className="cursor-pointer hover:opacity-70 transition-opacity" />
+      <div className="flex shrink-0 items-center gap-1">
+        <button onClick={onClick} aria-label={tipoLabel}
+          className="grid size-7 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-accent-soft hover:text-v-accent">
+          <ChevronRight size={14} />
+        </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDismiss?.() }}
           title={t('dashboard.descartarAlerta')}
-          className="flex items-center justify-center w-5 h-5 rounded-full hover:opacity-80 transition-opacity"
-          style={{ background: 'rgba(0,0,0,0.08)' }}>
-          <X size={10} style={{ color: 'var(--text-muted)' }} />
+          className="grid size-7 place-items-center rounded-full text-v-subtle opacity-60 transition-all hover:bg-v-danger/10 hover:text-v-danger group-hover:opacity-100">
+          <X size={13} />
         </button>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
 // ─── Cita row ─────────────────────────────────────────────────────────────────
-function CitaRow({ cita }: any) {
+function CitaRow({ cita, index }: any) {
   const { t, locale } = useI18n()
   const fecha = new Date((cita.fecha || cita.appointment_date) + 'T00:00:00')
   const hoy = new Date().toISOString().split('T')[0]
@@ -159,22 +248,25 @@ function CitaRow({ cita }: any) {
   const hora = cita.hora_inicio || cita.appointment_time
   const servicio = cita.service_type || cita.tipo || ''
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg transition-all"
-      style={{ background: esHoy ? 'rgba(2,132,199,0.06)' : 'transparent', border: esHoy ? '1px solid rgba(2,132,199,0.15)' : '1px solid transparent' }}>
-      <div className="w-10 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0"
-        style={{ background: esHoy ? '#0284c7' : 'var(--muted-bg)', color: esHoy ? '#fff' : 'var(--text-secondary)' }}>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.04 * index }}
+      className={`flex items-center gap-3 rounded-v-sm p-3 transition-colors ${esHoy ? 'bg-v-accent-soft' : 'hover:bg-v-fill'}`}
+    >
+      <div className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-[30%] ${esHoy ? 'v-brand' : 'bg-v-fill text-v-muted'}`}>
         <span className="text-[8px] font-bold leading-none">{mes}</span>
-        <span className="text-sm font-bold leading-none">{dia}</span>
+        <span className="text-base font-bold leading-none">{dia}</span>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{nombre}</p>
-        <p className="text-[11px] flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-          {hora && <><Clock size={9} /> {hora.slice(0, 5)}</>}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-v-text">{nombre}</p>
+        <p className="flex items-center gap-1 text-[11px] text-v-muted">
+          {hora && <><Clock size={10} /> {hora.slice(0, 5)}</>}
           {servicio && <span className="truncate"> · {servicio}</span>}
-          {esHoy && <span className="font-bold flex-shrink-0" style={{ color: '#0284c7' }}> · {t('common.hoy')}</span>}
         </p>
       </div>
-    </div>
+      {esHoy && <span className="shrink-0 rounded-full bg-v-accent px-2 py-0.5 text-[10px] font-bold text-white">{t('common.hoy')}</span>}
+    </motion.div>
   )
 }
 
@@ -214,21 +306,6 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
-      // 0. Refrescar alertas para TODOS los pacientes (logros + alertas negativas).
-      //    Esto detecta nuevos logros automáticamente y resuelve alertas que ya no aplican.
-      //    No bloquea el render si falla.
-      try {
-        const refRes = await fetch('/api/agente/refrescar-alertas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-          cache: 'no-store',
-        })
-        await refRes.json().catch(() => null)
-      } catch {
-        /* silencioso — no bloquea el render */
-      }
-
       // 1. API de métricas (usa agenda_sesiones, agente_alertas, etc.)
       const resM = await fetch('/api/dashboard/metricas?periodo=7d', { cache: 'no-store' })
       const dataM = resM.ok ? await resM.json() : null
@@ -463,6 +540,23 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
 
   useEffect(() => { cargar() }, [cargar])
 
+  // Refrescar alertas para todos los pacientes (logros + alertas que ya no aplican) en segundo plano:
+  // puede tardar decenas de segundos, así que no bloquea las métricas; al terminar se recarga el panel.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/agente/refrescar-alertas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      cache: 'no-store',
+    })
+      .then(r => { if (r.ok && !cancelled) cargar() })
+      .catch(() => { /* silencioso */ })
+    return () => { cancelled = true }
+    // Solo una vez por montaje; cargar cambia con el idioma y no debe relanzar el refresco.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Refrescar al volver al tab — captura cambios hechos en otra ventana/dispositivo
   useEffect(() => {
     const onFocus = () => { cargar() }
@@ -501,153 +595,156 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
   const tasaAsistencia = metricas?.hoy?.tasaAsistencia ?? 0
   const totalSes7d = sesSemanales.reduce((a, b) => a + b, 0)
 
+  const retenidos = Math.max(0, totalPacientes - sinSesion.length)
+
+  const horaStr = horaActual ? horaActual.toLocaleTimeString(toBCP47(locale), { hour: '2-digit', minute: '2-digit' }) : '--:--'
+
   return (
-    <div className="space-y-5">
+    <div className="v-scope space-y-4 md:space-y-5">
 
       {/* ── HERO ── */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-        <div className="h-1" style={{ background: 'linear-gradient(90deg, #0369a1, #0284c7, #06b6d4)' }} />
-        <div className="p-5 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-xs capitalize mb-0.5" style={{ color: 'var(--text-muted)' }}>{diaStr}</p>
-            <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>{saludo}, {t('dashboard.directora')} 👋</h2>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-medium"
-                style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
-                {totalSesHoy} {t('dashboard.sesionesHoyMin')}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 160, damping: 22 }}
+        className={`relative overflow-hidden ${cardClass}`}
+      >
+        <div aria-hidden className="pointer-events-none absolute inset-0"
+          style={{ background: 'radial-gradient(40rem 14rem at 0% 0%, var(--v-glow-1), transparent 70%)' }} />
+        <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
+        <div className="relative flex items-center justify-between gap-5 p-5 sm:p-6">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-3">
+              <p className="min-w-0 truncate text-sm text-v-muted first-letter:uppercase">{diaStr}</p>
+              {/* En celular la hora va compacta junto a la fecha; en pantallas grandes, grande a la derecha */}
+              <p className="v-brand-text shrink-0 text-lg font-extrabold tabular-nums tracking-tight sm:hidden">{horaStr}</p>
+            </div>
+            <h2 className="v-headline mt-1 text-[1.6rem] leading-tight text-v-text sm:text-[1.9rem]">
+              {saludo}, <span className="v-brand-text">{t('dashboard.directora')}</span>{' '}
+              <motion.span className="inline-block origin-[70%_70%]"
+                animate={{ rotate: [0, 14, -8, 14, 0] }} transition={{ delay: 0.6, duration: 1.4 }}>👋</motion.span>
+            </h2>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${CONCEPT.sesiones.tone}`}>
+                <CalendarCheck size={12} /> {totalSesHoy} {t('dashboard.sesionesHoyMin')}
               </span>
               {sinSesion.length > 0 && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
-                  style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
-                  <AlertCircle size={10} className="inline mr-1" />{sinSesion.length} {t('dashboard.sinSesion30dInline')}
-                </span>
+                <button onClick={() => navigateTo('ninos')} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-transform hover:scale-105 ${CONCEPT.sinSesion.tone}`}>
+                  <AlertTriangle size={12} /> {sinSesion.length} {t('dashboard.sinSesion30dInline')}
+                </button>
               )}
               {alertasUrgentes > 0 && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
-                  style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
-                  {alertasUrgentes} {t('dashboard.alertasUrgentesInline')}
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${CONCEPT.urgente.tone}`}>
+                  <AlertCircle size={12} /> {alertasUrgentes} {t('dashboard.alertasUrgentesInline')}
                 </span>
               )}
             </div>
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-5xl font-bold tabular-nums tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              {horaActual ? horaActual.toLocaleTimeString(toBCP47(locale), { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-              {horaActual?.getSeconds()}s
-            </p>
-          </div>
+          <p className="v-brand-text hidden shrink-0 text-5xl font-extrabold tabular-nums tracking-tight sm:block">{horaStr}</p>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── KPIs ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        <KPI label={t('pacientes.titulo')} value={totalPacientes} sub={t('dashboard.totalRegistrados')} icon={Users} bar="#0284c7" onClick={() => navigateTo('ninos')} />
-        <KPI label={t('dashboard.sesionesHoy')} value={totalSesHoy} sub={`${realizadasHoy} ${t('dashboard.realizadasLbl')}`} icon={Calendar} bar="#10b981" onClick={() => navigateTo('agenda')} />
-        <KPI label={t('dashboard.sinSesion30d')} value={sinSesion.length} sub={t('dashboard.requierenSeguimiento')} icon={AlertTriangle} bar="#f59e0b" urgent={sinSesion.length > 0} onClick={() => navigateTo('ninos')} />
-        <KPI label={t('nav.programas')} value={totalProgramasAba} sub={t('programas.activos')} icon={ClipboardList} bar="#0ea5e9" onClick={() => navigateTo('ninos')} />
+      <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+        <KPI index={0} label={t('pacientes.titulo')} value={totalPacientes} sub={t('dashboard.totalRegistrados')} concept="pacientes" onClick={() => navigateTo('ninos')} />
+        <KPI index={1} label={t('dashboard.sesionesHoy')} value={totalSesHoy} sub={`${realizadasHoy} ${t('dashboard.realizadasLbl')}`} concept="sesiones" onClick={() => navigateTo('agenda')} />
+        <KPI index={2} label={t('dashboard.sinSesion30d')} value={sinSesion.length} sub={t('dashboard.requierenSeguimiento')} concept="sinSesion" urgent={sinSesion.length > 0} onClick={() => navigateTo('ninos')} />
+        <KPI index={3} label={t('nav.programas')} value={totalProgramasAba} sub={t('programas.activos')} concept="programas" onClick={() => navigateTo('ninos')} />
       </div>
 
       {/* ── MÉTRICAS MEDIAS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
 
-        {/* Sesiones 7 días + Retención — combinados en fila */}
-        <div className="rounded-2xl p-5 flex flex-col justify-between" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.sesionesUlt7')}</p>
-            <span className="text-xl font-extrabold tabular-nums" style={{ color: '#0284c7' }}>{totalSes7d}</span>
+        {/* Sesiones 7 días + Retención */}
+        <Section index={4} className="flex flex-col">
+          <SectionHeader concept="sesiones" title={t('dashboard.sesionesUlt7')}>
+            <span className="text-2xl font-bold tabular-nums text-v-success"><CountUp value={totalSes7d} /></span>
+          </SectionHeader>
+          <div className="relative flex-1 px-5">
+            <BarChart values={sesSemanales} labels={diasLabels} />
+            {totalSes7d === 0 && !loading && (
+              <div className="absolute inset-x-5 top-8 flex justify-center">
+                <span className="rounded-full border border-v-border bg-v-elevated px-3 py-1 text-xs text-v-muted shadow-v">
+                  {t('vanty.home.noSessionsWeek')}
+                </span>
+              </div>
+            )}
           </div>
-          <BarChart values={sesSemanales} labels={diasLabels} color="#0284c7" />
-          <div className="mt-4 pt-4 border-t flex items-center gap-4" style={{ borderColor: 'var(--card-border)' }}>
-            <Donut value={totalPacientes - sinSesion.length} total={totalPacientes} color="#10b981" size={56} />
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>{t('dashboard.retencionActiva')}</p>
-              <p className="text-base font-bold leading-none" style={{ color: 'var(--text-primary)' }}>
-                {totalPacientes - sinSesion.length}
-                <span className="text-sm font-medium ml-1" style={{ color: 'var(--text-muted)' }}>/ {totalPacientes}</span>
+          <div className="mx-5 mt-4 mb-5 flex items-center gap-4 rounded-v-sm bg-v-fill p-4">
+            <Ring value={retenidos} total={totalPacientes} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-v-muted">{t('dashboard.retencionActiva')}</p>
+              <p className="mt-0.5 text-xl font-bold leading-none text-v-text">
+                <CountUp value={retenidos} /><span className="ml-1 text-sm font-medium text-v-subtle">/ {totalPacientes}</span>
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('dashboard.pacientesSesionReciente')}</p>
+              <p className="mt-1 text-xs text-v-subtle">{t('dashboard.pacientesSesionReciente')}</p>
             </div>
+            <TrendingUp size={18} className="shrink-0 text-v-success" />
           </div>
-        </div>
+        </Section>
 
         {/* Programas ABA activos */}
-        <div className="rounded-2xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.programasActivos')}</p>
-            <button onClick={() => navigateTo('ninos')} className="text-[11px] font-semibold" style={{ color: '#0284c7' }}>{t('common.verTodos')} →</button>
-          </div>
+        <Section index={5} className="flex flex-col">
+          <SectionHeader concept="programas" title={t('dashboard.programasActivos')} count={programasActivos.length}>
+            <button onClick={() => navigateTo('ninos')} className="inline-flex items-center gap-1 text-xs font-semibold text-v-accent hover:underline">
+              {t('common.verTodos')} <ArrowRight size={12} />
+            </button>
+          </SectionHeader>
           {programasActivos.length > 0 ? (
-            <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight: '260px', scrollbarWidth: 'thin' }}>
+            <div className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3 pb-4" style={{ maxHeight: 330, scrollbarWidth: 'thin' }}>
               {programasActivos.map((p, i) => {
                 const pct = p.ultimoPct ?? 0
-                const color = pct >= p.criterio ? '#10b981' : pct >= 60 ? '#f59e0b' : '#0284c7'
+                const done = p.ultimoPct !== null && pct >= p.criterio
+                const bar = done ? 'bg-v-success' : pct >= 60 ? 'bg-v-warning' : 'v-brand'
+                const text = done ? 'text-v-success' : pct >= 60 ? 'text-v-warning' : 'text-v-accent'
                 return (
-                  <div
-                    key={i}
-                    className="cursor-pointer rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-black/5"
-                    style={{ transition: 'background 0.15s' }}
+                  <motion.button
+                    key={p.id ?? i}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + Math.min(i, 8) * 0.04 }}
+                    className="block w-full rounded-v-sm px-2 py-2.5 text-left transition-colors hover:bg-v-fill"
                     onClick={() => {
-                      if (p.child_id && navigateToPatient) {
-                        navigateToPatient(p.child_id, 'programas')
-                      } else {
-                        navigateTo('ninos')
-                      }
+                      if (p.child_id && navigateToPatient) navigateToPatient(p.child_id, 'programas')
+                      else navigateTo('ninos')
                     }}
-                    title={`Ver programa de ${p.nombre}`}
+                    title={p.nombre}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex-1 min-w-0 mr-3">
-                        <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{p.titulo}</p>
-                        <p className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{p.nombre}</p>
+                    <div className="mb-1.5 flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-v-text">{p.titulo}</p>
+                        <p className="truncate text-[11px] text-v-subtle">{p.nombre}</p>
                       </div>
-                      <span className="text-sm font-bold flex-shrink-0" style={{ color }}>
+                      <span className={`shrink-0 text-sm font-bold tabular-nums ${p.ultimoPct !== null ? text : 'text-v-subtle'}`}>
                         {p.ultimoPct !== null ? `${p.ultimoPct}%` : '—'}
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--muted-bg)' }}>
-                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                    <div className="h-1.5 overflow-hidden rounded-full bg-v-fill">
+                      <motion.div className={`h-full rounded-full ${bar}`}
+                        initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                        transition={{ delay: 0.4 + Math.min(i, 8) * 0.05, duration: 0.9, ease: [0.22, 1, 0.36, 1] }} />
                     </div>
-                  </div>
+                  </motion.button>
                 )
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center py-4">
-              <Target size={20} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t('auto.dashboardHome.sinProgramasActivos')}</p>
-              <button onClick={() => navigateTo('ninos')} className="text-xs font-bold mt-2" style={{ color: '#0284c7' }}>
-                Crear programa →
-              </button>
-            </div>
+            <EmptyState icon={ClipboardList} text={t('auto.dashboardHome.sinProgramasActivos')} action={t('vanty.home.createProgram')} onAction={() => navigateTo('ninos')} />
           )}
-        </div>
+        </Section>
       </div>
 
       {/* ── PANEL INFERIOR ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
         {/* Alertas clínicas */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-          <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.14)' }}>
-                <Bell size={14} style={{ color: '#f59e0b' }} />
-              </div>
-              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.alertasClinicas')}</p>
-            </div>
-            {alertasClinicas.length > 0 && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
-                {alertasClinicas.length}
-              </span>
-            )}
-          </div>
-          <div className="p-3 space-y-2 overflow-y-auto" style={{ maxHeight: '320px' }}>
-            {alertasClinicas.length > 0
-              ? alertasClinicas.map((a, i) => (
-                  <AlertaRow key={i} {...a}
+        <Section index={6} className="flex flex-col overflow-hidden">
+          <SectionHeader concept="alertas" title={t('dashboard.alertasClinicas')} count={alertasClinicas.length} />
+          <div className="flex-1 overflow-y-auto px-2 pb-3" style={{ maxHeight: 360, scrollbarWidth: 'thin' }}>
+            {alertasClinicas.length > 0 ? (
+              <AnimatePresence initial={false}>
+                {alertasClinicas.map((a, i) => (
+                  <AlertaRow key={a.id ?? `${a.tipo}:${a.child_id}`} {...a}
                     onClick={() => {
                       if (a.child_id && navigateToPatient) {
                         const tab = (a.tipo === 'regresion' || a.tipo?.startsWith('regresion')) ? 'programas' : undefined
@@ -656,61 +753,36 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
                     }}
                     onDismiss={() => dismissAlerta(i)}
                   />
-                ))
-              : (
-                <div className="flex flex-col items-center py-10">
-                  <CheckCircle2 size={24} style={{ color: '#10b981', opacity: 0.5 }} />
-                  <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t('dashboard.sinAlertas')}</p>
-                </div>
-              )
-            }
+                ))}
+              </AnimatePresence>
+            ) : (
+              <EmptyState icon={CheckCircle2} tone="text-v-success" text={t('dashboard.sinAlertas')} />
+            )}
           </div>
-        </div>
+        </Section>
 
         {/* Próximas citas */}
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-          <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(2,132,199,0.14)' }}>
-                <Calendar size={14} style={{ color: '#0284c7' }} />
-              </div>
-              <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.proximasCitas')}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => cargar()}
-                disabled={loading}
-                title={t('dashboard.refrescarDatos')}
-                className="p-1 rounded-md hover:bg-[var(--muted-bg)] transition-colors disabled:opacity-40"
-              >
-                <RefreshCw size={11} style={{ color: 'var(--text-muted)' }} className={loading ? 'animate-spin' : ''} />
-              </button>
-              <button onClick={() => navigateTo('agenda')}
-                className="text-[10px] font-semibold flex items-center gap-1"
-                style={{ color: '#0284c7' }}>
-                {t('agenda.verCalendario')} <ArrowUpRight size={10} />
-              </button>
-            </div>
-          </div>
-          <div className="p-3 overflow-y-auto" style={{ maxHeight: '320px' }}>
+        <Section index={7} className="flex flex-col overflow-hidden">
+          <SectionHeader concept="citas" title={t('dashboard.proximasCitas')} count={proximasCitas.length}>
+            <button
+              onClick={() => cargar()}
+              disabled={loading}
+              title={t('dashboard.refrescarDatos')}
+              className="grid size-7 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-accent disabled:opacity-40"
+            >
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            </button>
+            <button onClick={() => navigateTo('agenda')} className="inline-flex items-center gap-1 text-xs font-semibold text-v-accent hover:underline">
+              {t('agenda.verCalendario')} <ArrowUpRight size={12} />
+            </button>
+          </SectionHeader>
+          <div className="flex-1 space-y-1 overflow-y-auto px-2 pb-3" style={{ maxHeight: 360, scrollbarWidth: 'thin' }}>
             {proximasCitas.length > 0
-              ? proximasCitas.map((c, i) => <CitaRow key={i} cita={c} />)
-              : (
-                <div className="flex flex-col items-center py-12">
-                  <Calendar size={24} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                  <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t('agenda.sinCitas')}</p>
-                  <button onClick={() => navigateTo('agenda')} className="mt-3 text-xs font-bold" style={{ color: '#0284c7' }}>
-                    {t('agenda.agendarAhora')} →
-                  </button>
-                </div>
-              )
-            }
+              ? proximasCitas.map((c, i) => <CitaRow key={c.id ?? i} cita={c} index={i} />)
+              : <EmptyState icon={Calendar} text={t('agenda.sinCitas')} action={t('agenda.agendarAhora')} onAction={() => navigateTo('agenda')} />}
           </div>
-        </div>
+        </Section>
       </div>
-
-
-
     </div>
   )
 }

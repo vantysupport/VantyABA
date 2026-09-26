@@ -1,15 +1,35 @@
 // app/api/chat-familias/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, canAccessChild, hasRole, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { avisarEquipo, avisarFamilia } from '@/lib/avisos'
 
 // GET — cargar mensajes con avatar de cada remitente
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   const { searchParams } = new URL(req.url)
+
+  // Lista de conversaciones del centro (último mensaje por paciente) — solo el equipo
+  if (searchParams.get('resumen') === '1') {
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
+    const { data, error } = await supabaseAdmin
+      .from('chat_familias')
+      .select('child_id, content, message_type, sender_name, sender_id, sender_role, read_by, created_at, children(name)')
+      .eq('centro_id', caller.centroId)
+      .order('created_at', { ascending: false }).limit(300)
+    if (error) return NextResponse.json({ error: 'No se pudo cargar' }, { status: 500 })
+    return NextResponse.json({ data: data || [] }, { headers: { 'Cache-Control': 'no-store' } })
+  }
+
   const childId = searchParams.get('child_id')
-  const userId  = searchParams.get('user_id')
+  const rawUserId = searchParams.get('user_id')
+  // Solo se puede marcar como leído en nombre propio
+  const userId  = rawUserId ? caller.id : null
   const limit   = Number(searchParams.get('limit') || 60)
 
   if (!childId) return NextResponse.json({ error: 'child_id requerido' }, { status: 400 })
+  if (!(await canAccessChild(caller, childId))) return notFound()
 
   try {
     const { data, error } = await supabaseAdmin
@@ -63,20 +83,26 @@ export async function GET(req: NextRequest) {
 
 // POST — enviar mensaje
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { child_id, content, sender_id, sender_role, sender_name, message_type, file_url, file_name, file_size } = await req.json()
 
     if (!child_id || !content?.trim() || !sender_id || !sender_name) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
+    if (sender_id !== caller.id) return forbidden()
+    if (!(await canAccessChild(caller, child_id))) return notFound()
+    const { data: childRow } = await supabaseAdmin.from('children').select('centro_id, name, parent_id, specialist_id').eq('id', child_id).maybeSingle()
 
     const { data, error } = await supabaseAdmin
       .from('chat_familias')
       .insert({
         child_id,
+        centro_id:    childRow?.centro_id ?? null,
         content:      content.trim(),
         sender_id,
-        sender_role:  sender_role || 'padre',
+        sender_role:  caller.role === 'padre' ? 'padre' : (sender_role || 'padre'),
         sender_name,
         message_type: message_type || 'text',
         file_url:     file_url  || null,
@@ -88,6 +114,35 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // Aviso en la campana del otro lado (varios mensajes seguidos se agrupan en un solo aviso)
+    if (childRow?.centro_id) {
+      const texto = message_type && message_type !== 'text' ? null : String(content).trim().slice(0, 140)
+      const vista = (en: boolean) => texto ?? (en ? 'Sent a file' : 'Envió un archivo')
+      const nombre = childRow.name || ''
+      if (caller.role === 'padre') {
+        await avisarEquipo({
+          centroId: childRow.centro_id, roles: ['jefe', 'admin'], extra: [childRow.specialist_id], excluir: caller.id,
+          tipo: 'mensaje_familia', childId: child_id, prioridad: 1,
+          titulo: { es: `Mensaje de ${sender_name} · ${nombre}`, en: `Message from ${sender_name} · ${nombre}` },
+          mensaje: { es: vista(false), en: vista(true) },
+          agrupar: (prev, en) => {
+            const n = Number(prev.n ?? 1) + 1
+            return { titulo: en ? `${n} new messages · ${nombre}` : `${n} mensajes nuevos · ${nombre}`, mensaje: `${sender_name}: ${vista(en)}`, metadata: { ...prev, n } }
+          },
+        })
+      } else if (childRow.parent_id && childRow.parent_id !== caller.id) {
+        await avisarFamilia({
+          parentId: childRow.parent_id, centroId: childRow.centro_id, type: 'mensaje_centro', childId: child_id,
+          title: { es: `Nuevo mensaje de ${sender_name}`, en: `New message from ${sender_name}` },
+          message: { es: vista(false), en: vista(true) },
+          agrupar: (prev, en) => {
+            const n = Number(prev.n ?? 1) + 1
+            return { title: en ? `${n} new messages from the center` : `${n} mensajes nuevos del centro`, message: `${sender_name}: ${vista(en)}`, metadata: { ...prev, n } }
+          },
+        })
+      }
+    }
     return NextResponse.json({ data })
   } catch (e: any) {
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : e.message }, { status: 500 })
@@ -96,9 +151,13 @@ export async function POST(req: NextRequest) {
 
 // PATCH — marcar mensajes como leídos
 export async function PATCH(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { child_id, user_id } = await req.json()
     if (!child_id || !user_id) return NextResponse.json({ ok: false })
+    if (user_id !== caller.id) return forbidden()
+    if (!(await canAccessChild(caller, child_id))) return notFound()
 
     const { data: msgs } = await supabaseAdmin
       .from('chat_familias')

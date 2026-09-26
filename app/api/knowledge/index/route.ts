@@ -4,14 +4,21 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { esCentroFundador } from '@/lib/knowledge-base'
 import { indexDocument } from '@/lib/knowledge-base'
 
 export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const { docId } = await req.json()
     if (!docId) return NextResponse.json({ error: 'docId requerido' }, { status: 400 })
+    if (!(await rowInCentro('knowledge_documents', docId, caller.centroId))) return notFound()
 
     // Obtener el texto extraído guardado en el ingest
     const { data: doc, error } = await supabaseAdmin

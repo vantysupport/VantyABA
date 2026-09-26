@@ -1,4 +1,5 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { X, Video, PhoneOff, Loader2, Wifi, AlertTriangle, Clock } from 'lucide-react'
@@ -17,6 +18,7 @@ const WARNING_SECS  =  5 * 60
 export default function VideoCallModal({
   roomUrl, sessionId, participantName, appointmentId, onClose
 }: VideoCallModalProps) {
+  const { name: centroNombre } = useCentroBranding()
 
   const startRef   = useRef<number>(Date.now())
   const autoEndRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -90,7 +92,7 @@ export default function VideoCallModal({
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm"
             style={{ background:'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>JA</div>
           <div>
-            <p className="text-white font-bold text-sm">Neuropsicología y Terapias SANTI · Videollamada</p>
+            <p className="text-white font-bold text-sm">{centroNombre} · Videollamada</p>
             <p className="text-xs font-medium" style={{ color:'rgba(255,255,255,0.4)' }}>{participantName}</p>
           </div>
         </div>
@@ -173,7 +175,7 @@ export default function VideoCallModal({
           className="w-full h-full border-0"
           style={{ display: connStatus==='connecting' ? 'none' : 'block' }}
           onLoad={() => setConnStatus('connected')}
-          title="Videollamada Neuropsicología y Terapias SANTI"
+          title={`Videollamada ${centroNombre}`}
         />
       </div>
 

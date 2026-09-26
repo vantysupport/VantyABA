@@ -4,6 +4,8 @@
 // Compara períodos, muestra evolución y genera predicción narrativa para padres
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
@@ -49,9 +51,14 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { childId } = await req.json()
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    const centro = await getCentroBranding({ childId })
 
     const hoy = new Date()
 
@@ -121,7 +128,7 @@ export async function POST(req: NextRequest) {
     const nombre = (child as any)?.name || 'el paciente'
 
     // Generar narrativa predictiva
-    const promptPredictivo = `Eres ARIA, el asistente del Centro Neuropsicología y Terapias SANTI. Escribe una narrativa PREDICTIVA y MOTIVADORA para los padres de ${nombre}.
+    const promptPredictivo = `Eres ARIA, el asistente del centro ${centro.name}. Escribe una narrativa PREDICTIVA y MOTIVADORA para los padres de ${nombre}.
 
 EVOLUCIÓN COMPARATIVA (del más antiguo al más reciente):
 ${datosPeriodos.reverse().map(p => `${p.label}: logro=${p.logro ?? 'N/A'}%, atención=${p.atencion ?? 'N/A'}%, sesiones=${p.sesiones}`).join('\n')}
@@ -154,7 +161,7 @@ Nunca uses porcentajes directamente — tradúcelos: "${pred3meses}%" = "de cada
       const _query = 'comparación progreso ABA evaluación neurodesarrollo'
 
 
-      const _kb = await buildAIContext(undefined, undefined, undefined, _query)
+      const _kb = await buildAIContext(undefined, undefined, undefined, _query, centro.id)
 
 
       _cerebroCtx = _kb.knowledgeContext
@@ -167,7 +174,7 @@ Nunca uses porcentajes directamente — tradúcelos: "${pred3meses}%" = "de cada
 
 
     const narrativa = await callGroqSimple(
-      'Eres ARIA, asistente de comunicación familiar cálida del Centro Neuropsicología y Terapias SANTI.',
+      `Eres ARIA, asistente de comunicación familiar cálida del centro ${centro.name}.`,
       promptPredictivo,
       { model: GROQ_MODELS.SMART, temperature: 0.65, maxTokens: 700 }
     )

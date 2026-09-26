@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
-import { Check, Loader2, RefreshCw, CalendarDays } from 'lucide-react'
+import { useI18n } from '@/lib/i18n-context'
+import { CalendarConnectPill, GoogleLogo } from '@/components/ui/calendar-connect-pill'
+import { confirmar } from '@/components/ui/confirmar'
 
 export default function GoogleCalendarSync() {
   const toast = useToast()
+  const { locale } = useI18n()
   const [status,     setStatus]     = useState<'loading' | 'connected' | 'disconnected'>('loading')
   const [userId,     setUserId]     = useState<string | null>(null)
   const [syncing,    setSyncing]    = useState(false)
@@ -48,7 +51,7 @@ export default function GoogleCalendarSync() {
   }
 
   const handleDisconnect = async () => {
-    if (!userId || !confirm('¿Desconectar Google Calendar?')) return
+    if (!userId || !await confirmar('¿Desconectar Google Calendar?')) return
     await fetch(`/api/google-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected')
     toast.success('Google Calendar desconectado')
@@ -72,49 +75,21 @@ export default function GoogleCalendarSync() {
 
   if (status === 'loading') return null
 
-  if (status === 'disconnected') {
-    return (
-      <button
-        onClick={handleConnect}
-        disabled={connecting}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50
-          dark:bg-[#21262d] dark:border-[#30363d] dark:text-slate-300 dark:hover:bg-[#30363d]
-          text-slate-600 text-xs font-semibold transition-all disabled:opacity-50"
-      >
-        {connecting
-          ? <Loader2 size={14} className="animate-spin text-sky-500" />
-          : <CalendarDays size={14} className="text-slate-400" />
-        }
-        {connecting ? 'Conectando...' : 'Conectar Google'}
-      </button>
-    )
-  }
-
+  const en = locale === 'en'
   return (
-    <div className="flex items-center gap-1.5">
-      {/* Estado conectado */}
-      <button
-        onClick={handleDisconnect}
-        title="Click para desconectar"
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all
-          bg-emerald-50 text-emerald-700 border border-emerald-200
-          hover:bg-red-50 hover:text-red-600 hover:border-red-200
-          dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800
-          dark:hover:bg-red-900/30 dark:hover:text-red-400 dark:hover:border-red-800"
-      >
-        <Check size={12} /> Google Calendar
-      </button>
-      {/* Sync */}
-      <button
-        onClick={handleSync}
-        disabled={syncing}
-        title="Sincronizar con Google Calendar"
-        className="p-2 rounded-xl border transition-all disabled:opacity-50
-          border-slate-200 text-slate-400 hover:text-sky-600 hover:border-sky-300 hover:bg-sky-50
-          dark:border-[#30363d] dark:text-slate-500 dark:hover:text-sky-400 dark:hover:border-sky-700 dark:hover:bg-sky-900/20"
-      >
-        {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-      </button>
-    </div>
+    <CalendarConnectPill
+      logo={<GoogleLogo />}
+      label="Google Calendar"
+      connected={status === 'connected'}
+      connecting={connecting}
+      syncing={syncing}
+      connectLabel={en ? 'Connect Google' : 'Conectar Google'}
+      connectingLabel={en ? 'Connecting…' : 'Conectando…'}
+      disconnectTitle={en ? 'Click to disconnect' : 'Clic para desconectar'}
+      syncTitle={en ? 'Sync with Google Calendar' : 'Sincronizar con Google Calendar'}
+      onConnect={handleConnect}
+      onDisconnect={handleDisconnect}
+      onSync={handleSync}
+    />
   )
 }

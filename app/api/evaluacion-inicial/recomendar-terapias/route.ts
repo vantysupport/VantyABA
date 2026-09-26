@@ -10,15 +10,18 @@
 // un razonamiento corto y específico para esta familia.
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, canAccessChild, hasRole, ROLES, unauthorized, notFound } from '@/lib/api-auth'
 import { callGroq, GROQ_MODELS } from '@/lib/groq-client'
 import { buildClinicalContext } from '@/lib/ai-context-builder'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 export const maxDuration = 60
 
-const SYSTEM_PROMPT = `Eres una neuropsicóloga clínica senior de SANTI (Perú). Vas a recomendar las terapias más adecuadas para un caso, eligiendo SOLO de la lista de terapias DISPONIBLES en nuestro centro (no inventes terapias que no estén en la lista).
+const systemPrompt = (centroNombre: string) => `Eres una neuropsicóloga clínica senior del centro ${centroNombre}. Vas a recomendar las terapias más adecuadas para un caso, eligiendo SOLO de la lista de terapias DISPONIBLES en nuestro centro (no inventes terapias que no estén en la lista).
 
 CRITERIOS:
 - Prioriza máximo 4 terapias (idealmente 2-3).
@@ -47,6 +50,8 @@ function fmtRespuestas(obj: any): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { evaluacion_id } = await req.json()
     if (!evaluacion_id) return NextResponse.json({ error: 'evaluacion_id requerido' }, { status: 400 })
@@ -59,6 +64,11 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     if (e1) throw e1
     if (!eval_) return NextResponse.json({ error: 'Evaluación no encontrada' }, { status: 404 })
+    if (!(await canAccessChild(caller, eval_.child_id))) return notFound()
+    // Tokens: solo cuando lo pide el personal (el flujo de la familia no se bloquea)
+    const centroCobro = hasRole(caller, ROLES.staff) ? caller.centroId : null
+    const bloqueo = await sinTokens(centroCobro, /^en/i.test(String(req.headers.get('x-locale') || '')))
+    if (bloqueo) return bloqueo
 
     const { data: child } = await supabaseAdmin
       .from('children')
@@ -66,10 +76,12 @@ export async function POST(req: NextRequest) {
       .eq('id', eval_.child_id)
       .maybeSingle()
     if (!child) return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
+    const centro = await getCentroBranding({ childId: child.id })
 
     const { data: catalogo } = await supabaseAdmin
       .from('terapias_catalogo')
       .select('*')
+      .eq('centro_id', eval_.centro_id || '')
       .eq('activo', true)
       .order('orden', { ascending: true })
 
@@ -100,7 +112,7 @@ export async function POST(req: NextRequest) {
 
     // Cerebro IA: protocolos clínicos relevantes
     const queryKB = `${(child as any).diagnosis || ''} ${recLabel} terapia indicaciones objetivos ABLLS AFLS habilidades funcionales`
-    const knowledgeCtx = await buildClinicalContext(queryKB, 8).catch(() => '')
+    const knowledgeCtx = await buildClinicalContext(queryKB, eval_.centro_id ?? null, 5).catch(() => '')
 
     const userPrompt = `# CASO
 
@@ -118,20 +130,20 @@ ${fmtRespuestas(eval_.anamnesis_especifica)}
 
 ---
 
-# CATÁLOGO DE TERAPIAS DISPONIBLES EN SANTI
+# CATÁLOGO DE TERAPIAS DISPONIBLES EN EL CENTRO
 
 ${terapiasTxt}
 
 ---
 
-${knowledgeCtx ? `\n# 📚 CONTEXTO CLÍNICO DE REFERENCIA (Cerebro IA SANTI — uso interno)\n${knowledgeCtx}\n` : ''}
+${knowledgeCtx ? `\n# 📚 CONTEXTO CLÍNICO DE REFERENCIA (Cerebro IA — uso interno)\n${knowledgeCtx}\n` : ''}
 
 Elige las 2-4 terapias del catálogo más adecuadas para este caso y devuelve el JSON solicitado. Usa los IDs EXACTOS de la lista de arriba. Usa el contexto de referencia SOLO como apoyo interno para fundamentar tu razonamiento con criterios profesionales; NO nombres ni cites instrumentos de evaluación de terceros en tu respuesta.`
 
     // 3. Llamar al LLM
     const raw = await callGroq(
       [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt(centro.name) },
         { role: 'user', content: userPrompt },
       ],
       { model: GROQ_MODELS.SMART, temperature: 0.3, maxTokens: 1500 }
@@ -190,6 +202,7 @@ Elige las 2-4 terapias del catálogo más adecuadas para este caso y devuelve el
       .single()
     if (upErr) throw upErr
 
+    await descontarToken(centroCobro)
     return NextResponse.json({
       ok: true,
       evaluacion: updated,

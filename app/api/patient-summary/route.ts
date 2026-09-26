@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 
 
 
@@ -17,6 +18,9 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: Request) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const userLocale = body.locale || req.headers.get('x-locale') || 'es';
@@ -97,7 +101,7 @@ Genera un JSON con la siguiente estructura EXACTA (sin markdown, solo JSON puro)
       const _query = 'resumen paciente diagnóstico ABA TEA perfil clínico'
 
 
-      const _kb = await buildAIContext(undefined, undefined, undefined, _query)
+      const _kb = await buildAIContext(undefined, undefined, undefined, _query, caller.centroId)
 
 
       _cerebroCtx = _kb.knowledgeContext

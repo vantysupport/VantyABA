@@ -5,6 +5,8 @@ export const maxDuration = 60;
 // Devuelve el .docx como stream descargable ÔÇö sin jsPDF, sin lab()
 
 import { NextRequest, NextResponse } from 'next/server'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
+import { getCentroBranding, type CentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { getLangInstruction, getDocLabels } from '@/lib/lang'
@@ -13,15 +15,16 @@ import {
   AlignmentType, BorderStyle, WidthType, ShadingType, LevelFormat,
   HeadingLevel, PageNumber, Footer, Header
 } from 'docx'
-import * as tpl from '@/lib/santi-report-template'
+import * as tpl from '@/lib/report-template'
 import {
   portadaInstitucional,
   firmaEspecialista,
   selloQRVerificacion,
   generarCodigoDocumento,
-} from '@/lib/santi-report-template'
-import type { HabilidadFila, RecomendacionesBloque } from '@/lib/santi-report-template'
+} from '@/lib/report-template'
+import type { HabilidadFila, RecomendacionesBloque } from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 // ÔöÇÔöÇ FIX: Helper universal para parsear nivel_logro_objetivos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // Maneja: n├║mero, "75", "75%", "51-75%", "mayormente logrado", "alto", etc.
@@ -126,7 +129,7 @@ async function contarSesionesRealizadas(childId: string, sessionsBefore: number 
 async function makeDoc(
   sections: DocChild[],
   fileName: string,
-  opts?: {
+  opts: {
     tipoInforme?: string
     especialista?: string
     credenciales?: string
@@ -137,8 +140,11 @@ async function makeDoc(
     periodoEval?: string
     conPortada?: boolean
     conQR?: boolean
+    /** Center that owns the document (getCentroBranding). */
+    branding: CentroBranding
   }
 ): Promise<Document> {
+  const centro = opts.branding
   const conPortada = opts?.conPortada !== false
   const conQR      = opts?.conQR !== false
   const codigo     = opts?.codigoDoc ?? ''
@@ -152,6 +158,7 @@ async function makeDoc(
       },
     },
     children: portadaInstitucional({
+      branding: centro,
       tipoInforme:    opts?.tipoInforme  ?? 'Informe Clínico',
       nombrePaciente: opts?.childName    ?? 'Paciente',
       edadPaciente:   opts?.childAge,
@@ -167,6 +174,7 @@ async function makeDoc(
   // Generar sello QR REAL (PNG embebido) si hay código de documento
   const selloFinal: DocChild[] = (conQR && codigo)
     ? (await tpl.selloQRVerificacionAsync({
+    branding: centro,
         codigoDoc:    codigo,
         fechaEmision: fecha,
         especialista: opts?.especialista,
@@ -180,11 +188,12 @@ async function makeDoc(
         margin: { top: 1200, right: 1260, bottom: 1440, left: 1260 },
       },
     },
-    headers: { default: tpl.headerInstitucional(opts?.tipoInforme ?? fileName) },
-    footers: { default: tpl.piePaginaOficial() },
+    headers: { default: tpl.headerInstitucional(opts?.tipoInforme ?? fileName, centro) },
+    footers: { default: tpl.piePaginaOficial(centro) },
     children: [
       ...sections,
       ...(firmaEspecialista({
+        branding: centro,
         nombre:      opts?.especialista,
         titulo:      opts?.credenciales?.split('·')[0]?.trim(),
         colegiatura: opts?.credenciales?.split('·')[1]?.trim(),
@@ -212,6 +221,7 @@ async function makeDoc(
 }
 
 async function generarReportePadres(childId: string, userLocale = 'es'): Promise<{ doc: Document; fileName: string }> {
+  const centro = await getCentroBranding({ childId })
   const isEN = userLocale === 'en'
   const L = (en: string, es: string) => (isEN ? en : es)
   const dateLoc = isEN ? 'en-US' : 'es-ES'
@@ -323,13 +333,13 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
   const sections: DocChild[] = [
     // ENCABEZADO C├üLIDO
     new Paragraph({ spacing:{before:0,after:20}, border:{bottom:{style:BorderStyle.SINGLE,size:8,color:'7C3AED',space:8}},
-      children:[new TextRun({text:'­ƒîƒ  Neuropsicolog├¡a y Terapias SANTI',bold:true,size:38,font:'Arial',color:'5B21B6'}),
+      children:[new TextRun({text:'­ƒîƒ  '+centro.name,bold:true,size:38,font:'Arial',color:'5B21B6'}),
                 new TextRun({text:(userLocale === 'en' ? '  ·  ABA Therapy Center' : '  ·  Centro de Terapia ABA'),size:22,font:'Arial',color:'9CA3AF'})] }),
     new Paragraph({ spacing:{before:180,after:60},
       children:[new TextRun({text:(userLocale === 'en' ? `Progress Report for ${nombreCorto}` : `Reporte de Progreso de ${nombreCorto}`),bold:true,size:44,font:'Arial',color:'4C1D95'})] }),
     new Paragraph({ spacing:{before:0,after:20},
       children:[new TextRun({text:(userLocale === 'en' ? 'For the family, with love' : 'Para la familia con cariño'),size:24,font:'Arial',color:'7C3AED',italics:true})] }),
-    new Paragraph({ spacing:{before:60,after:360}, shading:{fill:'F5F3FF',type:ShadingType.CLEAR},
+    new Paragraph({ spacing:{before:60,after:360}, shading:{fill:'E8F6FF',type:ShadingType.CLEAR},
       children:[new TextRun({text:(userLocale === 'en' ? `Period: ${fechaInicio} to ${fechaFin}   ·   ${totalSesiones} sessions   ·   Issued: ${hoy}` : `Período: ${fechaInicio} al ${fechaFin}   ·   ${totalSesiones} sesiones   ·   Emitido: ${hoy}`),size:18,font:'Arial',color:'6D28D9'})] }),
 
     // BIENVENIDA
@@ -392,9 +402,9 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
           new TableCell({borders:BDR,shading:{fill:'4C1D95',type:ShadingType.CLEAR},margins:{top:80,bottom:80,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:(userLocale === 'en' ? 'Status' : 'Estado'),bold:true,size:17,font:'Arial',color:'FFFFFF'})]})]  }),
         ]}),
         ...progArr.map((p:any,i:number)=>new TableRow({children:[
-          new TableCell({borders:BDR,shading:{fill:i%2===0?'F5F3FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:p.titulo||p.nombre||'Habilidad',size:17,font:'Arial',bold:true,color:'4C1D95'})]})]  }),
-          new TableCell({borders:BDR,shading:{fill:i%2===0?'F5F3FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:p.area||'General',size:16,font:'Arial',color:'475569'})]})]  }),
-          new TableCell({borders:BDR,shading:{fill:p.estado==='dominado'?'F0FDF4':i%2===0?'F5F3FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:p.estado==='dominado'?L('✅ Mastered','✅ Dominado'):L('🔵 Active','🔵 Activo'),bold:true,size:16,font:'Arial',color:p.estado==='dominado'?'15803D':'4C1D95'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:i%2===0?'E8F6FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:120,right:80},children:[new Paragraph({children:[new TextRun({text:p.titulo||p.nombre||'Habilidad',size:17,font:'Arial',bold:true,color:'4C1D95'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:i%2===0?'E8F6FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({children:[new TextRun({text:p.area||'General',size:16,font:'Arial',color:'475569'})]})]  }),
+          new TableCell({borders:BDR,shading:{fill:p.estado==='dominado'?'F0FDF4':i%2===0?'E8F6FF':'FFFFFF',type:ShadingType.CLEAR},margins:{top:70,bottom:70,left:80,right:80},children:[new Paragraph({alignment:AlignmentType.CENTER,children:[new TextRun({text:p.estado==='dominado'?L('✅ Mastered','✅ Dominado'):L('🔵 Active','🔵 Activo'),bold:true,size:16,font:'Arial',color:p.estado==='dominado'?'15803D':'4C1D95'})]})]  }),
         ]})),
       ]}),
     ]:[]),
@@ -417,7 +427,7 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
 
     // MENSAJE FINAL
     h2(L('A special message for you 💜','Un mensaje especial para ustedes 💜')),
-    new Paragraph({ spacing:{before:80,after:160}, shading:{fill:'F5F3FF',type:ShadingType.CLEAR},
+    new Paragraph({ spacing:{before:80,after:160}, shading:{fill:'E8F6FF',type:ShadingType.CLEAR},
       border:{left:{style:BorderStyle.SINGLE,size:12,color:'7C3AED',space:10}},
       children:textoMensaje.split('\n').filter((l:string)=>l.trim()).flatMap((line:string,i:number,arr:string[])=>[
         new TextRun({text:line,size:22,font:'Arial',color:'4C1D95',italics:true}),
@@ -427,7 +437,7 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
 
     // CIERRE
     new Paragraph({spacing:{before:400},border:{top:{style:BorderStyle.SINGLE,size:2,color:'E2E8F0',space:8}},
-      children:[new TextRun({text:(userLocale === 'en' ? 'With love, the Neuropsicología y Terapias SANTI team' : 'Con cariño, el equipo de Neuropsicología y Terapias SANTI'),size:20,font:'Arial',color:'7C3AED',bold:true,italics:true})]}),
+      children:[new TextRun({text:(userLocale === 'en' ? `With love, the ${centro.name} team` : `Con cariño, el equipo de ${centro.name}`),size:20,font:'Arial',color:'7C3AED',bold:true,italics:true})]}),
     new Paragraph({spacing:{before:40,after:0},
       children:[new TextRun({text:(userLocale === 'en' ? `${hoy}  ·  This report is personal and confidential` : `${hoy}  ·  Este reporte es personal y confidencial`),size:16,font:'Arial',color:'94A3B8'})]}),
   ]
@@ -440,11 +450,12 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
   })
   return {
     doc: await makeDoc(sections, fileName, {
+      branding: centro,
       tipoInforme:  L('FAMILY PROGRESS REPORT','REPORTE DE PROGRESO PARA LA FAMILIA'),
       childName:    nombreCap,
       childAge:     String(edad),
       diagnosis:    diagnostico,
-      especialista: 'Equipo Clínico SANTI',
+      especialista: 'Equipo Clínico',
       credenciales: 'BCBA · Terapia ABA',
       periodoEval:  `${fechaInicio} – ${fechaFin}`,
       codigoDoc,
@@ -458,6 +469,7 @@ Reconoce el esfuerzo de los padres, proyecta optimismo realista, invita a seguir
 
 // ┬─ Reporte Comparativo + Predicci├│n ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function generarReporteComparativo(childId: string, userLocale = 'es'): Promise<{ doc: Document; fileName: string }> {
+  const centro = await getCentroBranding({ childId })
   const { data: child } = await supabaseAdmin.from('children').select('name, age, diagnosis, birth_date').eq('id', childId).single()
   const nombre = (child as any)?.name || 'Paciente'
   const nombreCap = nombre.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
@@ -681,7 +693,7 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
   const sections: DocChild[] = [
     // PORTADA
     new Paragraph({spacing:{before:0,after:20},border:{bottom:{style:BorderStyle.SINGLE,size:8,color:'0F172A',space:8}},
-      children:[new TextRun({text:'NEUROPSICOLOG├ìA Y TERAPIAS SANTI',bold:true,size:38,font:'Arial',color:'0F172A'}),
+      children:[new TextRun({text:centro.name.toUpperCase(),bold:true,size:38,font:'Arial',color:'0F172A'}),
                 new TextRun({text:(userLocale === 'en' ? '  ·  Specialized ABA Therapy Center' : '  ·  Centro Especializado de Terapia ABA'),size:22,font:'Arial',color:'64748B'})] }),
     new Paragraph({spacing:{before:180,after:60},
       children:[new TextRun({text:(userLocale === 'en' ? 'COMPARATIVE ANALYSIS OF PERIODS' : 'ANÁLISIS COMPARATIVO DE PERÍODOS'),bold:true,size:44,font:'Arial',color:'0F172A'})] }),
@@ -825,7 +837,7 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
       children:[new TextRun({text:'Nota metodol├│gica: ',bold:true,size:16,font:'Arial',color:'64748B'}),
                 new TextRun({text:confianzaNota,size:16,font:'Arial',color:'94A3B8',italics:true})]}),
     new Paragraph({spacing:{before:40,after:0},
-      children:[new TextRun({text:(userLocale === 'en' ? `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Document No. ${docNum}  ·  Confidential use` : `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Documento Nº ${docNum}  ·  Uso confidencial`),size:16,font:'Arial',color:'94A3B8'})]}),
+      children:[new TextRun({text:(userLocale === 'en' ? `${centro.name}  ·  ${hoy}  ·  Document No. ${docNum}  ·  Confidential use` : `${centro.name}  ·  ${hoy}  ·  Documento Nº ${docNum}  ·  Uso confidencial`),size:16,font:'Arial',color:'94A3B8'})]}),
   ]
 
     const codigoDoc = generarCodigoDocumento(childId, 'comp')
@@ -836,11 +848,12 @@ Incluye: (a) ajustes al plan actual de los programas m├ís relevantes, (b) obj
   })
   return {
     doc: await makeDoc(sections, fileName, {
+      branding: centro,
       tipoInforme:  'AN\u00c1LISIS COMPARATIVO DE PER\u00cdODOS',
       childName:    nombreCap,
       childAge:     String(edad),
       diagnosis:    diagnostico,
-      especialista: 'Equipo Cl\u00ednico SANTI',
+      especialista: 'Equipo Clínico',
       credenciales: 'BCBA \u00b7 Neuropsicolog\u00eda Infantil',
       periodoEval:  `${fechaInicio} \u2013 ${fechaFin}`,
       codigoDoc,
@@ -888,6 +901,7 @@ function graficoBarras(titulo: string, datos: { label: string; valor: number }[]
 
 // ÔöÇÔöÇ Reporte Para Seguros ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise<{ doc: Document; fileName: string }> {
+  const centro = await getCentroBranding({ childId })
   const { data: child } = await supabaseAdmin.from('children').select('name, age, diagnosis, birth_date').eq('id', childId).single()
   const nombre = (child as any)?.name || 'Paciente'
   const nombreCap = nombre.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
@@ -969,7 +983,7 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
   const sections: DocChild[] = [
     // PORTADA
     new Paragraph({ spacing:{before:0,after:20}, border:{bottom:{style:BorderStyle.SINGLE,size:8,color:'1E40AF',space:8}},
-      children:[new TextRun({text:'NEUROPSICOLOG├ìA Y TERAPIAS SANTI',bold:true,size:38,font:'Arial',color:'1E293B'}),
+      children:[new TextRun({text:centro.name.toUpperCase(),bold:true,size:38,font:'Arial',color:'1E293B'}),
                 new TextRun({text:(userLocale === 'en' ? '  ·  Specialized ABA Therapy Center' : '  ·  Centro Especializado de Terapia ABA'),size:22,font:'Arial',color:'64748B'})] }),
     new Paragraph({ spacing:{before:180,after:60},
       children:[new TextRun({text:(userLocale === 'en' ? 'NEUROPSYCHOLOGICAL AND CLINICAL REPORT' : 'REPORTE NEUROPSICOLÓGICO Y CLÍNICO'),bold:true,size:46,font:'Arial',color:'1E40AF'})] }),
@@ -986,7 +1000,7 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
       kv('Diagn├│stico principal', diagnostico),
       kv('Clasificaci├│n CIE-10', cie),
       kv('Modalidad de intervenci├│n', 'An├ílisis Aplicado de la Conducta (ABA) ÔÇö Terapia Individual'),
-      kv('Centro terap├®utico', 'Neuropsicolog├¡a y Terapias SANTI ÔÇö Centro Especializado en Neurodesarrollo'),
+      kv('Centro terap├®utico', centro.name),
       kv('Inicio del tratamiento', fechaInicio),
       kv('├Ültima sesi├│n registrada', fechaFin),
       kv('Duraci├│n total del proceso', `${semanasTratamiento} semanas (${totalSesiones} sesiones)`),
@@ -1137,7 +1151,7 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
     // X. FIRMA
     h2('X.  ACREDITACI├ôN PROFESIONAL Y FIRMA'),
     new Table({width:{size:9360,type:WidthType.DXA},columnWidths:[3200,6160],rows:[
-      kv('Centro terap├®utico','Neuropsicolog├¡a y Terapias SANTI ÔÇö Centro Especializado en Neurodesarrollo'),
+      kv('Centro terap├®utico', centro.name),
       kv('Especialidad','An├ílisis Aplicado de la Conducta (ABA)'),
       kv('Tipo de intervenci├│n','Terapia individual ÔÇö intervenci├│n temprana y desarrollo'),
       kv('Fecha de emisi├│n',hoy),
@@ -1146,13 +1160,13 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
       kv('Vigencia','6 meses a partir de la fecha de emisi├│n'),
     ]}),
     new Paragraph({spacing:{before:600,after:80},children:[new TextRun({text:'_'.repeat(50),size:20,font:'Arial',color:'1E293B'})]}),
-    new Paragraph({spacing:{before:0,after:20},children:[new TextRun({text:(userLocale === 'en' ? 'Treatment Lead — Neuropsicología y Terapias SANTI' : 'Responsable del Tratamiento — Neuropsicología y Terapias SANTI'),bold:true,size:18,font:'Arial',color:'1E293B'})]}),
+    new Paragraph({spacing:{before:0,after:20},children:[new TextRun({text:(userLocale === 'en' ? `Treatment Lead — ${centro.name}` : `Responsable del Tratamiento — ${centro.name}`),bold:true,size:18,font:'Arial',color:'1E293B'})]}),
     new Paragraph({spacing:{before:0,after:40},children:[new TextRun({text:(userLocale === 'en' ? 'Certified ABA Therapist / Clinical Neuropsychologist' : 'Terapeuta ABA Certificado / Neuropsicólogo Clínico'),size:17,font:'Arial',color:'64748B',italics:true})]}),
 
     new Paragraph({spacing:{before:320},border:{top:{style:BorderStyle.SINGLE,size:2,color:'E2E8F0',space:8}},
       shading:{fill:'FFF7ED',type:ShadingType.CLEAR},
       children:[new TextRun({text:(userLocale === 'en' ? '⚠  CONFIDENTIAL DOCUMENT — For exclusive use in medical-legal procedures with authorized insurers. Partial or total reproduction is prohibited without authorization from the issuing center.' : '⚠  DOCUMENTO CONFIDENCIAL — Uso exclusivo para trámites médico-legales con aseguradoras autorizadas. Prohibida su reproducción parcial o total sin autorización del centro emisor.'),size:17,font:'Arial',color:'B45309',bold:true})]}),
-    new Paragraph({spacing:{before:40,after:0},children:[new TextRun({text:(userLocale === 'en' ? `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Document No. ${docNum}` : `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Documento Nº ${docNum}`),size:16,font:'Arial',color:'94A3B8'})]}),
+    new Paragraph({spacing:{before:40,after:0},children:[new TextRun({text:(userLocale === 'en' ? `${centro.name}  ·  ${hoy}  ·  Document No. ${docNum}` : `${centro.name}  ·  ${hoy}  ·  Documento Nº ${docNum}`),size:16,font:'Arial',color:'94A3B8'})]}),
   ]
 
   const codigoDoc = generarCodigoDocumento(childId, 'seg')
@@ -1163,11 +1177,12 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
   })
   return {
     doc: await makeDoc(sections, fileName, {
+      branding: centro,
       tipoInforme:  'REPORTE NEUROPSICOLÓGICO Y CLÍNICO',
       childName:    nombreCap,
       childAge:     String(edad),
       diagnosis:    diagnostico,
-      especialista: 'Equipo Clínico SANTI',
+      especialista: 'Equipo Clínico',
       credenciales: 'C.Ps.P. · Neuropsicología Clínica',
       periodoEval:  `${fechaInicio} – ${fechaFin}`,
       codigoDoc,
@@ -1181,7 +1196,7 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
 // ┬─ Handler principal ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 // ═══════════════════════════════════════════════════════════════════════════
-// INFORME CLÍNICO PROFESIONAL — formato oficial SANTI (estilo LuTr)
+// INFORME CLÍNICO PROFESIONAL — formato oficial (estilo LuTr)
 // ─ Diseñado para SUPERAR a Central Reach con:
 //   · Portada + datos generales + resumen ejecutivo IA
 //   · Tabla de Habilidades y Logros con vertical merge (ÁREA / SUBÁREA spanning)
@@ -1191,10 +1206,11 @@ async function generarReporteSeguro(childId: string, userLocale = 'es'): Promise
 //   · Recomendaciones tripartitas accionables
 //   · Glosario + pie legal profesional
 // ═══════════════════════════════════════════════════════════════════════════
-async function generarInformeClinicoSanti(
+async function generarInformeClinico(
   childId: string,
   userLocale = 'es',
 ): Promise<{ doc: Document; fileName: string }> {
+  const centro = await getCentroBranding({ childId })
 
   // ─── 1. Datos del paciente ──────────────────────────────────────────
   const { data: child } = await supabaseAdmin
@@ -1578,7 +1594,7 @@ async function generarInformeClinicoSanti(
 
   const [textoResumenEjecutivo, textoAnalisisGlobal, textoPlanTerapeutico, textoRecomendacionesIA, textoLimitaciones] = await Promise.all([
     callGroqSimple(
-      'Eres neuropsicóloga clínica senior de SANTI. Prosa formal, sin emojis, sin bullets en el body.',
+      'Eres neuropsicóloga clínica senior. Prosa formal, sin emojis, sin bullets en el body.',
       `Redacta el RESUMEN EJECUTIVO del informe clínico de ${nombreCap} (${edadTexto}, ${(child as any)?.diagnosis || 'en evaluación'}).
 
 Datos disponibles:
@@ -1598,7 +1614,7 @@ Escribe 2 párrafos densos (máximo 200 palabras total) que UN CLÍNICO senior p
     ),
 
     callGroqSimple(
-      'Eres neuropsicóloga clínica de SANTI. Prosa profesional, sin bullets, sin emojis.',
+      'Eres neuropsicóloga clínica. Prosa profesional, sin bullets, sin emojis.',
       `Redacta el "ANÁLISIS CLÍNICO POR ÁREA" de ${nombreCap}. Devuelve un texto con SUBSECCIONES en negrita por cada área de trabajo. Por cada área:
 1. Nombre del área en **negrita**.
 2. 1-2 oraciones de prosa que interpreten clínicamente el desempeño (no listar números, interpretarlos: tendencia, hipótesis de variabilidad, generalización, etc.).
@@ -1612,7 +1628,7 @@ Sin bullets, sin emojis. Cada área 50-80 palabras. Total ≤ 450 palabras.`+get
     ),
 
     callGroqSimple(
-      'Eres neuropsicóloga clínica de SANTI. Prosa formal, sin emojis.',
+      'Eres neuropsicóloga clínica. Prosa formal, sin emojis.',
       `Redacta el "PLAN TERAPÉUTICO" de ${nombreCap} para los próximos 30, 60 y 90 días. Tres párrafos cortos (máximo 60 palabras cada uno) con FOCOS específicos basados en los datos. Cita programas concretos por nombre. Sin emojis, sin bullets.
 
 Datos:
@@ -1628,7 +1644,7 @@ Estructura:
     ),
 
     callGroqSimple(
-      'Eres neuropsicóloga clínica de SANTI. Devolvé SOLO JSON válido, sin texto antes ni después.',
+      'Eres neuropsicóloga clínica. Devolvé SOLO JSON válido, sin texto antes ni después.',
       `Generá las RECOMENDACIONES tripartitas para ${nombreCap} (${edadTexto}, ${(child as any)?.diagnosis || 'en evaluación'}).
 
 Devolvé JSON ESTRICTO:
@@ -1647,7 +1663,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     ),
 
     callGroqSimple(
-      'Eres neuropsicóloga clínica de SANTI. Prosa formal, sin emojis, sin bullets.',
+      'Eres neuropsicóloga clínica. Prosa formal, sin emojis, sin bullets.',
       `Redacta la sección de LIMITACIONES del informe clínico de ${nombreCap}.
 Aquí se redactan las dificultades que se han tenido durante el período de intervención, por ejemplo: presencia de conductas interferentes o disruptivas que no han dejado avanzar (p. ej. que el menor muerda, se levante, etc.), el tiempo limitado de las sesiones o de los padres para practicar los programas en casa, algún problema de salud recurrente, inasistencias, u otros factores que han condicionado el progreso.
 
@@ -1731,11 +1747,12 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
       const rol = fichaConNombre.filler_role ? ` (${fichaConNombre.filler_role})` : ''
       return `${n}${rol}`
     }
-    return L('SANTI Clinical Team', 'Equipo Clínico SANTI')
+    return L('Clinical Team', 'Equipo Clínico')
   })()
 
   // ── Generar QR async (necesita estar fuera del array spread) ─────────
   const sellosVerificacion = await tpl.selloQRVerificacionAsync({
+    branding: centro,
     codigoDoc: docNum,
     fechaEmision: hoy,
     especialista: especialistaNombre,
@@ -1744,6 +1761,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
   const sections: DocChild[] = [
     // ── PORTADA institucional con QR ──
     ...portadaInstitucional({
+      branding: centro,
       tipoInforme: L('CLINICAL TREATMENT REPORT', 'INFORME CLÍNICO DE TRATAMIENTO'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
@@ -1874,7 +1892,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     spacing: { before: 220, after: 80 },
     children: [new TextRun({
       text: (userLocale === 'en' ? 'Calculations by program (raw data)' : 'Cálculos por programa (datos crudos)'),
-      bold: true, italics: true, size: 19, font: 'Arial', color: '1E3A8A',
+      bold: true, italics: true, size: 19, font: 'Arial', color: '0059C4',
     })],
   }))
 
@@ -1909,11 +1927,11 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     new Paragraph({
       spacing: { before: 600, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '0059C4' })],
     }),
     new Paragraph({
       spacing: { before: 0, after: 0 },
-      children: [new TextRun({ text: 'Neuropsicología y Terapias SANTI', size: 19, font: 'Arial', color: '475569' })],
+      children: [new TextRun({ text: centro.name, size: 19, font: 'Arial', color: '475569' })],
     }),
     new Paragraph({
       spacing: { before: 80, after: 0 },
@@ -1926,7 +1944,7 @@ ${evalIniContexto}${evaluacionesCtx}`+getLangInstruction(userLocale),
     styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
     sections: [{
       properties: tpl.DOC_PAGE_PROPS,
-      footers: { default: tpl.piePaginaOficial() },
+      footers: { default: tpl.piePaginaOficial(centro) },
       children: sections,
     }],
   })
@@ -1957,6 +1975,7 @@ async function generarReportePadresPro(
   childId: string,
   userLocale = 'es',
 ): Promise<{ doc: Document; fileName: string }> {
+  const centro = await getCentroBranding({ childId })
 
   const { data: child } = await supabaseAdmin
     .from('children')
@@ -2123,7 +2142,7 @@ async function generarReportePadresPro(
 
   const [bienvenida, celebracion, planCasa, mensajeCierre] = await Promise.all([
     callGroqSimple(
-      'Eres terapeuta ABA empática y cálida de SANTI. Escribís a familias con afecto, sin tecnicismos.',
+      'Eres terapeuta ABA empática y cálida. Escribís a familias con afecto, sin tecnicismos.',
       `Saluda a la familia de ${nombreCorto} (${edadTexto}). Hacé una bienvenida CORTA y cálida (1 párrafo, 50 palabras máximo) reconociendo el período de trabajo (${semanas} semanas, ${totalSesiones} sesiones) y celebrando la constancia de la familia.`+getLangInstruction(userLocale),
       { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 200 },
     ),
@@ -2155,7 +2174,8 @@ Cada actividad como un párrafo corto: nombre + cómo hacerla (1-2 oraciones) + 
 
   // QR
   const sellosVerif = await tpl.selloQRVerificacionAsync({
-    codigoDoc, fechaEmision: hoy, especialista: 'Equipo Clínico SANTI',
+    branding: centro,
+    codigoDoc, fechaEmision: hoy, especialista: 'Equipo Clínico',
   })
 
   // Datos del gráfico
@@ -2176,11 +2196,12 @@ Cada actividad como un párrafo corto: nombre + cómo hacerla (1-2 oraciones) + 
   const sections: DocChild[] = [
     // PORTADA con QR
     ...portadaInstitucional({
+      branding: centro,
       tipoInforme: L('FAMILY PROGRESS REPORT', 'REPORTE DE PROGRESO PARA LA FAMILIA'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
       diagnostico: (child as any)?.diagnosis || L('In progress', 'En proceso'),
-      especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+      especialista: L('Clinical Team', 'Equipo Clínico'),
       credenciales: L('ABA Therapy · Specialized Center', 'Terapia ABA · Centro Especializado'),
       fechaEmision: hoy,
       periodoEval: periodoTexto,
@@ -2231,11 +2252,11 @@ Cada actividad como un párrafo corto: nombre + cómo hacerla (1-2 oraciones) + 
     new Paragraph({
       spacing: { before: 320, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: (userLocale === 'en' ? 'With love,' : 'Con cariño,'), italics: true, size: 20, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'With love,' : 'Con cariño,'), italics: true, size: 20, font: 'Arial', color: '0059C4' })],
     }),
     new Paragraph({
       spacing: { before: 60, after: 0 },
-      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team — Neuropsicología y Terapias SANTI' : 'Equipo Clínico — Neuropsicología y Terapias SANTI'), bold: true, size: 19, font: 'Arial', color: '475569' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? `Clinical Team — ${centro.name}` : `Equipo Clínico — ${centro.name}`), bold: true, size: 19, font: 'Arial', color: '475569' })],
     }),
   )
 
@@ -2244,7 +2265,7 @@ Cada actividad como un párrafo corto: nombre + cómo hacerla (1-2 oraciones) + 
     styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
     sections: [{
       properties: tpl.DOC_PAGE_PROPS,
-      footers: { default: tpl.piePaginaOficial() },
+      footers: { default: tpl.piePaginaOficial(centro) },
       children: sections,
     }],
   })
@@ -2265,6 +2286,7 @@ async function generarReporteComparativoPro(
   childId: string,
   userLocale = 'es',
 ): Promise<{ doc: Document; fileName: string }> {
+  const centro = await getCentroBranding({ childId })
 
   const { data: child } = await supabaseAdmin
     .from('children')
@@ -2444,7 +2466,7 @@ async function generarReporteComparativoPro(
 
   const [analisisComp, analisisPred, recomendacionesIA] = await Promise.all([
     callGroqSimple(
-      'Eres neuropsicóloga clínica de SANTI. Prosa formal, sin emojis, sin bullets.',
+      'Eres neuropsicóloga clínica. Prosa formal, sin emojis, sin bullets.',
       `Redactá el "ANÁLISIS COMPARATIVO DE PERÍODOS" para ${nombreCap} (${edadTexto}, ${diagnostico}):
 
 Datos:
@@ -2458,7 +2480,7 @@ Explicá clínicamente qué significa esta evolución, qué factores pueden cont
       { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 600 },
     ),
     callGroqSimple(
-      'Eres neuropsicóloga clínica de SANTI. Prosa formal.',
+      'Eres neuropsicóloga clínica. Prosa formal.',
       `Redactá el "ANÁLISIS DE PREDICCIÓN TERAPÉUTICA" para ${nombreCap}:
 
 Sesiones totales: ${total} · Logro actual: ${avg2}%
@@ -2473,7 +2495,7 @@ Interpretá qué esperar en cada horizonte, qué condiciones son necesarias, qu�
       { model: GROQ_MODELS.SMART, temperature: 0.4, maxTokens: 400 },
     ),
     callGroqSimple(
-      'Eres neuropsicóloga clínica de SANTI. Devolvé SOLO JSON válido.',
+      'Eres neuropsicóloga clínica. Devolvé SOLO JSON válido.',
       `Generá RECOMENDACIONES TERAPÉUTICAS para ${nombreCap} en formato JSON:
 
 {
@@ -2498,7 +2520,8 @@ Datos:
   } catch { /* usar defaults */ }
 
   const sellosVerif = await tpl.selloQRVerificacionAsync({
-    codigoDoc, fechaEmision: hoy, especialista: 'Equipo Clínico SANTI',
+    branding: centro,
+    codigoDoc, fechaEmision: hoy, especialista: 'Equipo Clínico',
   })
 
   const periodoTexto = fechasUnif.length > 1 ? L(`${fechaInicio} to ${fechaFin}`, `${fechaInicio} al ${fechaFin}`) : (fechasUnif.length === 1 ? fechaInicio : '—')
@@ -2511,11 +2534,12 @@ Datos:
   const sections: DocChild[] = [
     // PORTADA con QR
     ...portadaInstitucional({
+      branding: centro,
       tipoInforme: L('COMPARATIVE ANALYSIS AND THERAPEUTIC PROJECTION', 'ANÁLISIS COMPARATIVO Y PROYECCIÓN TERAPÉUTICA'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
       diagnostico,
-      especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+      especialista: L('Clinical Team', 'Equipo Clínico'),
       credenciales: L('BCBA · Child Neuropsychology', 'BCBA · Neuropsicología Infantil'),
       fechaEmision: hoy,
       periodoEval: periodoTexto,
@@ -2615,11 +2639,11 @@ Datos:
     new Paragraph({
       spacing: { before: 320, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '0059C4' })],
     }),
     new Paragraph({
       spacing: { before: 0, after: 0 },
-      children: [new TextRun({ text: 'Neuropsicología y Terapias SANTI', size: 19, font: 'Arial', color: '475569' })],
+      children: [new TextRun({ text: centro.name, size: 19, font: 'Arial', color: '475569' })],
     }),
   )
 
@@ -2628,7 +2652,7 @@ Datos:
     styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
     sections: [{
       properties: tpl.DOC_PAGE_PROPS,
-      footers: { default: tpl.piePaginaOficial() },
+      footers: { default: tpl.piePaginaOficial(centro) },
       children: sections,
     }],
   })
@@ -2652,12 +2676,21 @@ async function generarReporteProgramasFamilia(
   childId: string,
   userLocale = 'es',
 ): Promise<{ doc: Document; fileName: string }> {
+  const centro = await getCentroBranding({ childId })
   const L = (en: string, es: string): string => userLocale === 'en' ? en : es
 
   const { data: child } = await supabaseAdmin
     .from('children')
-    .select('name, age, birth_date, diagnosis, sessions_before_platform')
+    .select('name, age, birth_date, diagnosis, sessions_before_platform, specialist_id')
     .eq('id', childId).single()
+
+  // Especialista asignado (en vez de "Equipo Clínico" genérico)
+  const { data: especialistaRow } = (child as any)?.specialist_id
+    ? await supabaseAdmin.from('profiles').select('full_name, specialty').eq('id', (child as any).specialist_id).maybeSingle()
+    : { data: null }
+  const nombreResponsable: string = (especialistaRow as any)?.full_name || L('Clinical Team', 'Equipo Clínico')
+  // Los títulos que escribe el equipo suelen traer emojis/flechas decorativas al inicio (📌, ➡️, 🎯, 📕)
+  const limpio = (v: unknown) => String(v ?? '').replace(/^[^\p{L}\p{N}¿¡("']+/u, '').trim()
 
   const nombre = (child as any)?.name || L('Patient', 'Paciente')
   const nombreCap = nombre.split(' ')
@@ -2799,7 +2832,7 @@ async function generarReporteProgramasFamilia(
       }
       return {
         numero: o.numero_set ?? null,
-        nombre: (o.descripcion || setLabel).toString().trim() || setLabel,
+        nombre: limpio(o.descripcion || setLabel) || setLabel,
         estadoManual: o.estado || 'pendiente',
         n_sesiones: pctsSet.length,
         pcts: pctsSet,
@@ -2811,9 +2844,9 @@ async function generarReporteProgramasFamilia(
 
     return {
       id: p.id,
-      titulo: p.titulo || L('Program', 'Programa'),
-      area: (p.area || 'General').toString().trim(),
-      objetivo: (p.objetivo_lp || '').toString().trim(),
+      titulo: limpio(p.titulo) || L('Program', 'Programa'),
+      area: limpio(p.area) || 'General',
+      objetivo: limpio(p.objetivo_lp),
       criterio: crit,
       n_sesiones: pcts.length,
       pcts,
@@ -2856,12 +2889,12 @@ async function generarReporteProgramasFamilia(
   try {
     const [bRes, cRes] = await Promise.all([
       callGroqSimple(
-        'Eres terapeuta ABA cálida y cercana de SANTI. Escribís a familias sin tecnicismos.',
+        'Eres terapeuta ABA cálida y cercana. Escribís a familias sin tecnicismos.',
         `Escribí una bienvenida CORTA y cálida (1 párrafo, máx 60 palabras) para la familia de ${nombreCorto}. Explicá que este documento resume los programas de terapia que estamos trabajando con su hijo/a y cómo va avanzando. Tono humano, esperanzador, sin tecnicismos, sin emojis.` + getLangInstruction(userLocale),
         { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 180 },
       ),
       callGroqSimple(
-        'Eres terapeuta ABA cálida de SANTI.',
+        'Eres terapeuta ABA cálida.',
         `Escribí un MENSAJE DE CIERRE corto (1 párrafo, máx 55 palabras) para la familia de ${nombreCorto}. Reconocé el esfuerzo de la familia, invitá a preguntar cualquier duda al especialista y proyectá optimismo realista. Sin tecnicismos, sin emojis.` + getLangInstruction(userLocale),
         { model: GROQ_MODELS.SMART, temperature: 0.7, maxTokens: 160 },
       ),
@@ -2873,7 +2906,8 @@ async function generarReporteProgramasFamilia(
   if (!cierre.trim()) cierre = L(`We appreciate your commitment and consistency, which are essential for ${nombreCorto}'s progress. If you have any questions about this report, please do not hesitate to consult the specialist in charge.`, `Agradecemos su compromiso y constancia, que son fundamentales para el progreso de ${nombreCorto}. Ante cualquier duda sobre este reporte, no duden en consultar con el especialista a cargo.`)
 
   const sellosVerif = await tpl.selloQRVerificacionAsync({
-    codigoDoc, fechaEmision: hoy, especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+    branding: centro,
+    codigoDoc, fechaEmision: hoy, especialista: nombreResponsable,
   })
 
   const limpiar = (t: string) => t.split('\n').filter(l => l.trim()).map(l => tpl.parrafo(l.replace(/\*\*/g, '').trim()))
@@ -2923,7 +2957,11 @@ async function generarReporteProgramasFamilia(
       return L(`This level has not been worked on yet. It will be taught once ${nombreCorto} advances enough in the previous levels.`, `Este nivel todavía no se ha trabajado. Se enseñará cuando ${nombreCorto} avance lo suficiente en los niveles anteriores.`)
     }
     if (st.cumple) {
-      return L(`${nombreCorto} has already met the criterion for this level. Excellent! Ready to move on to the next one.`, `${nombreCorto} ya alcanzó el criterio de este nivel. ¡Excelente! Está listo/a para avanzar al siguiente.`)
+      // Dado por logrado por el especialista aunque la última medición quedó por debajo de la meta
+      if (st.estadoManual === 'dominado' && st.promReciente != null && st.promReciente < p.criterio) {
+        return L(`The specialist marked this level as achieved based on their clinical assessment (the last recorded measurement was ${st.promReciente}%). It will keep being reinforced so the skill is maintained.`, `El especialista dio por logrado este nivel según su evaluación clínica (la última medición registrada fue ${st.promReciente}%). Se seguirá reforzando para que la habilidad se mantenga.`)
+      }
+      return L(`${nombreCorto} has already met the criterion for this level. Excellent! Ready to move on to the next one.`, `${nombreCorto} ya alcanzó el criterio de este nivel. ¡Excelente! Está preparada/o para avanzar al siguiente.`)
     }
     const reciente = st.promReciente ?? 0
     if (st.tendencia === 'sube') {
@@ -2938,12 +2976,13 @@ async function generarReporteProgramasFamilia(
   // ─── Construcción del documento ───────────────────────────────────────────
   const sections: DocChild[] = [
     ...portadaInstitucional({
+      branding: centro,
       tipoInforme: L('THERAPY PROGRAMS REPORT', 'REPORTE DE PROGRAMAS DE TERAPIA'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
       diagnostico,
-      especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
-      credenciales: L('ABA Therapy · Child Neuropsychology', 'Terapia ABA · Neuropsicología Infantil'),
+      especialista: (especialistaRow as any)?.full_name || L('Clinical Team', 'Equipo Clínico'),
+      credenciales: (especialistaRow as any)?.specialty || L('ABA Therapy · Child Neuropsychology', 'Terapia ABA · Neuropsicología Infantil'),
       fechaEmision: hoy,
       periodoEval: periodoTexto,
       codigoDoc,
@@ -2989,10 +3028,14 @@ async function generarReporteProgramasFamilia(
     }
   }
   const datosArea = Object.entries(areaMap).map(([label, vals]) => ({ label, valor: avg(vals) }))
+  const criterios = programasInfo.map(p => p.criterio).filter(Boolean)
+  const metaComun = criterios.length
+    ? Number(Object.entries(criterios.reduce<Record<number, number>>((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc }, {})).sort((x, y) => y[1] - x[1])[0][0])
+    : 90
   if (datosArea.length > 0) {
     sections.push(tpl.tituloSeccion(L('IV.  Progress by work area', 'IV.  Avance por área de trabajo')))
     sections.push(tpl.parrafo(L(`This is how ${nombreCorto} is doing in each major area we work on. The dotted line marks the mastery goal.`, `Así viene ${nombreCorto} en cada gran área que trabajamos. La línea punteada marca la meta de dominio.`)))
-    sections.push(...tpl.graficoProgresoBarra(L('Recent average by area (%)', 'Promedio reciente por área (%)'), datosArea, { mostrarMeta: true, metaPct: 90 }))
+    sections.push(...tpl.graficoProgresoBarra(L('Recent average by area (%)', 'Promedio reciente por área (%)'), datosArea, { mostrarMeta: true, metaPct: metaComun }))
   }
 
   // V. Detalle programa por programa
@@ -3012,7 +3055,7 @@ async function generarReporteProgramasFamilia(
     sections.push(new Paragraph({
       spacing: { before: 280, after: 60 },
       children: [
-        new TextRun({ text: `${idx}. ${p.titulo}`, bold: true, size: 24, font: 'Arial', color: '1E3A8A' }),
+        new TextRun({ text: `${idx}. ${p.titulo}`, bold: true, size: 24, font: 'Arial', color: '0059C4' }),
         new TextRun({ text: `   ·   ${p.area}`, size: 20, font: 'Arial', color: '64748B' }),
       ],
     }))
@@ -3031,7 +3074,7 @@ async function generarReporteProgramasFamilia(
     // Explicación general del programa
     sections.push(new Paragraph({
       spacing: { before: 100, after: 40 },
-      border: { left: { style: BorderStyle.SINGLE, size: 18, color: '4F46E5', space: 10 } },
+      border: { left: { style: BorderStyle.SINGLE, size: 18, color: '01A2F0', space: 10 } },
       children: [new TextRun({ text: explicarPrograma(p), size: 20, font: 'Arial', color: '334155', italics: true })],
     }))
 
@@ -3050,7 +3093,7 @@ async function generarReporteProgramasFamilia(
         sections.push(new Paragraph({
           spacing: { before: 140, after: 20 },
           children: [
-            new TextRun({ text: `   ▸ Set ${st.numero ?? sIdx}: `, bold: true, size: 20, font: 'Arial', color: '1E3A8A' }),
+            new TextRun({ text: `   ▸ Set ${st.numero ?? sIdx}: `, bold: true, size: 20, font: 'Arial', color: '0059C4' }),
             new TextRun({ text: st.nombre || L(`Level ${sIdx}`, `Nivel ${sIdx}`), size: 20, font: 'Arial', color: '1E293B' }),
           ],
         }))
@@ -3118,11 +3161,11 @@ async function generarReporteProgramasFamilia(
     new Paragraph({
       spacing: { before: 320, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: nombreResponsable, bold: true, size: 22, font: 'Arial', color: '0059C4' })],
     }),
     new Paragraph({
       spacing: { before: 0, after: 0 },
-      children: [new TextRun({ text: 'Neuropsicología y Terapias SANTI', size: 19, font: 'Arial', color: '475569' })],
+      children: [new TextRun({ text: centro.name, size: 19, font: 'Arial', color: '475569' })],
     }),
   )
 
@@ -3131,7 +3174,7 @@ async function generarReporteProgramasFamilia(
     styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
     sections: [{
       properties: tpl.DOC_PAGE_PROPS,
-      footers: { default: tpl.piePaginaOficial() },
+      footers: { default: tpl.piePaginaOficial(centro) },
       children: sections,
     }],
   })
@@ -3174,6 +3217,7 @@ async function generarGuiaSetFamilia(
     .maybeSingle()
 
   const childId = (programa as any)?.child_id || null
+  const centro = await getCentroBranding({ childId })
   const { data: child } = childId
     ? await supabaseAdmin.from('children').select('name, age, birth_date, diagnosis').eq('id', childId).maybeSingle()
     : { data: null }
@@ -3228,16 +3272,18 @@ async function generarGuiaSetFamilia(
   const pasos = pasosRaw.filter(p => p.contenido)
 
   const sellosVerif = await tpl.selloQRVerificacionAsync({
-    codigoDoc, fechaEmision: hoy, especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+    branding: centro,
+    codigoDoc, fechaEmision: hoy, especialista: L('Clinical Team', 'Equipo Clínico'),
   })
 
   const sections: DocChild[] = [
     ...portadaInstitucional({
+      branding: centro,
       tipoInforme: L('HOME EXERCISE GUIDE', 'GUÍA DE EJERCICIO PARA CASA'),
       nombrePaciente: nombre,
       edadPaciente: edadTexto,
       diagnostico,
-      especialista: L('SANTI Clinical Team', 'Equipo Clínico SANTI'),
+      especialista: L('Clinical Team', 'Equipo Clínico'),
       credenciales: L('ABA Therapy · Child Neuropsychology', 'Terapia ABA · Neuropsicología Infantil'),
       fechaEmision: hoy,
       periodoEval: tituloPrograma,
@@ -3275,7 +3321,7 @@ async function generarGuiaSetFamilia(
       sections.push(new Paragraph({
         spacing: { before: 220, after: 40 },
         children: [
-          new TextRun({ text: `${paso.icono}  ${L('Step', 'Paso')} ${n}: ${paso.titulo}`, bold: true, size: 23, font: 'Arial', color: '1E3A8A' }),
+          new TextRun({ text: `${paso.icono}  ${L('Step', 'Paso')} ${n}: ${paso.titulo}`, bold: true, size: 23, font: 'Arial', color: '0059C4' }),
         ],
       }))
       // Qué significa (nota guía, en cursiva)
@@ -3286,7 +3332,7 @@ async function generarGuiaSetFamilia(
       // Contenido específico de este set (lo que escribió el especialista)
       sections.push(new Paragraph({
         spacing: { before: 0, after: 40 },
-        border: { left: { style: BorderStyle.SINGLE, size: 18, color: '4F46E5', space: 10 } },
+        border: { left: { style: BorderStyle.SINGLE, size: 18, color: '01A2F0', space: 10 } },
         shading: { type: ShadingType.CLEAR, color: 'auto', fill: 'F8FAFC' },
         children: [new TextRun({ text: paso.contenido, size: 21, font: 'Arial', color: '1E293B' })],
       }))
@@ -3315,11 +3361,11 @@ async function generarGuiaSetFamilia(
     new Paragraph({
       spacing: { before: 320, after: 40 },
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CBD5E1', space: 8 } },
-      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '1E3A8A' })],
+      children: [new TextRun({ text: (userLocale === 'en' ? 'Clinical Team' : 'Equipo Clínico'), bold: true, size: 22, font: 'Arial', color: '0059C4' })],
     }),
     new Paragraph({
       spacing: { before: 0, after: 0 },
-      children: [new TextRun({ text: 'Neuropsicología y Terapias SANTI', size: 19, font: 'Arial', color: '475569' })],
+      children: [new TextRun({ text: centro.name, size: 19, font: 'Arial', color: '475569' })],
     }),
   )
 
@@ -3328,7 +3374,7 @@ async function generarGuiaSetFamilia(
     styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
     sections: [{
       properties: tpl.DOC_PAGE_PROPS,
-      footers: { default: tpl.piePaginaOficial() },
+      footers: { default: tpl.piePaginaOficial(centro) },
       children: sections,
     }],
   })
@@ -3352,6 +3398,7 @@ async function generarGuiaSetFamilia(
 // y una síntesis clínica generada por IA.
 // ─────────────────────────────────────────────────────────────────────────────
 async function generarReporteGeneral(childId: string, userLocale = 'es'): Promise<{ doc: Document; fileName: string }> {
+  const centro = await getCentroBranding({ childId })
   // ── 1. Paciente ──
   const { data: child } = await supabaseAdmin
     .from('children')
@@ -3538,15 +3585,22 @@ async function generarReporteGeneral(childId: string, userLocale = 'es'): Promis
   }).catch(() => {})
 
   const doc = await makeDoc(sections, fileName, {
+    branding: centro,
     tipoInforme: L('General Report', 'Reporte General'), childName: nombreCap, childAge: edadTexto, diagnosis, codigoDoc,
   })
   return { doc, fileName }
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const body = await req.json()
     const { childId, tipo, objetivoId } = body
+    // Padres: solo reportes pensados para la familia; el resto es clínico (staff)
+    const TIPOS_CLINICOS = ['general', 'seguro', 'clinico', 'tratamiento', 'seguro_legacy', 'comparativo', 'comparativo_legacy']
+    const esTipoFamilia = !TIPOS_CLINICOS.includes(tipo)
+    if (!hasRole(caller, ROLES.staff) && !(caller.role === 'padre' && esTipoFamilia)) return forbidden()
     const userLocale = body.locale || req.headers.get('x-locale') || 'es'
     tpl.setReportLocale(userLocale)
 
@@ -3555,6 +3609,12 @@ export async function POST(req: NextRequest) {
     // Guía de ejercicio para casa (un set) — usa objetivoId, no childId
     if (tipo === 'set' || tipo === 'guia_set') {
       if (!objetivoId) return NextResponse.json({ error: 'objetivoId requerido' }, { status: 400 })
+      const { data: setRow } = await supabaseAdmin.from('objetivos_cp').select('programa_id').eq('id', objetivoId).maybeSingle()
+      const { data: progRow } = setRow?.programa_id
+        ? await supabaseAdmin.from('programas_aba').select('child_id').eq('id', setRow.programa_id).maybeSingle()
+        : { data: null }
+      if (!progRow || !(await canAccessChild(caller, progRow.child_id))) return notFound()
+      await tpl.precargarLogoCentro(await getCentroBranding({ childId: progRow.child_id }))
       result = await generarGuiaSetFamilia(objetivoId, userLocale)
       const bufSet = await Packer.toBuffer(result.doc)
       const u8Set = new Uint8Array(bufSet)
@@ -3568,10 +3628,18 @@ export async function POST(req: NextRequest) {
     }
 
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    // Tokens de análisis del centro (reportes del equipo)
+    const cobraToken = hasRole(caller, ROLES.staff)
+    if (cobraToken) {
+      const bloqueo = await sinTokens(caller.centroId, String(userLocale).toLowerCase().startsWith('en'))
+      if (bloqueo) return bloqueo
+    }
+    await tpl.precargarLogoCentro(await getCentroBranding({ childId }))
 
-    // 'seguro' (botón "Informe Clínico" en el UI) → nuevo informe SANTI profesional
+    // 'seguro' (botón "Informe Clínico" en el UI) → nuevo informe clínico profesional
     if (tipo === 'general') result = await generarReporteGeneral(childId, userLocale)
-    else if (tipo === 'seguro' || tipo === 'clinico' || tipo === 'tratamiento') result = await generarInformeClinicoSanti(childId, userLocale)
+    else if (tipo === 'seguro' || tipo === 'clinico' || tipo === 'tratamiento') result = await generarInformeClinico(childId, userLocale)
     else if (tipo === 'seguro_legacy') result = await generarReporteSeguro(childId, userLocale)
     // Versiones PRO (nivel profesional con portada + QR + IA + trazabilidad)
     else if (tipo === 'comparativo') result = await generarReporteComparativoPro(childId, userLocale)
@@ -3583,6 +3651,8 @@ export async function POST(req: NextRequest) {
 
     const buffer = await Packer.toBuffer(result.doc)
     const uint8 = new Uint8Array(buffer)
+    // Se descuenta un token solo cuando el reporte se generó bien
+    if (cobraToken) await descontarToken(caller.centroId)
 
     return new NextResponse(uint8, {
       headers: {

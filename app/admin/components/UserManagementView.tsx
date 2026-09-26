@@ -9,17 +9,22 @@ import {
   Clock, Calendar, ChevronDown, ChevronUp, Send, Lock,
   Crown, Stethoscope, Heart, Plus, ToggleLeft, ToggleRight,
   Edit2, Briefcase, UserCheck, UserX, Filter, Link2, Unlink,
-  ClipboardList, Trash2} from 'lucide-react'
+  ClipboardList, Trash2, UserPlus, MoreHorizontal, Phone, Copy, Check} from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useToast } from '@/components/Toast'
 import { getControlStatus } from '@/lib/control'
 import { supabase } from '@/lib/supabase'
 import { adminFetch } from '@/lib/admin-fetch'
+import { fileUrl } from '@/lib/file-url'
+import InvitacionesPanel from './InvitacionesPanel'
+import EspecialidadInput from './EspecialidadInput'
 
+// Un icono y un tono por rol (el mismo en pestañas, avatar, etiqueta y selector)
 const ROLES = [
-  { value: 'jefe',        label: 'Director',      labelEn: 'Director',       description: 'Acceso total al sistema',  descriptionEn: 'Full system access',       icon: Crown,         dotColor: 'bg-sky-500', badgeClass: 'role-director'    },
-  { value: 'especialista',label: 'Especialista',  labelEn: 'Specialist',     description: 'Terapeuta / Clínico',      descriptionEn: 'Therapist / Clinician',    icon: Stethoscope,   dotColor: 'bg-sky-500',   badgeClass: 'role-especialista' },
-  { value: 'padre',       label: 'Padre / Tutor', labelEn: 'Parent / Guardian', description: 'Portal de familias',    descriptionEn: 'Family portal',            icon: Heart,         dotColor: 'bg-pink-500',   badgeClass: 'role-padre'       },
-  { value: 'secretaria',  label: 'Secretaria(o)', labelEn: 'Secretary',      description: 'Apoyo administrativo',     descriptionEn: 'Administrative support',   icon: ClipboardList, dotColor: 'bg-sky-500', badgeClass: 'role-secretaria'  },
+  { value: 'jefe',        label: 'Director(a)',   labelEn: 'Director',          description: 'Acceso total al sistema', descriptionEn: 'Full system access',     icon: Crown,         tone: 'bg-v-accent-soft text-v-accent' },
+  { value: 'especialista',label: 'Especialista',  labelEn: 'Specialist',        description: 'Terapeuta / Clínico',     descriptionEn: 'Therapist / Clinician',  icon: Stethoscope,   tone: 'bg-v-success/15 text-v-success' },
+  { value: 'padre',       label: 'Padre / Tutor', labelEn: 'Parent / Guardian', description: 'Portal de familias',      descriptionEn: 'Family portal',          icon: Heart,         tone: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
+  { value: 'secretaria',  label: 'Secretaría',    labelEn: 'Front desk',        description: 'Apoyo administrativo',    descriptionEn: 'Administrative support', icon: ClipboardList, tone: 'bg-v-warning/15 text-v-warning' },
 ]
 
 // Especialidades sugeridas (datalist) — el usuario puede elegir una o escribir la suya.
@@ -37,20 +42,16 @@ const SPECIALTY_SUGGESTIONS = [
 ]
 
 function getRoleInfo(role: string) {
-  const { t } = useI18n()
-
   return ROLES.find(r => r.value === role || (role === 'admin' && r.value === 'jefe')) || ROLES[0]
 }
 
 function RoleBadge({ role }: { role: string }) {
   const { locale } = useI18n()
-
   const info = getRoleInfo(role)
   const Icon = info.icon
   return (
-    <span className={`role-badge ${info.badgeClass}`}>
-      <Icon size={10} />
-      {locale === 'en' ? info.labelEn : info.label}
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${info.tone}`}>
+      <Icon size={11} /> {locale === 'en' ? info.labelEn : info.label}
     </span>
   )
 }
@@ -66,19 +67,15 @@ function RoleSelector({ currentRole, onSelect, disabled, roles: rolesList }: {
   const [pos, setPos] = useState({ top: 0, left: 0 })
   const btnRef = useRef<HTMLButtonElement>(null)
   const current = getRoleInfo(currentRole)
+  const lista = rolesList ?? ROLES
 
   const handleOpen = () => {
     if (disabled) return
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
-      const dropdownW = 260
-      const dropdownH = ROLES.length * 68 + 8
-      // Position below button, aligned to right edge
-      let left = rect.right - dropdownW
-      if (left < 8) left = 8
-      // Flip up if not enough space below
-      const spaceBelow = window.innerHeight - rect.bottom
-      const top = spaceBelow < dropdownH ? rect.top - dropdownH - 4 : rect.bottom + 4
+      const w = 264, h = lista.length * 60 + 12
+      const left = Math.max(8, Math.min(rect.right - w, window.innerWidth - w - 8))
+      const top = window.innerHeight - rect.bottom < h ? rect.top - h - 6 : rect.bottom + 6
       setPos({ top, left })
     }
     setOpen(o => !o)
@@ -86,54 +83,36 @@ function RoleSelector({ currentRole, onSelect, disabled, roles: rolesList }: {
 
   return (
     <div className="relative">
-      <button
-        ref={btnRef}
-        onClick={handleOpen}
-        disabled={disabled}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-        style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
-      >
-        <current.icon size={13} />
-        <span>{locale === 'en' ? current.labelEn : current.label}</span>
-        <ChevronDown size={11} style={{ color: 'var(--text-muted)' }} />
+      <button ref={btnRef} onClick={handleOpen} disabled={disabled}
+        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-bg px-3 text-xs font-semibold text-v-muted transition-colors hover:text-v-text disabled:cursor-not-allowed disabled:opacity-50">
+        <current.icon size={13} /> <span>{locale === 'en' ? current.labelEn : current.label}</span>
+        {!disabled && <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />}
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div
-            className="fixed z-50 rounded-xl overflow-hidden"
-            style={{
-              background: 'var(--card)',
-              border: '1px solid var(--card-border)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
-              top: pos.top,
-              left: pos.left,
-              width: '260px',
-            }}
-          >
-            {(rolesList ?? ROLES).map(r => {
-              const RIcon = r.icon
-              const isSelected = currentRole === r.value || (currentRole === 'admin' && r.value === 'jefe')
-              return (
-                <button
-                  key={r.value}
-                  onClick={() => { onSelect(r.value); setOpen(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:opacity-90"
-                  style={{ background: isSelected ? 'rgba(37,99,235,0.12)' : 'transparent' }}
-                >
-                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.dotColor}`} />
-                  <RIcon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{locale === 'en' ? r.labelEn : r.label}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{locale === 'en' ? r.descriptionEn : r.description}</p>
-                  </div>
-                  {isSelected && <CheckCircle2 size={13} className="text-sky-500 flex-shrink-0" />}
-                </button>
-              )
-            })}
-          </div>
-        </>
-      )}
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
+              className="v-scope fixed z-50 w-[264px] rounded-v-sm border border-v-border bg-v-elevated p-1 shadow-v-lg" style={{ top: pos.top, left: pos.left }}>
+              {lista.map(r => {
+                const RIcon = r.icon
+                const sel = currentRole === r.value || (currentRole === 'admin' && r.value === 'jefe')
+                return (
+                  <button key={r.value} onClick={() => { onSelect(r.value); setOpen(false) }}
+                    className={`flex w-full items-center gap-3 rounded-v-sm px-2.5 py-2 text-left transition-colors ${sel ? 'bg-v-fill' : 'hover:bg-v-fill'}`}>
+                    <span className={`grid size-8 shrink-0 place-items-center rounded-[30%] ${r.tone}`}><RIcon size={15} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-v-text">{locale === 'en' ? r.labelEn : r.label}</span>
+                      <span className="block text-[11px] text-v-subtle">{locale === 'en' ? r.descriptionEn : r.description}</span>
+                    </span>
+                    {sel && <CheckCircle2 size={15} className="shrink-0 text-v-accent" />}
+                  </button>
+                )
+              })}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -144,7 +123,10 @@ interface UserData {
   created_at: string
   last_sign_in_at: string | null
   email_confirmed: boolean
+  providers?: string[]
+  phone_alt?: string | null
   profile: {
+    avatar_url?: string | null
     full_name?: string
     role?: string
     tokens?: number
@@ -154,57 +136,27 @@ interface UserData {
   } | null
 }
 
-function StatCard({ value, label, icon: Icon, color }: any) {
-  const { t } = useI18n()
-
-  return (
-    <div className="rounded-2xl p-4 flex items-center gap-4" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-      <div className={`p-3 rounded-xl ${color}`}>
-        <Icon size={18} className="text-white" />
-      </div>
-      <div>
-        <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{value}</p>
-        <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</p>
-      </div>
-    </div>
-  )
-}
-
-function PacientesVinculados({ userId, children, onUnlink }: {
+function PacientesVinculados({ userId, pacientes: children, onUnlink }: {
   userId: string
-  children: any[]
+  pacientes: any[]
   onUnlink: (childId: string) => void
 }) {
   const { t } = useI18n()
-  const hijos = children.filter(c =>
-    c.parent_id === userId ||
-    (c.parent_ids && c.parent_ids.includes(userId))
-  )
-
+  const hijos = children.filter(c => c.parent_id === userId || (c.parent_ids && c.parent_ids.includes(userId)))
   if (hijos.length === 0) return (
-    <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--card-border)' }}>
-      <p className="text-xs text-amber-500 font-medium flex items-center gap-1.5">
-        <AlertCircle size={11} /> {t('usuarios.sinPacientesVinculados')} — {t('usuarios.vincularPaciente')}
-      </p>
-    </div>
+    <p className="mt-3 flex items-center gap-1.5 rounded-v-sm bg-v-warning/10 px-3 py-2 text-xs font-medium text-v-warning">
+      <AlertCircle size={13} /> {t('usuarios.sinPacientesVinculados')} — {t('usuarios.vincularPaciente')}
+    </p>
   )
-
   return (
-    <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--card-border)' }}>
-      <p className="text-[10px] font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
-        {t('auto.userManagementView.pacientesVinculados', { v1: String(hijos.length) })}
-      </p>
-      <div className="flex flex-wrap gap-2">
+    <div className="mt-3">
+      <p className="mb-1.5 text-[11px] font-semibold text-v-subtle">{t('auto.userManagementView.pacientesVinculados', { v1: String(hijos.length) })}</p>
+      <div className="flex flex-wrap gap-1.5">
         {hijos.map((h: any) => (
-          <div key={h.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
-            style={{ background: 'rgba(236,72,153,0.1)', border: '1px solid rgba(236,72,153,0.3)', color: '#be185d' }}>
-            <Heart size={10} />
-            {h.name}
-            <button onClick={() => onUnlink(h.id)} title={t('ui.unlink')}
-              className="ml-1 hover:text-red-600 transition-colors">
-              <X size={10} />
-            </button>
-          </div>
+          <span key={h.id} className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 py-1 pl-2.5 pr-1 text-xs font-semibold text-rose-600 dark:text-rose-400">
+            <Heart size={11} /> {h.name}
+            <button onClick={() => onUnlink(h.id)} title={t('ui.unlink')} className="grid size-5 place-items-center rounded-full hover:bg-rose-500/15"><X size={11} /></button>
+          </span>
         ))}
       </div>
     </div>
@@ -240,6 +192,7 @@ export default function UserManagementView({ rolesConfig }: {
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [savingRole, setSavingRole] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
   const [children, setChildren] = useState<any[]>([])
 
   // Vinculación múltiple: un hijo puede tener 2 padres
@@ -300,6 +253,17 @@ export default function UserManagementView({ rolesConfig }: {
 
   useEffect(() => { cargarUsuarios() }, [cargarUsuarios])
   useEffect(() => { getControlStatus().then(st => setProfileLimits(st.limits || {})).catch(() => {}) }, [])
+  // Cupos del plan del centro: solo los usuarios ACTIVOS ocupan lugar
+  const [cupos, setCupos] = useState<{ equipo: { used: number; max: number | null }; padres: { used: number; max: number | null } } | null>(null)
+  const cargarCupos = useCallback(() => {
+    fetch('/api/centro/plan', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+      if (j) setCupos({ equipo: j.professionals || { used: 0, max: null }, padres: j.parents || { used: 0, max: null } })
+    }).catch(() => {})
+  }, [])
+  useEffect(() => { cargarCupos() }, [cargarCupos])
+  // Recalcular cupos cuando cambia la composición del equipo (alta, baja, rol o estado)
+  const firmaCupos = users.map(u => `${u.id}:${u.profile?.role}:${u.profile?.is_active !== false}`).join('|')
+  useEffect(() => { if (firmaCupos) cargarCupos() }, [firmaCupos, cargarCupos])
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { tokenRef.current = data.session?.access_token || '' })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { tokenRef.current = session?.access_token || '' })
@@ -365,13 +329,8 @@ export default function UserManagementView({ rolesConfig }: {
   const handleDeleteUser = async (user: UserData) => {
     if (user.id === currentUserId) { toast.error(t('auto.userManagementView.noPuedesEliminarTuPropia')); return }
     const esPadre = user.profile?.role === 'padre'
-    const ok = confirm(
-      (locale === 'en'
-        ? `Delete ${user.profile?.full_name || user.email}?\nThis action CANNOT be undone.`
-        : `¿Eliminar a ${user.profile?.full_name || user.email}?\nEsta acción NO se puede deshacer.`) +
-      (esPadre ? (locale === 'en' ? `\nTheir patients will be left without a linked family (they are not deleted).` : `\nSus pacientes quedarán sin familia vinculada (no se borran).`) : '')
-    )
-    if (!ok) return
+    void esPadre
+    setConfirmDelete(null)
     setDeletingUser(user.id)
     try {
       const res = await fetch('/api/admin/users', {
@@ -403,8 +362,9 @@ export default function UserManagementView({ rolesConfig }: {
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
-      toast.success(json.is_active ? '✅ Usuario activado' : '⏸ Usuario desactivado')
+      toast.success(json.is_active ? L('User activated', 'Usuario activado') : L('User deactivated · a seat was freed', 'Usuario desactivado · se liberó un cupo'))
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, profile: { ...u.profile, is_active: json.is_active } } : u))
+      cargarCupos()
     } catch (err: any) {
       toast.error('Error: ' + err.message)
     }
@@ -572,442 +532,439 @@ export default function UserManagementView({ rolesConfig }: {
     new Set(users.map(u => u.profile?.specialty).filter(Boolean) as string[])
   ).sort()
 
+  const sugerenciasEspecialidad = Array.from(new Set([...SPECIALTY_SUGGESTIONS, ...especialidadesEquipo]))
+
   const totalJefes = users.filter(u => u.profile?.role === 'jefe' || u.profile?.role === 'admin').length
   const totalEspecialistas = users.filter(u => u.profile?.role === 'especialista').length
   const totalPadres = users.filter(u => u.profile?.role === 'padre').length
   const totalSecretarias = users.filter(u => u.profile?.role === 'secretaria').length
   const totalActivos = users.filter(u => u.profile?.is_active !== false).length
 
-  if (isLoading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="animate-spin text-sky-500" size={32} />
-    </div>
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const inputCls = 'h-11 w-full rounded-v-sm border border-v-border bg-v-bg px-3.5 text-sm sm:!text-sm [font-family:inherit] text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent focus:ring-4 focus:ring-v-accent-soft'
+  const totalInactivos = users.length - totalActivos
+  const fechaCorta = (iso: string) => new Date(iso).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  // Datos de contacto de cada persona
+  const telefonoDe = (u: UserData) => (u.profile?.phone || '').trim() || (u.phone_alt || '').trim()
+  const [copiado, setCopiado] = useState<string | null>(null)
+  const copiar = async (clave: string, texto: string) => {
+    try { await navigator.clipboard.writeText(texto); setCopiado(clave); setTimeout(() => setCopiado(c => (c === clave ? null : c)), 1500) }
+    catch { toast.error(L('Could not copy', 'No se pudo copiar')) }
+  }
+  const PROVEEDOR: Record<string, [string, string]> = { email: ['Email and password', 'Correo y contraseña'], google: ['Google', 'Google'], azure: ['Microsoft', 'Microsoft'] }
+  const contactoUsuario = (u: UserData) => {
+    const tel = telefonoDe(u)
+    const digitos = tel.replace(/\D/g, '')
+    // Números peruanos de 9 dígitos sin código de país
+    const wa = digitos.length === 9 ? `51${digitos}` : digitos
+    const btn = 'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors'
+    return (
+      <div className="mb-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="rounded-v-sm border border-v-border bg-v-elevated p-3.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-v-subtle"><Mail size={12} /> {L('Email', 'Correo')}</p>
+          <p className="mt-1 truncate text-sm font-semibold text-v-text">{u.email}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${u.email_confirmed ? 'bg-v-success/15 text-v-success' : 'bg-v-warning/15 text-v-warning'}`}>
+              {u.email_confirmed ? L('Confirmed', 'Confirmado') : L('Not confirmed', 'Sin confirmar')}
+            </span>
+            <span className="rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold text-v-muted">
+              {L('Signs in with', 'Ingresa con')} {(u.providers?.length ? u.providers : ['email']).map(pv => L(...(PROVEEDOR[pv] || [pv, pv]) as [string, string])).join(' · ')}
+            </span>
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <a href={`mailto:${u.email}`} className={`${btn} bg-v-accent-soft text-v-accent hover:bg-v-accent hover:text-white`}><Send size={12} /> {L('Write', 'Escribir')}</a>
+            <button onClick={() => copiar(`m-${u.id}`, u.email)} className={`${btn} text-v-muted hover:bg-v-fill`}>{copiado === `m-${u.id}` ? <Check size={12} /> : <Copy size={12} />} {copiado === `m-${u.id}` ? L('Copied', 'Copiado') : L('Copy', 'Copiar')}</button>
+          </div>
+        </div>
+        <div className="rounded-v-sm border border-v-border bg-v-elevated p-3.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-v-subtle"><Phone size={12} /> {L('Phone / WhatsApp', 'Teléfono / WhatsApp')}</p>
+          {tel ? (
+            <>
+              <p className="mt-1 truncate text-sm font-semibold tabular-nums text-v-text">{tel}</p>
+              {!u.profile?.phone && u.phone_alt && <p className="mt-0.5 text-[10px] text-v-subtle">{L('From their family record', 'De su ficha familiar')}</p>}
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {digitos.length >= 8 && (
+                  <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer" className={`${btn} bg-[#25D366]/15 text-[#128C7E] hover:bg-[#25D366] hover:text-white dark:text-[#25D366]`}><Send size={12} /> WhatsApp</a>
+                )}
+                <a href={`tel:${tel.replace(/[^\d+]/g, '')}`} className={`${btn} bg-v-accent-soft text-v-accent hover:bg-v-accent hover:text-white`}><Phone size={12} /> {L('Call', 'Llamar')}</a>
+                <button onClick={() => copiar(`t-${u.id}`, tel)} className={`${btn} text-v-muted hover:bg-v-fill`}>{copiado === `t-${u.id}` ? <Check size={12} /> : <Copy size={12} />} {copiado === `t-${u.id}` ? L('Copied', 'Copiado') : L('Copy', 'Copiar')}</button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-v-subtle">{L('No phone registered yet', 'Aún no registró teléfono')}</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Ventana modal con el estilo Vanty
+  const modal = (open: boolean, onClose: () => void, Icon: any, title: string, sub: string, body: React.ReactNode, tone = 'v-brand') => (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="v-scope fixed inset-0 z-50 flex items-end justify-center bg-[#081426]/50 backdrop-blur-sm sm:items-center sm:p-4"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+          <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 30 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+            className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-v-lg bg-v-elevated shadow-v-lg sm:rounded-v-lg">
+            <div className="flex items-center gap-3 border-b border-v-border px-5 py-4">
+              <span className={`grid size-10 shrink-0 place-items-center rounded-[30%] ${tone}`} style={tone === 'v-brand' ? { boxShadow: 'none' } : undefined}><Icon size={18} /></span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[15px] font-semibold tracking-tight text-v-text">{title}</p>
+                <p className="truncate text-xs text-v-subtle">{sub}</p>
+              </div>
+              <button onClick={onClose} className="grid size-9 shrink-0 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-text"><X size={17} /></button>
+            </div>
+            <div className="p-5">{body}</div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 
+  if (isLoading) return (
+    <div className="flex h-64 items-center justify-center"><Loader2 className="animate-spin text-v-accent" size={28} /></div>
+  )
+
+  const TABS = [
+    { id: 'todos',        label: t('common.todos'),                count: users.length,        limitKey: '',             icon: Users },
+    { id: 'jefe',         label: L('Directors', 'Directores'),     count: totalJefes,          limitKey: 'admin',        icon: Crown },
+    { id: 'especialista', label: L('Specialists', 'Especialistas'), count: totalEspecialistas,  limitKey: 'especialista', icon: Stethoscope },
+    { id: 'padre',        label: L('Parents', 'Padres'),           count: totalPadres,         limitKey: 'padre',        icon: Heart },
+    { id: 'secretaria',   label: L('Front desk', 'Secretaría'),    count: totalSecretarias,    limitKey: 'secretaria',   icon: ClipboardList },
+  ]
+
   return (
-    <div className="space-y-5 animate-fade-in pb-6">
+    <div className="v-scope space-y-4 pb-6 md:space-y-5">
 
-      {/* Datalist global de especialidades (lo usan el modal de crear y la edición inline) */}
-      <datalist id="specialty-suggestions">
-        {/* Sugeridas + las que ya existen en el equipo (dinámicas) */}
-        {Array.from(new Set([
-          ...SPECIALTY_SUGGESTIONS,
-          ...users.map(u => u.profile?.specialty).filter(Boolean) as string[],
-        ])).map(sp => <option key={sp} value={sp} />)}
-      </datalist>
-
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{t('usuarios.gestion')}</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>{users.length} {L('registered users', 'usuarios registrados')}</p>
+      {/* Encabezado */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="v-brand grid size-11 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><Users size={20} /></span>
+        <div className="min-w-0 flex-[1_1_200px]">
+          <h1 className="v-headline text-xl text-v-text">{t('usuarios.gestion')}</h1>
+          <p className="text-xs text-v-subtle">
+            {users.length} {L('users', 'usuarios')} · <span className="text-v-success">{totalActivos} {L('active', 'activos')}</span>
+            {totalInactivos > 0 && <> · <span className="text-v-danger">{totalInactivos} {L('inactive', 'inactivos')}</span></>}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={cargarUsuarios} className="p-2 rounded-xl transition-colors hover:opacity-80"
-            style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)' }}>
-            <RefreshCw size={16} />
+        <div className="flex w-full gap-2 sm:w-auto">
+          <button onClick={cargarUsuarios} title={L('Refresh', 'Actualizar')} className="grid size-10 shrink-0 place-items-center rounded-full border border-v-border bg-v-elevated text-v-muted transition-colors hover:text-v-accent"><RefreshCw size={16} /></button>
+          <button onClick={() => setShowCreateModal(true)} title={L('Create the account yourself, with a password', 'Crear la cuenta tú mismo, con contraseña')}
+            className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-4 text-sm font-semibold text-v-text transition-colors hover:border-v-accent/40 hover:text-v-accent sm:flex-none">
+            <UserPlus size={16} /> {L('Create', 'Crear')}
           </button>
-          <button onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm">
-            <Plus size={16} /> {t('usuarios.nuevo')}
+          <button onClick={() => setShowInvite(true)} className="v-brand inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-semibold sm:flex-none">
+            <Link2 size={16} /> {L('Invite', 'Invitar')}
           </button>
         </div>
       </div>
 
-      {/* Tabs por rol */}
-      <div className="flex gap-1 border-b overflow-x-auto scrollbar-hide" style={{ borderColor: 'var(--card-border)' }}>
-        {[
-          { id: 'todos',       label: t('common.todos'),        count: users.length,        limitKey: '',             icon: Users,       color: 'text-slate-500' },
-          { id: 'jefe',        label: L('Directors', 'Directores'),   count: totalJefes,          limitKey: 'admin',        icon: Crown,       color: 'text-sky-600' },
-          { id: 'especialista',label: L('Specialists', 'Especialistas'), count: totalEspecialistas,  limitKey: 'especialista', icon: Stethoscope, color: 'text-sky-600' },
-          { id: 'padre',       label: L('Parents', 'Padres'),       count: totalPadres,         limitKey: 'padre',        icon: Heart,       color: 'text-pink-600' },
-          { id: 'secretaria',  label: L('Secretaries', 'Secretarias'), count: totalSecretarias,    limitKey: 'secretaria',   icon: ClipboardList, color: 'text-sky-600' },
-        ].map(tab => {
-          const Icon = tab.icon
-          const isActive = activeTab === tab.id
-          const lim = tab.limitKey ? (profileLimits[tab.limitKey] || 0) : 0
-          const over = lim > 0 && tab.count >= lim
+      {/* Cupos del plan */}
+      {cupos && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {([
+            { key: 'equipo', Icon: Stethoscope, label: L('Team seats', 'Cupos del equipo'), sub: L('Directors, specialists and front desk', 'Directores, especialistas y secretaría'), data: cupos.equipo },
+            { key: 'padres', Icon: Heart, label: L('Family seats', 'Cupos de familias'), sub: L('Parents / guardians', 'Padres / tutores'), data: cupos.padres },
+          ] as const).map(c => {
+            const max = c.data.max
+            const pct = max ? Math.min(100, Math.round((c.data.used / max) * 100)) : 0
+            const lleno = !!max && c.data.used >= max
+            const libres = max ? Math.max(0, max - c.data.used) : null
+            return (
+              <div key={c.key} className="rounded-v border border-v-border bg-v-elevated p-4 shadow-v">
+                <div className="flex items-center gap-3">
+                  <span className={`grid size-10 shrink-0 place-items-center rounded-[30%] ${c.key === 'equipo' ? 'bg-v-accent-soft text-v-accent' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}><c.Icon size={18} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-v-text">{c.label}</p>
+                    <p className="truncate text-[11px] text-v-subtle">{c.sub}</p>
+                  </div>
+                  <p className="shrink-0 text-right">
+                    <span className="v-headline text-2xl tabular-nums text-v-text">{c.data.used}</span>
+                    <span className="text-sm tabular-nums text-v-subtle"> / {max ?? '∞'}</span>
+                  </p>
+                </div>
+                {max ? (
+                  <>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-v-fill">
+                      <motion.div className={`h-full rounded-full ${lleno ? 'bg-v-danger' : pct >= 85 ? 'bg-v-warning' : 'v-brand'}`} style={{ boxShadow: 'none' }}
+                        initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
+                    </div>
+                    <p className={`mt-1.5 text-[11px] ${lleno ? 'font-semibold text-v-danger' : 'text-v-subtle'}`}>
+                      {lleno
+                        ? L('Full: deactivate someone to free a seat, or expand the plan.', 'Lleno: desactivá a alguien para liberar un cupo o ampliá el plan.')
+                        : L(`${libres} seat${libres === 1 ? '' : 's'} available · only active users count`, `${libres} cupo${libres === 1 ? '' : 's'} libre${libres === 1 ? '' : 's'} · solo cuentan los usuarios activos`)}
+                    </p>
+                  </>
+                ) : <p className="mt-2 text-[11px] text-v-subtle">{L('No limit in your plan', 'Sin límite en tu plan')}</p>}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Invitaciones por link */}
+      <InvitacionesPanel open={showInvite} onClose={() => setShowInvite(false)} pacientes={children} cupos={cupos} especialidades={sugerenciasEspecialidad}
+        rolesHabilitados={{ especialista: enabledRoles.especialista, secretaria: enabledRoles.secretaria, padre: enabledRoles.padre }} />
+
+      {/* Pestañas por rol */}
+      <div className="flex gap-1 overflow-x-auto rounded-full bg-v-fill p-1 [scrollbar-width:none] sm:w-fit [&::-webkit-scrollbar]:hidden">
+        {TABS.map(tab => {
+          const on = activeTab === tab.id
+          const lim = 0
+          const over = false
           return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-xs md:text-sm font-bold rounded-t-xl border-b-2 transition-all whitespace-nowrap flex-shrink-0 ${
-                isActive ? `border-sky-600 ${tab.color}` : 'border-transparent'
-              }`}
-              style={{ color: isActive ? undefined : 'var(--text-muted)', background: isActive ? 'rgba(37,99,235,0.07)' : 'transparent' }}>
-              <Icon size={13} />
-              {tab.label}
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
-                title={lim > 0 ? `${tab.count} de ${lim} (límite)` : undefined}
-                style={{ background: over ? '#dc2626' : (isActive ? '#0284c7' : 'var(--muted-bg)'), color: (over || isActive) ? '#fff' : 'var(--text-muted)' }}>
-                {tab.count}{lim > 0 ? `/${lim}` : ''}
-              </span>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} title={lim > 0 ? L(`${tab.count} of ${lim} allowed by your plan`, `${tab.count} de ${lim} permitidos por tu plan`) : undefined}
+              className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors sm:text-sm ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+              {on && <motion.span layoutId="usuarios-tab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+              <tab.icon size={14} className="relative" />
+              <span className="relative">{tab.label}</span>
+              <span className={`relative rounded-full px-1.5 text-[11px] tabular-nums ${over ? 'bg-v-danger text-white' : on ? 'bg-v-accent-soft text-v-accent' : 'text-v-subtle'}`}>{tab.count}{lim > 0 ? `/${lim}` : ''}</span>
             </button>
           )
         })}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard value={totalActivos}       label={L('Active', 'Activos')}       icon={UserCheck}   color="bg-emerald-500" />
-        <StatCard value={totalJefes}         label={L('Directors', 'Directores')}    icon={Crown}        color="bg-sky-500" />
-        <StatCard value={totalEspecialistas} label={L('Specialists', 'Especialistas')} icon={Stethoscope}  color="bg-sky-500" />
-        <StatCard value={totalPadres}        label={L('Parents', 'Padres')}        icon={Heart}        color="bg-pink-500" />
-        <StatCard value={totalSecretarias}   label={L('Secretaries', 'Secretarias')}  icon={ClipboardList}color="bg-sky-500" />
-      </div>
-
-      {/* Buscador + filtro por especialidad */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-          <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            {...{placeholder: t('ui.search_user')}}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
-            style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
+      {/* Búsqueda + especialidad */}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative min-w-0 flex-[1_1_240px]">
+          <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
+          <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder={t('ui.search_user')}
+            className="h-10 w-full rounded-full border border-v-border bg-v-elevated pl-10 pr-4 text-sm sm:!text-sm [font-family:inherit] text-v-text outline-none placeholder:text-v-subtle focus:border-v-accent" />
         </div>
         {especialidadesEquipo.length > 0 && (
-          <div className="relative sm:w-64">
-            <Briefcase size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+          <div className="relative flex-[1_1_200px] sm:max-w-64">
+            <Briefcase size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
             <select value={filterSpecialty} onChange={e => setFilterSpecialty(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all appearance-none"
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}>
-              <option value="">{t("admin.todasEspecialidades")}</option>
+              className="h-10 w-full appearance-none rounded-full border border-v-border bg-v-elevated pl-9 pr-8 text-sm sm:!text-sm [font-family:inherit] text-v-text outline-none focus:border-v-accent">
+              <option value="">{t('admin.todasEspecialidades')}</option>
               {especialidadesEquipo.map(sp => <option key={sp} value={sp}>{sp}</option>)}
             </select>
+            <ChevronDown size={14} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
           </div>
         )}
       </div>
 
-      {/* Lista de usuarios */}
-      <div className="space-y-2">
-        {filteredUsers.length === 0 && (
-          <div className="p-12 text-center rounded-2xl" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-            <Users size={36} className="mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-            <p className="font-medium" style={{ color: 'var(--text-muted)' }}>{t('ui.no_patients')}</p>
-          </div>
-        )}
-
-        {filteredUsers.map(user => {
-          const isExpanded = expandedUser === user.id
-          const isActive = user.profile?.is_active !== false
-          const role = user.profile?.role || 'padre'
-          const isDirector = role === 'jefe' || role === 'admin'
-          const isSelf = user.id === currentUserId
-
-          return (
-            <div key={user.id} className={`rounded-2xl transition-all duration-200 ${!isActive ? 'opacity-60' : ''}`}
-              style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-
-              {/* Fila principal */}
-              <div className="px-4 py-3 flex flex-wrap items-center gap-3">
-                {/* Avatar */}
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0
-                  ${isDirector ? 'bg-gradient-to-br from-sky-500 to-sky-700'
-                    : role === 'especialista' ? 'bg-gradient-to-br from-sky-500 to-sky-700'
-                    : 'bg-gradient-to-br from-pink-500 to-pink-700'}`}>
-                  {(user.profile?.full_name || user.email).charAt(0).toUpperCase()}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-                      {user.profile?.full_name || 'Sin nombre'}
-                    </p>
-                    <RoleBadge role={role} />
-                    {/* Especialidad (clasificación interna del equipo) */}
-                    {role !== 'padre' && user.profile?.specialty && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-flex items-center gap-1"
-                        style={{ background: 'rgba(123,94,167,0.12)', color: '#7b5ea7' }}>
-                        <Briefcase size={9} /> {user.profile.specialty}
-                      </span>
+      {/* Lista */}
+      {filteredUsers.length === 0 ? (
+        <div className="flex flex-col items-center rounded-v border border-dashed border-v-border bg-v-elevated px-6 py-14 text-center">
+          <span className="mb-3 grid size-12 place-items-center rounded-full bg-v-fill text-v-subtle"><Users size={22} /></span>
+          <p className="text-sm font-semibold text-v-text">{L('No users match', 'Ningún usuario coincide')}</p>
+          <p className="mt-1 text-xs text-v-subtle">{L('Try another search or tab.', 'Probá con otra búsqueda o pestaña.')}</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-v-border overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v">
+          {filteredUsers.map((user, ui) => {
+            const isExpanded = expandedUser === user.id
+            const isActive = user.profile?.is_active !== false
+            const role = user.profile?.role || 'padre'
+            const info = getRoleInfo(role)
+            const isDirector = role === 'jefe' || role === 'admin'
+            const isSelf = user.id === currentUserId
+            const nombre = user.profile?.full_name || L('No name', 'Sin nombre')
+            const conf = confirmDelete === user.id
+            return (
+              <motion.div key={user.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(ui, 12) * 0.015 }}>
+                <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-v-bg sm:px-5 ${isActive ? '' : 'opacity-60'}`}>
+                  <span className={`relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-[30%] text-sm font-bold ${info.tone}`}>
+                    {nombre.charAt(0).toUpperCase()}
+                    {user.profile?.avatar_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={fileUrl(user.profile.avatar_url)} alt="" className="absolute inset-0 size-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
                     )}
-                    {isSelf && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700">TÚ</span>
-                    )}
-                    {!isActive && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">{t('usuarios.inactivo2')}</span>
-                    )}
+                  </span>
+                  <button onClick={() => setExpandedUser(isExpanded ? null : user.id)} className="min-w-0 flex-[1_1_200px] text-left">
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold text-v-text">{nombre}</span>
+                      {isSelf && <span className="rounded-full bg-v-accent px-1.5 py-px text-[10px] font-bold text-white">{L('YOU', 'TÚ')}</span>}
+                      {!isActive && <span className="rounded-full bg-v-danger/10 px-1.5 py-px text-[10px] font-semibold text-v-danger">{t('usuarios.inactivo2')}</span>}
+                      {!user.email_confirmed && <span className="rounded-full bg-v-warning/15 px-1.5 py-px text-[10px] font-semibold text-v-warning">{L('Unconfirmed', 'Sin confirmar')}</span>}
+                    </span>
+                    <span className="block truncate text-xs text-v-subtle">
+                      {user.email}
+                      {telefonoDe(user) && <span className="hidden sm:inline"> · {telefonoDe(user)}</span>}
+                      {role !== 'padre' && user.profile?.specialty ? ` · ${user.profile.specialty}` : ''}
+                    </span>
+                  </button>
+                  <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                    {savingRole === user.id
+                      ? <Loader2 size={16} className="animate-spin text-v-accent" />
+                      : <RoleSelector currentRole={role} roles={availableRoles} onSelect={(newRole) => handleChangeRole(user, newRole)} disabled={isSelf || isDirector} />}
+                    <button role="switch" aria-checked={isActive} onClick={() => handleToggleActive(user)} disabled={isSelf || isDirector}
+                      title={isSelf ? L('You cannot deactivate yourself', 'No podés desactivarte') : isDirector ? L('Directors cannot be deactivated', 'No se puede desactivar a un director') : isActive ? L('Deactivate', 'Desactivar') : L('Activate', 'Activar')}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${isActive ? 'bg-v-success' : 'bg-v-border'}`}>
+                      <span className={`inline-block size-5 rounded-full bg-white shadow transition-transform ${isActive ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                    </button>
+                    <button onClick={() => setExpandedUser(isExpanded ? null : user.id)} title={L('More options', 'Más opciones')}
+                      className={`grid size-9 place-items-center rounded-full transition-all ${isExpanded ? 'rotate-180 bg-v-accent-soft text-v-accent' : 'text-v-subtle hover:bg-v-fill'}`}><ChevronDown size={16} /></button>
                   </div>
-                  <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
                 </div>
 
-                {/* Acciones rápidas */}
-                <div className="flex items-center gap-1.5 flex-shrink-0 w-full sm:w-auto justify-end sm:justify-start mt-1 sm:mt-0">
-                  {savingRole === user.id ? (
-                    <Loader2 size={16} className="animate-spin text-sky-500" />
-                  ) : (
-                    <RoleSelector
-                      currentRole={role}
-                      roles={availableRoles}
-                    onSelect={(newRole) => handleChangeRole(user, newRole)}
-                      disabled={isSelf || isDirector}
-                    />
-                  )}
-
-                  {/* Toggle activo — protegido para directores y uno mismo */}
-                  <button
-                    onClick={() => handleToggleActive(user)}
-                    disabled={isSelf || isDirector}
-                    title={isSelf ? L('You cannot deactivate yourself', 'No podés desactivarte') : isDirector ? L('You cannot deactivate directors', 'No podés desactivar directores') : isActive ? L('Deactivate', 'Desactivar') : L('Activate', 'Activar')}
-                    className="p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    style={{ color: isActive ? '#10b981' : 'var(--text-muted)' }}>
-                    {isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                  </button>
-
-                  {/* Expandir */}
-                  <button onClick={() => setExpandedUser(isExpanded ? null : user.id)}
-                    className="p-1.5 rounded-lg transition-colors hover:opacity-80"
-                    style={{ color: 'var(--text-muted)', background: 'var(--muted-bg)' }}>
-                    {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Panel expandido */}
-              {isExpanded && (
-                <div className="border-t px-4 py-4 animate-fade-in" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)' }}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Meta */}
-                    <div className="space-y-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                      <p className="flex items-center gap-1.5"><Calendar size={11} /> {L('Created', 'Creado')}: {new Date(user.created_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'es')}</p>
-                      <p className="flex items-center gap-1.5"><Clock size={11} /> {L('Last access', 'Último acceso')}: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'es') : L('Never', 'Nunca')}</p>
-                      <p className="flex items-center gap-1.5"><Ticket size={11} /> Tokens: <strong style={{ color: 'var(--text-primary)' }}>{user.profile?.tokens ?? 0}</strong></p>
-
-                      {/* Especialidad / clasificación de equipo — solo staff (no padres) */}
-                      {role !== 'padre' && (
-                        editingSpecialtyFor === user.id ? (
-                          <div className="flex items-center gap-1.5 pt-1">
-                            <Briefcase size={11} />
-                            <input
-                              type="text" value={newSpecialty} autoFocus list="specialty-suggestions"
-                              onChange={e => setNewSpecialty(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') handleUpdateSpecialty(user.id); if (e.key === 'Escape') setEditingSpecialtyFor(null) }}
-                              placeholder={t("admin.phEspecialidad")}
-                              className="flex-1 px-2 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
-                              style={{ background: 'var(--card)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
-                            <button onClick={() => handleUpdateSpecialty(user.id)} disabled={savingSpecialty}
-                              className="p-1 rounded-md bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50" title={t("common.guardar")}>
-                              {savingSpecialty ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                            </button>
-                            <button onClick={() => setEditingSpecialtyFor(null)} className="p-1 rounded-md hover:text-red-500" style={{ color: 'var(--text-muted)' }} title={t("common.cancelar")}>
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ) : (
-                          <p className="flex items-center gap-1.5">
-                            <Briefcase size={11} />
-                            {user.profile?.specialty
-                              ? <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{user.profile.specialty}</span>
-                              : <span className="italic">{t("admin.sinEspecialidad")}</span>}
-                            <button
-                              onClick={() => { setEditingSpecialtyFor(user.id); setNewSpecialty(user.profile?.specialty || '') }}
-                              className="ml-1 text-sky-500 hover:underline font-semibold">
-                              {user.profile?.specialty ? L('edit', 'editar') : L('assign', 'asignar')}
-                            </button>
-                          </p>
-                        )
-                      )}
-                    </div>
-
-                    {/* Botones de acción */}
-                    <div className="flex flex-wrap gap-2">
-                      <button onClick={() => { setChangingPasswordFor(user); setNewPassword(''); setConfirmPassword('') }}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
-                        style={{ background: 'var(--card)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
-                        <Lock size={12} /> {L('Change password', 'Cambiar contraseña')}
-                      </button>
-
-                      <button onClick={() => handleSendResetEmail(user)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
-                        style={{ background: 'var(--card)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
-                        <Send size={12} /> {t('common.enviandoReset')}
-                      </button>
-
-                      {editingTokensFor === user.id ? (
-                        <div className="flex items-center gap-2">
-                          <input type="number" value={newTokens} onChange={e => setNewTokens(parseInt(e.target.value) || 0)}
-                            className="w-20 px-2 py-1.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                            style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
-                          <button onClick={() => handleUpdateTokens(user.id)} disabled={savingTokens}
-                            className="px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-semibold hover:bg-sky-700 disabled:opacity-50">
-                            {savingTokens ? <Loader2 size={12} className="animate-spin" /> : t('common.guardar')}
-                          </button>
-                          <button onClick={() => setEditingTokensFor(null)} className="px-2 py-1.5 rounded-lg hover:text-red-500 transition-colors" style={{ color: 'var(--text-muted)' }}>
-                            <X size={14} />
-                          </button>
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                      <div className="border-t border-v-border bg-v-bg px-4 py-4 sm:px-5">
+                        {contactoUsuario(user)}
+                        <div className="mb-3 flex flex-wrap gap-1.5 text-[11px]">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-v-elevated px-2.5 py-1 text-v-muted shadow-v"><Calendar size={11} /> {L('Created', 'Creado')} {fechaCorta(user.created_at)}</span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-v-elevated px-2.5 py-1 text-v-muted shadow-v"><Clock size={11} /> {L('Last access', 'Último acceso')}: {user.last_sign_in_at ? fechaCorta(user.last_sign_in_at) : L('never', 'nunca')}</span>
                         </div>
-                      ) : (
-                        <button onClick={() => { setEditingTokensFor(user.id); setNewTokens(user.profile?.tokens || 0) }}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
-                          style={{ background: 'var(--card)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}>
-                          <Ticket size={12} /> {L('Edit tokens', 'Editar tokens')}
-                        </button>
-                      )}
 
-                      {user.id !== currentUserId && (
-                        <button onClick={() => handleDeleteUser(user)} disabled={deletingUser === user.id}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80 disabled:opacity-50"
-                          style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', color: '#dc2626' }}>
-                          {deletingUser === user.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} {L('Delete', 'Eliminar')}
-                        </button>
-                      )}
+                        {role !== 'padre' && (
+                          <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <Briefcase size={14} className="text-v-subtle" />
+                            {editingSpecialtyFor === user.id ? (
+                              <>
+                                <EspecialidadInput value={newSpecialty} autoFocus onChange={setNewSpecialty} sugerencias={sugerenciasEspecialidad}
+                                  onKeyDown={e => { if (e.key === 'Enter') handleUpdateSpecialty(user.id); if (e.key === 'Escape') setEditingSpecialtyFor(null) }}
+                                  placeholder={t('admin.phEspecialidad')} wrapperClassName="min-w-0 flex-[1_1_180px]" className={`${inputCls} h-9 bg-v-elevated`} />
+                                <button onClick={() => handleUpdateSpecialty(user.id)} disabled={savingSpecialty} className="v-brand inline-flex h-9 items-center gap-1 rounded-full px-3.5 text-xs font-semibold disabled:opacity-50">
+                                  {savingSpecialty ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} {t('common.guardar')}
+                                </button>
+                                <button onClick={() => setEditingSpecialtyFor(null)} className="h-9 rounded-full px-3 text-xs font-semibold text-v-muted hover:bg-v-fill">{t('common.cancelar')}</button>
+                              </>
+                            ) : (
+                              <>
+                                <span className={`text-sm ${user.profile?.specialty ? 'font-semibold text-v-text' : 'italic text-v-subtle'}`}>{user.profile?.specialty || t('admin.sinEspecialidad')}</span>
+                                <button onClick={() => { setEditingSpecialtyFor(user.id); setNewSpecialty(user.profile?.specialty || '') }} className="text-xs font-semibold text-v-accent hover:underline">
+                                  {user.profile?.specialty ? L('Edit', 'Editar') : L('Assign', 'Asignar')}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
 
-                      {!user.email_confirmed && (
-                        <button onClick={async () => {
-                          try {
-                            const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenRef.current}`, 'x-locale': typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es' }, body: JSON.stringify({ action: 'confirm_email', userId: user.id }) })
-                            const json = await res.json()
-                            if (json.error) throw new Error(json.error)
-                            toast.success(L('Email confirmed', 'Email confirmado'))
-                            cargarUsuarios()
-                          } catch (err: any) { toast.error('Error: ' + err.message) }
-                        }}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
-                          style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#059669' }}>
-                          <CheckCircle2 size={12} /> {L('Confirm email', 'Confirmar email')}
-                        </button>
-                      )}
+                        <div className="flex flex-wrap gap-1.5">
+                          <button onClick={() => { setChangingPasswordFor(user); setNewPassword(''); setConfirmPassword('') }}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-3.5 text-xs font-semibold text-v-muted transition-colors hover:text-v-accent">
+                            <Lock size={13} /> {L('Change password', 'Cambiar contraseña')}
+                          </button>
+                          <button onClick={() => handleSendResetEmail(user)} title={L('The user gets an email with a link to set a new password', 'El usuario recibe un correo con un enlace para crear una nueva contraseña')}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-3.5 text-xs font-semibold text-v-muted transition-colors hover:text-v-accent">
+                            <Send size={13} /> {L('Email a password change link', 'Enviar correo para cambiar contraseña')}
+                          </button>
+                          {!user.email_confirmed && (
+                            <button onClick={async () => {
+                              try {
+                                const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenRef.current}`, 'x-locale': locale }, body: JSON.stringify({ action: 'confirm_email', userId: user.id }) })
+                                const json = await res.json()
+                                if (json.error) throw new Error(json.error)
+                                toast.success(L('Email confirmed', 'Email confirmado'))
+                                cargarUsuarios()
+                              } catch (err: any) { toast.error('Error: ' + err.message) }
+                            }} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-v-success/15 px-3.5 text-xs font-semibold text-v-success transition-colors hover:bg-v-success hover:text-white">
+                              <CheckCircle2 size={13} /> {L('Confirm email', 'Confirmar email')}
+                            </button>
+                          )}
+                          {role === 'padre' && (
+                            <button onClick={() => { setLinkingParent(user); adminFetch('/api/admin/children').then(r => r.json()).then(j => { if (j.data) setChildren(j.data) }).catch(() => {}); setSelectedChildId('') }}
+                              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-rose-500/10 px-3.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-500 hover:text-white dark:text-rose-400">
+                              <Link2 size={13} /> {t('common.vincular')}
+                            </button>
+                          )}
+                          {!isSelf && (
+                            <button onClick={() => setConfirmDelete(conf ? null : user.id)} disabled={deletingUser === user.id}
+                              className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-colors disabled:opacity-50 ${conf ? 'bg-v-danger text-white' : 'bg-v-danger/10 text-v-danger hover:bg-v-danger hover:text-white'}`}>
+                              {deletingUser === user.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} {L('Delete', 'Eliminar')}
+                            </button>
+                          )}
+                        </div>
 
-                      {role === 'padre' && (
-                        <button onClick={() => { setLinkingParent(user)
-      // Recargar niños al abrir modal
-      adminFetch('/api/admin/children').then(r=>r.json()).then(j=>{
-        if(j.data) setChildren(j.data)
-      }).catch(()=>{}); setSelectedChildId('') }}
-                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
-                          style={{ background: 'rgba(236,72,153,0.1)', border: '1px solid rgba(236,72,153,0.3)', color: '#be185d' }}>
-                          <Link2 size={12} /> {t('common.vincular')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                        <AnimatePresence>
+                          {conf && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-v-sm bg-v-danger/10 px-3.5 py-3">
+                                <p className="min-w-0 flex-[1_1_220px] text-xs leading-relaxed text-v-danger">
+                                  {L(`Delete ${nombre}? This cannot be undone.`, `¿Eliminar a ${nombre}? No se puede deshacer.`)}
+                                  {role === 'padre' && L(' Their patients stay, without a linked family.', ' Sus pacientes se conservan, sin familia vinculada.')}
+                                </p>
+                                <button onClick={() => setConfirmDelete(null)} className="h-8 rounded-full px-3 text-xs font-semibold text-v-muted hover:bg-v-fill">{t('common.cancelar')}</button>
+                                <button onClick={() => handleDeleteUser(user)} className="h-8 rounded-full bg-v-danger px-3.5 text-xs font-semibold text-white">{L('Delete', 'Eliminar')}</button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
-                  {/* Pacientes vinculados */}
-                  {role === 'padre' && (
-                    <PacientesVinculados userId={user.id} children={children} onUnlink={handleUnlinkChild} />
+                        {role === 'padre' && <PacientesVinculados userId={user.id} pacientes={children} onUnlink={handleUnlinkChild} />}
+                      </div>
+                    </motion.div>
                   )}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Modal Cambiar Contraseña */}
-      {changingPasswordFor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="rounded-2xl shadow-2xl p-6 w-full max-w-sm animate-scale-in" style={{ background: 'var(--card)' }}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>{t('ui.change_password')}</h3>
-              <button onClick={() => setChangingPasswordFor(null)} className="p-1.5 rounded-lg hover:opacity-80" style={{ color: 'var(--text-muted)' }}><X size={16} /></button>
-            </div>
-            <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-              {L('User', 'Usuario')}: <strong style={{ color: 'var(--text-primary)' }}>{changingPasswordFor.profile?.full_name || changingPasswordFor.email}</strong>
-            </p>
-            <div className="space-y-3">
-              <div className="relative">
-                <input type={showPwd ? 'text' : 'password'} {...{placeholder: t('ui.new_password')}} value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                  className="w-full pr-10 pl-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
-                <button onClick={() => setShowPwd(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }}>
-                  {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-              <input type={showPwd ? 'text' : 'password'} {...{placeholder: t('ui.confirm_password')}} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
-            </div>
-            <button onClick={handleChangePassword} disabled={savingPassword}
-              className="mt-4 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-              {savingPassword ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
-              {t('auto.userManagementView.actualizarContrasena')}
-            </button>
-          </div>
+                </AnimatePresence>
+              </motion.div>
+            )
+          })}
         </div>
       )}
 
-      {/* Modal Crear Usuario */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="rounded-2xl shadow-2xl p-6 w-full max-w-md animate-scale-in" style={{ background: 'var(--card)' }}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <Plus size={18} className="text-sky-500" /> {L('Create new user', 'Crear nuevo usuario')}
-              </h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-1.5 rounded-lg hover:opacity-80" style={{ color: 'var(--text-muted)' }}><X size={16} /></button>
-            </div>
-            <div className="space-y-3">
-              {[L('Full name', 'Nombre completo'), 'Email', L('Password (minimum 6 characters)', 'Contraseña (mínimo 6 caracteres)')].map((ph, i) => (
-                <input key={i} placeholder={ph} type={i === 2 ? 'password' : i === 1 ? 'email' : 'text'}
-                  value={i === 0 ? createForm.full_name : i === 1 ? createForm.email : createForm.password}
-                  onChange={e => setCreateForm(f => ({ ...f, [i === 0 ? 'full_name' : i === 1 ? 'email' : 'password']: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
-              ))}
-              <select value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}
-                className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}>
-                <option value="jefe">👑 {L('Director — Full access', 'Director — Acceso total')}</option>
-                <option value="especialista">{t('ui.specialist_role')}</option>
-                <option value="padre">{t('usuarios.rolPadre')}</option>
-                <option value="secretaria">📋 {L('Secretary — Administrative support', 'Secretaria(o) — Apoyo administrativo')}</option>
-              </select>
-              {createForm.role !== 'padre' && (
-                <input list="specialty-suggestions" placeholder={t("admin.phEspecialidadArea")} value={createForm.specialty}
-                  onChange={e => setCreateForm(f => ({ ...f, specialty: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
-              )}
-            </div>
-            <button onClick={handleCreateUser} disabled={creatingUser}
-              className="mt-4 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-              {creatingUser ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              {t('auto.userManagementView.crearUsuario')}
-            </button>
+      {/* Cambiar contraseña */}
+      {modal(!!changingPasswordFor, () => setChangingPasswordFor(null), Lock, t('ui.change_password'), changingPasswordFor?.profile?.full_name || changingPasswordFor?.email || '', (
+        <div className="space-y-3">
+          <div className="relative">
+            <input type={showPwd ? 'text' : 'password'} placeholder={t('ui.new_password')} value={newPassword} onChange={e => setNewPassword(e.target.value)} className={`${inputCls} pr-11`} />
+            <button onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-v-subtle hover:bg-v-fill">{showPwd ? <EyeOff size={15} /> : <Eye size={15} />}</button>
           </div>
+          <input type={showPwd ? 'text' : 'password'} placeholder={t('ui.confirm_password')} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputCls} />
+          {newPassword && confirmPassword && newPassword !== confirmPassword && <p className="text-xs text-v-danger">{L('Passwords do not match', 'Las contraseñas no coinciden')}</p>}
+          <button onClick={handleChangePassword} disabled={savingPassword} className="v-brand inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold disabled:opacity-50">
+            {savingPassword ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />} {t('auto.userManagementView.actualizarContrasena')}
+          </button>
         </div>
-      )}
+      ))}
 
-      {/* Modal Vincular Paciente */}
-      {linkingParent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="rounded-2xl shadow-2xl p-6 w-full max-w-sm animate-scale-in" style={{ background: 'var(--card)' }}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-                <Heart size={18} className="text-pink-500" /> Vincular paciente
-              </h3>
-              <button onClick={() => setLinkingParent(null)} className="p-1.5 rounded-lg hover:opacity-80" style={{ color: 'var(--text-muted)' }}><X size={16} /></button>
+      {/* Crear usuario */}
+      {modal(showCreateModal, () => setShowCreateModal(false), UserPlus, L('New user', 'Nuevo usuario'), L('They will be able to sign in right away', 'Podrá ingresar de inmediato'), (
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-v-muted">{L('Role', 'Rol')}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(availableRoles ?? ROLES).map(r => {
+                const on = createForm.role === r.value
+                return (
+                  <button key={r.value} type="button" onClick={() => setCreateForm(f => ({ ...f, role: r.value }))}
+                    className={`flex items-center gap-2 rounded-v-sm border p-2.5 text-left transition-all ${on ? 'border-v-accent bg-v-accent-soft ring-1 ring-v-accent' : 'border-v-border bg-v-bg hover:border-v-accent/40'}`}>
+                    <span className={`grid size-8 shrink-0 place-items-center rounded-[30%] ${r.tone}`}><r.icon size={15} /></span>
+                    <span className="min-w-0">
+                      <span className={`block truncate text-xs font-semibold ${on ? 'text-v-accent' : 'text-v-text'}`}>{locale === 'en' ? r.labelEn : r.label}</span>
+                      <span className="block truncate text-[10px] text-v-subtle">{locale === 'en' ? r.descriptionEn : r.description}</span>
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-            <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>
-              {L('Parent/Guardian', 'Padre/Tutor')}: <strong style={{ color: 'var(--text-primary)' }}>{linkingParent.profile?.full_name || linkingParent.email}</strong>
-            </p>
-            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-              {t('auto.userManagementView.siElPacienteYaTiene')}
-            </p>
-            <label className="text-xs font-bold block mb-2" style={{ color: 'var(--text-muted)' }}>
-              {t('auto.userManagementView.seleccionaElPaciente')}
-            </label>
-            <select value={selectedChildId} onChange={e => setSelectedChildId(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 mb-4"
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}>
+          </div>
+          <div className="space-y-2.5">
+            <input placeholder={L('Full name', 'Nombre completo')} value={createForm.full_name} onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))} className={inputCls} />
+            <input type="email" placeholder="Email" value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} className={inputCls} />
+            <input type="password" placeholder={L('Password (at least 6 characters)', 'Contraseña (mínimo 6 caracteres)')} value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} className={inputCls} />
+            {createForm.role !== 'padre' && (
+              <EspecialidadInput placeholder={t('admin.phEspecialidadArea')} value={createForm.specialty} onChange={v => setCreateForm(f => ({ ...f, specialty: v }))} sugerencias={sugerenciasEspecialidad} className={inputCls} />
+            )}
+          </div>
+          <button onClick={handleCreateUser} disabled={creatingUser} className="v-brand inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold disabled:opacity-50">
+            {creatingUser ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />} {t('auto.userManagementView.crearUsuario')}
+          </button>
+        </div>
+      ))}
+
+      {/* Vincular paciente */}
+      {modal(!!linkingParent, () => setLinkingParent(null), Link2, L('Link patient', 'Vincular paciente'), `${L('Parent/Guardian', 'Padre/Tutor')}: ${linkingParent?.profile?.full_name || linkingParent?.email || ''}`, (
+        <div className="space-y-3">
+          <p className="text-xs leading-relaxed text-v-subtle">{t('auto.userManagementView.siElPacienteYaTiene')}</p>
+          <div className="relative">
+            <select value={selectedChildId} onChange={e => setSelectedChildId(e.target.value)} className={`${inputCls} appearance-none pr-9`}>
               <option value="">{t('usuarios.selPaciente2')}</option>
               {children.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name}{c.parent_id && c.parent_id !== linkingParent.id ? (locale === 'en' ? ' ⚠️ already has a guardian' : ' ⚠️ ya tiene tutor') : ''}
-                </option>
+                <option key={c.id} value={c.id}>{c.name}{c.parent_id && linkingParent && c.parent_id !== linkingParent.id ? (locale === 'en' ? ' — already has a guardian' : ' — ya tiene tutor') : ''}</option>
               ))}
             </select>
-            {children.length === 0 && (
-              <p className="text-xs text-amber-500 font-medium mb-3">{t("ui.no_patients_registered")}</p>
-            )}
-            <button onClick={handleLinkParentChild} disabled={savingLink || !selectedChildId}
-              className="w-full py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2 text-white"
-              style={{ background: '#db2777' }}>
-              {savingLink ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />}
-              {t('auto.userManagementView.vincular')}
-            </button>
+            <ChevronDown size={15} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
           </div>
+          {children.length === 0 && <p className="text-xs font-medium text-v-warning">{t('ui.no_patients_registered')}</p>}
+          <button onClick={handleLinkParentChild} disabled={savingLink || !selectedChildId} className="v-brand inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold disabled:opacity-50">
+            {savingLink ? <Loader2 size={16} className="animate-spin" /> : <Link2 size={16} />} {t('auto.userManagementView.vincular')}
+          </button>
         </div>
-      )}
+      ), 'bg-rose-500/10 text-rose-600')}
     </div>
   )
 }

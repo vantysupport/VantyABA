@@ -2,16 +2,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { notifyAsync } from '@/lib/notifications'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
+    const caller = await getApiCaller(request)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
+
     const body = await request.json()
     const { action, appointment, childName, secretariaName } = body
+    if (appointment?.child_id && !(await canAccessChild(caller, appointment.child_id))) return forbidden()
 
-    const { data: admins } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, full_name')
-      .eq('role', 'admin')
+    // Only the admins of the caller's own center.
+    const centro = await getCentroBranding({ centroId: caller.centroId })
+    const { data: admins } = centro.id
+      ? await supabaseAdmin.from('profiles').select('id, email, full_name').in('role', ['admin', 'jefe']).eq('centro_id', centro.id)
+      : { data: [] }
 
     const adminIds = (admins || []).map((a: any) => a.id).filter(Boolean)
 
@@ -24,6 +32,7 @@ export async function POST(request: NextRequest) {
     const label = actionLabels[action] || 'Cambio en cita'
 
     notifyAsync({
+      centro,
       tipo: action === 'cancelled' ? 'cita_cancelada' : 'cita_confirmada',
       vars: {
         fecha: appointment?.appointment_date || '',

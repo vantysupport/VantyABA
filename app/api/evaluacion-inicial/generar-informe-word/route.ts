@@ -6,7 +6,9 @@
 // para que aparezca automáticamente en la pestaña "Historial & IA" del paciente.
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, canAccessChild, hasRole, ROLES, unauthorized, notFound } from '@/lib/api-auth'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildClinicalContext } from '@/lib/ai-context-builder'
 import {
@@ -19,8 +21,9 @@ import {
   tablaDatosGenerales, recomendaciones, piePaginaOficial,
   generarIniciales, generarCodigoDocumento, portadaInstitucional,
   selloQRVerificacionAsync, DOC_NUMBERING, DOC_PAGE_PROPS,
-} from '@/lib/santi-report-template'
+} from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -198,6 +201,8 @@ function fmtRespuesta(v: any): string {
 
 // ─── Endpoint ────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { evaluacion_id } = await req.json()
     if (!evaluacion_id) return NextResponse.json({ error: 'evaluacion_id requerido' }, { status: 400 })
@@ -210,6 +215,11 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     if (error) throw error
     if (!eval_) return NextResponse.json({ error: 'Evaluación no encontrada' }, { status: 404 })
+    if (!(await canAccessChild(caller, eval_.child_id))) return notFound()
+    // Tokens: solo cuando lo pide el personal (el flujo de la familia no se bloquea)
+    const centroCobro = hasRole(caller, ROLES.staff) ? caller.centroId : null
+    const bloqueo = await sinTokens(centroCobro, /^en/i.test(String(req.headers.get('x-locale') || '')))
+    if (bloqueo) return bloqueo
     if (!eval_.anamnesis_especifica) {
       return NextResponse.json({ error: 'La anamnesis aún no está completada' }, { status: 400 })
     }
@@ -220,6 +230,7 @@ export async function POST(req: NextRequest) {
       .eq('id', eval_.child_id)
       .maybeSingle()
     if (!child) return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
+    const centro = await getCentroBranding({ childId: child.id })
 
     // Profile del padre
     let parentName = ''
@@ -251,10 +262,10 @@ export async function POST(req: NextRequest) {
     // Cerebro IA: protocolos clínicos relevantes para fundamentar el informe
     const motivoConsulta = String(eval_.respuestas_intake?.motivo_principal || '')
     const queryKB = `${motivoConsulta} ${(child as any).diagnosis || ''} ${tipoInforme} indicadores criterios DSM CIE-11 ABLLS AFLS hitos desarrollo`
-    const knowledgeCtx = await buildClinicalContext(queryKB, 10).catch(() => '')
+    const knowledgeCtx = await buildClinicalContext(queryKB, eval_.centro_id ?? null, 5).catch(() => '')
 
     const analisisIA = await callGroqSimple(
-      `Eres neuropsicóloga clínica senior de SANTI (Perú). Vas a redactar el INFORME PROFESIONAL de una anamnesis ${tipoInforme.toLowerCase()} para incluir en el historial clínico del paciente. Lenguaje técnico riguroso, párrafos fluidos, sin bullets. Cita observaciones concretas de los datos.
+      `Eres neuropsicóloga clínica senior del centro ${centro.name}. Vas a redactar el INFORME PROFESIONAL de una anamnesis ${tipoInforme.toLowerCase()} para incluir en el historial clínico del paciente. Lenguaje técnico riguroso, párrafos fluidos, sin bullets. Cita observaciones concretas de los datos.
 
 FORMATO OBLIGATORIO (respétalo al pie de la letra para que el documento se vea profesional):
 - Estructura el informe en estas 5 secciones, EN ESTE ORDEN:
@@ -285,7 +296,7 @@ ${fmtPorSecciones()}
 - Tipo de evaluación recomendada: ${tipoInforme}
 - Razonamiento previo: ${eval_.recomendacion_razon || '—'}
 
-${knowledgeCtx ? `# 📚 CONTEXTO CLÍNICO DE REFERENCIA (Cerebro IA SANTI — uso interno)
+${knowledgeCtx ? `# 📚 CONTEXTO CLÍNICO DE REFERENCIA (Cerebro IA — uso interno)
 ${knowledgeCtx}
 
 INSTRUCCIONES ADICIONALES:
@@ -413,19 +424,21 @@ Redacta el INFORME COMPLETO ahora siguiendo la estructura indicada.`,
 
     // Sello QR de verificación (async)
     const sellosVerif = await selloQRVerificacionAsync({
+      branding: centro,
       codigoDoc: docNum,
       fechaEmision: hoy,
-      especialista: 'Equipo Clínico SANTI',
+      especialista: 'Equipo Clínico',
     })
 
     const seccionesDocx: (Paragraph | Table)[] = [
       // ── Portada institucional profesional ──
       ...portadaInstitucional({
+        branding: centro,
         tipoInforme: `INFORME DE ANAMNESIS ${tipoInforme.toUpperCase()}`,
         nombrePaciente: child.name || 'Paciente',
         edadPaciente: (child as any).age != null ? `${(child as any).age} años` : '—',
         diagnostico: (child as any).diagnosis || 'En evaluación clínica',
-        especialista: 'Equipo Clínico SANTI',
+        especialista: 'Equipo Clínico',
         credenciales: 'Centro de Neuropsicología y Terapias',
         fechaEmision: hoy,
         codigoDoc: docNum,
@@ -482,7 +495,7 @@ Redacta el INFORME COMPLETO ahora siguiendo la estructura indicada.`,
     seccionesDocx.push(
       tituloSeccion('Observaciones finales'),
       parrafo(`El presente informe fue generado a partir de la ficha de anamnesis ${tipoInforme.toLowerCase()} completada por la familia el ${hoy}. La información aquí consignada constituye una base preliminar para el proceso de evaluación clínica directa con el paciente y deberá ser corroborada, ampliada y contrastada por el equipo profesional a cargo del caso.`),
-      parrafo(`La información contenida en este documento es confidencial y de uso exclusivo del equipo clínico del Centro de Neuropsicología y Terapias SANTI, en el marco del proceso de atención del paciente.`),
+      parrafo(`La información contenida en este documento es confidencial y de uso exclusivo del equipo clínico del centro ${centro.name}, en el marco del proceso de atención del paciente.`),
       // ── Sello QR ──
       new Paragraph({ spacing: { before: 160, after: 40 }, children: [] }),
       ...sellosVerif,
@@ -499,7 +512,7 @@ Redacta el INFORME COMPLETO ahora siguiendo la estructura indicada.`,
       new Paragraph({
         spacing: { before: 0, after: 0 },
         children: [new TextRun({
-          text: 'Neuropsicología y Terapias SANTI',
+          text: centro.name,
           size: 18,
           font: 'Arial',
           color: '475569',
@@ -512,7 +525,7 @@ Redacta el INFORME COMPLETO ahora siguiendo la estructura indicada.`,
       styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
       sections: [{
         properties: DOC_PAGE_PROPS,
-        footers: { default: piePaginaOficial() },
+        footers: { default: piePaginaOficial(centro) },
         children: seccionesDocx,
       }],
     })
@@ -549,11 +562,13 @@ Redacta el INFORME COMPLETO ahora siguiendo la estructura indicada.`,
         fecha_generacion: new Date().toISOString(),
         generado_por: 'Padres + IA',
         source_id: evaluacion_id,
+        centro_id: eval_.centro_id,
       })
       .select()
       .single()
     if (insErr) throw insErr
 
+    await descontarToken(centroCobro)
     return NextResponse.json({
       ok: true,
       reporte_id: (inserted as any)?.id,

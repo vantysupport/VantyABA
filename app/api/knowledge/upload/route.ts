@@ -8,6 +8,8 @@ export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
+import { esCentroFundador } from '@/lib/knowledge-base'
 import { logServerError } from '@/lib/log-server-error'
 
 const BUCKET = process.env.KNOWLEDGE_BUCKET_NAME || 'knowledge-base'
@@ -15,6 +17,10 @@ const MAX_SIZE = 500 * 1024 * 1024 // 500MB
 const VERCEL_LIMIT = 4 * 1024 * 1024 // 4MB — límite seguro para FormData en Vercel
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const contentLength = parseInt(req.headers.get('content-length') || '0')
 
@@ -22,7 +28,7 @@ export async function POST(req: NextRequest) {
     // El cliente pidió una URL de upload pre-firmada con GET ?presign=true
     const { searchParams } = new URL(req.url)
     if (searchParams.get('presign') === 'true') {
-      return handlePresign(req)
+      return handlePresign(req, caller.centroId)
     }
 
     // Para archivos pequeños (<4MB), recibir por FormData normal
@@ -40,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No se recibió ningún archivo' }, { status: 400 })
     }
 
-    const safeName = `knowledge/${Date.now()}_${file.name.replace(/\s+/g, '_')}`
+    const safeName = `knowledge/${caller.centroId}/${Date.now()}_${file.name.replace(/\s+/g, '_')}`
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
@@ -77,13 +83,13 @@ export async function POST(req: NextRequest) {
 
 // Genera una URL pre-firmada para que el cliente suba DIRECTAMENTE a Supabase Storage
 // sin pasar por Vercel — evita el límite de 4.5MB
-async function handlePresign(req: NextRequest) {
+async function handlePresign(req: NextRequest, centroId: string) {
   try {
     const body = await req.json()
     const { fileName, contentType } = body
     if (!fileName) return NextResponse.json({ error: 'fileName requerido' }, { status: 400 })
 
-    const safeName = `knowledge/${Date.now()}_${fileName.replace(/\s+/g, '_')}`
+    const safeName = `knowledge/${centroId}/${Date.now()}_${fileName.replace(/\s+/g, '_')}`
 
     // Crear upload URL pre-firmada (válida 1 hora)
     const { data, error } = await supabaseAdmin.storage

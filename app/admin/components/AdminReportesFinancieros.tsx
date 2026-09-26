@@ -1,67 +1,103 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useI18n } from '@/lib/i18n-context'
 import {
-  DollarSign, TrendingUp, Users, Calendar, Download,
-  RefreshCw, Loader2, CheckCircle2, ArrowUpRight, ArrowDownRight,
-  BarChart3, Package, Activity
+  DollarSign, TrendingUp, Users, Calendar, Download, RefreshCw, Loader2, CheckCircle2,
+  ArrowUpRight, ArrowDownRight, Package, Activity, CreditCard, BarChart3, Trophy, ChevronDown,
 } from 'lucide-react'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid,
-  Legend
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, ReferenceArea,
 } from 'recharts'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { useCurrency } from '@/components/CurrencyContext'
+import { cobradoDe, saldoDe } from '@/lib/pagos'
 
-const MESES     = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-const MESES_L   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const MESES      = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+const MESES_L    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const MESES_EN   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const MESES_L_EN = ['January','February','March','April','May','June','July','August','September','October','November','December']
-const COLORS    = ['#0284c7','#10b981','#f59e0b','#0ea5e9','#ef4444','#0891b2','#06b6d4','#6366f1']
-const METHODS   = ['efectivo','yape','plin','transferencia','tarjeta','otro']
-const METHOD_EN: Record<string, string> = { efectivo: 'Cash', yape: 'Yape', plin: 'Plin', transferencia: 'Bank Transfer', tarjeta: 'Card', otro: 'Other' }
+const METHODS    = ['efectivo','yape','plin','transferencia','tarjeta','otro']
+const METHOD_ES: Record<string, string> = { efectivo: 'Efectivo', yape: 'Yape', plin: 'Plin', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' }
+const METHOD_EN: Record<string, string> = { efectivo: 'Cash', yape: 'Yape', plin: 'Plin', transferencia: 'Bank transfer', tarjeta: 'Card', otro: 'Other' }
+// efectivo, yape, plin, transferencia, tarjeta, otro (Yape y Plin con sus colores de marca)
+const METHOD_COLOR: Record<string, string> = { efectivo: '#10b981', yape: '#742284', plin: '#00b5c3', transferencia: '#0069db', tarjeta: '#f59e0b', otro: '#94a3b8' }
+// Paleta de marca para series sin color propio (pacientes, servicios)
+const PALETTE = ['#0069db', '#01abfc', '#10b981', '#f59e0b', '#742284', '#00b5c3', '#ef4444', '#94a3b8']
 
-// ── KPI grande con comparativa ────────────────────────────────────────────────
-function KPIBig({ label, value, sub, icon: Icon, bar, delta, deltaLabel }: any) {
-  const up = delta >= 0
+// Mes/año de un pago en hora de Perú (paid_at viene en UTC; los antiguos son medianoche UTC = solo fecha)
+function mesAnioLima(iso: string): { m: number; y: number } {
+  const d = new Date(iso)
+  const soloFecha = d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0
+  if (soloFecha) return { m: d.getUTCMonth(), y: d.getUTCFullYear() }
+  const lima = new Date(d.getTime() - 5 * 3600 * 1000)
+  return { m: lima.getUTCMonth(), y: lima.getUTCFullYear() }
+}
+const fechaPago = (p: any) => p.paid_at || p.created_at
+
+// ── KPI ───────────────────────────────────────────────────────────────────────
+function KPI({ label, value, sub, icon: Icon, tone, delta, deltaTitle, index = 0 }: {
+  label: string; value: React.ReactNode; sub?: string; icon: any; tone: string; delta?: number | null; deltaTitle?: string; index?: number
+}) {
+  const up = (delta ?? 0) >= 0
   return (
-    <div className="group rounded-2xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
-      style={{ background: `linear-gradient(157deg, ${bar}0d 0%, var(--card) 46%)`, border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110" style={{ background: `${bar}1a`, color: bar }}>
-          <Icon size={18} />
-        </div>
-        {delta !== undefined && (
-          <div className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-full ${up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
-            {up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-            {Math.abs(delta).toFixed(1)}%
-          </div>
-        )}
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05, type: 'spring', stiffness: 200, damping: 24 }}
+      className="rounded-v border border-v-border bg-v-elevated p-4 shadow-v sm:p-5">
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <p className="text-xs font-medium text-v-muted">{label}</p>
+        <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${tone}`}><Icon size={17} /></span>
       </div>
-      <p className="font-extrabold leading-none mb-1 tabular-nums tracking-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: 'var(--text-primary)', fontSize: 'clamp(1.1rem, 2.2vw, 2.25rem)' }}>{value}</p>
-      <p className="text-xs font-bold mt-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
-      {sub && <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{sub}</p>}
+      <p className="v-headline truncate text-2xl tabular-nums text-v-text sm:text-[1.75rem]">{value}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+        {delta !== undefined && delta !== null && (
+          <span title={deltaTitle} className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${up ? 'bg-v-success/15 text-v-success' : 'bg-v-danger/10 text-v-danger'}`}>
+            {up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}{Math.abs(delta).toFixed(0)}%
+          </span>
+        )}
+        {sub && <p className="truncate text-[11px] text-v-subtle">{sub}</p>}
+      </div>
+    </motion.div>
+  )
+}
+
+function Card({ Icon, tone, title, sub, right, children, className = '' }: { Icon: any; tone: string; title: string; sub?: string; right?: React.ReactNode; children: React.ReactNode; className?: string }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v ${className}`}>
+      <div className="flex flex-wrap items-center gap-3 border-b border-v-border px-5 py-4">
+        <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${tone}`}><Icon size={17} /></span>
+        <div className="min-w-0 flex-[1_1_160px]">
+          <h3 className="text-[15px] font-semibold tracking-tight text-v-text">{title}</h3>
+          {sub && <p className="text-xs text-v-subtle">{sub}</p>}
+        </div>
+        {right}
+      </div>
+      {children}
+    </motion.div>
+  )
+}
+
+function Vacio({ Icon, texto }: { Icon: any; texto: string }) {
+  return (
+    <div className="flex h-[200px] flex-col items-center justify-center px-6 text-center">
+      <span className="mb-3 grid size-12 place-items-center rounded-full bg-v-fill text-v-subtle"><Icon size={20} /></span>
+      <p className="text-sm text-v-subtle">{texto}</p>
     </div>
   )
 }
 
-// ── Tooltip personalizado ─────────────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label }: any) => {
-  const { symbol } = useCurrency()
+// ── Tooltip ───────────────────────────────────────────────────────────────────
+function ChartTooltip({ active, payload, label, fmt }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-2xl px-4 py-3 shadow-xl" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-      <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{label}</p>
+    <div className="rounded-v-sm border border-v-border bg-v-elevated px-3.5 py-2.5 shadow-v-lg">
+      <p className="mb-1.5 text-xs font-semibold text-v-text">{label}</p>
       {payload.map((p: any, i: number) => (
         <div key={i} className="flex items-center gap-2 text-xs">
-          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span style={{ color: 'var(--text-muted)' }}>{p.name}:</span>
-          <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
-            {p.dataKey === 'sesiones' ? p.value : `${symbol} ${Number(p.value).toFixed(2)}`}
-          </span>
+          <span className="size-2 rounded-full" style={{ background: p.color }} />
+          <span className="text-v-muted">{p.name}:</span>
+          <span className="font-semibold tabular-nums text-v-text">{p.dataKey === 'sesiones' ? p.value : fmt(Number(p.value))}</span>
         </div>
       ))}
     </div>
@@ -77,318 +113,269 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
   const dateLoc = isEN ? 'en-US' : 'es-PE'
   const toast = useToast()
   const { symbol } = useCurrency()
-  const [loading, setLoading]         = useState(true)
+  const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'overview' | 'pacientes' | 'servicios'>('overview')
   const reportesTabs = ([
-    { id: 'overview',  label: L('Income', 'Ingresos'),      Icon: TrendingUp },
-    { id: 'pacientes', label: L('Patients', 'Pacientes'),   Icon: Users },
-    { id: 'servicios', label: L('Services', 'Servicios'),   Icon: Package },
-  ] as const).filter(t => !enabledTabs || enabledTabs[`reportes_${t.id}`] !== false)
+    { id: 'overview',  label: L('Income', 'Ingresos'),    Icon: TrendingUp },
+    { id: 'pacientes', label: L('Patients', 'Pacientes'), Icon: Users },
+    { id: 'servicios', label: L('Services', 'Servicios'), Icon: Package },
+  ] as const).filter(tb => !enabledTabs || enabledTabs[`reportes_${tb.id}`] !== false)
   type ReportesTab = 'overview' | 'pacientes' | 'servicios'
-  const activeTab: ReportesTab = reportesTabs.find(t => t.id === tab) ? tab : (reportesTabs[0]?.id ?? 'overview')
-  const [anio, setAnio]               = useState(new Date().getFullYear())
-  const [mesFilter, setMesFilter]     = useState<number | null>(null) // null = todo el año
-
-  const [raw, setRaw] = useState({ payments: [] as any[], appointments: [] as any[], specialists: [] as any[] })
-  const [data, setData] = useState({
-    totalAnio: 0, totalMes: 0, totalPendiente: 0, sesionesAnio: 0,
-    deltaMes: 0, // % vs mes anterior
-    porMes: [] as any[], porMetodo: [] as any[],
-    porTerapeuta: [] as any[], porPaciente: [] as any[], porServicio: [] as any[],
-    tasaCobro: 0,
-  })
-
-  const compute = useCallback((pays: any[], apts: any[], specs: any[], año: number, mes: number | null) => {
-    // Build specialist lookup
-    const specMap: Record<string, string> = {}
-    specs.forEach(s => { specMap[s.id] = s.full_name || 'Sin nombre' })
-
-    const paid      = pays.filter(p => p.status === 'paid')
-    const pending   = pays.filter(p => p.status === 'pending')
-    const sum       = (arr: any[]) => arr.reduce((a, p) => a + Number(p.amount), 0)
-    const now       = new Date()
-    const curMes    = now.getMonth()
-    const prevMes   = curMes === 0 ? 11 : curMes - 1
-    const prevAnio  = curMes === 0 ? año - 1 : año
-
-    const paidThisMes = paid.filter(p => {
-      const d = new Date(p.paid_at || p.created_at)
-      return d.getMonth() === curMes && d.getFullYear() === año
-    })
-    const paidPrevMes = paid.filter(p => {
-      const d = new Date(p.paid_at || p.created_at)
-      return d.getMonth() === prevMes && d.getFullYear() === prevAnio
-    })
-    const thisMesTotal = sum(paidThisMes)
-    const prevMesTotal = sum(paidPrevMes)
-    const deltaMes = prevMesTotal > 0 ? ((thisMesTotal - prevMesTotal) / prevMesTotal) * 100 : 0
-
-    // Por mes (12 meses)
-    const porMes = Array.from({ length: 12 }, (_, i) => {
-      const m = String(i + 1).padStart(2,'0')
-      const mp = paid.filter(p => (p.paid_at || p.created_at).startsWith(`${año}-${m}`))
-      const pp = pending.filter(p => p.created_at.startsWith(`${año}-${m}`))
-      return { mes: MES[i], ingresos: sum(mp), pendiente: sum(pp), sesiones: mp.length }
-    })
-
-    // Por método de pago
-    const porMetodo = METHODS.map((m, i) => ({
-      name: isEN ? (METHOD_EN[m] || m) : (m.charAt(0).toUpperCase() + m.slice(1)),
-      value: sum(paid.filter(p => p.payment_method === m)),
-      color: COLORS[i % COLORS.length],
-    })).filter(m => m.value > 0)
-
-    // Por terapeuta — join payments → appointments via child_id
-    const tMap: Record<string, { name: string; ingresos: number; sesiones: number; color: string }> = {}
-    paid.forEach(p => {
-      // Find appointment for this child near payment date
-      const relatedApt = apts.find(a =>
-        a.child_id === p.child_id &&
-        a.specialist_id &&
-        Math.abs(new Date(a.appointment_date).getTime() - new Date(p.paid_at || p.created_at).getTime()) < 30 * 24 * 3600 * 1000
-      )
-      const specId   = relatedApt?.specialist_id || null
-      const specName = specId ? (specMap[specId] || 'Otro') : 'Sin asignar'
-      if (!tMap[specName]) tMap[specName] = { name: specName, ingresos: 0, sesiones: 0, color: COLORS[Object.keys(tMap).length % COLORS.length] }
-      tMap[specName].ingresos += Number(p.amount)
-      tMap[specName].sesiones++
-    })
-    const porTerapeuta = Object.values(tMap).sort((a, b) => b.ingresos - a.ingresos)
-
-    // Por paciente
-    const pMap: Record<string, { name: string; ingresos: number; sesiones: number }> = {}
-    paid.forEach(p => {
-      const id = p.child_id || 'none'
-      if (!pMap[id]) pMap[id] = { name: p.children?.name || '—', ingresos: 0, sesiones: 0 }
-      pMap[id].ingresos += Number(p.amount)
-      pMap[id].sesiones++
-    })
-    const porPaciente = Object.values(pMap).sort((a, b) => b.ingresos - a.ingresos).slice(0, 12)
-
-    // Por servicio
-    const sMap: Record<string, { value: number; count: number }> = {}
-    paid.forEach(p => {
-      const s = p.concept?.replace(/ \(\d+\/\d+\)$/, '') || L('Other', 'Otro')
-      if (!sMap[s]) sMap[s] = { value: 0, count: 0 }
-      sMap[s].value += Number(p.amount)
-      sMap[s].count++
-    })
-    const porServicio = Object.entries(sMap).sort(([,a],[,b]) => b.value - a.value)
-      .map(([name, v], i) => ({ name, ...v, color: COLORS[i % COLORS.length] }))
-
-    setData({
-      totalAnio: sum(paid),
-      totalMes: thisMesTotal,
-      totalPendiente: sum(pending),
-      sesionesAnio: paid.length,
-      deltaMes,
-      porMes, porMetodo, porTerapeuta, porPaciente, porServicio,
-      tasaCobro: pays.length > 0 ? Math.round((paid.length / pays.length) * 100) : 0,
-    })
-  }, [MES, isEN])
+  const activeTab: ReportesTab = reportesTabs.find(tb => tb.id === tab) ? tab : (reportesTabs[0]?.id ?? 'overview')
+  const hoy = new Date()
+  const [anio, setAnio] = useState(hoy.getFullYear())
+  const [mesFilter, setMesFilter] = useState<number | null>(null) // null = todo el año
+  const [mesMenu, setMesMenu] = useState(false)
+  const [payments, setPayments] = useState<any[]>([])
 
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
-      const inicio = `${anio}-01-01`
-      const fin    = `${anio}-12-31`
-
-      const [{ data: pays }, { data: apts }, { data: specs }] = await Promise.all([
-        supabase.from('payments').select('*, children(name, id)').gte('created_at', inicio).lte('created_at', fin + 'T23:59:59').order('created_at'),
-        supabase.from('appointments').select('id, child_id, appointment_date, specialist_id, service_type').gte('appointment_date', inicio).lte('appointment_date', fin),
-        supabase.from('profiles').select('id, full_name').in('role', ['especialista','terapeuta','admin','jefe']),
-      ])
-      const p = pays || [], a = apts || [], s = specs || []
-      setRaw({ payments: p, appointments: a, specialists: s })
-      compute(p, a, s, anio, mesFilter)
+      // Se piden desde diciembre del año anterior para poder comparar enero con el mes previo
+      const { data: pays, error } = await supabase.from('payments').select('*, children(name, id)')
+        .gte('created_at', `${anio - 1}-12-01`).lte('created_at', `${anio}-12-31T23:59:59`).order('created_at')
+      if (error) throw error
+      setPayments(pays || [])
     } catch (e: any) { toast.error('Error: ' + e.message) }
     finally { setLoading(false) }
-  }, [anio, compute])
+  }, [anio]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { cargar() }, [cargar])
-  useEffect(() => { if (raw.payments.length > 0) compute(raw.payments, raw.appointments, raw.specialists, anio, mesFilter) }, [mesFilter])
 
-  // Excel anual profesional (multi-hoja con formato) — reutiliza /api/pagos/reporte-mensual
-  const exportExcelAnual = async () => {
+  const fmt = useCallback((n: number) => `${symbol} ${n.toLocaleString(dateLoc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, [symbol, dateLoc])
+
+  const data = useMemo(() => {
+    // Cobrado incluye los adelantos de pagos parciales; la deuda, sus saldos (lib/pagos)
+    const sum = (arr: any[]) => arr.reduce((a, p) => a + cobradoDe(p), 0)
+    const deb = (arr: any[]) => arr.reduce((a, p) => a + saldoDe(p), 0)
+    const delAnio = payments.filter(p => mesAnioLima(fechaPago(p)).y === anio)
+    const enMes = (p: any, m: number, y: number) => { const r = mesAnioLima(fechaPago(p)); return r.m === m && r.y === y }
+    // Mes de referencia: el elegido en el filtro, o el actual si se ve el año en curso
+    const mesRef = mesFilter ?? (anio === hoy.getFullYear() ? hoy.getMonth() : 11)
+    const alcance = mesFilter === null ? delAnio : delAnio.filter(p => enMes(p, mesFilter, anio))
+    const paid    = alcance.filter(p => cobradoDe(p) > 0)
+    const pending = alcance.filter(p => saldoDe(p) > 0)
+
+    const pagMes  = sum(payments.filter(p => enMes(p, mesRef, anio)))
+    const prevM   = mesRef === 0 ? 11 : mesRef - 1
+    const prevY   = mesRef === 0 ? anio - 1 : anio
+    const pagPrev = sum(payments.filter(p => enMes(p, prevM, prevY)))
+    // El mes en curso todavía no termina: la comparación sería engañosa, así que no se muestra
+    const mesEnCurso = anio === hoy.getFullYear() && mesRef === hoy.getMonth()
+    const deltaMes = pagPrev > 0 && !mesEnCurso ? ((pagMes - pagPrev) / pagPrev) * 100 : null
+
+    const porMes = Array.from({ length: 12 }, (_, i) => {
+      const mp = delAnio.filter(p => cobradoDe(p) > 0 && enMes(p, i, anio))
+      const pp = delAnio.filter(p => saldoDe(p) > 0 && enMes(p, i, anio))
+      return { mes: MES[i], ingresos: sum(mp), pendiente: deb(pp), sesiones: mp.length }
+    })
+
+    const porMetodo = METHODS.map(m => ({
+      name: (isEN ? METHOD_EN : METHOD_ES)[m], value: sum(paid.filter(p => p.payment_method === m)), color: METHOD_COLOR[m],
+    })).filter(m => m.value > 0)
+
+    const pMap: Record<string, { name: string; ingresos: number; sesiones: number; externo: boolean }> = {}
+    paid.forEach(p => {
+      const id = p.child_id || `ext:${p.paciente_externo || '—'}`
+      if (!pMap[id]) pMap[id] = { name: p.children?.name || p.paciente_externo || '—', ingresos: 0, sesiones: 0, externo: !p.child_id }
+      pMap[id].ingresos += cobradoDe(p); pMap[id].sesiones++
+    })
+    const porPaciente = Object.values(pMap).sort((a, b) => b.ingresos - a.ingresos)
+
+    const sMap: Record<string, { value: number; count: number }> = {}
+    paid.forEach(p => {
+      const s = p.concept?.replace(/\s*\(\d+\/\d+\)$/, '').trim() || L('Other', 'Otro')
+      if (!sMap[s]) sMap[s] = { value: 0, count: 0 }
+      sMap[s].value += cobradoDe(p); sMap[s].count++
+    })
+    const porServicio = Object.entries(sMap).sort(([, a], [, b]) => b.value - a.value)
+      .map(([name, v], i) => ({ name, ...v, color: PALETTE[i % PALETTE.length] }))
+
+    const cobrables = alcance.filter(p => p.status !== 'cancelled' && p.status !== 'refunded')
+    return {
+      total: sum(paid), pagMes, mesRef, deltaMes, pendiente: deb(pending), cobros: paid.length,
+      tasaCobro: cobrables.length > 0 ? Math.round((paid.length / cobrables.length) * 100) : 0,
+      porMes, porMetodo, porPaciente, porServicio,
+    }
+  }, [payments, anio, mesFilter, isEN]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const descargarExcel = async (mes: number) => {
     try {
-      const res = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=0&lang=${locale}`)
+      const res = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=${mes}&lang=${locale}`)
       if (!res.ok) { toast.error(t('auto.adminReportesFinancieros.errorGenerandoReporte')); return }
       const blob = await res.blob()
-      const url  = URL.createObjectURL(blob)
-      const a    = document.createElement('a')
-      a.href     = url
-      a.download = `${L('financial_report', 'reporte_financiero')}_${anio}.xlsx`
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = mes === 0 ? `${L('financial_report', 'reporte_financiero')}_${anio}.xlsx` : `${L('report', 'reporte')}_${MESL[mes - 1].toLowerCase()}_${anio}.xlsx`
       a.click(); URL.revokeObjectURL(url)
       toast.success(t('auto.adminReportesFinancieros.reporteExportado'))
-    } catch (e: any) {
-      toast.error('Error: ' + e.message)
-    }
+    } catch (e: any) { toast.error('Error: ' + e.message) }
   }
 
-  const fmt = (n: number) => `${symbol} ${n.toLocaleString(dateLoc, { minimumFractionDigits: 2 })}`
-
-  // Filtered porMes for selected month
-  const chartData = mesFilter !== null ? data.porMes.filter((_, i) => i === mesFilter) : data.porMes
+  const periodo = mesFilter === null ? String(anio) : `${MESL[mesFilter]} ${anio}`
+  const totMetodo = data.porMetodo.reduce((a, x) => a + x.value, 0)
+  const tip = <ChartTooltip fmt={fmt} />
+  const sinIngresos = data.porMes.every(m => !m.ingresos && !m.pendiente)
 
   return (
-    <div className="space-y-5">
+    <div className="v-scope space-y-4 md:space-y-5">
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-        <div className="h-1" style={{ background: 'linear-gradient(90deg, #10b981 0%, #0284c7 40%, #f59e0b 70%, #0ea5e9 100%)' }} />
-        <div className="px-6 py-4 flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{t("admin.reportesFinancieros")}</h2>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{L('Income, billing and center metrics','Ingresos, facturación y métricas del centro')} · {MESL[new Date().getMonth()]} {anio}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="v-brand grid size-11 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><BarChart3 size={20} /></span>
+        <div className="min-w-0 flex-[1_1_220px]">
+          <h2 className="v-headline text-xl text-v-text">{t('admin.reportesFinancieros')}</h2>
+          <p className="text-xs text-v-subtle">{L('Income, billing and center metrics', 'Ingresos, facturación y métricas del centro')} · {periodo}</p>
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="flex rounded-full bg-v-fill p-1">
+            {[hoy.getFullYear() - 1, hoy.getFullYear()].map(y => (
+              <button key={y} onClick={() => { setAnio(y); setMesFilter(null) }}
+                className={`relative rounded-full px-4 py-1.5 text-xs font-semibold tabular-nums transition-colors ${anio === y ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+                {anio === y && <motion.span layoutId="rf-anio" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+                <span className="relative">{y}</span>
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Año */}
-            <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: 'var(--card-border)' }}>
-              {[new Date().getFullYear() - 1, new Date().getFullYear()].map(y => (
-                <button key={y} onClick={() => setAnio(y)}
-                  className="px-4 py-2 text-xs font-bold transition-all"
-                  style={{ background: anio === y ? '#10b981' : 'var(--muted-bg)', color: anio === y ? '#fff' : 'var(--text-muted)' }}>
-                  {y}
-                </button>
-              ))}
-            </div>
-            {/* Mes filter */}
-            <select value={mesFilter ?? ''} onChange={e => setMesFilter(e.target.value === '' ? null : Number(e.target.value))}
-              className="px-3 py-2 rounded-xl text-xs font-bold border-2 outline-none"
-              style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-              <option value="">{t("admin.todoAnio")}</option>
-              {MESL.map((m, i) => <option key={i} value={i}>{m}</option>)}
-            </select>
-            <button onClick={exportExcelAnual}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
-              style={{ background: '#0f766e' }}
-              title={L('Download professional annual Excel', 'Descargar Excel anual profesional')}>
-              <Download size={13} /> Excel
+          {/* Filtro de mes */}
+          <div className="relative">
+            <button onClick={() => setMesMenu(o => !o)}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors ${mesFilter !== null ? 'border-v-accent/40 bg-v-accent-soft text-v-accent' : 'border-v-border bg-v-elevated text-v-muted hover:text-v-text'}`}>
+              <Calendar size={14} /> {mesFilter === null ? t('admin.todoAnio') : MESL[mesFilter]} <ChevronDown size={13} className={`transition-transform ${mesMenu ? 'rotate-180' : ''}`} />
             </button>
-            <button onClick={cargar} className="p-2 rounded-xl transition-all hover:opacity-70"
-              style={{ color: 'var(--text-muted)', background: 'var(--muted-bg)' }}>
-              <RefreshCw size={14} />
-            </button>
+            <AnimatePresence>
+              {mesMenu && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setMesMenu(false)} />
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-full z-40 mt-1.5 w-60 rounded-v-sm border border-v-border bg-v-elevated p-2 shadow-v-lg">
+                    <button onClick={() => { setMesFilter(null); setMesMenu(false) }}
+                      className={`mb-1.5 w-full rounded-full py-1.5 text-xs font-semibold transition-colors ${mesFilter === null ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-fill'}`}>{t('admin.todoAnio')}</button>
+                    <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-1">
+                      {MES.map((m, i) => {
+                        const futuro = anio === hoy.getFullYear() && i > hoy.getMonth()
+                        return (
+                          <button key={m} disabled={futuro} onClick={() => { setMesFilter(i); setMesMenu(false) }}
+                            className={`rounded-full py-1.5 text-xs font-semibold transition-colors disabled:opacity-35 ${mesFilter === i ? 'bg-v-accent text-white' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>{m}</button>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
+          <button onClick={() => descargarExcel(mesFilter === null ? 0 : mesFilter + 1)}
+            title={L('Download Excel report', 'Descargar reporte en Excel')}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full bg-v-accent-soft px-3.5 text-xs font-semibold text-v-accent transition-colors hover:bg-v-accent hover:text-white">
+            <Download size={14} /> Excel
+          </button>
+          <button onClick={cargar} title={L('Refresh', 'Actualizar')}
+            className="grid size-9 place-items-center rounded-full border border-v-border bg-v-elevated text-v-muted transition-colors hover:text-v-accent">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
 
       {/* ── KPIs ────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KPIBig label={L('Income this year','Ingresos del año')}    value={loading ? '—' : fmt(data.totalAnio)}         sub={`${anio}`}              icon={DollarSign}  bar="#10b981" />
-        <KPIBig label={L('This month','Este mes')}            value={loading ? '—' : fmt(data.totalMes)}           sub={MESL[new Date().getMonth()]} icon={TrendingUp} bar="#0284c7" delta={data.deltaMes} />
-        <KPIBig label={L('Payments collected','Cobros realizados')}   value={loading ? '—' : data.sesionesAnio}            sub={`${data.tasaCobro}% ${L('collection rate','tasa de cobro')}`} icon={CheckCircle2} bar="#0ea5e9" />
-        <KPIBig label={L('Outstanding','Por cobrar')}          value={loading ? '—' : fmt(data.totalPendiente)}     sub={L('Pending payment','Pendiente de pago')}     icon={Calendar}    bar="#f59e0b" />
+      <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+        <KPI index={0} label={mesFilter === null ? L('Income this year', 'Ingresos del año') : L('Income of the month', 'Ingresos del mes')} value={loading ? '—' : fmt(data.total)} sub={periodo} icon={DollarSign} tone="bg-v-success/15 text-v-success" />
+        <KPI index={1} label={mesFilter === null && anio === hoy.getFullYear() ? L('This month', 'Este mes') : MESL[data.mesRef]} value={loading ? '—' : fmt(data.pagMes)}
+          sub={data.deltaMes === null ? (anio === hoy.getFullYear() && data.mesRef === hoy.getMonth() ? L('Month in progress', 'Mes en curso') : undefined) : L('vs previous month', 'vs mes anterior')}
+          delta={loading ? null : data.deltaMes} deltaTitle={L('Compared with the previous month', 'Comparado con el mes anterior')} icon={TrendingUp} tone="bg-v-accent-soft text-v-accent" />
+        <KPI index={2} label={L('Payments collected', 'Cobros realizados')} value={loading ? '—' : data.cobros} sub={`${data.tasaCobro}% ${L('collection rate', 'tasa de cobro')}`} icon={CheckCircle2} tone="bg-v-accent-soft text-v-accent" />
+        <KPI index={3} label={L('Outstanding', 'Por cobrar')} value={loading ? '—' : fmt(data.pendiente)} sub={L('Pending payment', 'Pendiente de pago')} icon={Calendar} tone="bg-v-warning/15 text-v-warning" />
       </div>
 
       {/* ── TABS ────────────────────────────────────────────────────────────── */}
-      <div className="flex rounded-2xl p-1.5 border gap-1.5" style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)' }}>
-        {reportesTabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id as any)}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-            style={{
-              background: tab === t.id ? 'var(--card)' : 'transparent',
-              color: tab === t.id ? '#0284c7' : 'var(--text-muted)',
-              border: tab === t.id ? '1px solid var(--card-border)' : '1px solid transparent',
-              boxShadow: tab === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-            }}>
-            <t.Icon size={14} /> {t.label}
-          </button>
-        ))}
+      <div className="flex gap-1 rounded-full bg-v-fill p-1">
+        {reportesTabs.map(tb => {
+          const on = activeTab === tb.id
+          return (
+            <button key={tb.id} onClick={() => setTab(tb.id as ReportesTab)}
+              className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors sm:text-sm ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+              {on && <motion.span layoutId="rf-tab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+              <tb.Icon size={15} className="relative" /><span className="relative">{tb.label}</span>
+            </button>
+          )
+        })}
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 size={28} className="animate-spin" style={{ color: '#0284c7' }} />
-          <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.calculandoMetricas")}</p>
+        <div className="flex flex-col items-center justify-center gap-3 py-20">
+          <Loader2 size={26} className="animate-spin text-v-accent" />
+          <p className="text-sm text-v-subtle">{t('admin.calculandoMetricas')}</p>
         </div>
       ) : (
         <>
-          {/* ── OVERVIEW ── */}
+          {/* ── INGRESOS ── */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
-
-              {/* Area chart — ingresos vs pendiente */}
-              <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-                <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                  <div>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{L('Income evolution','Evolución de ingresos')} {anio}</h3>
-                    <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{t("admin.ingresosCobrados")}</p>
+              <Card Icon={TrendingUp} tone="bg-v-success/15 text-v-success" title={`${L('Income evolution', 'Evolución de ingresos')} ${anio}`} sub={t('admin.ingresosCobrados')}
+                right={
+                  <div className="flex items-center gap-3 text-xs text-v-muted">
+                    <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-v-success" /> {L('Collected', 'Cobrado')}</span>
+                    <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-v-warning" /> {L('Pending', 'Pendiente')}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-[11px]">
-                    {[{ color: '#10b981', label: L('Collected','Cobrado') }, { color: '#f59e0b', label: L('Pending','Pendiente') }].map(l => (
-                      <div key={l.label} className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-sm" style={{ background: l.color }} />
-                        <span style={{ color: 'var(--text-muted)' }}>{l.label}</span>
-                      </div>
-                    ))}
-                  </div>
+                }>
+                <div className="p-3 sm:p-5">
+                  {sinIngresos ? <Vacio Icon={BarChart3} texto={L('No payments recorded this year.', 'Aún no hay pagos registrados este año.')} /> : (
+                    <ResponsiveContainer width="100%" height={240}>
+                      <AreaChart data={data.porMes} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="rfIngresos" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity={0.28} />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
+                          </linearGradient>
+                          <linearGradient id="rfPendiente" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.22} />
+                            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--v-border)" vertical={false} />
+                        {mesFilter !== null && <ReferenceArea x1={MES[mesFilter]} x2={MES[mesFilter]} fill="var(--v-accent-soft)" fillOpacity={1} />}
+                        <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'var(--v-text-tertiary)' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: 'var(--v-text-tertiary)' }} axisLine={false} tickLine={false} width={56} tickFormatter={v => `${symbol}${Number(v).toLocaleString(dateLoc)}`} />
+                        <Tooltip content={tip} />
+                        <Area type="monotone" dataKey="ingresos" name={L('Collected', 'Cobrado')} stroke="#10b981" strokeWidth={2.5} fill="url(#rfIngresos)" dot={{ r: 3, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+                        <Area type="monotone" dataKey="pendiente" name={L('Pending', 'Pendiente')} stroke="#f59e0b" strokeWidth={2} fill="url(#rfPendiente)" dot={false} activeDot={{ r: 5 }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
-                <div className="p-5">
-                  <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={data.porMes} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="gIngresos" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#10b981" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
-                        </linearGradient>
-                        <linearGradient id="gPendiente" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
-                      <XAxis dataKey="mes" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={50} tickFormatter={v => `${symbol}${v}`} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="ingresos" name={L('Collected','Cobrado')}   stroke="#10b981" strokeWidth={2.5} fill="url(#gIngresos)"  dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
-                      <Area type="monotone" dataKey="pendiente" name={L('Pending','Pendiente')} stroke="#f59e0b" strokeWidth={2} fill="url(#gPendiente)" dot={{ r: 3, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+              </Card>
 
-              {/* Bottom row: método pago + sesiones por mes */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Por método */}
-                <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.metodosPago")}</h3>
-                    <DollarSign size={15} style={{ color: '#f59e0b' }} />
-                  </div>
-                  <div className="p-5">
-                    {data.porMetodo.length === 0 ? (
-                      <div className="flex items-center justify-center h-[160px]">
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t("admin.sinDatos")}</p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-4">
-                        <ResponsiveContainer width="50%" height={160}>
-                          <PieChart>
-                            <Pie data={data.porMetodo} cx="50%" cy="50%" innerRadius={42} outerRadius={68} dataKey="value" paddingAngle={3}>
-                              {data.porMetodo.map((e, i) => <Cell key={i} fill={e.color} />)}
-                            </Pie>
-                            <Tooltip formatter={(v: any) => `${symbol} ${Number(v).toFixed(2)}`}
-                              contentStyle={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 10, fontSize: 11, color: 'var(--text-primary)', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
-                              labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
-                              itemStyle={{ color: 'var(--text-secondary)' }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="flex-1 space-y-2.5">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <Card Icon={CreditCard} tone="bg-v-accent-soft text-v-accent" title={t('admin.metodosPago')} sub={periodo}>
+                  <div className="p-4 sm:p-5">
+                    {data.porMetodo.length === 0 ? <Vacio Icon={CreditCard} texto={t('admin.sinDatos')} /> : (
+                      <div className="flex flex-col items-center gap-5 sm:flex-row">
+                        <div className="relative size-[170px] shrink-0">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={data.porMetodo} cx="50%" cy="50%" innerRadius={56} outerRadius={80} dataKey="value" paddingAngle={3} stroke="none">
+                                {data.porMetodo.map((e, i) => <Cell key={i} fill={e.color} />)}
+                              </Pie>
+                              <Tooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ background: 'var(--v-bg-elevated)', border: '1px solid var(--v-border)', borderRadius: 10, fontSize: 11, color: 'var(--v-text)' }} itemStyle={{ color: 'var(--v-text-secondary)' }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                            <p className="text-[11px] text-v-subtle">Total</p>
+                            <p className="text-sm font-bold tabular-nums text-v-text">{fmt(totMetodo)}</p>
+                          </div>
+                        </div>
+                        <div className="w-full min-w-0 flex-1 space-y-3">
                           {data.porMetodo.map(m => {
-                            const total = data.porMetodo.reduce((a,x) => a + x.value, 0)
-                            const pct = total > 0 ? Math.round(m.value / total * 100) : 0
+                            const pct = totMetodo > 0 ? Math.round(m.value / totMetodo * 100) : 0
                             return (
                               <div key={m.name}>
-                                <div className="flex items-center justify-between mb-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <div className="w-2 h-2 rounded-full" style={{ background: m.color }} />
-                                    <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{m.name}</span>
-                                  </div>
-                                  <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{pct}%</span>
+                                <div className="mb-1 flex items-center justify-between gap-2">
+                                  <span className="flex min-w-0 items-center gap-2 text-sm text-v-muted"><span className="size-2.5 shrink-0 rounded-full" style={{ background: m.color }} /><span className="truncate">{m.name}</span></span>
+                                  <span className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(m.value)} <span className="text-xs font-normal text-v-subtle">· {pct}%</span></span>
                                 </div>
-                                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--muted-bg)' }}>
-                                  <div style={{ width: `${pct}%`, background: m.color, height: '100%', borderRadius: '999px' }} />
+                                <div className="h-1.5 overflow-hidden rounded-full bg-v-fill">
+                                  <motion.div className="h-full rounded-full" style={{ background: m.color }} initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
                                 </div>
                               </div>
                             )
@@ -397,192 +384,169 @@ export default function AdminReportesFinancieros({ enabledTabs }: { enabledTabs?
                       </div>
                     )}
                   </div>
-                </div>
+                </Card>
 
-                {/* Sesiones por mes */}
-                <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.sesionesPagadas")}</h3>
-                    <Activity size={15} style={{ color: '#0284c7' }} />
+                <Card Icon={Activity} tone="bg-v-accent-soft text-v-accent" title={t('admin.sesionesPagadas')} sub={String(anio)}>
+                  <div className="p-3 sm:p-5">
+                    {sinIngresos ? <Vacio Icon={Activity} texto={t('admin.sinDatos')} /> : (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={data.porMes} barSize={18}>
+                          <defs>
+                            <linearGradient id="rfBar" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#01abfc" /><stop offset="100%" stopColor="#0069db" />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--v-border)" vertical={false} />
+                          <XAxis dataKey="mes" tick={{ fontSize: 10, fill: 'var(--v-text-tertiary)' }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 10, fill: 'var(--v-text-tertiary)' }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
+                          <Tooltip content={tip} cursor={{ fill: 'var(--v-fill)' }} />
+                          <Bar dataKey="sesiones" name={L('Sessions', 'Sesiones')} radius={[6, 6, 0, 0]}>
+                            {data.porMes.map((_, i) => <Cell key={i} fill={mesFilter === null || mesFilter === i ? 'url(#rfBar)' : 'var(--v-border)'} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
-                  <div className="p-5">
-                    <ResponsiveContainer width="100%" height={160}>
-                      <BarChart data={data.porMes} barSize={20}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
-                        <XAxis dataKey="mes" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} width={20} allowDecimals={false} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Bar dataKey="sesiones" name={L('Sessions','Sesiones')} fill="#0284c7" radius={[5,5,0,0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                </Card>
               </div>
 
-              {/* Tabla resumen mes a mes */}
-              <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-                <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                  <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{L('Monthly summary','Resumen mensual')} {anio}</h3>
-                  <button
-                    onClick={async () => {
-                      const res = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=0&lang=${locale}`)
-                      if (!res.ok) { toast.error(t('auto.adminReportesFinancieros.errorGenerandoReporte')); return }
-                      const blob = await res.blob()
-                      const url  = URL.createObjectURL(blob)
-                      const a    = document.createElement('a')
-                      a.href     = url
-                      a.download = `reporte_financiero_${anio}.xlsx`
-                      a.click(); URL.revokeObjectURL(url)
-                      toast.success(L('Annual Excel exported','Excel anual exportado'))
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all hover:opacity-80"
-                    style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
-                    <Download size={12} /> {L('Annual Excel','Excel anual')}
+              {/* Resumen mes a mes */}
+              <Card Icon={Calendar} tone="bg-v-fill text-v-muted" title={`${L('Monthly summary', 'Resumen mensual')} ${anio}`} sub={L('Tap a month to filter · download its Excel on the right', 'Tocá un mes para filtrar · descargá su Excel a la derecha')}
+                right={
+                  <button onClick={() => descargarExcel(0)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-3.5 text-xs font-semibold text-v-muted transition-colors hover:text-v-accent">
+                    <Download size={14} /> {L('Annual Excel', 'Excel anual')}
                   </button>
-                </div>
+                }>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-[520px] text-sm">
                     <thead>
-                      <tr style={{ background: 'var(--muted-bg)', borderBottom: '1px solid var(--card-border)' }}>
-                        {[L('Month','Mes'),L('Sessions','Sesiones'),L('Collected','Cobrado'),L('Pending','Pendiente'),L('Total','Total'),''].map(h => (
-                          <th key={h} className="text-left px-3 sm:px-5 py-2.5 text-[10px] font-bold whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{h}</th>
+                      <tr className="bg-v-bg text-left text-xs text-v-subtle">
+                        {[L('Month', 'Mes'), L('Sessions', 'Sesiones'), L('Collected', 'Cobrado'), L('Pending', 'Pendiente'), L('Total', 'Total'), ''].map((h, i) => (
+                          <th key={i} className={`whitespace-nowrap px-4 py-2.5 font-medium sm:px-5 ${i > 0 && i < 5 ? 'text-right' : ''}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody>
-                      {data.porMes.map((m, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid var(--card-border)', opacity: m.ingresos + m.pendiente === 0 ? 0.4 : 1 }}>
-                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{MESL[i]}</td>
-                          <td className="px-3 sm:px-5 py-3" style={{ color: 'var(--text-muted)' }}>{m.sesiones}</td>
-                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#10b981' }}>{symbol} {m.ingresos.toFixed(2)}</td>
-                          <td className="px-3 sm:px-5 py-3 font-medium whitespace-nowrap" style={{ color: '#f59e0b' }}>{symbol} {m.pendiente.toFixed(2)}</td>
-                          <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{symbol} {(m.ingresos + m.pendiente).toFixed(2)}</td>
-                          <td className="px-3 py-3">
-                            {(m.ingresos + m.pendiente) > 0 && (
-                              <button
-                                onClick={async () => {
-                                  const res  = await fetch(`/api/pagos/reporte-mensual?anio=${anio}&mes=${i + 1}&lang=${locale}`)
-                                  if (!res.ok) { toast.error(t('auto.adminReportesFinancieros.error')); return }
-                                  const blob = await res.blob()
-                                  const url  = URL.createObjectURL(blob)
-                                  const a    = document.createElement('a')
-                                  a.href     = url; a.download = `reporte_${MESL[i].toLowerCase()}_${anio}.xlsx`
-                                  a.click(); URL.revokeObjectURL(url)
-                                  toast.success(t('auto.adminReportesFinancieros.excelDeExportado', { v1: String(MESL[i]) }))
-                                }}
-                                title={`${L('Download report for','Descargar reporte de')} ${MESL[i]}`}
-                                className="p-1.5 rounded-lg transition-all hover:opacity-70"
-                                style={{ background: 'rgba(59,130,246,0.1)', color: '#0284c7' }}>
-                                <Download size={12} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                    <tbody className="divide-y divide-v-border">
+                      {data.porMes.map((m, i) => {
+                        const vacio = m.ingresos + m.pendiente === 0
+                        const sel = mesFilter === i
+                        return (
+                          <tr key={i} onClick={() => setMesFilter(sel ? null : i)}
+                            className={`cursor-pointer transition-colors ${sel ? 'bg-v-accent-soft' : 'hover:bg-v-bg'} ${vacio ? 'text-v-subtle' : ''}`}>
+                            <td className={`whitespace-nowrap px-4 py-3 font-medium sm:px-5 ${sel ? 'text-v-accent' : vacio ? '' : 'text-v-text'}`}>{MESL[i]}</td>
+                            <td className="px-4 py-3 text-right tabular-nums text-v-muted sm:px-5">{m.sesiones || '—'}</td>
+                            <td className={`whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums sm:px-5 ${m.ingresos ? 'text-v-success' : ''}`}>{m.ingresos ? fmt(m.ingresos) : '—'}</td>
+                            <td className={`whitespace-nowrap px-4 py-3 text-right tabular-nums sm:px-5 ${m.pendiente ? 'text-v-warning' : ''}`}>{m.pendiente ? fmt(m.pendiente) : '—'}</td>
+                            <td className={`whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums sm:px-5 ${vacio ? '' : 'text-v-text'}`}>{vacio ? '—' : fmt(m.ingresos + m.pendiente)}</td>
+                            <td className="px-3 py-2 text-right">
+                              {!vacio && (
+                                <button onClick={e => { e.stopPropagation(); descargarExcel(i + 1) }} title={`${L('Download report for', 'Descargar reporte de')} ${MESL[i]}`}
+                                  className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><Download size={14} /></button>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                     <tfoot>
-                      <tr style={{ background: 'var(--muted-bg)', borderTop: '2px solid var(--card-border)' }}>
-                        <td className="px-3 sm:px-5 py-3 font-bold text-xs whitespace-nowrap" style={{ color: 'var(--text-muted)' }}>{L('Total','Total')} {anio}</td>
-                        <td className="px-3 sm:px-5 py-3 font-bold" style={{ color: 'var(--text-primary)' }}>{data.sesionesAnio}</td>
-                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#10b981' }}>{symbol} {data.totalAnio.toFixed(2)}</td>
-                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: '#f59e0b' }}>{symbol} {data.totalPendiente.toFixed(2)}</td>
-                        <td className="px-3 sm:px-5 py-3 font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{symbol} {(data.totalAnio + data.totalPendiente).toFixed(2)}</td>
-                        <td />
-                      </tr>
+                      {(() => {
+                        const tot = data.porMes.reduce((a, m) => ({ s: a.s + m.sesiones, i: a.i + m.ingresos, p: a.p + m.pendiente }), { s: 0, i: 0, p: 0 })
+                        return (
+                          <tr className="border-t border-v-border bg-v-bg font-semibold">
+                            <td className="whitespace-nowrap px-4 py-3 text-v-text sm:px-5">{L('Total', 'Total')} {anio}</td>
+                            <td className="px-4 py-3 text-right tabular-nums text-v-text sm:px-5">{tot.s}</td>
+                            <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-v-success sm:px-5">{fmt(tot.i)}</td>
+                            <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-v-warning sm:px-5">{fmt(tot.p)}</td>
+                            <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-v-text sm:px-5">{fmt(tot.i + tot.p)}</td>
+                            <td />
+                          </tr>
+                        )
+                      })()}
                     </tfoot>
                   </table>
                 </div>
-              </div>
+              </Card>
             </div>
           )}
 
-          {/* ── TERAPEUTAS ── */}
           {/* ── PACIENTES ── */}
           {activeTab === 'pacientes' && (
-            <div className="space-y-4">
-              <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-                <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                  <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{L('Income by patient','Ingresos por paciente')} {anio}</h3>
-                  <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{data.porPaciente.length} {L('patients','pacientes')}</span>
-                </div>
-                <div className="p-5 space-y-3">
-                  {data.porPaciente.length === 0 ? (
-                    <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>{t("admin.sinDatos")}</p>
-                  ) : data.porPaciente.map((p, i) => {
+            <Card Icon={Users} tone="bg-v-accent-soft text-v-accent" title={`${L('Income by patient', 'Ingresos por paciente')}`} sub={periodo}
+              right={<span className="rounded-full bg-v-fill px-2.5 py-1 text-xs font-semibold text-v-muted">{data.porPaciente.length} {L('patients', 'pacientes')}</span>}>
+              {data.porPaciente.length === 0 ? <Vacio Icon={Users} texto={t('admin.sinDatos')} /> : (
+                <div className="divide-y divide-v-border">
+                  {data.porPaciente.map((p, i) => {
                     const max = data.porPaciente[0]?.ingresos || 1
                     const pct = Math.round(p.ingresos / max * 100)
+                    const medalla = i < 3
                     return (
-                      <div key={p.name} className="flex items-center gap-4 p-3 rounded-xl" style={{ background: 'var(--muted-bg)' }}>
-                        <span className="text-[11px] font-bold w-5 text-center flex-shrink-0" style={{ color: 'var(--text-muted)' }}>{i + 1}</span>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                          style={{ background: COLORS[i % COLORS.length] }}>{p.name.charAt(0).toUpperCase()}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <p className="text-xs font-bold truncate" style={{ color: 'var(--text-primary)' }}>{p.name}</p>
-                            <p className="text-sm font-bold ml-2 flex-shrink-0" style={{ color: '#10b981' }}>{symbol} {p.ingresos.toFixed(2)}</p>
+                      <motion.div key={p.name + i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 10) * 0.025 }}
+                        className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                        <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${medalla ? 'bg-v-warning/15 text-v-warning' : 'text-v-subtle'}`}>{medalla ? <Trophy size={12} /> : i + 1}</span>
+                        <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-sm font-semibold text-v-accent">{p.name.charAt(0).toUpperCase()}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                            <p className="truncate text-sm font-semibold text-v-text">{p.name}{p.externo && <span className="ml-1.5 rounded-full bg-v-fill px-1.5 py-0.5 text-[10px] font-medium text-v-subtle">{L('not enrolled', 'sin inscribir')}</span>}</p>
+                            <p className="shrink-0 text-sm font-bold tabular-nums text-v-text">{fmt(p.ingresos)}</p>
                           </div>
-                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--card)' }}>
-                            <div style={{ width: `${pct}%`, background: COLORS[i % COLORS.length], height: '100%', borderRadius: '999px', transition: 'width 0.6s ease' }} />
+                          <div className="h-1.5 overflow-hidden rounded-full bg-v-fill">
+                            <motion.div className="h-full rounded-full v-brand" style={{ boxShadow: 'none' }} initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }} />
                           </div>
-                          <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>{p.sesiones} {L('paid sessions','sesiones pagadas')}</p>
+                          <p className="mt-1 text-[11px] text-v-subtle">{p.sesiones} {p.sesiones === 1 ? L('paid session', 'sesión pagada') : L('paid sessions', 'sesiones pagadas')}</p>
                         </div>
-                      </div>
+                      </motion.div>
                     )
                   })}
                 </div>
-              </div>
-            </div>
+              )}
+            </Card>
           )}
 
           {/* ── SERVICIOS ── */}
           {activeTab === 'servicios' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.distribServicio")}</h3>
-                  </div>
-                  <div className="p-5">
-                    {data.porServicio.length === 0 ? (
-                      <div className="flex items-center justify-center h-[200px]">
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t("admin.sinDatos")}</p>
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height={200}>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <Card Icon={Package} tone="bg-v-accent-soft text-v-accent" title={t('admin.distribServicio')} sub={periodo}>
+                <div className="p-4 sm:p-5">
+                  {data.porServicio.length === 0 ? <Vacio Icon={Package} texto={t('admin.sinDatos')} /> : (
+                    <div className="relative mx-auto size-[220px]">
+                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                          <Pie data={data.porServicio} cx="50%" cy="50%" innerRadius={50} outerRadius={85} dataKey="value" paddingAngle={3}>
+                          <Pie data={data.porServicio} cx="50%" cy="50%" innerRadius={70} outerRadius={104} dataKey="value" paddingAngle={2} stroke="none">
                             {data.porServicio.map((e, i) => <Cell key={i} fill={e.color} />)}
                           </Pie>
-                          <Tooltip formatter={(v: any) => `${symbol} ${Number(v).toFixed(2)}`}
-                            contentStyle={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 10, fontSize: 11, color: 'var(--text-primary)', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
-                            labelStyle={{ color: 'var(--text-primary)', fontWeight: 700 }}
-                            itemStyle={{ color: 'var(--text-secondary)' }} />
-                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: 'var(--text-muted)' }} />
+                          <Tooltip formatter={(v: any) => fmt(Number(v))} contentStyle={{ background: 'var(--v-bg-elevated)', border: '1px solid var(--v-border)', borderRadius: 10, fontSize: 11, color: 'var(--v-text)' }} itemStyle={{ color: 'var(--v-text-secondary)' }} />
                         </PieChart>
                       </ResponsiveContainer>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{t("admin.rankingServicio")}</h3>
-                  </div>
-                  <div className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
-                    {data.porServicio.slice(0, 8).map((s, i) => (
-                      <div key={s.name} className="flex items-center gap-3 px-5 py-3.5">
-                        <span className="text-xs font-bold w-5 text-center" style={{ color: 'var(--text-muted)' }}>{i + 1}</span>
-                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
-                        <p className="text-xs font-medium flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>{s.name}</p>
-                        <div className="text-right">
-                          <p className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{symbol} {s.value.toFixed(2)}</p>
-                          <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{s.count} {L('payments','cobros')}</p>
-                        </div>
+                      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                        <p className="text-[11px] text-v-subtle">{data.porServicio.length} {L('services', 'servicios')}</p>
+                        <p className="text-base font-bold tabular-nums text-v-text">{fmt(data.total)}</p>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              </Card>
+
+              <Card Icon={Trophy} tone="bg-v-warning/15 text-v-warning" title={t('admin.rankingServicio')} sub={periodo}>
+                {data.porServicio.length === 0 ? <Vacio Icon={Trophy} texto={t('admin.sinDatos')} /> : (
+                  <div className="divide-y divide-v-border">
+                    {data.porServicio.slice(0, 10).map((s, i) => {
+                      const pct = data.total > 0 ? Math.round(s.value / data.total * 100) : 0
+                      return (
+                        <div key={s.name} className="flex items-center gap-3 px-5 py-3">
+                          <span className="w-5 shrink-0 text-center text-xs font-semibold text-v-subtle">{i + 1}</span>
+                          <span className="size-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-v-text">{s.name}</p>
+                            <p className="text-[11px] text-v-subtle">{s.count} {s.count === 1 ? L('payment', 'cobro') : L('payments', 'cobros')} · {pct}%</p>
+                          </div>
+                          <p className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(s.value)}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </Card>
             </div>
           )}
         </>

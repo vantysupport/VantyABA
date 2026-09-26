@@ -5,14 +5,19 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
     const { data, error } = await supabaseAdmin
       .from('booking_config')
       .select('*')
+      .eq('centro_id', caller.centroId)
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -25,10 +30,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
     const body = await req.json()
     const {
-      id, session_duration_min, slot_step_min, working_hours,
-      closed_dates, max_advance_days, updated_by,
+      session_duration_min, slot_step_min, working_hours,
+      closed_dates, max_advance_days,
     } = body
 
     const payload: Record<string, any> = { updated_at: new Date().toISOString() }
@@ -37,21 +45,21 @@ export async function POST(req: NextRequest) {
     if (working_hours != null) payload.working_hours = working_hours
     if (closed_dates != null) payload.closed_dates = closed_dates
     if (max_advance_days != null) payload.max_advance_days = Number(max_advance_days)
-    if (updated_by) payload.updated_by = updated_by
+    payload.updated_by = caller.id
 
-    // Buscar la fila existente (singleton)
+    // Buscar la fila existente (singleton por centro); a client-sent id is ignored so another centro's row can't be targeted.
     const { data: existing } = await supabaseAdmin
-      .from('booking_config').select('id').order('updated_at', { ascending: false }).limit(1).maybeSingle()
+      .from('booking_config').select('id').eq('centro_id', caller.centroId).order('updated_at', { ascending: false }).limit(1).maybeSingle()
 
     let result
-    if (existing?.id || id) {
+    if (existing?.id) {
       const { data, error } = await supabaseAdmin
-        .from('booking_config').update(payload).eq('id', id || existing!.id).select().single()
+        .from('booking_config').update(payload).eq('id', existing.id).eq('centro_id', caller.centroId).select().single()
       if (error) throw error
       result = data
     } else {
       const { data, error } = await supabaseAdmin
-        .from('booking_config').insert(payload).select().single()
+        .from('booking_config').insert({ ...payload, centro_id: caller.centroId }).select().single()
       if (error) throw error
       result = data
     }

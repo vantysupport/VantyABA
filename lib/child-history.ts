@@ -1,5 +1,29 @@
 // lib/child-history.ts
 // FIX: programas ABA se construyen PRIMERO en el texto para no ser truncados por el límite de tokens
+//
+// Ahorro de tokens de IA: a la IA solo le llegan las ÚLTIMAS 3 SESIONES de cada programa.
+// El avance de todo el historial (n.º de sesiones, promedio, tendencia) se calcula aquí en
+// código y se envía como una sola línea, así la IA ve la evolución sin leer cada sesión.
+
+const SESIONES_A_IA = 3
+
+type SesionPrograma = { fecha: string; porcentaje_exito: number | null; fase?: string | null; nivel_ayuda?: string | null; notas?: string | null }
+
+/** Resumen del avance de un programa con TODAS sus sesiones (recientes primero). */
+function avancePrograma(sesiones: SesionPrograma[]): string {
+  const pcts = sesiones.map(s => s.porcentaje_exito).filter((v): v is number => typeof v === 'number')
+  if (pcts.length === 0) return `${sesiones.length} sesión(es), sin % registrado`
+  const prom = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length)
+  const recientes = pcts.slice(0, SESIONES_A_IA)
+  const anteriores = pcts.slice(SESIONES_A_IA, SESIONES_A_IA * 3)
+  let tendencia = 'sin datos previos para comparar'
+  if (anteriores.length > 0) {
+    const d = prom(recientes) - prom(anteriores)
+    tendencia = d >= 5 ? `mejora (+${d} pts vs sesiones anteriores)` : d <= -5 ? `retroceso (${d} pts vs sesiones anteriores)` : `estable (${d >= 0 ? '+' : ''}${d} pts)`
+  }
+  const primera = sesiones[sesiones.length - 1]?.fecha
+  return `${sesiones.length} sesiones${primera ? ` desde ${primera}` : ''} · promedio ${prom(pcts)}% · mín ${Math.min(...pcts)}% / máx ${Math.max(...pcts)}% · tendencia: ${tendencia}`
+}
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
@@ -7,16 +31,17 @@ export async function getChildHistory(
   childId: string,
   childNameFallback?: string,
   childAgeFallback?: string | number,
-  options?: { forParent?: boolean }
+  options?: { forParent?: boolean; centroId?: string | null }
 ) {
   // 1. Datos básicos del niño
   const { data: child } = await supabaseAdmin
     .from('children')
-    .select('name, age, birth_date, diagnosis')
+    .select('name, age, birth_date, diagnosis, centro_id')
     .eq('id', childId)
     .single()
 
-  if (!child) {
+  // Multi-tenant: si se indica el centro del llamador, un paciente de otro centro no existe.
+  if (!child || (options?.centroId && (child as any).centro_id !== options.centroId)) {
     return {
       nombre: childNameFallback || 'Paciente no encontrado',
       edad: childAgeFallback ? String(childAgeFallback) : '',
@@ -81,14 +106,12 @@ export async function getChildHistory(
         .select('programa_id, fecha, porcentaje_exito, fase, nivel_ayuda, notas')
         .in('programa_id', programaIds)
         .order('fecha', { ascending: false })
-        .limit(80)
+        .limit(300)
 
+      // Se guardan todas (para calcular el avance); a la IA solo van las últimas 3.
       if (todasSesiones) {
         for (const s of todasSesiones as any[]) {
-          if (!sesionesPorPrograma[s.programa_id]) sesionesPorPrograma[s.programa_id] = []
-          if (sesionesPorPrograma[s.programa_id].length < 8) {
-            sesionesPorPrograma[s.programa_id].push(s)
-          }
+          (sesionesPorPrograma[s.programa_id] ??= []).push(s)
         }
       }
     } catch (e: any) {
@@ -102,9 +125,10 @@ export async function getChildHistory(
         .map((o: any) => `    Set ${o.numero_set}: ${o.descripcion} [${o.estado}]`)
         .join('\n')
 
-      const sesiones = (sesionesPorPrograma[p.id] || [])
+      const todas = sesionesPorPrograma[p.id] || []
+      const sesiones = todas.slice(0, SESIONES_A_IA)
         .map((s: any) =>
-          `    ${s.fecha}: ${s.porcentaje_exito != null ? s.porcentaje_exito + '%' : 'sin %'} | Fase: ${s.fase || '-'} | Ayuda: ${s.nivel_ayuda || '-'}${s.notas ? ' | ' + s.notas : ''}`
+          `    ${s.fecha}: ${s.porcentaje_exito != null ? s.porcentaje_exito + '%' : 'sin %'} | Fase: ${s.fase || '-'} | Ayuda: ${s.nivel_ayuda || '-'}${s.notas ? ' | ' + String(s.notas).slice(0, 160) : ''}`
         )
         .join('\n')
 
@@ -115,7 +139,7 @@ export async function getChildHistory(
       return `• ${p.titulo} (${p.area}) | Fase: ${p.fase_actual} | Último %: ${ultimoPct} | Criterio dominio: ${p.criterio_dominio_pct}%
   Objetivo LP: ${p.objetivo_lp || 'no especificado'}
 ${sets ? '  Sets:\n' + sets : '  Sin sets registrados'}
-${sesiones ? '  Últimas sesiones (recientes primero):\n' + sesiones : '  Sin sesiones registradas'}`
+${todas.length ? `  Avance: ${avancePrograma(todas)}\n  Últimas ${Math.min(SESIONES_A_IA, todas.length)} sesiones (recientes primero):\n` + sesiones : '  Sin sesiones registradas'}`
     }).join('\n\n')
 
     partes.push(`Programas ABA activos (${programasAba.length}):\n${progTexto}`)
@@ -123,7 +147,7 @@ ${sesiones ? '  Últimas sesiones (recientes primero):\n' + sesiones : '  Sin se
     partes.push('Programas ABA activos: ninguno registrado.')
   }
 
-  // 2. Últimas 5 sesiones ABA (registro general) — defensivo
+  // 2. Últimas 3 sesiones ABA (registro general) — defensivo
   let sesionesAba: any[] | null = null
   try {
     const { data } = await supabaseAdmin
@@ -131,7 +155,7 @@ ${sesiones ? '  Últimas sesiones (recientes primero):\n' + sesiones : '  Sin se
       .select('fecha_sesion, datos, ai_analysis')
       .eq('child_id', childId)
       .order('fecha_sesion', { ascending: false })
-      .limit(5)
+      .limit(SESIONES_A_IA)
     sesionesAba = data
   } catch (e: any) {
     console.warn('[getChildHistory] registro_aba falló:', e?.message)
@@ -226,7 +250,7 @@ ${sesiones ? '  Últimas sesiones (recientes primero):\n' + sesiones : '  Sin se
   if (formResponses && formResponses.length > 0) {
     const formsTexto = (formResponses as any[])
       .filter(f => f.ai_analysis)
-      .slice(0, 4)
+      .slice(0, 3)
       .map(f => `• ${f.form_title} (${f.created_at?.slice(0, 10)}): ${String(f.ai_analysis).slice(0, 200)}`)
       .join('\n')
     if (formsTexto) partes.push(`Evaluaciones de formularios:\n${formsTexto}`)
@@ -239,7 +263,7 @@ ${sesiones ? '  Últimas sesiones (recientes primero):\n' + sesiones : '  Sin se
       .select('created_at, filler_name, filler_role, responses, notes, clinical_templates(name)')
       .eq('child_id', childId)
       .order('created_at', { ascending: false })
-      .limit(8)
+      .limit(SESIONES_A_IA)
     if (fichas && fichas.length > 0) {
       const fichasTxt = (fichas as any[]).map(f => {
         const fName = f.clinical_templates?.name || 'Ficha'
@@ -290,7 +314,7 @@ ${sesiones ? '  Últimas sesiones (recientes primero):\n' + sesiones : '  Sin se
       .eq('child_id', childId)
       .eq('resuelta', false)
       .order('created_at', { ascending: false })
-      .limit(10)
+      .limit(5)
     if (alertas && alertas.length > 0) {
       const alertasTxt = (alertas as any[]).map(a => {
         const tipoStr = String(a.tipo || '')
@@ -385,13 +409,13 @@ ${sesiones ? '  Últimas sesiones (recientes primero):\n' + sesiones : '  Sin se
     if (options?.forParent) dq = dq.eq('visible_to_parent', true)
     const { data: docs } = await dq
       .order('created_at', { ascending: false })
-      .limit(10)
+      .limit(5)
 
     if (docs && docs.length > 0) {
-      // Tope total: 12000 caracteres entre TODOS los docs para no saturar tokens.
-      // Por doc: máximo 3000. Si hay muchos docs, prorrateamos.
-      const MAX_TOTAL = 12_000
-      const MAX_POR_DOC = Math.min(3000, Math.floor(MAX_TOTAL / docs.length))
+      // Tope total: 5000 caracteres entre TODOS los docs para no gastar tokens de IA.
+      // Por doc: máximo 1500. Si hay muchos docs, prorrateamos.
+      const MAX_TOTAL = 5_000
+      const MAX_POR_DOC = Math.min(1500, Math.floor(MAX_TOTAL / docs.length))
 
       const bloques: string[] = []
       let totalChars = 0

@@ -9,6 +9,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { notifyAsync, sendWspToParent, buildParentMessage, notifyParentDirect } from '@/lib/notifications'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { getApiCaller, canAccessChild, unauthorized, notFound } from '@/lib/api-auth'
 
 function parseLogro(val: any): number | null {
   if (val == null || val === "") return null
@@ -41,9 +43,13 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { childId, periodoSemanas = 4 } = await req.json()
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    const centro = await getCentroBranding({ childId })
 
     const fechaInicio = new Date()
     fechaInicio.setDate(fechaInicio.getDate() - periodoSemanas * 7)
@@ -129,7 +135,7 @@ export async function POST(req: NextRequest) {
     const edadAnios = (child as any)?.age
 
     // ── Generar reporte con IA ─────────────────────────────────────────────────
-    const promptPadres = `Eres ARIA, el asistente de comunicación familiar del Centro Neuropsicología y Terapias SANTI, gestionado a través de la plataforma Vanty ABA. Tu tarea es escribir un REPORTE MENSUAL PARA PADRES sobre el progreso de su hijo/a.
+    const promptPadres = `Eres ARIA, el asistente de comunicación familiar del centro ${centro.name}, gestionado a través de la plataforma Vanty ABA. Tu tarea es escribir un REPORTE MENSUAL PARA PADRES sobre el progreso de su hijo/a.
 
 REGLAS CRÍTICAS:
 - Lenguaje SIMPLE, CÁLIDO y POSITIVO. Los padres no son especialistas.
@@ -184,7 +190,7 @@ Dirígete a los padres como "ustedes" o por "familia".`
       const _query = 'reporte padres ABA progreso comunicación familia'
 
 
-      const _kb = await buildAIContext(undefined, undefined, undefined, _query)
+      const _kb = await buildAIContext(undefined, undefined, undefined, _query, centro.id)
 
 
       _cerebroCtx = _kb.knowledgeContext
@@ -247,6 +253,7 @@ Dirígete a los padres como "ustedes" o por "familia".`
     try {
       await supabaseAdmin.from('reportes_padres').insert({
         child_id: childId,
+        centro_id: centro.id,
         periodo_inicio: fechaInicioStr,
         periodo_fin: hoy,
         metricas: reporte.metricas,
@@ -263,6 +270,7 @@ Dirígete a los padres como "ustedes" o por "familia".`
         paciente: pName,
         periodo: `${fechaInicioStr} → ${hoy}`,
       },
+      centro,
     })
 
     // WhatsApp directo al padre — informe listo
@@ -273,7 +281,7 @@ Dirígete a los padres como "ustedes" o por "familia".`
         const { data: pProf } = await supabaseAdmin
           .from('profiles').select('phone, wsp_notif').eq('id', pLink.user_id).maybeSingle()
         if ((pProf as any)?.phone && (pProf as any)?.wsp_notif !== false) {
-          const msg = buildParentMessage('informe_nuevo', { paciente: pName, periodo: `${fechaInicioStr} → ${hoy}` })
+          const msg = buildParentMessage('informe_nuevo', { paciente: pName, periodo: `${fechaInicioStr} → ${hoy}` }, centro)
           sendWspToParent((pProf as any).phone, msg).catch(() => {})
         }
       }

@@ -3,18 +3,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { vantyAgent } from '@/lib/vanty-agent'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { checkAriaRateLimit } from '@/lib/aria-rate-limit'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
-    const { mensaje, childId, userId, conversacionId, contexto } = body
+    const { mensaje, childId, conversacionId, contexto } = body
+    // El usuario es siempre quien llama (no se confía en el userId del body).
+    const userId = caller.id
 
-    if (!mensaje || !userId) {
+    if (!mensaje) {
       return NextResponse.json({ error: 'mensaje y userId son requeridos' }, { status: 400 })
     }
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
 
     // Rate limiting de ARIA para el personal (jefe/especialista), configurable en /control.
-    const rl = await checkAriaRateLimit(String(userId), 'staff')
+    const rl = await checkAriaRateLimit(String(userId), 'staff', caller.centroId)
     if (!rl.allowed) {
       // Sin "error" → el frontend muestra "respuesta" como mensaje de ARIA.
       return NextResponse.json({ respuesta: rl.message, rateLimited: true, conversacionId: conversacionId || null })
@@ -22,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const locale = req.headers.get('x-locale') || 'es'
     const response = await vantyAgent.chat(mensaje, {
-      childId, userId, conversacionId, contexto, locale,
+      childId, userId, conversacionId, contexto, locale, centroId: caller.centroId,
     })
 
     return NextResponse.json(response)
@@ -32,14 +39,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const action = searchParams.get('action')
   const childId = searchParams.get('child_id')
-  const userId = searchParams.get('user_id')
+  const userId = searchParams.get('user_id') ? caller.id : null
 
   try {
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
+
     if (action === 'analisis_proactivo' && childId) {
-      const analysis = await vantyAgent.analizarPacienteProactivo(childId)
+      const analysis = await vantyAgent.analizarPacienteProactivo(childId, caller.centroId)
       return NextResponse.json(analysis)
     }
 
@@ -58,6 +70,7 @@ export async function GET(req: NextRequest) {
       const { data } = await supabaseAdmin
         .from('agente_alertas')
         .select('*, children(name)')
+        .eq('centro_id', caller.centroId)
         .eq('resuelta', false)
         .order('prioridad', { ascending: true })
         .order('created_at', { ascending: false })
@@ -83,9 +96,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { action, id } = body
+    if (!(await rowInCentro('agente_alertas', id, caller.centroId))) return notFound()
 
     if (action === 'resolver_alerta') {
       await supabaseAdmin
@@ -110,46 +127,28 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { searchParams } = new URL(req.url)
     const conversacionId = searchParams.get('conversacion_id')
-    const userId = searchParams.get('user_id')
+    const userId = searchParams.get('user_id') ? caller.id : null
 
     if (!userId) {
       return NextResponse.json({ error: 'user_id requerido' }, { status: 400 })
     }
 
-    // Borrar mensajes de la conversación específica o todas las del usuario
+    // Borrar la conversación indicada o todas las del usuario (sus acciones se borran en cascada)
     if (conversacionId) {
-      await supabaseAdmin
-        .from('agente_mensajes')
-        .delete()
-        .eq('conversacion_id', conversacionId)
-
-      await supabaseAdmin
-        .from('agente_conversaciones')
-        .delete()
-        .eq('id', conversacionId)
-        .eq('user_id', userId)
+      const { data: conv } = await supabaseAdmin
+        .from('agente_conversaciones').select('id').eq('id', conversacionId).eq('user_id', userId).maybeSingle()
+      if (!conv) return notFound()
+      const { error } = await supabaseAdmin.from('agente_conversaciones').delete().eq('id', conversacionId).eq('user_id', userId)
+      if (error) throw error
     } else {
-      // Borrar todas las conversaciones del usuario
-      const { data: convs } = await supabaseAdmin
-        .from('agente_conversaciones')
-        .select('id')
-        .eq('user_id', userId)
-
-      if (convs && convs.length > 0) {
-        const ids = convs.map(c => c.id)
-        await supabaseAdmin
-          .from('agente_mensajes')
-          .delete()
-          .in('conversacion_id', ids)
-
-        await supabaseAdmin
-          .from('agente_conversaciones')
-          .delete()
-          .eq('user_id', userId)
-      }
+      const { error } = await supabaseAdmin.from('agente_conversaciones').delete().eq('user_id', userId)
+      if (error) throw error
     }
 
     return NextResponse.json({ success: true })

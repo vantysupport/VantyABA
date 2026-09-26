@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,13 +43,18 @@ function parseNivelLogro(val: any): number | null {
 }
 
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { childId, startDate, endDate } = await request.json();
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
     console.log('📊 Analytics request:', { childId, startDate, endDate });
 
     let query = supabase
       .from('registro_aba')
       .select('*')
+      .eq('centro_id', caller.centroId)
       .order('fecha_sesion', { ascending: true });
 
     if (childId)   query = query.eq('child_id', childId);
@@ -204,6 +210,7 @@ export async function POST(request: NextRequest) {
     const { data: programas } = await supabase
       .from('aba_programas')
       .select('id, estado')
+      .eq('centro_id', caller.centroId)
       .eq('child_id', childId)
       .in('estado', ['dominado', 'activo', 'intervencion']);
 

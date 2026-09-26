@@ -149,3 +149,66 @@ export async function synthesizeEdgeTTS(text: string, opts: EdgeTTSOptions = {})
     ws.on('close', () => finish())
   })
 }
+
+/**
+ * Igual que synthesizeEdgeTTS, pero entrega el MP3 a medida que llega (stream):
+ * el navegador puede empezar a reproducir sin esperar a que termine toda la frase.
+ */
+export function streamEdgeTTS(text: string, opts: EdgeTTSOptions = {}): ReadableStream<Uint8Array> {
+  const voice  = opts.voice || 'es-PE-CamilaNeural'
+  const lang   = opts.lang || voice.split('-').slice(0, 2).join('-') || 'es-PE'
+  const rate   = opts.rate   || '+0%'
+  const pitch  = opts.pitch  || '+0Hz'
+  const volume = opts.volume || '+0%'
+  const url =
+    `${WSS_BASE}?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}` +
+    `&Sec-MS-GEC=${generateSecMsGec()}` +
+    `&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION}`
+  let ws: WebSocket | null = null
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      let done = false
+      const finish = (err?: Error) => {
+        if (done) return
+        done = true
+        clearTimeout(timeout)
+        try { ws?.close() } catch { /* noop */ }
+        if (err) controller.error(err); else controller.close()
+      }
+      const timeout = setTimeout(() => finish(new Error('Edge TTS timeout')), 20000)
+      ws = new WebSocket(url, {
+        headers: {
+          'Pragma': 'no-cache', 'Cache-Control': 'no-cache',
+          'Origin': 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
+          'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'en-US,en;q=0.9',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+            `(KHTML, like Gecko) Chrome/${CHROMIUM_MAJOR}.0.0.0 Safari/537.36 Edg/${CHROMIUM_MAJOR}.0.0.0`,
+        },
+      })
+      ws.on('open', () => {
+        const date = dateToString()
+        ws!.send(
+          `X-Timestamp:${date}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n` +
+          `{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},` +
+          `"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`
+        )
+        const requestId = crypto.randomUUID().replace(/-/g, '')
+        const ssml =
+          `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='${lang}'>` +
+          `<voice name='${voice}'><prosody pitch='${pitch}' rate='${rate}' volume='${volume}'>${escapeXml(text)}</prosody></voice></speak>`
+        ws!.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${date}Z\r\nPath:ssml\r\n\r\n` + ssml)
+      })
+      ws.on('message', (data: Buffer, isBinary: boolean) => {
+        if (done) return
+        if (isBinary) {
+          if (data.length < 2) return
+          const headerLen = data.readUInt16BE(0)
+          if (data.length > headerLen + 2) controller.enqueue(new Uint8Array(data.subarray(headerLen + 2)))
+        } else if (data.toString('utf8').includes('Path:turn.end')) finish()
+      })
+      ws.on('error', e => finish(e instanceof Error ? e : new Error(String(e))))
+      ws.on('close', () => finish())
+    },
+    cancel() { try { ws?.close() } catch { /* noop */ } },
+  })
+}

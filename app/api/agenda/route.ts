@@ -2,9 +2,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { notifyAsync, notifyParentDirect } from '@/lib/notifications'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { avisarCitaFamilia } from '@/lib/avisos'
 
 // ─── GET: obtener agenda ──────────────────────────────────────
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   const { searchParams } = new URL(req.url)
   const fecha       = searchParams.get('fecha')        // YYYY-MM-DD
   const fechaInicio = searchParams.get('fecha_inicio')
@@ -12,6 +17,12 @@ export async function GET(req: NextRequest) {
   const terapeutaId = searchParams.get('terapeuta_id')
   const childId     = searchParams.get('child_id')
   const estado      = searchParams.get('estado')
+
+  const isStaff = hasRole(caller, ROLES.staff)
+  // Parents may only read their own child's agenda.
+  if (!isStaff) {
+    if (caller.role !== 'padre' || !childId || !(await canAccessChild(caller, childId))) return forbidden()
+  }
 
   try {
     let query = supabaseAdmin
@@ -24,6 +35,7 @@ export async function GET(req: NextRequest) {
       .order('fecha', { ascending: true })
       .order('hora_inicio', { ascending: true })
 
+    if (isStaff)      query = query.eq('centro_id', caller.centroId!)
     if (fecha)        query = query.eq('fecha', fecha)
     if (fechaInicio)  query = query.gte('fecha', fechaInicio)
     if (fechaFin)     query = query.lte('fecha', fechaFin)
@@ -42,6 +54,10 @@ export async function GET(req: NextRequest) {
 // ─── POST: crear / actualizar sesión ─────────────────────────
 export async function POST(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
+
     const body = await req.json()
     const { action } = body
 
@@ -52,6 +68,8 @@ export async function POST(req: NextRequest) {
       if (!child_id || !terapeuta_id || !fecha || !hora_inicio) {
         return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
       }
+      if (!(await canAccessChild(caller, child_id))) return notFound()
+      if (!(await rowInCentro('profiles', terapeuta_id, caller.centroId))) return notFound()
 
       // Verificar conflicto de horario para el terapeuta
       const { data: conflicto } = await supabaseAdmin
@@ -71,12 +89,12 @@ export async function POST(req: NextRequest) {
       let meeting_link: string | null = null
       if (modalidad === 'virtual') {
         const tempId = `${child_id}-${fecha}-${hora_inicio}`.replace(/:/g, '-')
-        meeting_link = `https://meet.jit.si/SantiMeet-${tempId}`
+        meeting_link = `https://meet.jit.si/VantyMeet-${tempId}`
       }
 
       const { data, error } = await supabaseAdmin
         .from('agenda_sesiones')
-        .insert({ child_id, terapeuta_id, fecha, hora_inicio, hora_fin, tipo, modalidad, notas, estado: 'programada', ...(meeting_link ? { meeting_link } : {}) })
+        .insert({ child_id, terapeuta_id, fecha, hora_inicio, hora_fin, tipo, modalidad, notas, estado: 'programada', centro_id: caller.centroId, ...(meeting_link ? { meeting_link } : {}) })
         .select('*, children(name)')
         .single()
 
@@ -87,6 +105,7 @@ export async function POST(req: NextRequest) {
 
       // Notificar al padre (si tiene WSP) + al admin
       const childName = (data as any).children?.name || 'Paciente'
+      const centro = await getCentroBranding({ childId: child_id })
       const { data: parentLink } = await supabaseAdmin
         .from('parent_accounts').select('user_id').eq('child_id', child_id).maybeSingle()
       if (parentLink?.user_id) {
@@ -98,7 +117,7 @@ export async function POST(req: NextRequest) {
             fecha, hora: hora_inicio, paciente: childName,
             tipo: modalidad === 'virtual' ? 'Virtual 📹' : (tipo || 'Presencial'),
             ...(meeting_link ? { link: meeting_link } : {}),
-          })
+          }, centro)
         }
       }
       // Notificar al admin también
@@ -109,6 +128,7 @@ export async function POST(req: NextRequest) {
           tipo: modalidad === 'virtual' ? 'Virtual 📹' : (tipo || 'Presencial'),
           ...(meeting_link ? { link: meeting_link } : {}),
         },
+        centro,
       })
 
       // ── Agregar al Google / Microsoft Calendar del padre (si tiene OAuth) ──
@@ -136,10 +156,12 @@ export async function POST(req: NextRequest) {
     // ACTUALIZAR estado
     if (action === 'actualizar_estado') {
       const { id, estado, notas } = body
+      if (!(await rowInCentro('agenda_sesiones', id, caller.centroId))) return notFound()
       const { data, error } = await supabaseAdmin
         .from('agenda_sesiones')
         .update({ estado, notas: notas || undefined, updated_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('centro_id', caller.centroId)
         .select('*, children(name, id)')
         .single()
 
@@ -153,11 +175,13 @@ export async function POST(req: NextRequest) {
         const cancelHora  = (data as any).hora_inicio || ''
         const cancelNombre = (data.children as any).name || 'Paciente'
         const cancelChildId = (data.children as any).id
+        const centro = await getCentroBranding({ childId: cancelChildId })
 
         // WhatsApp al admin
         notifyAsync({
           tipo: 'cita_cancelada',
           vars: { fecha: cancelFecha, hora: cancelHora, paciente: cancelNombre },
+          centro,
         })
 
         // WhatsApp directo al padre via Baileys
@@ -170,7 +194,7 @@ export async function POST(req: NextRequest) {
             if ((pProf as any)?.phone && (pProf as any)?.wsp_notif !== false) {
               notifyParentDirect((pProf as any).phone, 'cita_cancelada', {
                 fecha: cancelFecha, hora: cancelHora, paciente: cancelNombre,
-              })
+              }, centro)
             }
           }
         } catch { /* silencioso */ }
@@ -182,6 +206,7 @@ export async function POST(req: NextRequest) {
         const inicioHora   = (data as any).hora_inicio || ''
         const inicioNombre = (data.children as any).name || 'Paciente'
         const inicioChildId = (data.children as any).id
+        const centro = await getCentroBranding({ childId: inicioChildId })
         const meetingLink  = (data as any).meeting_link || null
 
         try {
@@ -194,7 +219,7 @@ export async function POST(req: NextRequest) {
               notifyParentDirect((pProf as any).phone, 'sesion_iniciada', {
                 fecha: inicioFecha, hora: inicioHora, paciente: inicioNombre,
                 ...(meetingLink ? { link: meetingLink } : {}),
-              })
+              }, centro)
             }
           }
         } catch { /* silencioso */ }
@@ -207,10 +232,15 @@ export async function POST(req: NextRequest) {
     if (action === 'editar') {
       const { id, ...updates } = body
       delete updates.action
+      delete updates.centro_id
+      if (!(await rowInCentro('agenda_sesiones', id, caller.centroId))) return notFound()
+      if (updates.child_id && !(await canAccessChild(caller, updates.child_id))) return notFound()
+      if (updates.terapeuta_id && !(await rowInCentro('profiles', updates.terapeuta_id, caller.centroId))) return notFound()
       const { data, error } = await supabaseAdmin
         .from('agenda_sesiones')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('centro_id', caller.centroId)
         .select()
         .single()
       if (error) throw error
@@ -226,11 +256,16 @@ export async function POST(req: NextRequest) {
 // ─── DELETE: cancelar sesión ─────────────────────────────────
 export async function DELETE(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
     const { id } = await req.json()
+    if (!(await rowInCentro('agenda_sesiones', id, caller.centroId))) return notFound()
     const { error } = await supabaseAdmin
       .from('agenda_sesiones')
       .update({ estado: 'cancelada' })
       .eq('id', id)
+      .eq('centro_id', caller.centroId)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (e: any) {
@@ -274,6 +309,10 @@ async function crearNotificacionCita(childId: string, sesion: any, tipo: string)
       }
     }
 
+    if (tipo === 'nueva' || tipo === 'cancelada') {
+      await avisarCitaFamilia({ id: sesion.id, child_id: childId, appointment_date: fecha, appointment_time: hora, service_type: sesion.tipo ?? null }, tipo)
+      return
+    }
     const notif = mensajes[tipo] || mensajes.nueva
 
     const notificaciones = padres.map(padre => ({

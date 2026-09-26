@@ -1,4 +1,6 @@
 'use client'
+import { useId } from 'react'
+import { motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n-context'
 
 // Switch de idioma Español ⇄ Inglés (segmentado ES | EN).
@@ -6,37 +8,21 @@ import { useI18n } from '@/lib/i18n-context'
 // que se envía a la IA / documentos vía x-locale.
 export default function LocaleSelector({ compact = false }: { compact?: boolean }) {
   const { locale, changeLocale } = useI18n()
-
-  const opts: { code: 'es' | 'en'; label: string; flag: string }[] = [
-    { code: 'es', label: 'ES', flag: '🇵🇪' },
-    { code: 'en', label: 'EN', flag: '🇺🇸' },
+  const id = useId()
+  const opts = [
+    { code: 'es' as const, label: 'ES', title: 'Cambiar a Español' },
+    { code: 'en' as const, label: 'EN', title: 'Switch to English' },
   ]
 
   return (
-    <div
-      role="group"
-      aria-label="Idioma / Language"
-      className="inline-flex items-center rounded-lg border overflow-hidden"
-      style={{ borderColor: 'var(--card-border)', background: 'var(--card)' }}
-    >
+    <div role="group" aria-label="Idioma / Language" className="inline-flex items-center rounded-full bg-v-fill p-0.5">
       {opts.map(o => {
         const active = locale === o.code
         return (
-          <button
-            key={o.code}
-            type="button"
-            onClick={() => changeLocale(o.code)}
-            aria-pressed={active}
-            title={o.code === 'es' ? 'Cambiar a Español' : 'Switch to English'}
-            className={`flex items-center gap-1 font-bold transition-colors ${compact ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-xs'}`}
-            style={
-              active
-                ? { background: 'var(--text-primary)', color: 'var(--card)' }
-                : { background: 'transparent', color: 'var(--text-muted)' }
-            }
-          >
-            <span>{o.flag}</span>
-            <span>{o.label}</span>
+          <button key={o.code} type="button" onClick={() => changeLocale(o.code)} aria-pressed={active} title={o.title}
+            className={`relative rounded-full font-semibold tracking-wide transition-colors ${compact ? 'h-7 px-2.5 text-[11px]' : 'h-8 px-3 text-xs'} ${active ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+            {active && <motion.span layoutId={`locale-${id}`} transition={{ type: 'spring', stiffness: 420, damping: 32 }} className="absolute inset-0 rounded-full bg-v-elevated shadow-v" />}
+            <span className="relative">{o.label}</span>
           </button>
         )
       })}

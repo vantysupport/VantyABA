@@ -5,16 +5,21 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(req: NextRequest) {
   try {
+    // Per-centro catalog: any signed-in member (staff or parent) reads their own centro's.
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!caller.centroId) return NextResponse.json({ ok: true, terapias: [] })
     const { searchParams } = new URL(req.url)
-    const includeInactive = searchParams.get('all') === '1'
+    const includeInactive = searchParams.get('all') === '1' && hasRole(caller, ROLES.staff)
 
-    let q = supabaseAdmin.from('terapias_catalogo').select('*').order('orden', { ascending: true })
+    let q = supabaseAdmin.from('terapias_catalogo').select('*').eq('centro_id', caller.centroId).order('orden', { ascending: true })
     if (!includeInactive) q = q.eq('activo', true)
 
     const { data, error } = await q
@@ -28,6 +33,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.admins)) return forbidden()
     const body = await req.json()
     const {
       nombre, descripcion, por_que, imagen_url, precio, moneda,
@@ -51,6 +59,7 @@ export async function POST(req: NextRequest) {
         color_tema: color_tema ?? 'indigo',
         orden: orden ?? 0,
         activo: true,
+        centro_id: caller.centroId,
       })
       .select()
       .single()
@@ -64,9 +73,13 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.admins)) return forbidden()
     const body = await req.json()
     const { id, ...campos } = body
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('terapias_catalogo', id, caller.centroId))) return notFound()
 
     const permitidos = ['nombre', 'descripcion', 'por_que', 'imagen_url', 'precio', 'moneda',
                         'duracion', 'modalidad', 'categoria', 'orden', 'activo', 'color_tema']
@@ -79,6 +92,7 @@ export async function PATCH(req: NextRequest) {
       .from('terapias_catalogo')
       .update(patch)
       .eq('id', id)
+      .eq('centro_id', caller.centroId)
       .select()
       .single()
     if (error) throw error
@@ -91,16 +105,20 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.admins)) return forbidden()
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('terapias_catalogo', id, caller.centroId))) return notFound()
 
     const force = searchParams.get('force') === '1'
     if (force) {
-      const { error } = await supabaseAdmin.from('terapias_catalogo').delete().eq('id', id)
+      const { error } = await supabaseAdmin.from('terapias_catalogo').delete().eq('id', id).eq('centro_id', caller.centroId)
       if (error) throw error
     } else {
-      const { error } = await supabaseAdmin.from('terapias_catalogo').update({ activo: false }).eq('id', id)
+      const { error } = await supabaseAdmin.from('terapias_catalogo').update({ activo: false }).eq('id', id).eq('centro_id', caller.centroId)
       if (error) throw error
     }
     return NextResponse.json({ ok: true })

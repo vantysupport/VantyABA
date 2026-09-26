@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, canAccessChild, unauthorized, notFound } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -12,6 +13,10 @@ export async function GET(req: NextRequest) {
   if (!childId) {
     return NextResponse.json({ error: 'child_id requerido' }, { status: 400 })
   }
+
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!(await canAccessChild(caller, childId))) return notFound()
 
   try {
     // 0. Datos del niño — incluye `sessions_before_platform` para sumar al conteo

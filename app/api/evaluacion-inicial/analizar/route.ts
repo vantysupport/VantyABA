@@ -4,21 +4,24 @@
 // llama a un LLM clínico y guarda la recomendación (psicológica /
 // neuropsicológica / ambas) + razonamiento detallado.
 //
-// El prompt está alineado con las dos anamnesis oficiales de SANTI:
+// El prompt está alineado con las dos anamnesis oficiales del centro:
 //  • Anamnesis Psicológica Emocional   → motivos socioemocionales/conductuales
 //  • Anamnesis Neuropsicológica        → atención, memoria, lenguaje,
 //                                        aprendizaje, indicadores neurodiversidad
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, canAccessChild, hasRole, ROLES, unauthorized, notFound } from '@/lib/api-auth'
 import { callGroq, GROQ_MODELS } from '@/lib/groq-client'
 import { buildClinicalContext } from '@/lib/ai-context-builder'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 export const maxDuration = 60
 
-const SYSTEM_PROMPT = `Eres una neuropsicóloga clínica senior de SANTI (Neuropsicología y Terapias SANTI, Perú). Tu rol es analizar la ficha inicial (intake) que llenó un padre/madre sobre su hijo/a y recomendar entre:
+const systemPrompt = (centroNombre: string) => `Eres una neuropsicóloga clínica senior del centro ${centroNombre}. Tu rol es analizar la ficha inicial (intake) que llenó un padre/madre sobre su hijo/a y recomendar entre:
 
 1. **Evaluación Psicológica Emocional** — cuando el motivo principal son dificultades emocionales, conductuales o sociales (ansiedad, tristeza, irritabilidad, problemas vinculares, miedos, conflictos en casa o colegio, autoestima, regulación emocional, eventos vitales estresantes). Permite diseñar estrategias de acompañamiento y bienestar emocional.
 
@@ -82,6 +85,8 @@ Analiza este caso siguiendo el esquema JSON solicitado. Sé clínicamente riguro
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { id } = await req.json()
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
@@ -94,6 +99,11 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     if (evalErr) throw evalErr
     if (!eval_) return NextResponse.json({ error: 'Evaluación no encontrada' }, { status: 404 })
+    if (!(await canAccessChild(caller, eval_.child_id))) return notFound()
+    // Tokens: solo cuando lo pide el personal (el flujo de la familia no se bloquea)
+    const centroCobro = hasRole(caller, ROLES.staff) ? caller.centroId : null
+    const bloqueo = await sinTokens(centroCobro, /^en/i.test(String(req.headers.get('x-locale') || '')))
+    if (bloqueo) return bloqueo
     if (!eval_.respuestas_intake) {
       return NextResponse.json({ error: 'El intake aún no está completado' }, { status: 400 })
     }
@@ -104,19 +114,20 @@ export async function POST(req: NextRequest) {
       .eq('id', eval_.child_id)
       .maybeSingle()
     if (!child) return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
+    const centro = await getCentroBranding({ childId: child.id })
 
     // 2. Recuperar conocimiento clínico relevante del Cerebro IA
     //    (ABLLS-R, AFLS, guías clínicas, etc. — lo que el admin haya subido)
     const motivoConsulta = String(eval_.respuestas_intake?.motivo_principal || '')
     const queryConocimiento = `${motivoConsulta} ${(child as any).diagnosis || ''} indicadores TEA TDAH neurodesarrollo evaluación`
-    const knowledgeCtx = await buildClinicalContext(queryConocimiento, 8).catch(() => '')
+    const knowledgeCtx = await buildClinicalContext(queryConocimiento, eval_.centro_id ?? null, 5).catch(() => '')
 
     // 3. Llamar al LLM
     const userPrompt = buildUserPrompt(child, eval_.respuestas_intake) +
       (knowledgeCtx ? `\n\n# 📚 CONTEXTO CLÍNICO DE REFERENCIA (uso interno)\n${knowledgeCtx}\n\nUsa este contexto SOLO como apoyo interno para fundamentar tu recomendación con criterios clínicos. NO nombres, cites ni transcribas instrumentos de evaluación de terceros ni sus códigos; redacta con tus propias palabras clínicas.` : '')
     const raw = await callGroq(
       [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt(centro.name) },
         { role: 'user', content: userPrompt },
       ],
       { model: GROQ_MODELS.SMART, temperature: 0.35, maxTokens: 2200 }
@@ -169,6 +180,7 @@ export async function POST(req: NextRequest) {
       .single()
     if (upErr) throw upErr
 
+    await descontarToken(centroCobro)
     return NextResponse.json({ ok: true, evaluacion: updated, parsed })
   } catch (e: any) {
     console.error('[evaluacion-inicial][analizar]', e)

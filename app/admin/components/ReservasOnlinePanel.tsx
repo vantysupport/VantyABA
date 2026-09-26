@@ -5,10 +5,14 @@
 
 import { useState, useEffect } from 'react'
 import { useI18n } from '@/lib/i18n-context'
+import { SelectorV } from '@/components/ui/selector-v'
 import {
   X, Clock, Plus, Trash2, Loader2, Link2, Copy, CheckCircle2,
-  Settings, CalendarClock, Power, ChevronLeft, ChevronRight,
+  Settings, CalendarClock, Power, ChevronLeft, ChevronRight, RefreshCw, Sparkles, CalendarOff, MapPin, Video,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import GoogleCalendarSync from './GoogleCalendarSync'
+import MicrosoftCalendarSync from './MicrosoftCalendarSync'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 
@@ -24,7 +28,7 @@ type Props = {
 }
 
 export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: Props) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const toast = useToast()
   const [tab, setTab] = useState<'config' | 'links'>('config')
 
@@ -112,8 +116,11 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
     cargarLinks()
   }
 
+  // Confirmación en el propio panel: window.confirm no aparece en algunos navegadores integrados.
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const eliminarLink = async (id: string) => {
-    if (!confirm(t('auto.reservasOnlinePanel.eliminarEsteLinkDeReserva'))) return
+    setDeleting(id)
     try {
       const r = await fetch(`/api/booking/links?id=${id}`, { method: 'DELETE' })
       const d = await r.json()
@@ -121,6 +128,7 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
       toast.success(t('auto.reservasOnlinePanel.linkEliminado'))
       setLinks(prev => prev.filter(l => l.id !== id))
     } catch (e: any) { toast.error('Error: ' + e.message) }
+    finally { setDeleting(null); setConfirmDelete(null) }
   }
 
   const urlDe = (token: string) => `${typeof window !== 'undefined' ? window.location.origin : ''}/reservar/${token}`
@@ -151,32 +159,74 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
       return { ...c, closed_dates: [...set].sort() }
     })
 
+  const TABS = [
+    { id: 'config' as const, label: 'Disponibilidad', icon: Settings },
+    { id: 'links' as const, label: 'Generar links', icon: Link2 },
+  ]
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ background: 'var(--card)', maxHeight: '92vh' }} onClick={e => e.stopPropagation()}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#081426]/50 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+        className="v-scope flex w-full max-w-3xl flex-col overflow-hidden rounded-v-lg border border-v-border bg-v-elevated shadow-v-lg"
+        style={{ maxHeight: '92vh' }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: 'var(--card-border)' }}>
-          <h2 className="font-bold text-lg flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            <CalendarClock size={20} className="text-sky-500" /> Reservas online
+        <div className="flex items-center justify-between px-6 pb-4 pt-5">
+          <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight text-v-text">
+            <span className="v-brand grid size-10 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><CalendarClock size={20} /></span>
+            Reservas online
           </h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:opacity-70" style={{ color: 'var(--text-muted)' }}><X size={18} /></button>
+          <button onClick={onClose} className="grid size-9 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-text"><X size={18} /></button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-3 border-b" style={{ borderColor: 'var(--card-border)' }}>
-          {[{ id: 'config', label: 'Disponibilidad', icon: Settings }, { id: 'links', label: 'Generar links', icon: Link2 }].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${tab === t.id ? 'bg-sky-600 text-white' : ''}`}
-              style={tab === t.id ? {} : { color: 'var(--text-muted)' }}>
-              <t.icon size={15} /> {t.label}
-            </button>
-          ))}
+        <div className="px-6 pb-4">
+          <div className="inline-flex rounded-full bg-v-fill p-1">
+            {TABS.map(tb => (
+              <button key={tb.id} onClick={() => setTab(tb.id)}
+                className={`relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${tab === tb.id ? 'text-v-text' : 'text-v-muted hover:text-v-text'}`}>
+                {tab === tb.id && (
+                  <motion.span layoutId="reservas-tab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+                )}
+                <tb.icon size={15} className={`relative ${tab === tb.id ? 'text-v-accent' : ''}`} />
+                <span className="relative">{tb.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="overflow-y-auto p-5 flex-1">
+        <div className="flex-1 overflow-y-auto border-t border-v-border bg-v-bg px-6 py-5" style={{ scrollbarWidth: 'thin' }}>
+          {/* Aviso: sincronización con calendarios y correos */}
+          <div className="mb-5 flex items-start gap-3 rounded-v border border-v-border bg-v-elevated p-4 shadow-v">
+            <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><RefreshCw size={16} /></span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-v-text">Cada reserva se sincroniza sola</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-v-muted">
+                Cuando una familia reserva, la cita entra a la agenda, se agrega al Google Calendar u Outlook conectado
+                (del especialista del link o del jefe del centro) y se envía un correo de confirmación a la familia y al equipo.
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <GoogleCalendarSync />
+                <MicrosoftCalendarSync />
+              </div>
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait" initial={false}>
           {/* ─── TAB CONFIG ─── */}
           {tab === 'config' && (
-            loadingCfg || !cfg ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-sky-500" /></div> : (
+            <motion.div key="config" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} transition={{ duration: 0.18 }}>
+            {loadingCfg || !cfg ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-v-accent" /></div> : (
               <div className="space-y-5">
                 {/* Duración + descanso → el sistema arma los turnos solo */}
                 {(() => {
@@ -190,55 +240,72 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
                     preview.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`)
                   }
                   return (
-                    <>
+                    <div className="rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
                       <div className="grid grid-cols-2 gap-3">
-                        <Campo label="Duración de cada cita (min)">
+                        <Campo label="Duración de cada cita" suffix="min">
                           <input type="number" min={5} value={dur} onChange={e => setDur(Number(e.target.value))} className={inp} />
                         </Campo>
-                        <Campo label="Descanso entre citas (min)">
+                        <Campo label="Descanso entre citas" suffix="min">
                           <input type="number" min={0} value={descanso} onChange={e => setDescanso(Number(e.target.value))} className={inp} />
                         </Campo>
                       </div>
-                      <div className="rounded-lg p-3 text-xs leading-relaxed" style={{ background: 'rgba(99,102,241,0.08)', color: 'var(--text-secondary)' }}>
-                        💡 Solo poné los <strong>rangos de atención</strong> abajo (ej. 09:00 a 13:00) y el sistema arma los turnos automáticamente.
-                        Con cita de {dur} min{descanso > 0 ? ` y ${descanso} min de descanso` : ''}, en un bloque 09:00–13:00 saldrían:
-                        &nbsp;<strong>{preview.join(' · ')}…</strong>
-                        &nbsp;·&nbsp; Para <strong>sábados o domingos</strong>, tildá el día y agregale un bloque. Marcá los días cerrados en el calendario.
+                      <div className="mt-4">
+                        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-v-muted">
+                          <Sparkles size={12} className="text-v-accent" /> Así quedarían los turnos en un bloque de 09:00 a 13:00
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {preview.map((h, i) => (
+                            <motion.span key={`${h}-${dur}-${descanso}`} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.04 }}
+                              className="rounded-full bg-v-accent-soft px-3 py-1 text-xs font-semibold tabular-nums text-v-accent">{h}</motion.span>
+                          ))}
+                        </div>
+                        <p className="mt-3 text-xs leading-relaxed text-v-subtle">
+                          Solo marcá los <strong className="text-v-muted">rangos de atención</strong> de cada día y el sistema arma los turnos. Para abrir sábados o domingos, activá el día y agregale un bloque.
+                        </p>
                       </div>
-                    </>
+                    </div>
                   )
                 })()}
 
                 {/* Horario por día */}
                 <div>
-                  <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>{t("admin.horarioAtencion")}</p>
-                  <div className="space-y-2">
-                    {DIAS.map(d => {
+                  <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-v-text"><Clock size={14} className="text-v-accent" /> {t('admin.horarioAtencion')}</p>
+                  <div className="overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v">
+                    {DIAS.map((d, idx) => {
                       const dia = cfg.working_hours[d.k] || { activo: false, bloques: [] }
                       return (
-                        <div key={d.k} className="rounded-xl border p-3" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)' }}>
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="flex items-center gap-2 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                              <input type="checkbox" checked={!!dia.activo} onChange={e => setDiaActivo(d.k, e.target.checked)} />
-                              {d.label}
-                            </label>
-                            {dia.activo && (
-                              <button onClick={() => addBloque(d.k)} className="text-xs font-bold text-sky-500 flex items-center gap-1"><Plus size={12} /> bloque</button>
+                        <div key={d.k} className={`flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start ${idx > 0 ? 'border-t border-v-border' : ''}`}>
+                          <div className="flex w-full items-center gap-3 sm:w-36 sm:shrink-0 sm:pt-1.5">
+                            <Toggle checked={!!dia.activo} onChange={v => setDiaActivo(d.k, v)} />
+                            <span className={`text-sm font-semibold ${dia.activo ? 'text-v-text' : 'text-v-subtle'}`}>{d.label}</span>
+                          </div>
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                            {!dia.activo ? (
+                              <span className="pt-1.5 text-xs text-v-subtle">Cerrado</span>
+                            ) : (
+                              <>
+                                {(dia.bloques || []).length === 0 && <span className="text-xs italic text-v-subtle">{t('admin.sinHorario')}</span>}
+                                <AnimatePresence initial={false}>
+                                  {(dia.bloques || []).map((b: any, i: number) => (
+                                    <motion.div key={i} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                                      className="group inline-flex items-center gap-1 rounded-full border border-v-border bg-v-bg py-1 pl-3 pr-1">
+                                      <input type="time" value={b.inicio} onChange={e => setBloque(d.k, i, 'inicio', e.target.value)} className={timeInp} />
+                                      <span className="text-xs text-v-subtle">–</span>
+                                      <input type="time" value={b.fin} onChange={e => setBloque(d.k, i, 'fin', e.target.value)} className={timeInp} />
+                                      <button onClick={() => delBloque(d.k, i)} title="Quitar bloque"
+                                        className="grid size-6 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-danger/10 hover:text-v-danger">
+                                        <X size={12} />
+                                      </button>
+                                    </motion.div>
+                                  ))}
+                                </AnimatePresence>
+                                <button onClick={() => addBloque(d.k)}
+                                  className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-v-accent transition-colors hover:bg-v-accent-soft">
+                                  <Plus size={13} /> Bloque
+                                </button>
+                              </>
                             )}
                           </div>
-                          {dia.activo && (
-                            <div className="space-y-1.5">
-                              {(dia.bloques || []).length === 0 && <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t("admin.sinHorario")}</p>}
-                              {(dia.bloques || []).map((b: any, i: number) => (
-                                <div key={i} className="flex items-center gap-2">
-                                  <input type="time" value={b.inicio} onChange={e => setBloque(d.k, i, 'inicio', e.target.value)} className={inpSm} />
-                                  <span style={{ color: 'var(--text-muted)' }}>a</span>
-                                  <input type="time" value={b.fin} onChange={e => setBloque(d.k, i, 'fin', e.target.value)} className={inpSm} />
-                                  <button onClick={() => delBloque(d.k, i)} className="p-1 text-red-400 hover:text-red-600"><Trash2 size={13} /></button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       )
                     })}
@@ -247,8 +314,8 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
 
                 {/* Días cerrados — calendario navegable por mes */}
                 <div>
-                  <p className="text-xs font-bold mb-1" style={{ color: 'var(--text-muted)' }}>{t("admin.diasCerrados")}</p>
-                  <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>{t("admin.tocaDiasCerrado")}</p>
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-v-text"><CalendarOff size={14} className="text-v-danger" /> {t('admin.diasCerrados')}</p>
+                  <p className="mb-2 mt-0.5 text-xs text-v-subtle">{t('admin.tocaDiasCerrado')}</p>
                   <CalendarioDiasCerrados
                     mes={calMonth}
                     onCambiarMes={setCalMonth}
@@ -256,144 +323,226 @@ export default function ReservasOnlinePanel({ ninos, especialistas, onClose }: P
                     onToggle={toggleClosed}
                   />
                   {(cfg.closed_dates || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
+                    <div className="mt-3 flex flex-wrap gap-1.5">
                       {[...(cfg.closed_dates || [])].sort().map((d: string) => (
-                        <span key={d} className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(220,38,38,0.1)', color: '#dc2626' }}>
-                          {d} <button onClick={() => toggleClosed(d)}><X size={11} /></button>
+                        <span key={d} className="inline-flex items-center gap-1 rounded-full bg-v-danger/10 py-1 pl-3 pr-1 text-xs font-semibold text-v-danger">
+                          {d}
+                          <button onClick={() => toggleClosed(d)} className="grid size-5 place-items-center rounded-full hover:bg-v-danger/15"><X size={11} /></button>
                         </span>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <button onClick={guardarConfig} disabled={savingCfg}
-                  className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
-                  {savingCfg ? <><Loader2 size={16} className="animate-spin" /> {t("admin.guardando")}</> : <><CheckCircle2 size={16} /> {t("admin.guardarDisponibilidad")}</>}
-                </button>
+                <motion.button whileTap={{ scale: 0.98 }} onClick={guardarConfig} disabled={savingCfg}
+                  className="v-brand flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold disabled:opacity-50">
+                  {savingCfg ? <><Loader2 size={16} className="animate-spin" /> {t('admin.guardando')}</> : <><CheckCircle2 size={16} /> {t('admin.guardarDisponibilidad')}</>}
+                </motion.button>
               </div>
-            )
+            )}
+            </motion.div>
           )}
 
           {/* ─── TAB LINKS ─── */}
           {tab === 'links' && (
-            <div className="space-y-5">
+            <motion.div key="links" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }} className="space-y-5">
               {/* Crear link */}
-              <div className="rounded-xl border p-4" style={{ borderColor: 'var(--card-border)' }}>
-                <p className="text-sm font-bold mb-3" style={{ color: 'var(--text-primary)' }}>{t("admin.nuevoLinkReserva")}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
+                <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-v-text">
+                  <span className="grid size-7 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Link2 size={14} /></span>
+                  {t('admin.nuevoLinkReserva')}
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Campo label="Paciente (opcional)">
-                    <select value={form.child_id} onChange={e => setForm(f => ({ ...f, child_id: e.target.value }))} className={inp}>
-                      <option value="">{t("admin.padreEligeHijo")}</option>
-                      {ninos.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
-                    </select>
+                    <SelectorV en={locale === 'en'} value={form.child_id} onChange={v => setForm(f => ({ ...f, child_id: v }))}
+                      opciones={[
+                        { value: '', label: t('admin.padreEligeHijo'), sub: locale === 'en' ? 'The family chooses when booking' : 'La familia lo elige al reservar' },
+                        ...ninos.map(n => ({ value: n.id, label: n.name })),
+                      ]} />
                   </Campo>
                   <Campo label="Especialista (opcional)">
-                    <select value={form.specialist_id} onChange={e => setForm(f => ({ ...f, specialist_id: e.target.value }))} className={inp}>
-                      <option value="">{t("admin.sinEspecialistaFijo")}</option>
-                      {especialistas.map(e => <option key={e.id} value={e.id}>{e.full_name || e.email}</option>)}
-                    </select>
+                    <SelectorV en={locale === 'en'} value={form.specialist_id} onChange={v => setForm(f => ({ ...f, specialist_id: v }))}
+                      opciones={[
+                        { value: '', label: t('admin.sinEspecialistaFijo'), sub: locale === 'en' ? 'Any available specialist' : 'Cualquier especialista disponible' },
+                        ...especialistas.map(e => ({ value: e.id, label: e.full_name || e.email, sub: e.specialty || undefined })),
+                      ]} />
                   </Campo>
-                  <Campo label="Tipo de reserva">
-                    <div className="flex gap-2">
-                      <button type="button"
-                        onClick={() => setForm(f => ({ ...f, plan_type: 'individual', max_slots: 1 }))}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-bold border-2 transition ${form.plan_type === 'individual' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>
-                        Individual<br /><span className="text-[10px] font-medium">1 cita</span>
-                      </button>
-                      <button type="button"
-                        onClick={() => setForm(f => ({ ...f, plan_type: 'mensual', max_slots: f.max_slots > 1 ? f.max_slots : 4 }))}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-bold border-2 transition ${form.plan_type === 'mensual' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500'}`}>
-                        Mensual / Paquete<br /><span className="text-[10px] font-medium">varias citas</span>
-                      </button>
-                    </div>
-                  </Campo>
-                  {form.plan_type === 'mensual' ? (
+                  <div className="sm:col-span-2">
+                    <Campo label="Tipo de reserva">
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          { v: 'individual', title: 'Individual', sub: '1 cita', apply: (f: typeof form) => ({ ...f, plan_type: 'individual', max_slots: 1 }) },
+                          { v: 'mensual', title: 'Mensual / Paquete', sub: 'varias citas', apply: (f: typeof form) => ({ ...f, plan_type: 'mensual', max_slots: f.max_slots > 1 ? f.max_slots : 4 }) },
+                        ]).map(o => {
+                          const on = form.plan_type === o.v
+                          return (
+                            <button key={o.v} type="button" onClick={() => setForm(o.apply)}
+                              className={`rounded-v-sm border p-3 text-left transition-all ${on ? 'border-v-accent/50 bg-v-accent-soft ring-4 ring-v-accent-soft' : 'border-v-border bg-v-bg hover:border-v-accent/30'}`}>
+                              <span className={`block text-sm font-semibold ${on ? 'text-v-accent' : 'text-v-text'}`}>{o.title}</span>
+                              <span className="text-xs text-v-subtle">{o.sub}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </Campo>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Campo label={locale === 'en' ? 'Format' : 'Modalidad'}>
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          { v: 'presencial', Icon: MapPin, title: locale === 'en' ? 'In person' : 'Presencial', sub: locale === 'en' ? 'At the center' : 'En el centro' },
+                          { v: 'virtual', Icon: Video, title: 'Virtual', sub: locale === 'en' ? 'Video call, link created automatically' : 'Videollamada, link automático' },
+                        ]).map(o => {
+                          const on = form.modalidad === o.v
+                          return (
+                            <button key={o.v} type="button" onClick={() => setForm(f => ({ ...f, modalidad: o.v }))}
+                              className={`flex items-center gap-3 rounded-v-sm border p-3 text-left transition-all ${on ? 'border-v-accent/50 bg-v-accent-soft ring-4 ring-v-accent-soft' : 'border-v-border bg-v-bg hover:border-v-accent/30'}`}>
+                              <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${on ? 'v-brand' : 'bg-v-fill text-v-muted'}`} style={on ? { boxShadow: 'none' } : undefined}><o.Icon size={16} /></span>
+                              <span className="min-w-0">
+                                <span className={`block text-sm font-semibold ${on ? 'text-v-accent' : 'text-v-text'}`}>{o.title}</span>
+                                <span className="block text-xs text-v-subtle">{o.sub}</span>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </Campo>
+                  </div>
+                  {form.plan_type === 'mensual' && (
                     <Campo label="¿Cuántas citas incluye el paquete?">
                       <select value={form.max_slots} onChange={e => setForm(f => ({ ...f, max_slots: Number(e.target.value) }))} className={inp}>
                         {[2, 3, 4, 5, 6, 8, 10, 12, 16, 20].map(n => <option key={n} value={n}>{n} citas</option>)}
                       </select>
                     </Campo>
-                  ) : (
-                    <Campo label="Servicio">
-                      <input value={form.service_type} onChange={e => setForm(f => ({ ...f, service_type: e.target.value }))} className={inp} />
-                    </Campo>
                   )}
-                  {form.plan_type === 'mensual' && (
-                    <Campo label="Servicio">
-                      <input value={form.service_type} onChange={e => setForm(f => ({ ...f, service_type: e.target.value }))} className={inp} />
-                    </Campo>
-                  )}
-                  <Campo label="Vence en (días)">
+                  <Campo label="Servicio">
+                    <input value={form.service_type} onChange={e => setForm(f => ({ ...f, service_type: e.target.value }))} className={inp} />
+                  </Campo>
+                  <Campo label="Vence en" suffix="días">
                     <input type="number" value={form.expires_in_days} onChange={e => setForm(f => ({ ...f, expires_in_days: Number(e.target.value) }))} className={inp} />
                   </Campo>
                 </div>
-                <button onClick={crearLink} disabled={creando}
-                  className="mt-3 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50">
-                  {creando ? <><Loader2 size={16} className="animate-spin" /> {t("common.generando")}</> : <><Link2 size={16} /> {t("admin.generarLink")}</>}
-                </button>
+                <motion.button whileTap={{ scale: 0.98 }} onClick={crearLink} disabled={creando}
+                  className="v-brand mt-4 flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold disabled:opacity-50">
+                  {creando ? <><Loader2 size={16} className="animate-spin" /> {t('common.generando')}</> : <><Link2 size={16} /> {t('admin.generarLink')}</>}
+                </motion.button>
               </div>
 
               {/* Lista de links */}
               <div>
-                <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>{t("admin.linksGenerados")}</p>
-                {loadingLinks ? <div className="flex justify-center py-6"><Loader2 className="animate-spin text-sky-500" /></div> : (
+                <p className="mb-2 text-sm font-semibold text-v-text">{t('admin.linksGenerados')}</p>
+                {loadingLinks ? <div className="flex justify-center py-6"><Loader2 className="animate-spin text-v-accent" /></div> : (
                   <div className="space-y-2">
-                    {links.length === 0 && <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>{t("admin.sinLinks")}</p>}
-                    {links.map(l => {
+                    {links.length === 0 && (
+                      <div className="flex flex-col items-center rounded-v border border-dashed border-v-border py-8 text-center">
+                        <span className="grid size-11 place-items-center rounded-full bg-v-fill"><Link2 size={18} className="text-v-subtle" /></span>
+                        <p className="mt-2 text-sm text-v-muted">{t('admin.sinLinks')}</p>
+                      </div>
+                    )}
+                    {links.map((l, i) => {
                       const agotado = l.slots_used >= l.max_slots
                       const vencido = l.expires_at && new Date(l.expires_at) < new Date()
+                      const vivo = l.active && !agotado && !vencido
                       const childName = ninos.find(n => n.id === l.child_id)?.name
+                      const estado = agotado ? { label: 'Completado', cls: 'bg-v-accent-soft text-v-accent' }
+                        : vencido ? { label: 'Vencido', cls: 'bg-v-fill text-v-subtle' }
+                        : !l.active ? { label: 'Desactivado', cls: 'bg-v-warning/15 text-v-warning' }
+                        : { label: 'Activo', cls: 'bg-v-success/15 text-v-success' }
+                      const pct = Math.min(100, Math.round((l.slots_used / Math.max(1, l.max_slots)) * 100))
                       return (
-                        <div key={l.id} className="rounded-xl border p-3" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)', opacity: l.active && !agotado && !vencido ? 1 : 0.55 }}>
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="text-sm">
-                              <p className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                                {l.service_type} · {l.plan_type} · {l.slots_used}/{l.max_slots} citas
-                              </p>
-                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                {childName ? `${childName} · ` : 'Padre elige hijo · '}
-                                {agotado ? 'Completado' : vencido ? 'Vencido' : !l.active ? 'Desactivado' : 'Activo'}
-                              </p>
+                        <motion.div key={l.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }}
+                          className={`rounded-v border border-v-border bg-v-elevated p-4 shadow-v transition-opacity ${vivo ? '' : 'opacity-60'}`}>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-semibold text-v-text">{l.service_type}</p>
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${estado.cls}`}>{estado.label}</span>
+                                <span className="rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold capitalize text-v-muted">{l.plan_type}</span>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold text-v-muted">
+                                  {l.modalidad === 'virtual' ? <><Video size={10} /> Virtual</> : <><MapPin size={10} /> {locale === 'en' ? 'In person' : 'Presencial'}</>}
+                                </span>
+                              </div>
+                              <p className="mt-0.5 text-xs text-v-subtle">{childName || 'La familia elige al paciente'}</p>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                              <button onClick={() => copiar(l.token)} title={t("admin.copiarLink")}
-                                className="px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-bold flex items-center gap-1.5">
-                                {copiado === l.token ? <><CheckCircle2 size={13} /> {t("admin.copiado")}</> : <><Copy size={13} /> {t("admin.copiarLink")}</>}
-                              </button>
+                            <div className="flex items-center gap-1">
+                              <motion.button whileTap={{ scale: 0.95 }} onClick={() => copiar(l.token)} title={t('admin.copiarLink')}
+                                className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${copiado === l.token ? 'bg-v-success/15 text-v-success' : 'v-brand'}`}
+                                style={copiado === l.token ? undefined : { boxShadow: 'none' }}>
+                                {copiado === l.token ? <><CheckCircle2 size={13} /> {t('admin.copiado')}</> : <><Copy size={13} /> {t('admin.copiarLink')}</>}
+                              </motion.button>
                               <button onClick={() => toggleLink(l.id, l.active)} title={l.active ? 'Desactivar' : 'Activar'}
-                                className="p-1.5 rounded-lg" style={{ color: l.active ? '#d97706' : '#16a34a', background: 'var(--card)' }}>
+                                className={`grid size-8 place-items-center rounded-full transition-colors ${l.active ? 'text-v-warning hover:bg-v-warning/15' : 'text-v-success hover:bg-v-success/15'}`}>
                                 <Power size={14} />
                               </button>
-                              <button onClick={() => eliminarLink(l.id)} title={t("admin.eliminarLink")}
-                                className="p-1.5 rounded-lg" style={{ color: '#dc2626', background: 'var(--card)' }}>
-                                <Trash2 size={14} />
-                              </button>
+                              <AnimatePresence mode="wait" initial={false}>
+                                {confirmDelete === l.id ? (
+                                  <motion.div key="confirm" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                                    className="inline-flex items-center gap-1 rounded-full bg-v-danger/10 py-0.5 pl-3 pr-0.5">
+                                    <span className="text-xs font-semibold text-v-danger">¿Borrar?</span>
+                                    <button onClick={() => eliminarLink(l.id)} disabled={deleting === l.id} title={t('admin.eliminarLink')}
+                                      className="grid size-7 place-items-center rounded-full bg-v-danger text-white transition-opacity disabled:opacity-60">
+                                      {deleting === l.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                    </button>
+                                    <button onClick={() => setConfirmDelete(null)} title="Cancelar"
+                                      className="grid size-7 place-items-center rounded-full text-v-danger transition-colors hover:bg-v-danger/15">
+                                      <X size={13} />
+                                    </button>
+                                  </motion.div>
+                                ) : (
+                                  <motion.button key="trash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                    onClick={() => setConfirmDelete(l.id)} title={t('admin.eliminarLink')}
+                                    className="grid size-8 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-danger/10 hover:text-v-danger">
+                                    <Trash2 size={14} />
+                                  </motion.button>
+                                )}
+                              </AnimatePresence>
                             </div>
                           </div>
-                          <p className="text-[11px] mt-1.5 font-mono truncate" style={{ color: 'var(--text-muted)' }}>{urlDe(l.token)}</p>
-                        </div>
+                          <div className="mt-3 flex items-center gap-3">
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-v-fill">
+                              <motion.div className="v-brand h-full rounded-full" style={{ boxShadow: 'none' }}
+                                initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
+                            </div>
+                            <span className="shrink-0 text-xs font-semibold tabular-nums text-v-muted">{l.slots_used}/{l.max_slots} citas</span>
+                          </div>
+                          <p className="mt-2 truncate rounded-full bg-v-bg px-3 py-1.5 font-mono text-[11px] text-v-subtle">{urlDe(l.token)}</p>
+                        </motion.div>
                       )
                     })}
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+const inp = 'w-full rounded-v-sm border border-v-border bg-v-bg px-3.5 py-2.5 text-sm text-v-text outline-none transition-shadow focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft'
+const timeInp = 'w-[5.2rem] bg-transparent text-sm font-medium tabular-nums text-v-text outline-none'
+
+function Campo({ label, suffix, children }: { label: string; suffix?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 flex items-baseline gap-1 text-xs font-semibold text-v-muted">
+        {label}{suffix && <span className="font-normal text-v-subtle">({suffix})</span>}
+      </label>
+      {children}
     </div>
   )
 }
 
-const inp = 'w-full px-3 py-2 rounded-lg border outline-none text-sm focus:border-sky-500'
-const inpSm = 'px-2 py-1.5 rounded-lg border outline-none text-sm focus:border-sky-500'
-
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div>
-      <label className="block text-[11px] font-bold mb-1" style={{ color: 'var(--text-muted)' }}>{label}</label>
-      {children}
-    </div>
+    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
+      className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${checked ? 'v-brand' : 'bg-v-border'}`}
+      style={checked ? { boxShadow: 'none' } : undefined}>
+      <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+        className={`absolute top-0.5 size-5 rounded-full bg-white shadow ${checked ? 'right-0.5' : 'left-0.5'}`} />
+    </button>
   )
 }
 
@@ -421,17 +570,17 @@ function CalendarioDiasCerrados({ mes, onCambiarMes, cerrados, onToggle }: {
   const fechaDe = (dia: number) => `${year}-${String(month + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
 
   return (
-    <div className="rounded-xl border p-3" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)' }}>
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-v border border-v-border bg-v-elevated p-4 shadow-v">
+      <div className="mb-3 flex items-center justify-between">
         <button onClick={() => onCambiarMes(new Date(year, month - 1, 1))}
-          className="p-1.5 rounded-lg hover:bg-black/5" style={{ color: 'var(--text-secondary)' }}><ChevronLeft size={16} /></button>
-        <p className="text-sm font-bold capitalize" style={{ color: 'var(--text-primary)' }}>{nombreMes}</p>
+          className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-text"><ChevronLeft size={16} /></button>
+        <p className="text-sm font-semibold capitalize text-v-text">{nombreMes}</p>
         <button onClick={() => onCambiarMes(new Date(year, month + 1, 1))}
-          className="p-1.5 rounded-lg hover:bg-black/5" style={{ color: 'var(--text-secondary)' }}><ChevronRight size={16} /></button>
+          className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-text"><ChevronRight size={16} /></button>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center mb-1">
+      <div className="mb-1 grid grid-cols-7 gap-1 text-center">
         {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
-          <span key={i} className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{d}</span>
+          <span key={i} className="text-[10px] font-semibold uppercase text-v-subtle">{d}</span>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -440,21 +589,21 @@ function CalendarioDiasCerrados({ mes, onCambiarMes, cerrados, onToggle }: {
           const fecha = fechaDe(dia)
           const cerrado = cerradosSet.has(fecha)
           const pasado = fecha < hoyStr
+          const hoy = fecha === hoyStr
           return (
-            <button key={i} disabled={pasado}
+            <motion.button key={i} disabled={pasado} whileTap={{ scale: 0.9 }}
               onClick={() => onToggle(fecha)}
-              className={`aspect-square rounded-lg text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed ${
-                cerrado ? 'bg-red-500 text-white' : 'hover:bg-sky-100'
+              className={`grid aspect-square place-items-center rounded-full text-xs font-semibold tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
+                cerrado ? 'bg-v-danger text-white' : hoy ? 'bg-v-accent-soft text-v-accent' : 'text-v-text hover:bg-v-fill'
               }`}
-              style={cerrado ? {} : { background: 'var(--card)', color: 'var(--text-primary)', border: '1px solid var(--card-border)' }}
               title={cerrado ? 'Cerrado — tocá para abrir' : 'Abierto — tocá para cerrar'}>
               {dia}
-            </button>
+            </motion.button>
           )
         })}
       </div>
-      <p className="text-[10px] mt-2 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-        <span className="inline-block w-3 h-3 rounded bg-red-500" /> = cerrado
+      <p className="mt-3 flex items-center gap-1.5 text-[11px] text-v-subtle">
+        <span className="inline-block size-2.5 rounded-full bg-v-danger" /> Cerrado
       </p>
     </div>
   )

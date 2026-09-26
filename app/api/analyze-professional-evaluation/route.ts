@@ -8,6 +8,8 @@ export const maxDuration = 60;
 import { NextResponse } from 'next/server';
 import { callGroqSimple, GROQ_MODELS, GroqExhaustedError } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder';
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 
 // Definimos interfaces para tipado básico
 interface EvaluationRequest {
@@ -36,18 +38,24 @@ function getLangInstruction(locale: string): string {
 let _evalLocale = 'es'
 
 export async function POST(req: Request) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body: EvaluationRequest = await req.json();
     const { evaluationType, responses, childName, childAge, childId } = body;
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
     _evalLocale = (body as any).locale || req.headers.get('x-locale') || 'es';
+    const bloqueo = await sinTokens(caller.centroId, String(_evalLocale).startsWith('en'))
+    if (bloqueo) return bloqueo
 
 
     // Contexto completo: RAG + historial + instrucciones del centro
     const evalQuery = `${evaluationType} evaluación clínica ${childName || ''}`
-    const ctx = await buildAIContext(childId, childName, childAge ? String(childAge) : undefined, evalQuery)
+    const ctx = await buildAIContext(childId, childName, childAge ? String(childAge) : undefined, evalQuery, caller.centroId)
     const nombreNino = ctx.childName
     const edadNino = ctx.childAge ? Number(ctx.childAge) || childAge : childAge
-    const historialTexto = (ctx.fullContext || '').slice(0, 12000)  // tope duro (RAG+centro+historial): evita exceder tokens en pacientes con mucho expediente
+    const historialTexto = (ctx.fullContext || '').slice(0, 6000)  // tope duro (RAG+centro+historial): evita exceder tokens en pacientes con mucho expediente
 
     // 2. Inicialización
     let analysisResult: any = {};
@@ -76,6 +84,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: `Tipo de evaluación no soportado: ${evaluationType}` }, { status: 400 });
     }
 
+    await descontarToken(caller.centroId)
     return NextResponse.json(analysisResult);
 
   } catch (error: any) {

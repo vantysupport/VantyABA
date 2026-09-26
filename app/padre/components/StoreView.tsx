@@ -1,15 +1,18 @@
 'use client'
+// app/padre/components/StoreView.tsx
+// Tienda del centro para la familia: catálogo, carrito y seguimiento de pedidos (pago coordinado con el centro).
 
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 import { useI18n } from '@/lib/i18n-context'
 import { useCurrency } from '@/components/CurrencyContext'
 import { toBCP47 } from '@/lib/i18n'
-
+import { useTraducir } from '@/lib/use-traducir'
 import { useState, useEffect, useCallback } from 'react'
 import {
-  ShoppingBag, ShoppingCart, Plus, Minus, X, Package, Star,
-  CheckCircle, Clock, Truck, XCircle, ChevronRight, Loader2,
-  Phone, Filter, Search, ImageIcon, ArrowLeft, FileText, Tag
+  ShoppingBag, ShoppingCart, Plus, Minus, X, Package, Star, CheckCircle2, Clock, XCircle, Loader2,
+  Phone, Search, Image as ImageIcon, FileText, Download, Info, ArrowRight, Receipt,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
 
 interface Product {
@@ -23,154 +26,137 @@ interface Product {
   imagen_url: string | null
   destacado: boolean
 }
-
 interface CartItem { product: Product; cantidad: number }
+interface Order { id: string; total_soles: number; estado: string; notas: string; created_at: string; store_order_items: any[] }
 
-interface Order {
-  id: string
-  total_soles: number
-  estado: string
-  notas: string
-  created_at: string
-  store_order_items: any[]
+const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
+type Tr = (t?: string) => string
+
+const ESTADO: Record<string, { es: string; en: string; Icon: any; tone: string }> = {
+  pendiente: { es: 'Pendiente de confirmación', en: 'Awaiting confirmation', Icon: Clock, tone: 'bg-v-warning/15 text-v-warning' },
+  confirmado: { es: 'Confirmado', en: 'Confirmed', Icon: CheckCircle2, tone: 'bg-v-accent-soft text-v-accent' },
+  listo: { es: 'Listo para recoger', en: 'Ready for pickup', Icon: Package, tone: 'bg-v-accent-soft text-v-accent' },
+  entregado: { es: 'Entregado', en: 'Delivered', Icon: CheckCircle2, tone: 'bg-v-success/15 text-v-success' },
+  cancelado: { es: 'Cancelado', en: 'Cancelled', Icon: XCircle, tone: 'bg-v-danger/10 text-v-danger' },
 }
 
-const ESTADO_CFG: Record<string, any> = {
-  pendiente:  { label: 'Pendiente de confirmación', icon: Clock,       color: 'text-amber-600',   bg: 'bg-amber-50',   border: 'border-amber-200' },
-  confirmado: { label: 'Confirmado',                icon: CheckCircle, color: 'text-sky-600',    bg: 'bg-sky-50',    border: 'border-sky-200'  },
-  listo:      { label: '¡Listo para recoger!',      icon: Package,     color: 'text-sky-600',  bg: 'bg-sky-50',  border: 'border-sky-200'},
-  entregado:  { label: 'Entregado',                 icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200'},
-  cancelado:  { label: 'Cancelado',                 icon: XCircle,     color: 'text-red-500',     bg: 'bg-red-50',     border: 'border-red-200'   },
+function useL() {
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  return { en, locale, L: (e: string, s: string) => (en ? e : s) }
 }
 
-// ── Carrito flotante ──────────────────────────────────────────────────────────
-function CartDrawer({ cart, onClose, onUpdate, onCheckout }: any) {
-  const total = cart.reduce((s: number, i: CartItem) => s + i.product.precio_soles * i.cantidad, 0)
-  const { t, locale } = useI18n()
+function Foto({ src, alt, icon = 30 }: { src: string | null; alt: string; icon?: number }) {
+  const [error, setError] = useState(false)
+  return src && !error
+    ? <img src={src} alt={alt} onError={() => setError(true)} className="absolute inset-0 w-full object-cover" style={{ height: '100%' }} />
+    : <div className="absolute inset-0 grid place-items-center bg-v-fill text-v-subtle"><ImageIcon size={icon} /></div>
+}
+
+function TipoChip({ tipo }: { tipo: string }) {
+  const { L } = useL()
+  return tipo === 'digital'
+    ? <span className="inline-flex items-center gap-1 rounded-full bg-v-accent px-2 py-0.5 text-[10px] font-semibold text-white"><FileText size={10} /> {L('Digital', 'Digital')}</span>
+    : <span className="inline-flex items-center gap-1 rounded-full bg-[#081426]/75 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur"><Package size={10} /> {L('Physical', 'Físico')}</span>
+}
+
+// ── Carrito (panel lateral) ───────────────────────────────────────────────────
+function CartDrawer({ cart, onClose, onUpdate, onCheckout, tr }: { cart: CartItem[]; onClose: () => void; onUpdate: (id: string, n: number) => void; onCheckout: (nota: string) => Promise<boolean>; tr: Tr }) {
+  const CONTACTO = useCentroBranding()
+  const { L } = useL()
   const { symbol } = useCurrency()
+  const total = cart.reduce((s, i) => s + i.product.precio_soles * i.cantidad, 0)
   const [nota, setNota] = useState('')
   const [placing, setPlacing] = useState(false)
   const [done, setDone] = useState(false)
 
-  const handleCheckout = async () => {
+  const confirmar = async () => {
     setPlacing(true)
-    const ok = await onCheckout(nota)
-    if (ok) setDone(true)
+    if (await onCheckout(nota)) setDone(true)
     setPlacing(false)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative w-full max-w-md h-full flex flex-col shadow-2xl" style={{ background: "var(--c-card)" }} onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: "1px solid var(--c-border)" }}>
-          <h3 className="font-bold text-lg flex items-center gap-2" style={{ color: "var(--c-text-primary)" }}>
-            <ShoppingCart size={20} className="text-sky-600 dark:text-sky-400" /> Mi carrito
-            {cart.length > 0 && <span className="text-xs bg-sky-600 text-white px-2 py-0.5 rounded-full">{cart.length}</span>}
-          </h3>
-          <button onClick={onClose} className="p-2 rounded-xl transition-all" style={{ background: "var(--c-surface)" }}>
-            <X size={20} className="text-slate-500 dark:text-slate-400 dark:text-slate-500" />
-          </button>
+    <motion.div className="v-scope fixed inset-0 z-[150] flex justify-end bg-[#081426]/50 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.div onClick={e => e.stopPropagation()} initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+        className="flex h-full w-full max-w-md flex-col border-l border-v-border bg-v-elevated shadow-v-lg">
+        <div className="relative flex items-center gap-3 border-b border-v-border px-5 py-4">
+          <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
+          <span className="grid size-10 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><ShoppingCart size={18} /></span>
+          <p className="flex-1 text-base font-semibold text-v-text">{L('My cart', 'Mi carrito')}</p>
+          <button onClick={onClose} aria-label={L('Close', 'Cerrar')} className="grid size-9 place-items-center rounded-full text-v-muted hover:bg-v-fill"><X size={17} /></button>
         </div>
 
         {done ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-5">
-              <CheckCircle size={40} className="text-emerald-600" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2" style={{ color: "var(--c-text-primary)" }}>{t('tienda.pedidoEnviado')}</h3>
-            <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--c-text-muted)" }}>
-              {t('auto.storeView.tuPedidoFueRegistradoNos')}
-            </p>
-            <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-all">
-              <Phone size={16} /> Coordinar por WhatsApp
-            </a>
+          <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+            <motion.span initial={{ scale: 0.6 }} animate={{ scale: 1 }} className="grid size-16 place-items-center rounded-full bg-v-success/15 text-v-success"><CheckCircle2 size={32} /></motion.span>
+            <p className="mt-4 text-xl font-semibold text-v-text">{L('Order sent!', '¡Pedido enviado!')}</p>
+            <p className="mt-1.5 max-w-xs text-sm text-v-muted">{L('The center will contact you to coordinate payment and delivery.', 'El centro te contactará para coordinar el pago y la entrega.')}</p>
+            {CONTACTO.telefono && (
+              <a href={`https://wa.me/${CONTACTO.telefonoDigitos}`} target="_blank" rel="noopener noreferrer"
+                className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-[#25D366] px-5 text-sm font-semibold text-white hover:brightness-95">
+                <Phone size={15} /> {L('Coordinate on WhatsApp', 'Coordinar por WhatsApp')}
+              </a>
+            )}
           </div>
         ) : cart.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--c-surface)" }}>
-              <ShoppingCart size={36} className="text-slate-300" />
-            </div>
-            <p className="font-bold mb-1" style={{ color: "var(--c-text-muted)" }}>{t('ui.cart_empty')}</p>
-            <p className="text-sm" style={{ color: "var(--c-text-muted)" }}>{t('ui.add_items')}</p>
+          <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
+            <span className="grid size-14 place-items-center rounded-full bg-v-fill text-v-subtle"><ShoppingCart size={24} /></span>
+            <p className="mt-3 text-sm font-semibold text-v-text">{L('Your cart is empty', 'Tu carrito está vacío')}</p>
+            <p className="mt-1 text-xs text-v-muted">{L('Add items from the catalog.', 'Agrega productos del catálogo.')}</p>
           </div>
         ) : (
           <>
-            {/* Items */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-3">
-              {cart.map(({ product: p, cantidad }: CartItem) => (
-                <div key={p.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)" }}>
-                  <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0" style={{ background: "var(--c-surface)" }}>
-                    {p.imagen_url
-                      ? <img src={p.imagen_url} alt={p.nombre} className="absolute inset-0 w-full h-full object-cover" />
-                      : <Package size={20} className="text-slate-300 m-auto mt-3.5" />
-                    }
+            <div className="flex-1 space-y-3 overflow-y-auto p-5">
+              {cart.map(({ product: p, cantidad }) => (
+                <div key={p.id} className="flex items-center gap-3 rounded-v-sm border border-v-border bg-v-bg p-2.5">
+                  <div className="relative size-14 shrink-0 overflow-hidden rounded-v-sm"><Foto src={p.imagen_url} alt={p.nombre} icon={18} /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-v-text">{tr(p.nombre)}</p>
+                    <p className="mt-0.5 text-xs font-semibold tabular-nums text-v-accent">{symbol} {(p.precio_soles * cantidad).toFixed(2)}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm leading-tight truncate" style={{ color: "var(--c-text-primary)" }}>{p.nombre}</p>
-                    <p className="text-xs text-sky-600 dark:text-sky-400 font-bold mt-0.5">{symbol} {(p.precio_soles * cantidad).toFixed(2)}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button onClick={() => onUpdate(p.id, cantidad - 1)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all" style={{ background: "var(--c-card)", border: "1px solid var(--c-border)" }}>
-                      <Minus size={12} className="text-slate-500 dark:text-slate-400 dark:text-slate-500" />
-                    </button>
-                    <span className="w-6 text-center font-bold text-sm" style={{ color: "var(--c-text-primary)" }}>{cantidad}</span>
-                    <button onClick={() => onUpdate(p.id, cantidad + 1)}
-                      disabled={p.tipo === 'fisico' && cantidad >= p.stock}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all disabled:opacity-30" style={{ background: "var(--c-card)", border: "1px solid var(--c-border)" }}>
-                      <Plus size={12} className="text-slate-500 dark:text-slate-400 dark:text-slate-500" />
-                    </button>
+                  <div className="flex items-center gap-1 rounded-full bg-v-fill p-1">
+                    <button onClick={() => onUpdate(p.id, cantidad - 1)} aria-label="-" className="grid size-7 place-items-center rounded-full bg-v-elevated text-v-muted shadow-v"><Minus size={12} /></button>
+                    <span className="w-6 text-center text-sm font-semibold tabular-nums text-v-text">{cantidad}</span>
+                    <button onClick={() => onUpdate(p.id, cantidad + 1)} disabled={p.tipo === 'fisico' && cantidad >= p.stock} aria-label="+" className="grid size-7 place-items-center rounded-full bg-v-elevated text-v-muted shadow-v disabled:opacity-30"><Plus size={12} /></button>
                   </div>
                 </div>
               ))}
-
-              {/* Nota */}
-              <div className="pt-2">
-                <label className="block text-xs font-bold mb-2" style={{ color: "var(--c-text-muted)" }}>{t('familias.notaCentro')}</label>
-                <textarea
-                  value={nota} onChange={e => setNota(e.target.value)}
-                  rows={2} placeholder={t("tienda.pedidoGuardar")}
-                  className="w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all resize-none" style={{ background: "var(--c-surface)", border: "1px solid var(--c-border)", color: "var(--c-text-primary)" }}
-                />
+              <div className="pt-1">
+                <label className="mb-1.5 block text-xs font-semibold text-v-muted">{L('Note for the center (optional)', 'Nota para el centro (opcional)')}</label>
+                <textarea value={nota} onChange={e => setNota(e.target.value)} rows={2} placeholder={L('E.g. please hold it until Friday', 'Ej. guárdenlo hasta el viernes')}
+                  className="w-full resize-none rounded-v-sm border border-v-border bg-v-bg px-4 py-3 text-sm text-v-text outline-none placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft" />
               </div>
-
-              {/* Info pago */}
-              <div className="rounded-xl p-4" style={{ background: "var(--c-stat-blue)", border: "1px solid var(--c-border)" }}>
-                <p className="text-xs font-bold text-sky-500 mb-1">{t('tienda.comoPaga')}</p>
-                <p className="text-xs text-sky-500 leading-relaxed">
-                  {t('auto.storeView.elPagoSeRealizaAl')}
+              <div className="flex gap-2.5 rounded-v-sm bg-v-accent-soft/60 p-3.5">
+                <Info size={15} className="mt-0.5 shrink-0 text-v-accent" />
+                <p className="text-xs leading-relaxed text-v-text">
+                  <span className="font-semibold">{L('How do I pay? ', '¿Cómo pago? ')}</span>
+                  {L('Payment is made at the center or by transfer. The team will confirm your order.', 'El pago se realiza en el centro o por transferencia. El equipo confirmará tu pedido.')}
                 </p>
               </div>
             </div>
-
-            {/* Footer con total y botón */}
-            <div className="p-5 space-y-3" style={{ borderTop: "1px solid var(--c-border)" }}>
-              <div className="flex justify-between items-center">
-                <span className="font-bold" style={{ color: "var(--c-text-secondary)" }}>{t('ui.total_to_pay')}</span>
-                <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">{symbol} {total.toFixed(2)}</span>
+            <div className="space-y-3 border-t border-v-border p-5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-medium text-v-muted">{L('Total to pay', 'Total a pagar')}</span>
+                <span className="text-2xl font-bold tabular-nums text-v-text">{symbol} {total.toFixed(2)}</span>
               </div>
-              <button onClick={handleCheckout} disabled={placing}
-                className="w-full py-4 bg-sky-600 hover:bg-sky-700 text-white font-bold text-base rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-sky-200">
-                {placing ? <Loader2 size={18} className="animate-spin" /> : <ShoppingBag size={18} />}
-                {placing ? 'Enviando pedido...' : 'Confirmar pedido'}
+              <button onClick={confirmar} disabled={placing} className="v-brand inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold disabled:opacity-60">
+                {placing ? <Loader2 size={17} className="animate-spin" /> : <ShoppingBag size={17} />}
+                {placing ? L('Sending order…', 'Enviando pedido…') : L('Confirm order', 'Confirmar pedido')}
               </button>
-              <p className="text-center text-xs" style={{ color: "var(--c-text-muted)" }}>
-                {t('auto.storeView.alConfirmarElCentroRecibira')}
-              </p>
+              <p className="text-center text-[11px] text-v-subtle">{L('The center will receive your order and contact you.', 'El centro recibirá tu pedido y te contactará.')}</p>
             </div>
           </>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
 // ── Vista principal de la tienda ──────────────────────────────────────────────
 export default function StoreView({ profile }: { profile: any }) {
-  const { t, locale } = useI18n()
+  const CONTACTO = useCentroBranding()
+  const { L, locale } = useL()
   const { symbol } = useCurrency()
   const [view, setView] = useState<'catalogo' | 'mis-pedidos'>('catalogo')
   const [products, setProducts] = useState<Product[]>([])
@@ -185,40 +171,25 @@ export default function StoreView({ profile }: { profile: any }) {
   const [addedId, setAddedId] = useState<string | null>(null)
 
   const loadProducts = useCallback(async () => {
-    const { data } = await supabase
-      .from('store_products')
-      .select('*')
-      .eq('activo', true)
-      .order('destacado', { ascending: false })
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('store_products').select('*').eq('activo', true)
+      .order('destacado', { ascending: false }).order('created_at', { ascending: false })
     setProducts(data || [])
   }, [])
 
   const loadOrders = useCallback(async () => {
     if (!profile?.id) return
-    const { data } = await supabase
-      .from('store_orders')
-      .select('*, store_order_items(*)')
-      .eq('parent_id', profile.id)
-      .order('created_at', { ascending: false })
+    const { data } = await supabase.from('store_orders').select('*, store_order_items(*)').eq('parent_id', profile.id).order('created_at', { ascending: false })
     setOrders(data || [])
   }, [profile?.id])
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      await Promise.all([loadProducts(), loadOrders()])
-      setLoading(false)
-    }
-    load()
+    (async () => { setLoading(true); await Promise.all([loadProducts(), loadOrders()]); setLoading(false) })()
   }, [loadProducts, loadOrders])
 
   const addToCart = (product: Product) => {
-    setCart(prev => {
-      const exists = prev.find(i => i.product.id === product.id)
-      if (exists) return prev.map(i => i.product.id === product.id ? { ...i, cantidad: i.cantidad + 1 } : i)
-      return [...prev, { product, cantidad: 1 }]
-    })
+    setCart(prev => prev.find(i => i.product.id === product.id)
+      ? prev.map(i => i.product.id === product.id ? { ...i, cantidad: i.cantidad + 1 } : i)
+      : [...prev, { product, cantidad: 1 }])
     setAddedId(product.id)
     setTimeout(() => setAddedId(null), 1500)
   }
@@ -233,363 +204,241 @@ export default function StoreView({ profile }: { profile: any }) {
     const total = cart.reduce((s, i) => s + i.product.precio_soles * i.cantidad, 0)
     try {
       const { data: order, error } = await supabase.from('store_orders').insert({
-        parent_id: profile.id,
-        parent_name: profile.full_name || '',
-        parent_email: profile.email || '',
-        parent_phone: profile.phone || '',
-        total_soles: total,
-        estado: 'pendiente',
-        notas: nota,
+        parent_id: profile.id, parent_name: profile.full_name || '', parent_email: profile.email || '', parent_phone: profile.phone || '',
+        total_soles: total, estado: 'pendiente', notas: nota,
       }).select().single()
       if (error) throw error
-
-      const items = cart.map(i => ({
-        order_id: order.id,
-        product_id: i.product.id,
-        product_nombre: i.product.nombre,
-        product_imagen: i.product.imagen_url || '',
-        cantidad: i.cantidad,
-        precio_unitario: i.product.precio_soles,
-      }))
-      await supabase.from('store_order_items').insert(items)
-
+      await supabase.from('store_order_items').insert(cart.map(i => ({
+        order_id: order.id, product_id: i.product.id, product_nombre: i.product.nombre, product_imagen: i.product.imagen_url || '',
+        cantidad: i.cantidad, precio_unitario: i.product.precio_soles, subtotal: i.product.precio_soles * i.cantidad,
+      })))
       // Reducir stock de productos físicos
       for (const item of cart) {
-        if (item.product.tipo === 'fisico') {
-          await supabase.from('store_products').update({ stock: item.product.stock - item.cantidad }).eq('id', item.product.id)
-        }
+        if (item.product.tipo === 'fisico') await supabase.from('store_products').update({ stock: item.product.stock - item.cantidad }).eq('id', item.product.id)
       }
-
       setCart([])
-      await loadOrders()
+      await Promise.all([loadOrders(), loadProducts()])
       return true
-    } catch (e) { return false }
+    } catch { return false }
   }
 
-  const categorias = ['todos', ...new Set(products.map(p => p.categoria))]
+  const tr = useTraducir([
+    ...products.flatMap(p => [p.nombre, p.descripcion, p.categoria]),
+    ...orders.flatMap(o => (o.store_order_items || []).map((i: any) => i.product_nombre)),
+  ])
+
+  const categorias = ['todos', ...new Set(products.map(p => p.categoria).filter(Boolean))]
   const cartCount = cart.reduce((s, i) => s + i.cantidad, 0)
+  const q = search.toLowerCase()
+  const filtered = products.filter(p =>
+    (!q || [p.nombre, p.descripcion, tr(p.nombre), tr(p.descripcion)].some(x => x?.toLowerCase().includes(q))) &&
+    (filterTipo === 'todos' || p.tipo === filterTipo) && (filterCat === 'todos' || p.categoria === filterCat))
+  const sinFiltros = !search && filterTipo === 'todos' && filterCat === 'todos'
+  const destacados = sinFiltros ? filtered.filter(p => p.destacado) : []
+  const resto = sinFiltros ? filtered.filter(p => !p.destacado) : filtered
 
-  const filtered = products.filter(p => {
-    const ms = p.nombre.toLowerCase().includes(search.toLowerCase()) || p.descripcion?.toLowerCase().includes(search.toLowerCase())
-    const mt = filterTipo === 'todos' || p.tipo === filterTipo
-    const mc = filterCat === 'todos' || p.categoria === filterCat
-    return ms && mt && mc
-  })
+  if (loading) return <div className="grid place-items-center py-24"><Loader2 size={26} className="animate-spin text-v-accent" /></div>
 
-  const destacados = filtered.filter(p => p.destacado)
-  const resto = filtered.filter(p => !p.destacado)
-
-  if (loading) return (
-    <div className="flex items-center justify-center py-32">
-      <Loader2 size={32} className="animate-spin text-sky-600 dark:text-sky-400" />
-    </div>
-  )
+  const chip = (on: boolean) => `shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${on ? 'bg-v-accent text-white' : 'border border-v-border bg-v-elevated text-v-muted hover:text-v-text'}`
+  const vistas = [
+    { id: 'catalogo' as const, label: L('Catalog', 'Catálogo'), Icon: ShoppingBag, n: products.length },
+    { id: 'mis-pedidos' as const, label: L('My orders', 'Mis pedidos'), Icon: Receipt, n: orders.filter(o => !['entregado', 'cancelado'].includes(o.estado)).length },
+  ]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 32, width: '100%' }}>
-      <style>{`
-        .sv-products-grid,.sv-featured-grid,.sv-orders-grid{display:grid!important;grid-template-columns:repeat(1,1fr)!important;gap:12px!important}
-        @media(min-width:480px){
-          .sv-products-grid,.sv-featured-grid,.sv-orders-grid{grid-template-columns:repeat(2,1fr)!important}
-        }
-        @media(min-width:1024px){
-          .sv-products-grid,.sv-featured-grid{grid-template-columns:repeat(3,1fr)!important}
-        }
-      `}</style>
-
-      {/* ── Clean header with tabs ── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-4" style={{ borderBottom: "1px solid var(--c-border)" }}>
-        <div>
-          <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: "var(--c-text-primary)" }}>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "var(--c-stat-blue)", border: "1px solid var(--c-border)" }}>
-              <ShoppingBag size={15} className="text-sky-600 dark:text-sky-400"/>
-            </div>
-            {view === 'catalogo' ? 'Tienda' : 'Mis pedidos'}
-          </h2>
-          <p className="text-xs mt-0.5 ml-10" style={{ color: "var(--c-text-muted)" }}>
-            {view === 'catalogo' ? `${products.length} productos disponibles` : `${orders.length} pedido${orders.length !== 1 ? 's' : ''}`}
-          </p>
+    <div className="v-scope space-y-4">
+      {/* Cabecera */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 gap-1 rounded-full bg-v-fill p-1">
+          {vistas.map(({ id, label, Icon, n }) => (
+            <button key={id} onClick={() => setView(id)} className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${view === id ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+              {view === id && <motion.span layoutId="tienda-padre-vista" transition={{ type: 'spring', stiffness: 400, damping: 32 }} className="absolute inset-0 rounded-full bg-v-elevated shadow-v" />}
+              <Icon size={13} className="relative" /><span className="relative">{label}</span>
+              {n > 0 && <span className="relative rounded-full bg-v-accent-soft px-1.5 text-[10px] tabular-nums text-v-accent">{n}</span>}
+            </button>
+          ))}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Cart button */}
-          {view === 'catalogo' && cartCount > 0 && (
-            <button onClick={() => setShowCart(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-sky-600 text-white rounded-xl text-sm font-bold hover:bg-sky-700 transition-colors">
-              <ShoppingCart size={15}/> {cartCount}
-            </button>
-          )}
-          {/* Toggle view */}
-          <div className="flex rounded-xl p-1 gap-1" style={{ background: "var(--c-surface)" }}>
-            <button onClick={() => setView('catalogo')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all`} style={{ background: view === "catalogo" ? "var(--c-card)" : "transparent", color: view === "catalogo" ? "var(--c-text-primary)" : "var(--c-text-muted)" }}>
-              {t('auto.storeView.catalogo')}
-            </button>
-            <button onClick={() => setView('mis-pedidos')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5`} style={{ background: view === "mis-pedidos" ? "var(--c-card)" : "transparent", color: view === "mis-pedidos" ? "var(--c-text-primary)" : "var(--c-text-muted)" }}>
-              📦 Pedidos
-              {orders.length > 0 && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: view === 'mis-pedidos' ? '#0284c7' : 'var(--c-surface)', color: view === 'mis-pedidos' ? '#fff' : 'var(--c-text-muted)' }}>
-                  {orders.length}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
+        <button onClick={() => setShowCart(true)} aria-label={L('Cart', 'Carrito')} className={`relative inline-flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm sm:px-4 font-semibold transition-colors ${cartCount ? 'v-brand' : 'border border-v-border bg-v-elevated text-v-muted hover:text-v-text'}`}>
+          <ShoppingCart size={16} /> <span className="hidden sm:inline">{L('Cart', 'Carrito')}</span>
+          {cartCount > 0 && <motion.span key={cartCount} initial={{ scale: 1.5 }} animate={{ scale: 1 }} className="grid min-w-5 place-items-center rounded-full bg-white px-1 text-[11px] font-bold tabular-nums text-v-accent">{cartCount}</motion.span>}
+        </button>
       </div>
 
-      {/* ── CATÁLOGO ── */}
-      {view === 'catalogo' && (
+      {view === 'catalogo' ? (
         <>
-          {/* Búsqueda y filtros */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="relative">
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-              <input value={search} onChange={e => setSearch(e.target.value)} {...{placeholder: t('ui.search_material')}}
-                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-medium outline-none focus:border-sky-400 transition-all shadow-sm" style={{ background: "var(--c-card)", border: "1px solid var(--c-border)", color: "var(--c-text-primary)" }}
-              />
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-v-subtle" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={L('Search products…', 'Buscar productos…')}
+                className="h-11 w-full rounded-full border border-v-border bg-v-elevated pl-11 pr-4 text-sm text-v-text shadow-v outline-none placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft" />
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {['todos', 'fisico', 'digital'].map(f => (
-                <button key={f} onClick={() => setFilterTipo(f)}
-                  className={`px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${filterTipo === f ? 'bg-sky-600 text-white border-sky-600' : 'hover:border-sky-300'}`} style={filterTipo === f ? {} : { background: 'var(--c-card)', color: 'var(--c-text-muted)', borderColor: 'var(--c-border)' }}>
-                  {f === 'todos' ? 'Todo' : f === 'fisico' ? t('auto.storeView.fisicos') : '📄 Digitales'}
-                </button>
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+              {[['todos', L('All', 'Todo')], ['fisico', L('Physical', 'Físicos')], ['digital', L('Digital', 'Digitales')]].map(([f, label]) => (
+                <button key={f} onClick={() => setFilterTipo(f)} className={chip(filterTipo === f)}>{label}</button>
               ))}
-              <div className="w-px self-stretch mx-1" style={{ background: "var(--c-border)" }} />
-              {categorias.map(c => (
-                <button key={c} onClick={() => setFilterCat(c)}
-                  className={`px-3.5 py-2 rounded-xl border text-xs font-bold capitalize transition-all ${filterCat === c ? 'bg-slate-700 text-white border-slate-700' : 'hover:border-slate-300'}`} style={filterCat === c ? {} : { background: 'var(--c-card)', color: 'var(--c-text-muted)', borderColor: 'var(--c-border)' }}>
-                  {c === 'todos' ? 'Categorías' : c}
-                </button>
-              ))}
+              {categorias.length > 2 && <>
+                <span className="mx-1 w-px shrink-0 self-stretch bg-v-border" />
+                {categorias.map(c => <button key={c} onClick={() => setFilterCat(c)} className={chip(filterCat === c)}>{c === 'todos' ? L('All categories', 'Todas las categorías') : tr(c)}</button>)}
+              </>}
             </div>
           </div>
 
-          {/* Destacados */}
-          {destacados.length > 0 && search === '' && filterTipo === 'todos' && filterCat === 'todos' && (
-            <div>
-              <p className="text-xs font-bold mb-3 flex items-center gap-2" style={{ color: "var(--c-text-muted)" }}>
-                <Star size={12} className="text-amber-400 fill-amber-400" /> Destacados
-              </p>
-              <div className="sv-featured-grid">
-                {destacados.map(p => (
-                  <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={setSelectedProduct} justAdded={addedId === p.id} inCart={cart.find(i => i.product.id === p.id)?.cantidad || 0} featured />
-                ))}
+          {destacados.length > 0 && (
+            <section>
+              <p className="mb-2.5 flex items-center gap-2 text-sm font-semibold text-v-text"><span className="grid size-6 place-items-center rounded-full bg-v-warning/15 text-v-warning"><Star size={12} /></span>{L('Featured', 'Destacados')}</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {destacados.map((p, i) => <ProductCard key={p.id} i={i} product={p} tr={tr} onAdd={addToCart} onDetail={setSelectedProduct} justAdded={addedId === p.id} inCart={cart.find(c => c.product.id === p.id)?.cantidad || 0} featured />)}
               </div>
+            </section>
+          )}
+
+          {resto.length > 0 ? (
+            <section>
+              {destacados.length > 0 && <p className="mb-2.5 text-sm font-semibold text-v-text">{L('All products', 'Todos los productos')}</p>}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {resto.map((p, i) => <ProductCard key={p.id} i={i} product={p} tr={tr} onAdd={addToCart} onDetail={setSelectedProduct} justAdded={addedId === p.id} inCart={cart.find(c => c.product.id === p.id)?.cantidad || 0} />)}
+              </div>
+            </section>
+          ) : filtered.length === 0 && (
+            <div className={`${cardClass} px-6 py-12 text-center`}>
+              <span className="mx-auto grid size-12 place-items-center rounded-full bg-v-fill text-v-subtle"><ShoppingBag size={20} /></span>
+              <p className="mt-3 text-sm font-semibold text-v-text">{products.length ? L('No products match', 'Ningún producto coincide') : L('The store is empty for now', 'La tienda está vacía por ahora')}</p>
+              {products.length > 0 && <button onClick={() => { setSearch(''); setFilterTipo('todos'); setFilterCat('todos') }} className="mt-2 text-xs font-semibold text-v-accent hover:underline">{L('Clear filters', 'Limpiar filtros')}</button>}
             </div>
           )}
 
-          {/* Todos los productos */}
-          {resto.length > 0 || (filtered.length > 0 && destacados.length === 0) ? (
-            <div>
-              {destacados.length > 0 && search === '' && filterTipo === 'todos' && filterCat === 'todos' && (
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-3">{t('ui.all_items')}</p>
-              )}
-              <div className="sv-products-grid">
-                {(destacados.length > 0 && search === '' && filterTipo === 'todos' && filterCat === 'todos' ? resto : filtered).map(p => (
-                  <ProductCard key={p.id} product={p} onAdd={addToCart} onDetail={setSelectedProduct} justAdded={addedId === p.id} inCart={cart.find(i => i.product.id === p.id)?.cantidad || 0} />
-                ))}
-              </div>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="rounded-2xl py-20 text-center" style={{ background: "var(--c-card)", border: "1px solid var(--c-border)" }}>
-              <ShoppingBag size={36} className="text-slate-200 mx-auto mb-3" />
-              <p className="font-bold text-slate-400 dark:text-slate-500">{t('ui.no_items_found')}</p>
-              <button onClick={() => { setSearch(''); setFilterTipo('todos'); setFilterCat('todos') }}
-                className="mt-3 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline">
-                Limpiar filtros
-              </button>
-            </div>
-          ) : null}
-
-          {/* Info tienda */}
-          <div className="bg-gradient-to-r from-sky-50 to-cyan-50 rounded-2xl border border-sky-100 dark:border-sky-800/50 p-5 flex gap-4 items-start">
-            <div className="w-10 h-10 bg-sky-100 dark:bg-sky-900/30 rounded-xl flex items-center justify-center shrink-0">
-              <Package size={18} className="text-sky-600 dark:text-sky-400" />
-            </div>
-            <div>
-              <p className="font-bold text-sky-800 text-sm mb-1">{t('tienda.comoFuncTienda')}</p>
-              <p className="text-xs text-sky-500 leading-relaxed">
-                {t('ui.physical_items_note')}
-                Los <strong>{t('ui.digitales')}</strong> te los enviamos por WhatsApp tras confirmar el pago.
-                ¿Dudas? Escríbenos al <a href="https://wa.me/51991070734" className="underline font-bold">+51 991 070 734</a>.
-              </p>
+          <div className="flex gap-3 rounded-v border border-v-border bg-v-accent-soft/50 p-4">
+            <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-elevated text-v-accent shadow-v"><Info size={16} /></span>
+            <div className="text-xs leading-relaxed text-v-text">
+              <p className="mb-0.5 text-sm font-semibold">{L('How does the store work?', '¿Cómo funciona la tienda?')}</p>
+              {L('Physical items are picked up at the center once your order is confirmed. Digital items are sent to you by WhatsApp after payment.', 'Los productos físicos se recogen en el centro cuando tu pedido esté confirmado. Los digitales te los enviamos por WhatsApp tras confirmar el pago.')}
+              {CONTACTO.telefono && <> {L('Questions? Write to us at', '¿Dudas? Escríbenos al')} <a href={`https://wa.me/${CONTACTO.telefonoDigitos}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-v-accent underline">{CONTACTO.telefono}</a>.</>}
             </div>
           </div>
         </>
-      )}
-
-      {/* ── MIS PEDIDOS ── */}
-      {view === 'mis-pedidos' && (
-        <div className="space-y-4">
-          {orders.length === 0 ? (
-            <div className="rounded-2xl py-20 text-center" style={{ background: "var(--c-card)", border: "1px solid var(--c-border)" }}>
-              <ShoppingBag size={36} className="text-slate-200 mx-auto mb-3" />
-              <p className="font-bold mb-1" style={{ color: "var(--c-text-muted)" }}>{t('tienda.sinPedidos')}</p>
-              <p className="text-sm text-slate-400 dark:text-slate-500 mb-4">{t('tienda.exploraCompra')}</p>
-              <button onClick={() => setView('catalogo')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-600 text-white font-bold text-sm rounded-xl hover:bg-sky-700 transition-all">
-                Ir a la tienda →
-              </button>
-            </div>
-          ) : orders.map(order => {
-            const cfg = ESTADO_CFG[order.estado] || ESTADO_CFG.pendiente
-            const StatusIcon = cfg.icon
+      ) : orders.length === 0 ? (
+        <div className={`${cardClass} px-6 py-12 text-center`}>
+          <span className="mx-auto grid size-12 place-items-center rounded-full bg-v-fill text-v-subtle"><Receipt size={20} /></span>
+          <p className="mt-3 text-sm font-semibold text-v-text">{L('No orders yet', 'Aún no tienes pedidos')}</p>
+          <p className="mt-1 text-xs text-v-muted">{L('Explore the catalog and place your first order.', 'Explora el catálogo y haz tu primer pedido.')}</p>
+          <button onClick={() => setView('catalogo')} className="v-brand mt-4 inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold">{L('Go to the store', 'Ir a la tienda')} <ArrowRight size={15} /></button>
+        </div>
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {orders.map((order, i) => {
+            const e = ESTADO[order.estado] || ESTADO.pendiente
             return (
-              <div key={order.id} className={`rounded-2xl border-2 overflow-hidden ${cfg.border}`} style={{ background: "var(--c-card)" }}>
-                <div className={`${cfg.bg} px-5 py-3 flex items-center justify-between`}>
-                  <div className="flex items-center gap-2">
-                    <StatusIcon size={15} className={cfg.color} />
-                    <span className={`text-xs font-bold ${cfg.color}`}>{cfg.label}</span>
-                  </div>
-                  <span className="text-xs text-slate-400 dark:text-slate-500">
-                    {new Date(order.created_at).toLocaleDateString(toBCP47(locale), { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </span>
+              <motion.div key={order.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 * i }} className={`${cardClass} overflow-hidden`}>
+                <div className="flex items-center justify-between gap-2 border-b border-v-border px-4 py-3">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${e.tone}`}><e.Icon size={12} /> {locale === 'en' ? e.en : e.es}</span>
+                  <span className="text-xs text-v-subtle">{new Date(order.created_at).toLocaleDateString(toBCP47(locale), { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                 </div>
-                <div className="p-5 space-y-3">
+                <div className="space-y-2.5 p-4">
                   {(order.store_order_items || []).map((item: any) => (
                     <div key={item.id} className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 dark:bg-[#21262d] shrink-0">
-                        {item.product_imagen
-                          ? <img src={item.product_imagen} alt="" className="w-full h-full object-cover" />
-                          : <Package size={18} className="text-slate-300 m-auto mt-3" />
-                        }
+                      <div className="relative size-11 shrink-0 overflow-hidden rounded-v-sm"><Foto src={item.product_imagen || null} alt="" icon={16} /></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-v-text">{tr(item.product_nombre)}</p>
+                        <p className="text-xs tabular-nums text-v-subtle">x{item.cantidad} · {symbol} {Number(item.precio_unitario).toFixed(2)} {L('each', 'c/u')}</p>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-sm text-slate-800 dark:text-slate-100">{item.product_nombre}</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">x{item.cantidad} · {symbol} {Number(item.precio_unitario).toFixed(2)} c/u</p>
-                      </div>
-                      <p className="font-bold text-slate-700 dark:text-slate-200">{symbol} {Number(item.subtotal).toFixed(2)}</p>
+                      <p className="text-sm font-semibold tabular-nums text-v-text">{symbol} {Number(item.subtotal ?? item.precio_unitario * item.cantidad).toFixed(2)}</p>
                     </div>
                   ))}
-                  <div className="pt-3 border-t border-slate-100 dark:border-[#21262d] flex items-center justify-between">
-                    <span className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500 font-medium">{t("tienda.totalPagado")}</span>
-                    <span className="text-xl font-bold text-sky-600 dark:text-sky-400">{symbol} {Number(order.total_soles).toFixed(2)}</span>
+                  <div className="flex items-baseline justify-between border-t border-v-border pt-3">
+                    <span className="text-sm text-v-muted">{L('Total', 'Total')}</span>
+                    <span className="text-lg font-bold tabular-nums text-v-accent">{symbol} {Number(order.total_soles).toFixed(2)}</span>
                   </div>
-                  {order.notas && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500 italic">Tu nota: "{order.notas}"</p>
-                  )}
+                  {order.notas && <p className="rounded-v-sm bg-v-fill px-3 py-2 text-xs text-v-muted">{L('Your note: ', 'Tu nota: ')}{order.notas}</p>}
                 </div>
-              </div>
+              </motion.div>
             )
           })}
         </div>
       )}
 
-      {/* Carrito */}
-      {showCart && (
-        <CartDrawer cart={cart} onClose={() => setShowCart(false)} onUpdate={updateCart} onCheckout={checkout} />
-      )}
-
-      {/* Detalle producto */}
-      {selectedProduct && (
-        <ProductDetail product={selectedProduct} onClose={() => setSelectedProduct(null)} onAdd={addToCart} inCart={cart.find(i => i.product.id === selectedProduct.id)?.cantidad || 0} justAdded={addedId === selectedProduct.id} />
-      )}
+      <AnimatePresence>
+        {showCart && <CartDrawer cart={cart} tr={tr} onClose={() => setShowCart(false)} onUpdate={updateCart} onCheckout={checkout} />}
+        {selectedProduct && <ProductDetail product={selectedProduct} tr={tr} onClose={() => setSelectedProduct(null)} onAdd={addToCart} inCart={cart.find(i => i.product.id === selectedProduct.id)?.cantidad || 0} justAdded={addedId === selectedProduct.id} />}
+      </AnimatePresence>
     </div>
   )
 }
 
 // ── Tarjeta de producto ───────────────────────────────────────────────────────
-function ProductCard({ product: p, onAdd, onDetail, justAdded, inCart, featured }: any) {
-  const { t } = useI18n()
+function ProductCard({ product: p, onAdd, onDetail, justAdded, inCart, featured, tr, i }: { product: Product; onAdd: (p: Product) => void; onDetail: (p: Product) => void; justAdded: boolean; inCart: number; featured?: boolean; tr: Tr; i: number }) {
+  const { L } = useL()
   const { symbol } = useCurrency()
-  const sinStock = p.tipo === 'fisico' && p.stock === 0
+  const sinStock = p.tipo === 'fisico' && p.stock <= 0
   return (
-    <div className="rounded-2xl border-2 overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 cursor-pointer" style={{ background: "var(--c-card)", borderColor: featured ? "rgba(251,191,36,0.4)" : "var(--c-border)" }}>
-      {/* Imagen */}
-      <div style={{ background: "var(--muted-bg)", height: 160, overflow: 'hidden', position: 'relative' }} onClick={() => onDetail(p)}>
-        {p.imagen_url
-          ? <img src={p.imagen_url} alt={p.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={28} className="text-slate-300" /></div>
-        }
-        <div className="absolute top-3 left-3 flex gap-1.5">
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full text-white ${p.tipo === 'digital' ? 'bg-sky-600' : 'bg-slate-700'}`}>
-            {p.tipo === 'digital' ? '📄' : '📦'}
-          </span>
-          {featured && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-400 text-white">⭐</span>}
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 * i }}
+      className={`${cardClass} group flex overflow-hidden transition-all sm:flex-col hover:-translate-y-0.5 hover:shadow-v-lg ${featured ? 'ring-1 ring-v-warning/40' : ''}`}>
+      <button onClick={() => onDetail(p)} className="relative min-h-32 w-32 shrink-0 overflow-hidden text-left sm:aspect-[4/3] sm:min-h-0 sm:w-full">
+        <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105"><Foto src={p.imagen_url} alt={p.nombre} /></div>
+        <div className="absolute left-2.5 top-2.5 flex gap-1.5">
+          <TipoChip tipo={p.tipo} />
+          {featured && <span className="hidden size-5 sm:grid place-items-center rounded-full bg-v-warning text-white"><Star size={10} /></span>}
         </div>
-        {sinStock && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full">{t("tienda.agotado")}</span>
-          </div>
-        )}
-        {p.tipo === 'fisico' && p.stock > 0 && p.stock <= 3 && (
-          <div className="absolute bottom-2 right-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Solo {p.stock}</div>
-        )}
-      </div>
-
-      <div className="p-3 sm:p-4">
-        <p className="font-bold text-xs sm:text-sm leading-tight mb-1 line-clamp-2" style={{ color: "var(--c-text-primary)" }} onClick={() => onDetail(p)}>{p.nombre}</p>
-        <p className="text-[10px] sm:text-xs line-clamp-2 mb-2 sm:mb-3 leading-relaxed" style={{ color: "var(--c-text-muted)" }}>{p.descripcion}</p>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm sm:text-lg font-bold text-sky-500">{symbol} {Number(p.precio_soles).toFixed(2)}</span>
+        {sinStock && <div className="absolute inset-0 grid place-items-center bg-black/45"><span className="rounded-full bg-v-danger px-3 py-1 text-xs font-semibold text-white">{L('Sold out', 'Agotado')}</span></div>}
+        {p.tipo === 'fisico' && p.stock > 0 && p.stock <= 3 && <span className="absolute bottom-2 right-2 rounded-full bg-v-warning px-2 py-0.5 text-[10px] font-semibold text-white">{L(`Only ${p.stock} left`, `Solo ${p.stock}`)}</span>}
+      </button>
+      <div className="flex min-w-0 flex-1 flex-col p-3 sm:p-4">
+        <button onClick={() => onDetail(p)} className="text-left">
+          <p className="line-clamp-2 text-sm font-semibold leading-snug text-v-text">{tr(p.nombre)}</p>
+          {p.descripcion && <p className="mt-0.5 line-clamp-2 text-xs text-v-muted">{tr(p.descripcion)}</p>}
+        </button>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+          <span className="text-base font-bold tabular-nums text-v-text">{symbol} {Number(p.precio_soles).toFixed(2)}</span>
           <button onClick={() => !sinStock && onAdd(p)} disabled={sinStock}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${justAdded ? 'bg-emerald-600 text-white scale-95' : sinStock ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-200'}`}>
-            {justAdded ? <><CheckCircle size={13} /> {t('ui.added_short')}</> : <><ShoppingCart size={13} /> {inCart > 0 ? `${t('ui.in_cart')} (${inCart})` : t('common.agregar')}</>}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:bg-v-fill disabled:text-v-subtle ${justAdded ? 'bg-v-success text-white' : 'v-brand'}`}>
+            {justAdded ? <><CheckCircle2 size={13} /> {L('Added', 'Agregado')}</> : <><Plus size={13} /> {inCart ? `${L('Add', 'Agregar')} (${inCart})` : L('Add', 'Agregar')}</>}
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
-// ── Detalle de producto (modal) ───────────────────────────────────────────────
-function ProductDetail({ product: p, onClose, onAdd, inCart, justAdded }: any) {
-  const { t } = useI18n()
+// ── Detalle de producto ───────────────────────────────────────────────────────
+function ProductDetail({ product: p, onClose, onAdd, inCart, justAdded, tr }: { product: Product; onClose: () => void; onAdd: (p: Product) => void; inCart: number; justAdded: boolean; tr: Tr }) {
+  const { L } = useL()
   const { symbol } = useCurrency()
-  const sinStock = p.tipo === 'fisico' && p.stock === 0
+  const sinStock = p.tipo === 'fisico' && p.stock <= 0
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:50, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'flex-end', justifyContent:'center', padding:0 }} onClick={onClose}>
-      <div style={{ background:'var(--c-card)', width:'100%', maxWidth:480, borderRadius:'24px 24px 0 0', maxHeight:'82vh', display:'flex', flexDirection:'column', overflow:'hidden' }} onClick={e => e.stopPropagation()}>
-        
-        {/* Imagen compacta */}
-        <div style={{ position:'relative', height:160, flexShrink:0, background:'var(--c-surface)', overflow:'hidden' }}>
-          {p.imagen_url
-            ? <img src={p.imagen_url} alt={p.nombre} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-            : <div style={{ height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}><ImageIcon size={36} color="var(--c-text-muted)" /></div>
-          }
-          <button onClick={onClose} style={{ position:'absolute', top:12, right:12, width:36, height:36, borderRadius:10, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--c-card)' }}>
-            <X size={16} color="var(--c-text-primary)" />
-          </button>
-          <div style={{ position:'absolute', top:12, left:12, display:'flex', gap:6 }}>
-            <span style={{ fontSize:10, fontWeight:800, padding:'3px 10px', borderRadius:20, color:'#fff', background: p.tipo === 'digital' ? '#0284c7' : '#475569' }}>
-              {p.tipo === 'digital' ? '📄 Digital' : t('auto.storeView.fisico')}
-            </span>
-          </div>
+    <motion.div className="v-scope fixed inset-0 z-[150] flex items-end justify-center bg-[#081426]/50 backdrop-blur-sm sm:items-center sm:p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+        className="flex max-h-[88vh] w-full max-w-md flex-col overflow-hidden rounded-t-v-lg border border-v-border bg-v-elevated shadow-v-lg sm:rounded-v-lg">
+        <div className="relative aspect-[16/10] shrink-0">
+          <Foto src={p.imagen_url} alt={p.nombre} icon={36} />
+          <button onClick={onClose} aria-label={L('Close', 'Cerrar')} className="absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-black/40 text-white backdrop-blur hover:bg-black/55"><X size={17} /></button>
+          <div className="absolute left-3 top-3"><TipoChip tipo={p.tipo} /></div>
         </div>
-
-        {/* Contenido scrolleable */}
-        <div style={{ padding:'16px 20px 20px', overflowY:'auto', flex:1 }}>
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:8 }}>
-            <h3 style={{ fontWeight:900, fontSize:17, color:'var(--c-text-primary)', margin:0, lineHeight:1.3, flex:1 }}>{p.nombre}</h3>
-            <span style={{ fontWeight:900, fontSize:20, color:'#0284c7', flexShrink:0 }}>{symbol} {Number(p.precio_soles).toFixed(2)}</span>
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex items-start justify-between gap-3">
+            <p className="flex-1 text-lg font-semibold leading-snug text-v-text">{tr(p.nombre)}</p>
+            <span className="shrink-0 text-xl font-bold tabular-nums text-v-accent">{symbol} {Number(p.precio_soles).toFixed(2)}</span>
           </div>
-
-          <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12 }}>
-            <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background:'var(--c-surface)', color:'var(--c-text-secondary)', textTransform:'capitalize' }}>{p.categoria}</span>
-            {p.tipo === 'fisico' && <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background: p.stock > 3 ? 'rgba(16,185,129,0.12)' : p.stock > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)', color: p.stock > 3 ? '#10b981' : p.stock > 0 ? '#f59e0b' : '#ef4444' }}>
-              {p.stock === 0 ? 'Sin stock' : `${p.stock} disponibles`}
-            </span>}
-            {p.tipo === 'digital' && <span style={{ fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:20, background:'var(--c-stat-purple)', color:'#0ea5e9' }}>{t("ui.descargaInmediata")}</span>}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {p.categoria && <span className="rounded-full bg-v-fill px-2.5 py-0.5 text-[11px] font-semibold capitalize text-v-muted">{tr(p.categoria)}</span>}
+            {p.tipo === 'fisico'
+              ? <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${p.stock > 3 ? 'bg-v-success/15 text-v-success' : p.stock > 0 ? 'bg-v-warning/15 text-v-warning' : 'bg-v-danger/10 text-v-danger'}`}>{p.stock > 0 ? L(`${p.stock} available`, `${p.stock} disponibles`) : L('Out of stock', 'Sin stock')}</span>
+              : <span className="inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-v-accent"><Download size={10} /> {L('Sent after payment', 'Se envía tras el pago')}</span>}
           </div>
-
-          <p style={{ fontSize:13, color:'var(--c-text-secondary)', lineHeight:1.6, marginBottom:14 }}>{p.descripcion || 'Sin descripción disponible.'}</p>
-
+          <p className="mt-3 text-sm leading-relaxed text-v-muted">{p.descripcion ? tr(p.descripcion) : L('No description available.', 'Sin descripción disponible.')}</p>
           {p.tipo === 'digital' && (
-            <div style={{ background:'var(--c-stat-purple)', border:'1px solid var(--c-border)', borderRadius:12, padding:'10px 14px', marginBottom:14 }}>
-              <p style={{ fontSize:11, fontWeight:800, color:'#0ea5e9', margin:'0 0 4px' }}>📄 {t('tienda.articuloDigital')}</p>
-              <p style={{ fontSize:11, color:'var(--c-text-muted)', margin:0, lineHeight:1.5 }}>{t("tienda.alConfirmarPedido")}</p>
+            <div className="mt-4 flex gap-2.5 rounded-v-sm bg-v-accent-soft/60 p-3.5">
+              <FileText size={15} className="mt-0.5 shrink-0 text-v-accent" />
+              <p className="text-xs leading-relaxed text-v-text"><span className="font-semibold">{L('Digital item. ', 'Artículo digital. ')}</span>{L('Once your order is confirmed, the center will send you the file by WhatsApp.', 'Al confirmar tu pedido, el centro te enviará el archivo por WhatsApp.')}</p>
             </div>
           )}
-
+        </div>
+        <div className="border-t border-v-border p-4">
           <button onClick={() => !sinStock && onAdd(p)} disabled={sinStock}
-            style={{ width:'100%', padding:'14px', borderRadius:16, border:'none', cursor: sinStock ? 'not-allowed' : 'pointer', fontWeight:900, fontSize:15, display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'all .2s',
-              background: justAdded ? '#10b981' : sinStock ? 'var(--c-surface)' : '#0284c7',
-              color: sinStock ? 'var(--c-text-muted)' : '#fff' }}>
-            {justAdded ? <><CheckCircle size={16} /> {t('ui.added_to_cart')}</> : sinStock ? t('ui.out_of_stock') : <><ShoppingCart size={16} /> {inCart > 0 ? `${t('ui.add_another')} (${inCart})` : t('ui.add_to_cart')}</>}
+            className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:bg-v-fill disabled:text-v-subtle ${justAdded ? 'bg-v-success text-white' : 'v-brand'}`}>
+            {justAdded ? <><CheckCircle2 size={17} /> {L('Added to cart', 'Agregado al carrito')}</> : sinStock ? L('Out of stock', 'Sin stock')
+              : <><ShoppingCart size={17} /> {inCart ? `${L('Add another', 'Agregar otro')} (${inCart})` : L('Add to cart', 'Agregar al carrito')}</>}
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

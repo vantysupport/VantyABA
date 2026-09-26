@@ -6,16 +6,19 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
 
 // ── POST /api/agente-conocimiento?accion=aprender ────────────────────────────
 // Procesa una sesión y extrae conocimiento anonimizado
-async function aprenderDeSesion(sesionId: string, childId: string): Promise<any> {
+async function aprenderDeSesion(sesionId: string, childId: string, centroId: string): Promise<any> {
   const { data: sesion } = await supabaseAdmin
     .from('registro_aba')
     .select('datos, fecha_sesion')
     .eq('id', sesionId)
+    .eq('child_id', childId)
+    .eq('centro_id', centroId)
     .single()
 
   const { data: child } = await supabaseAdmin
@@ -75,7 +78,7 @@ SOLO JSON, sin texto adicional.
     const _query = 'conocimiento clínico ABA aprendizaje sesión'
 
 
-    const _kb = await buildAIContext(undefined, undefined, undefined, _query)
+    const _kb = await buildAIContext(undefined, undefined, undefined, _query, centroId)
 
 
     _cerebroCtx = _kb.knowledgeContext
@@ -115,6 +118,7 @@ SOLO JSON, sin texto adicional.
       tags: conocimiento.tags,
       votos_util: 0,
       sesion_fecha: sesion.fecha_sesion,
+      centro_id: centroId,
       created_at: new Date().toISOString()
     })
     .select('id')
@@ -125,11 +129,12 @@ SOLO JSON, sin texto adicional.
 
 // ── POST /api/agente-conocimiento?accion=consultar ───────────────────────────
 // Consulta conocimiento relevante para una situación clínica específica
-async function consultarConocimiento(consulta: string, area?: string, diagnostico?: string): Promise<any> {
+async function consultarConocimiento(centroId: string, consulta: string, area?: string, diagnostico?: string): Promise<any> {
   // Buscar en KB por área o tags (búsqueda simple sin embeddings)
   let query = supabaseAdmin
     .from('conocimiento_clinico')
     .select('*')
+    .eq('centro_id', centroId)
     .order('votos_util', { ascending: false })
     .limit(20)
 
@@ -191,6 +196,9 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const accion = searchParams.get('accion') || 'estadisticas'
 
@@ -199,6 +207,7 @@ export async function GET(req: NextRequest) {
       const { data: entradas, count } = await supabaseAdmin
         .from('conocimiento_clinico')
         .select('area_intervencion, tecnica_ganadora, reforzador_tipo, nivel_complejidad', { count: 'exact' })
+        .eq('centro_id', caller.centroId)
         .limit(500)
 
       const areas: Record<string, number> = {}
@@ -236,6 +245,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const accion = searchParams.get('accion') || 'consultar'
 
@@ -246,19 +258,21 @@ export async function POST(req: NextRequest) {
     if (accion === 'aprender') {
       const { sesionId, childId } = body
       if (!sesionId || !childId) return NextResponse.json({ error: 'sesionId y childId requeridos' }, { status: 400 })
-      const resultado = await aprenderDeSesion(sesionId, childId)
+      if (!(await canAccessChild(caller, childId))) return notFound()
+      const resultado = await aprenderDeSesion(sesionId, childId, caller.centroId)
       return NextResponse.json({ ok: !!resultado, resultado })
     }
 
     if (accion === 'consultar') {
       const { consulta, area, diagnostico } = body
       if (!consulta) return NextResponse.json({ error: 'consulta requerida' }, { status: 400 })
-      const resultado = await consultarConocimiento(consulta, area, diagnostico)
+      const resultado = await consultarConocimiento(caller.centroId, consulta, area, diagnostico)
       return NextResponse.json(resultado)
     }
 
     if (accion === 'votar') {
       const { entradaId, util } = body
+      if (!(await rowInCentro('conocimiento_clinico', entradaId, caller.centroId))) return notFound()
       const { data: entrada } = await supabaseAdmin.from('conocimiento_clinico').select('votos_util').eq('id', entradaId).single()
       const votos = ((entrada as any)?.votos_util || 0) + (util ? 1 : -1)
       await supabaseAdmin.from('conocimiento_clinico').update({ votos_util: Math.max(0, votos) }).eq('id', entradaId)

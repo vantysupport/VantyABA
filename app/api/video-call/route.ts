@@ -1,17 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 // Jitsi Meet — 100% gratuito, sin cuenta, sin tarjeta
 const JITSI_BASE = 'https://meet.jit.si'
 
 // ── GET: uso del mes (sin params) · sesión activa por appointment_id (con param) ─
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { searchParams } = new URL(req.url)
     const appointmentId = searchParams.get('appointment_id')
 
     // ── Consulta de sesión activa para un appointment específico (padre) ──
     if (appointmentId) {
+      const { data: apt } = await supabaseAdmin.from('appointments').select('centro_id, parent_id, child_id').eq('id', appointmentId).maybeSingle()
+      const allowed = !!apt && (
+        (hasRole(caller, ROLES.staff) && apt.centro_id === caller.centroId) ||
+        apt.parent_id === caller.id ||
+        (!!apt.child_id && await canAccessChild(caller, apt.child_id))
+      )
+      if (!allowed) return notFound()
       const { data, error } = await supabaseAdmin
         .from('video_sessions')
         .select('id, room_url, status, started_at')
@@ -27,11 +37,13 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Uso mensual (admin) ──
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const { data, error } = await supabaseAdmin
       .from('video_sessions')
       .select('duration_minutes')
+      .eq('centro_id', caller.centroId)
       .gte('started_at', monthStart)
 
     if (error) throw error
@@ -47,11 +59,16 @@ export async function GET(req: NextRequest) {
 
 // ── POST: crear sala de videollamada con Jitsi (sin API externa) ──────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { appointment_id, child_id, initiated_by } = await req.json()
+    if (appointment_id && !(await rowInCentro('appointments', appointment_id, caller.centroId))) return notFound()
+    if (child_id && !(await canAccessChild(caller, child_id))) return notFound()
 
     // Generar nombre de sala único y legible
-    const roomName = `SantiMeet-${appointment_id || Date.now()}`
+    const roomName = `VantyMeet-${appointment_id || Date.now()}`
     const roomUrl = `${JITSI_BASE}/${roomName}`
 
     // Guardar sesión en Supabase
@@ -60,6 +77,7 @@ export async function POST(req: NextRequest) {
       .insert({
         appointment_id,
         child_id,
+        centro_id: caller.centroId,
         room_name: roomName,
         room_url: roomUrl,
         initiated_by,
@@ -108,8 +126,16 @@ export async function POST(req: NextRequest) {
 
 // ── PATCH: finalizar sesión y registrar duración ─────────────────────────────
 export async function PATCH(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { session_id, duration_minutes } = await req.json()
+    const { data: vs } = await supabaseAdmin.from('video_sessions').select('centro_id, child_id').eq('id', session_id).maybeSingle()
+    const allowed = !!vs && (
+      (hasRole(caller, ROLES.staff) && vs.centro_id === caller.centroId) ||
+      (!!vs.child_id && await canAccessChild(caller, vs.child_id))
+    )
+    if (!allowed) return notFound()
 
     await supabaseAdmin
       .from('video_sessions')

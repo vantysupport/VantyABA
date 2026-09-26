@@ -1,4 +1,5 @@
 'use client'
+import { PLATFORM_NAME } from '@/lib/branding'
 
 import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
@@ -42,7 +43,7 @@ export default function WhatsAppConfigView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: adminPhone,
-          message: `🧪 *Test SANTI** — ${new Date().toLocaleTimeString()} ✅\nLas notificaciones están funcionando correctamente.`,
+          message: `🧪 *Test ${PLATFORM_NAME}* — ${new Date().toLocaleTimeString()} ✅\nLas notificaciones están funcionando correctamente.`,
         }),
       })
       const d = await res.json()

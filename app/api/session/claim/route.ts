@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
 
     let sessionId = ''
     try { const b = await req.json(); sessionId = (b?.sessionId as string) || '' } catch {}
-    if (!sessionId) return NextResponse.json({ error: 'no_session' }, { status: 400 })
+    // sessionId is interpolated into a PostgREST .or() filter below: only allow uuid-like ids.
+    if (!sessionId || !/^[A-Za-z0-9-]{8,80}$/.test(sessionId)) return NextResponse.json({ error: 'no_session' }, { status: 400 })
 
     const nowIso = new Date().toISOString()
     const threshold = new Date(Date.now() - STALE_MS).toISOString()

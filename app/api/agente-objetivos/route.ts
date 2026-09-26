@@ -4,7 +4,9 @@
 // basándose en el nivel de dominio, patrones detectados y mejores prácticas ABA
 
 import { NextRequest, NextResponse } from 'next/server'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
 
@@ -22,12 +24,19 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const rawBody = await req.json()
     const userLocale = rawBody.locale || req.headers.get('x-locale') || 'es'
     const { childId, childName, accion = 'generar' } = rawBody
     // accion: 'generar' | 'ajustar' | 'evaluar_dominio'
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    // Tokens de análisis del centro
+    const bloqueo = await sinTokens(caller.centroId, String(userLocale).toLowerCase().startsWith('en'))
+    if (bloqueo) return bloqueo
 
     // Cargar datos del paciente
     const { data: child } = await supabaseAdmin
@@ -98,7 +107,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Resumen sesiones recientes
-    const resumenSesiones = sesiones?.slice(0, 5).map(s => ({
+    const resumenSesiones = sesiones?.slice(0, 3).map(s => ({
       fecha: s.fecha_sesion,
       objetivo: s.datos?.objetivo_principal || 'N/A',
       logro: s.datos?.nivel_logro_objetivos || 'N/A',
@@ -202,7 +211,7 @@ SOLO JSON.`
     try {
       const areasPaciente = [...new Set(resumenProgramas.map(p => p.area).filter(Boolean))].join(' ')
       const _query = `objetivos ABA criterios dominio ${areasPaciente} ${diagnostico}`
-      const _kb = await buildAIContext(undefined, undefined, undefined, _query)
+      const _kb = await buildAIContext(undefined, undefined, undefined, _query, caller.centroId)
       _cerebroCtx = _kb.knowledgeContext
     } catch { /* Cerebro IA no disponible */ }
     // ━━━ FIN CEREBRO IA ━━━
@@ -298,11 +307,16 @@ REGLAS NO NEGOCIABLES:
         accion,
         resultado,
         programas_analizados: resumenProgramas.length,
+        centro_id: caller.centroId,
         created_at: new Date().toISOString()
       })
     } catch { /* no bloquear */ }
 
+    // Se descuenta un token solo cuando se generó bien
+    const tokens = await descontarToken(caller.centroId)
+
     return NextResponse.json({
+      tokens,
       accion,
       paciente: nombre,
       resultado,
@@ -318,9 +332,13 @@ REGLAS NO NEGOCIABLES:
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const childId = searchParams.get('child_id')
   if (!childId) return NextResponse.json({ error: 'child_id requerido' }, { status: 400 })
+  if (!(await canAccessChild(caller, childId))) return notFound()
   try {
     const { data } = await supabaseAdmin
       .from('objetivos_adaptativos')

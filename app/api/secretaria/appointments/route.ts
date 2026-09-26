@@ -5,18 +5,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { notifyAsync, notifyParentDirect } from '@/lib/notifications'
 import { sendEmail, buildEmailCita, buildEmailAdmin } from '@/lib/email'
+import { getCentroBranding, type CentroBranding } from '@/lib/centro-branding'
+import { internalApiHeaders } from '@/lib/calendar-integration'
+import { getLocaleFromRequest } from '@/lib/lang'
+import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { avisarCitaFamilia } from '@/lib/avisos'
 
-const CENTRO_EMAIL = 'contacto@santi.com'
+/** Inbox that receives the copy of every appointment email: the center's own email. */
+const centroEmail = (centro: CentroBranding) => centro.email || process.env.GMAIL_USER || ''
 const APP_URL      = process.env.NEXT_PUBLIC_APP_URL || 'https://taller-jugando-aprendo.vercel.app'
 
 // ── Sincronizar cita al calendario (Google o Microsoft) del admin ─────────────
 async function sincronizarCalendario(apt: any, childName: string) {
   try {
     // Buscar el admin que tiene Google Calendar o Microsoft Calendar conectado
+    // Only calendars of the patient's own center: another center's admins must never receive this appointment.
+    const centro = await getCentroBranding({ childId: apt?.child_id ?? null })
+    if (!centro.id) return
     const { data: admins } = await supabaseAdmin
       .from('profiles')
       .select('id, google_calendar_token, microsoft_calendar_token')
       .in('role', ['admin', 'jefe'])
+      .eq('centro_id', centro.id)
 
     if (!admins || admins.length === 0) return
 
@@ -25,7 +35,7 @@ async function sincronizarCalendario(apt: any, childName: string) {
       if (admin.google_calendar_token) {
         const res = await fetch(`${APP_URL}/api/google-calendar`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: internalApiHeaders(),
           body: JSON.stringify({
             action:        'sync-appointment',
             userId:        admin.id,
@@ -52,7 +62,7 @@ async function sincronizarCalendario(apt: any, childName: string) {
       if (admin.microsoft_calendar_token) {
         const res = await fetch(`${APP_URL}/api/microsoft-calendar`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: internalApiHeaders(),
           body: JSON.stringify({
             action:        'sync-appointment',
             userId:        admin.id,
@@ -92,11 +102,12 @@ async function crearNotifInApp(userId: string, payload: {
   } catch (e) { console.error('[notif] error insertando notificacion:', e) }
 }
 
-async function notificarPadre(childId: string, tipo: 'nueva' | 'cancelada' | 'actualizada', apt: any) {
+async function notificarPadre(childId: string, tipo: 'nueva' | 'cancelada' | 'actualizada', apt: any, en = false) {
   try {
     const { data: child } = await supabaseAdmin
       .from('children').select('name, parent_id').eq('id', childId).maybeSingle()
     if (!child?.parent_id) return
+    const centro = await getCentroBranding({ childId })
 
     const childName = child.name || 'su hijo/a'
     const fecha     = apt.appointment_date || ''
@@ -109,11 +120,8 @@ async function notificarPadre(childId: string, tipo: 'nueva' | 'cancelada' | 'ac
       actualizada: { titulo: '🔄 Cita actualizada',        mensaje: `La cita de ${childName} fue actualizada: ${fecha} a las ${hora}. Servicio: ${servicio}.` },
     }
 
-    await crearNotifInApp(child.parent_id, {
-      tipo: `cita_${tipo}`, titulo: mensajes[tipo].titulo, mensaje: mensajes[tipo].mensaje,
-      prioridad: tipo === 'cancelada' ? 1 : 2,
-      metadata: { appointment_id: apt.id, fecha, hora },
-    })
+    void mensajes
+    await avisarCitaFamilia({ ...apt, child_id: childId }, tipo)
 
     const { data: parentProfile } = await supabaseAdmin
       .from('profiles')
@@ -132,27 +140,29 @@ async function notificarPadre(childId: string, tipo: 'nueva' | 'cancelada' | 'ac
       ? (parentProfile?.google_calendar_email || parentProfile?.microsoft_calendar_email || null)
       : parentProfile.email
 
-    const { subject, html } = buildEmailCita(tipo, citaVars)
-    if (emailPadre) await sendEmail(emailPadre, subject, html)
-    await sendEmail(CENTRO_EMAIL, subject, html)
+    const { subject, html } = buildEmailCita(tipo, citaVars, centro.name, en)
+    if (emailPadre) await sendEmail(emailPadre, subject, html, centro.name)
+    await sendEmail(centroEmail(centro), subject, html, centro.name)
 
     // WhatsApp
     const wspTipo = tipo === 'cancelada' ? 'cita_cancelada' : 'cita_confirmada'
     const wspVars = { fecha, hora, paciente: childName, tipo: apt.modalidad || servicio, ...(apt.video_link ? { link: apt.video_link } : {}) }
-    notifyAsync({ tipo: wspTipo, vars: wspVars })
+    notifyAsync({ tipo: wspTipo, vars: wspVars, centro })
     try {
       if (parentProfile?.wsp_notif !== false) {
-        await notifyParentDirect(parentProfile?.phone ?? null, wspTipo, wspVars)
+        await notifyParentDirect(parentProfile?.phone ?? null, wspTipo, wspVars, centro)
       }
     } catch { /* silencioso */ }
 
   } catch (e) { console.error('[notif padre] error:', e) }
 }
 
-async function notificarAdmins(accion: string, apt: any, childName: string, secretariaName: string) {
+async function notificarAdmins(accion: string, apt: any, childName: string, secretariaName: string, en = false) {
   try {
+    const centro = await getCentroBranding({ childId: apt?.child_id ?? null })
+    if (!centro.id) return
     const { data: admins } = await supabaseAdmin
-      .from('profiles').select('id, full_name, email, google_calendar_email, microsoft_calendar_email').in('role', ['admin', 'jefe'])
+      .from('profiles').select('id, full_name, email, google_calendar_email, microsoft_calendar_email').in('role', ['admin', 'jefe']).eq('centro_id', centro.id)
     if (!admins || admins.length === 0) return
 
     const fecha = apt.appointment_date || ''
@@ -183,9 +193,9 @@ async function notificarAdmins(accion: string, apt: any, childName: string, secr
         paciente: childName, fecha, hora,
         servicio: apt.service_type || 'Terapia',
         secretaria: secretariaName,
-      })
-      if (adminEmail) await sendEmail(adminEmail, subject, html)
-      if (adminEmail !== CENTRO_EMAIL) await sendEmail(CENTRO_EMAIL, subject, html)
+      }, centro.name, en)
+      if (adminEmail) await sendEmail(adminEmail, subject, html, centro.name)
+      if (adminEmail !== centroEmail(centro)) await sendEmail(centroEmail(centro), subject, html, centro.name)
     }
   } catch (e) { console.error('[notif admin] error:', e) }
 }
@@ -193,15 +203,22 @@ async function notificarAdmins(accion: string, apt: any, childName: string, secr
 // ── POST — crear cita ─────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
+    const en = getLocaleFromRequest(req) === 'en'
+
     const body = await req.json()
     const { secretaria_name, ...aptPayload } = body
+    if (aptPayload.child_id && !(await canAccessChild(caller, aptPayload.child_id))) return notFound()
+    aptPayload.centro_id = caller.centroId
 
     // Generar link Jitsi si es virtual (igual que el admin)
     if (aptPayload.modalidad === 'virtual' && !aptPayload.video_link) {
       const tempId = crypto.randomUUID()
       const fecha  = (aptPayload.appointment_date || '').replace(/-/g, '-')
       const hora   = (aptPayload.appointment_time || '').slice(0, 5).replace(':', '-')
-      aptPayload.video_link = `https://meet.jit.si/SantiMeet-${tempId}-${fecha}-${hora}`
+      aptPayload.video_link = `https://meet.jit.si/VantyMeet-${tempId}-${fecha}-${hora}`
     }
 
     const { data: apt, error } = await supabaseAdmin
@@ -210,8 +227,8 @@ export async function POST(req: NextRequest) {
     const childName = (apt as any).children?.name || 'Paciente'
 
     await Promise.all([
-      notificarPadre(apt.child_id, 'nueva', apt),
-      notificarAdmins('created', apt, childName, secretaria_name || 'Secretaria'),
+      notificarPadre(apt.child_id, 'nueva', apt, en),
+      notificarAdmins('created', apt, childName, secretaria_name || 'Secretaria', en),
       sincronizarCalendario(apt, childName), // ← agrega al Google/Outlook del admin y del padre
     ])
 
@@ -224,18 +241,25 @@ export async function POST(req: NextRequest) {
 // ── PATCH — actualizar cita ───────────────────────────────────────────────────
 export async function PATCH(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
+    const en = getLocaleFromRequest(req) === 'en'
     const body = await req.json()
     const { id, secretaria_name, accion, ...updates } = body
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('appointments', id, caller.centroId))) return notFound()
+    if (updates.child_id && !(await canAccessChild(caller, updates.child_id))) return notFound()
+    delete updates.centro_id
     const { data: apt, error } = await supabaseAdmin
-      .from('appointments').update(updates).eq('id', id).select('*, children(name)').single()
+      .from('appointments').update(updates).eq('id', id).eq('centro_id', caller.centroId).select('*, children(name)').single()
     if (error) throw error
     const childName = (apt as any).children?.name || 'Paciente'
     const tipo = accion === 'status_changed' && updates.status === 'cancelled' ? 'cancelada' : 'actualizada'
 
     await Promise.all([
-      notificarPadre(apt.child_id, tipo, apt),
-      notificarAdmins(accion || 'updated', apt, childName, secretaria_name || 'Secretaria'),
+      notificarPadre(apt.child_id, tipo, apt, en),
+      notificarAdmins(accion || 'updated', apt, childName, secretaria_name || 'Secretaria', en),
     ])
 
     return NextResponse.json({ data: apt })
@@ -247,18 +271,23 @@ export async function PATCH(req: NextRequest) {
 // ── DELETE — cancelar cita ────────────────────────────────────────────────────
 export async function DELETE(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
+    const en = getLocaleFromRequest(req) === 'en'
     const body = await req.json()
     const { id, secretaria_name } = body
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('appointments', id, caller.centroId))) return notFound()
     const { data: apt } = await supabaseAdmin
-      .from('appointments').select('*, children(name)').eq('id', id).maybeSingle()
-    const { error } = await supabaseAdmin.from('appointments').delete().eq('id', id)
+      .from('appointments').select('*, children(name)').eq('id', id).eq('centro_id', caller.centroId).maybeSingle()
+    const { error } = await supabaseAdmin.from('appointments').delete().eq('id', id).eq('centro_id', caller.centroId)
     if (error) throw error
     if (apt) {
       const childName = (apt as any).children?.name || 'Paciente'
       await Promise.all([
-        notificarPadre(apt.child_id, 'cancelada', apt),
-        notificarAdmins('cancelled', apt, childName, secretaria_name || 'Secretaria'),
+        notificarPadre(apt.child_id, 'cancelada', apt, en),
+        notificarAdmins('cancelled', apt, childName, secretaria_name || 'Secretaria', en),
       ])
     }
     return NextResponse.json({ success: true })

@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useI18n } from '@/lib/i18n-context'
 import {
   Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp,
-  Loader2, FileText, ArrowLeft, Eye, LayoutTemplate
+  Loader2, FileText, ArrowLeft, Eye, LayoutTemplate, Calendar, User, Stethoscope, Lock, Check, FileDown,
+  Type, AlignLeft, ListChecks, CircleDot, Hash, CheckSquare, Layers
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { useTheme } from '@/components/ThemeContext'
+import { confirmar } from '@/components/ui/confirmar'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Field {
@@ -87,10 +90,10 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
   const [editing, setEditing]     = useState<Template | null>(null)
 
   const cc = {
-    card: isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200',
-    txt1: isDark ? 'text-slate-100' : 'text-slate-800',
-    txt3: isDark ? 'text-slate-500' : 'text-slate-400',
-    hover: isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-50',
+    card: 'bg-v-elevated border-v-border',
+    txt1: 'text-v-text',
+    txt3: 'text-v-subtle',
+    hover: 'hover:bg-v-fill',
   }
 
   const load = useCallback(async () => {
@@ -103,7 +106,7 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
   useEffect(() => { load() }, [load])
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm(tr('auto.plantillasClinicas.eliminarEstaFichaEstaAccion'))) return
+    if (!await confirmar(tr('auto.plantillasClinicas.eliminarEstaFichaEstaAccion'))) return
     await supabase.from('clinical_templates').delete().eq('id', id)
     toast.success(tr('auto.plantillasClinicas.fichaEliminada'))
     load()
@@ -130,73 +133,76 @@ export function GestorPlantillas({ isDark: isDarkProp }: { isDark?: boolean }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className={`font-bold text-base flex items-center gap-2 ${cc.txt1}`}>
-            <LayoutTemplate size={18} className="text-sky-500" />
+          <h3 className={`flex items-center gap-2.5 text-lg font-semibold tracking-tight ${cc.txt1}`}>
+            <span className="grid size-9 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><LayoutTemplate size={17} /></span>
             {locale === 'en' ? 'Clinical Forms' : 'Fichas Clínicas'}
           </h3>
-          <p className={`text-xs mt-0.5 ${cc.txt3}`}>{tr("admin.creaGestionaModelos")}</p>
+          <p className={`mt-1 text-sm ${cc.txt3}`}>{tr("admin.creaGestionaModelos")}</p>
         </div>
         <button onClick={() => { setEditing(null); setView('create') }}
-          className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm">
-          <Plus size={14} /> {locale === 'en' ? 'New form' : 'Nueva ficha'}
+          className="v-brand inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-semibold sm:px-5">
+          <Plus size={15} /> {locale === 'en' ? 'New form' : 'Nueva ficha'}
         </button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 size={22} className="animate-spin text-sky-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 size={22} className="animate-spin text-v-accent" /></div>
       ) : templates.length === 0 ? (
-        <div className={`${cc.card} border rounded-2xl p-12 text-center`}>
+        <div className={`${cc.card} border rounded-v p-12 text-center`}>
           <LayoutTemplate size={40} className={`mx-auto mb-3 ${cc.txt3}`} />
           <p className={`font-bold text-sm ${cc.txt3}`}>{tr("admin.sinFichasCreadas")}</p>
           <p className={`text-xs mt-1 ${cc.txt3} opacity-60`}>{tr("admin.creaPrimeraFicha")}</p>
           <button onClick={() => setView('create')}
-            className="mt-4 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl">
-            Crear primera ficha
+            className="v-brand mt-4 inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold">
+            <Plus size={15} /> {locale === 'en' ? 'Create first form' : 'Crear primera ficha'}
           </button>
         </div>
       ) : (
         <div className="space-y-2">
-          {templates.map(t => (
-            <div key={t.id} className={`${cc.card} border rounded-2xl`}>
-              <div className="p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-sky-900/30' : 'bg-sky-50'}`}>
-                  <FileText size={18} className="text-sky-500" />
-                </div>
+          {templates.map((t, i) => (
+            <motion.div key={t.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }}
+              className={`group ${cc.card} border rounded-v shadow-v transition-shadow hover:shadow-v-lg ${t.is_active ? '' : 'opacity-70'}`}>
+              <div className="flex flex-wrap items-start gap-3 p-4 sm:flex-nowrap sm:items-center sm:gap-4">
+                <span className="grid size-11 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent transition-transform group-hover:-rotate-6 group-hover:scale-105">
+                  <FileText size={19} />
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className={`font-bold text-sm ${cc.txt1}`}>{t.name}</p>
-                    {t.is_default && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700">{tr("admin.sistema")}</span>}
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${t.is_active ? 'bg-emerald-100 text-emerald-700' : isDark ? 'bg-[#21262d] text-slate-500' : 'bg-slate-100 text-slate-400'}`}>
-                      {t.is_active ? (locale === 'en' ? '● Active' : '● Activa') : (locale === 'en' ? '○ Inactive' : '○ Inactiva')}
+                    <p className={`text-[15px] font-semibold tracking-tight ${cc.txt1}`}>{t.name}</p>
+                    {t.is_default && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-v-accent-soft text-v-accent">{tr("admin.sistema")}</span>}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${t.is_active ? 'bg-v-success/15 text-v-success' : 'bg-v-fill text-v-subtle'}`}>
+                      {t.is_active ? (locale === 'en' ? 'Active' : 'Activa') : (locale === 'en' ? 'Inactive' : 'Inactiva')}
                     </span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isDark ? 'bg-[#21262d] text-slate-500' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${'bg-v-fill text-v-muted'}`}>
                       {(() => { const _c = CATEGORIES.find(c => c.id === t.category); return _c ? (locale === 'en' ? _c.labelEn : _c.label) : t.category })()}
                     </span>
                   </div>
                   {t.description && <p className={`text-xs mt-0.5 ${cc.txt3}`}>{t.description}</p>}
-                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <p className={`text-[10px] mt-0.5 ${'text-v-subtle'}`}>
                     {t.fields?.length || 0} {locale === 'en' ? ((t.fields?.length || 0) !== 1 ? 'fields' : 'field') : ('campo' + ((t.fields?.length || 0) !== 1 ? 's' : ''))}
                     {t.sections?.length ? ` · ${t.sections.length} ${locale === 'en' ? (t.sections.length !== 1 ? 'sections' : 'section') : ('secci' + (t.sections.length !== 1 ? 'ones' : 'ón'))}` : ''}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={() => toggleActive(t)}
-                    className={`p-2 rounded-lg text-xs font-bold transition-colors ${cc.hover} ${t.is_active ? 'text-emerald-500' : cc.txt3}`}>
-                    {t.is_active ? '✓' : '○'}
+                <div className="ml-auto flex w-full shrink-0 items-center justify-end gap-1 border-t border-v-border pt-2 sm:ml-0 sm:w-auto sm:border-0 sm:pt-0">
+                  <button onClick={() => toggleActive(t)} role="switch" aria-checked={t.is_active}
+                    title={t.is_active ? (locale === 'en' ? 'Deactivate' : 'Desactivar') : (locale === 'en' ? 'Activate' : 'Activar')}
+                    className={`relative mr-1 h-6 w-10 shrink-0 rounded-full transition-colors ${t.is_active ? 'bg-v-success' : 'bg-v-border'}`}>
+                    <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+                      className={`absolute top-0.5 size-5 rounded-full bg-white shadow ${t.is_active ? 'right-0.5' : 'left-0.5'}`} />
                   </button>
-                  <button onClick={() => { setEditing(t); setView('edit') }}
-                    className={`p-2 rounded-lg transition-colors ${cc.hover} ${cc.txt3}`}>
-                    <Edit2 size={14} />
+                  <button onClick={() => { setEditing(t); setView('edit') }} title={locale === 'en' ? 'Edit' : 'Editar'}
+                    className="grid size-9 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-accent-soft hover:text-v-accent">
+                    <Edit2 size={15} />
                   </button>
                   {!t.is_default && (
-                    <button onClick={() => deleteTemplate(t.id)}
-                      className={`p-2 rounded-lg transition-colors text-red-400 ${isDark ? 'hover:bg-red-900/20' : 'hover:bg-red-50'}`}>
-                      <Trash2 size={14} />
+                    <button onClick={() => deleteTemplate(t.id)} title={locale === 'en' ? 'Delete' : 'Eliminar'}
+                      className="grid size-9 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-danger/10 hover:text-v-danger">
+                      <Trash2 size={15} />
                     </button>
                   )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -221,20 +227,18 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
   const [preview, setPreview]   = useState(false)
 
   const cc = {
-    card:  isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200',
-    muted: isDark ? 'bg-[#0d1117] border-[#30363d]' : 'bg-slate-50 border-slate-200',
-    txt1:  isDark ? 'text-slate-100' : 'text-slate-800',
-    txt3:  isDark ? 'text-slate-500' : 'text-slate-400',
-    input: isDark
-      ? 'bg-[#0d1117] border-[#30363d] text-slate-200 placeholder:text-slate-600 focus:border-sky-500'
-      : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-sky-400',
+    card:  'bg-v-elevated border-v-border',
+    muted: 'bg-v-fill border-v-border',
+    txt1:  'text-v-text',
+    txt3:  'text-v-subtle',
+    input: 'bg-v-bg border-v-border text-v-text placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft',
   }
-  const inputCls = `w-full px-3 py-2.5 rounded-xl text-sm border-2 outline-none transition-all ${cc.input}`
+  const inputCls = `w-full px-3.5 py-2.5 rounded-v-sm text-sm border outline-none transition-shadow ${cc.input}`
 
   const addSection = () => setSections(prev => [...prev, { id: uid(), title: locale === 'en' ? 'New section' : 'Nueva sección', description: '' }])
   const updateSection = (id: string, patch: Partial<Section>) => setSections(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
   const removeSection = (id: string) => { setSections(prev => prev.filter(s => s.id !== id)); setFields(prev => prev.map(f => f.section === id ? { ...f, section: undefined } : f)) }
-  const addField = (sectionId?: string) => setFields(prev => [...prev, { id: uid(), label: '', type: 'text', required: false, placeholder: '', section: sectionId }])
+  const addField = (sectionId?: string, type: Field['type'] = 'text') => setFields(prev => [...prev, { id: uid(), label: '', type, required: false, placeholder: '', section: sectionId, options: ['select', 'radio'].includes(type) ? [''] : undefined }])
   const updateField = (id: string, patch: Partial<Field>) => setFields(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f))
   const removeField = (id: string) => setFields(prev => prev.filter(f => f.id !== id))
   const moveField = (id: string, dir: -1 | 1) => {
@@ -273,209 +277,303 @@ function FormBuilder({ isDark, template, onSave, onCancel }: {
   return (
     <div className="space-y-4">
       {/* Top bar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={onCancel} className={`p-2 rounded-xl ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}>
-          <ArrowLeft size={16} className={cc.txt3} />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-[1_1_240px] items-center gap-3">
+        <button onClick={onCancel} className="grid size-9 shrink-0 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-text">
+          <ArrowLeft size={17} />
         </button>
-        <div className="flex-1">
-          <p className={`font-bold text-base ${cc.txt1}`}>{template ? (locale === 'en' ? 'Edit form' : 'Editar ficha') : (locale === 'en' ? 'New clinical form' : 'Nueva ficha clínica')}</p>
+        <span className="v-brand grid size-10 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><LayoutTemplate size={18} /></span>
+        <div className="min-w-0 flex-1">
+          <p className={`text-base font-semibold leading-tight tracking-tight sm:text-lg ${cc.txt1}`}>{template ? (locale === 'en' ? 'Edit form' : 'Editar ficha') : (locale === 'en' ? 'New clinical form' : 'Nueva ficha clínica')}</p>
           <p className={`text-xs ${cc.txt3}`}>{t("admin.disenaFormulario")}</p>
         </div>
+        </div>
+        <div className="flex w-full gap-2 sm:w-auto">
         <button onClick={() => setPreview(true)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${isDark ? 'border-[#30363d] text-slate-400 hover:bg-[#21262d]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-          <Eye size={13} /> {locale === 'en' ? 'Preview' : 'Vista previa'}
+          className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-v-border bg-v-elevated px-4 text-sm font-semibold text-v-muted shadow-v transition-colors hover:text-v-accent sm:flex-none">
+          <Eye size={15} /> {locale === 'en' ? 'Preview' : 'Vista previa'}
         </button>
         <button onClick={handleSave} disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl disabled:opacity-50">
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          className="v-brand inline-flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-5 text-sm font-semibold disabled:opacity-50 sm:flex-none">
+          {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
           {saving ? (locale === 'en' ? 'Saving...' : 'Guardando...') : (locale === 'en' ? 'Save form' : 'Guardar ficha')}
         </button>
+        </div>
       </div>
 
       {/* Datos básicos */}
-      <div className={`${cc.card} border rounded-2xl p-5 space-y-4`}>
-        <div>
-          <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>{t("admin.nombreFicha")}</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder={t("admin.phNombreFicha")} className={inputCls} />
+      <div className={`${cc.card} relative overflow-hidden border rounded-v p-4 shadow-v sm:p-6`}>
+        <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-1" />
+        <GrowText value={name} onChange={setName} placeholder={t("admin.phNombreFicha")}
+          className="border-b border-transparent pb-1 text-xl font-semibold tracking-tight text-v-text transition-colors placeholder:text-v-subtle/70 focus:border-v-accent sm:text-2xl" />
+        <GrowText value={desc} onChange={setDesc} placeholder={t("admin.phParaQueFicha")}
+          className="mt-2 border-b border-transparent pb-1 text-sm text-v-muted transition-colors placeholder:text-v-subtle focus:border-v-accent" />
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-v-subtle">{t("common.categoria")}:</span>
+          {CATEGORIES.map(cat => {
+            const on = category === cat.id
+            return (
+              <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${on ? 'bg-v-accent-soft text-v-accent ring-1 ring-v-accent/40' : 'bg-v-fill text-v-muted hover:text-v-text'}`}>
+                {locale === 'en' ? cat.labelEn : cat.label}
+              </button>
+            )
+          })}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>{t("common.descripcion")}</label>
-            <input value={desc} onChange={e => setDesc(e.target.value)} placeholder={t("admin.phParaQueFicha")} className={inputCls} />
-          </div>
-          <div>
-            <label className={`block text-[10px] font-bold mb-1.5 ${cc.txt3}`}>{t("common.categoria")}</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} className={`${inputCls} cursor-pointer`}>
-              {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{locale === 'en' ? cat.labelEn : cat.label}</option>)}
-            </select>
-          </div>
-        </div>
+        <p className="mt-4 flex items-center gap-1.5 text-[11px] text-v-subtle">
+          <Lock size={11} /> {locale === 'en' ? 'Date, patient and specialist are added automatically to every form.' : 'Fecha, paciente y especialista se agregan solos a cada ficha.'}
+        </p>
       </div>
 
-      {/* Campos sin sección */}
-      <div className={`${cc.card} border rounded-2xl overflow-hidden`}>
-        <div className={`px-5 py-3 border-b flex items-center justify-between ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-          <p className={`text-xs font-bold ${cc.txt3}`}>{t("admin.camposGenerales")}</p>
-          <button onClick={() => addField()} className="flex items-center gap-1 text-xs font-bold text-sky-500 hover:text-sky-400">
-            <Plus size={13} /> {locale === 'en' ? 'Add field' : 'Añadir campo'}
-          </button>
-        </div>
-        <div className="p-4 space-y-2">
-          {unsectioned.length === 0 && (
-            <p className={`text-xs text-center py-4 ${cc.txt3}`}>{t("admin.sinCamposAqui")}</p>
-          )}
-          {unsectioned.map(field => (
-            <FieldEditor key={field.id} field={field} isDark={isDark}
+      {/* Preguntas generales (sin sección) */}
+      <BuilderBlock
+        title={locale === 'en' ? 'General questions' : 'Preguntas generales'}
+        subtitle={locale === 'en' ? 'Shown at the top of the form' : 'Aparecen al inicio de la ficha'}
+        count={unsectioned.length}
+        onAdd={type => addField(undefined, type)}>
+        {unsectioned.map((field, i) => (
+          <FieldEditor key={field.id} index={i + 1} field={field} isDark={isDark}
+            onChange={p => updateField(field.id, p)}
+            onDelete={() => removeField(field.id)}
+            onMoveUp={() => moveField(field.id, -1)}
+            onMoveDown={() => moveField(field.id, 1)} />
+        ))}
+      </BuilderBlock>
+
+      {/* Secciones */}
+      {sections.map((section, si) => (
+        <BuilderBlock key={section.id}
+          badge={`${locale === 'en' ? 'Section' : 'Sección'} ${si + 1}`}
+          titleInput={
+            <GrowText value={section.title} onChange={v => updateSection(section.id, { title: v })} placeholder={t("admin.phTituloSeccion")}
+              className="border-b border-transparent pb-0.5 text-base font-semibold tracking-tight text-v-text transition-colors placeholder:text-v-subtle focus:border-v-accent sm:text-lg" />
+          }
+          subtitleInput={
+            <GrowText value={section.description || ''} onChange={v => updateSection(section.id, { description: v })} placeholder={t("admin.phDescSeccion")}
+              className="border-b border-transparent pb-0.5 text-sm text-v-muted transition-colors placeholder:text-v-subtle focus:border-v-accent" />
+          }
+          count={bySection(section.id).length}
+          onAdd={type => addField(section.id, type)}
+          onRemove={() => removeSection(section.id)}>
+          {bySection(section.id).map((field, i) => (
+            <FieldEditor key={field.id} index={i + 1} field={field} isDark={isDark}
               onChange={p => updateField(field.id, p)}
               onDelete={() => removeField(field.id)}
               onMoveUp={() => moveField(field.id, -1)}
               onMoveDown={() => moveField(field.id, 1)} />
           ))}
-        </div>
-      </div>
-
-      {/* Secciones */}
-      {sections.map(section => (
-        <div key={section.id} className={`${cc.card} border rounded-2xl overflow-hidden`}>
-          <div className={`px-5 py-3 border-b ${isDark ? 'border-[#21262d] bg-[#0d1117]' : 'border-slate-100 bg-slate-50'}`}>
-            <div className="flex items-start gap-2">
-              <div className="flex-1 space-y-1.5">
-                <input value={section.title} onChange={e => updateSection(section.id, { title: e.target.value })}
-                  placeholder={t("admin.phTituloSeccion")}
-                  className={`w-full px-3 py-1.5 rounded-lg text-sm font-bold border-2 outline-none ${isDark ? 'bg-[#161b22] border-[#21262d] text-slate-200' : 'bg-white border-slate-200 text-slate-800'}`} />
-                <input value={section.description || ''} onChange={e => updateSection(section.id, { description: e.target.value })}
-                  placeholder={t("admin.phDescSeccion")}
-                  className={`w-full px-3 py-1 rounded-lg text-xs border outline-none ${isDark ? 'bg-[#161b22] border-[#21262d] text-slate-400' : 'bg-white border-slate-200 text-slate-500'}`} />
-              </div>
-              <button onClick={() => addField(section.id)} className="flex items-center gap-1 text-xs font-bold text-sky-500 hover:text-sky-400 whitespace-nowrap mt-1">
-                <Plus size={12} /> Campo
-              </button>
-              <button onClick={() => removeSection(section.id)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 mt-0.5">
-                <Trash2 size={13} />
-              </button>
-            </div>
-          </div>
-          <div className="p-4 space-y-2">
-            {bySection(section.id).length === 0 && (
-              <p className={`text-xs text-center py-3 ${cc.txt3}`}>{t("admin.sinCamposUsa")}</p>
-            )}
-            {bySection(section.id).map(field => (
-              <FieldEditor key={field.id} field={field} isDark={isDark}
-                onChange={p => updateField(field.id, p)}
-                onDelete={() => removeField(field.id)}
-                onMoveUp={() => moveField(field.id, -1)}
-                onMoveDown={() => moveField(field.id, 1)} />
-            ))}
-          </div>
-        </div>
+        </BuilderBlock>
       ))}
 
       {/* Agregar sección */}
       <button onClick={addSection}
-        className={`w-full py-3 rounded-2xl border-2 border-dashed text-xs font-bold transition-all
-          ${isDark ? 'border-[#30363d] text-slate-500 hover:border-sky-700 hover:text-sky-400' : 'border-slate-200 text-slate-400 hover:border-sky-300 hover:text-sky-500'}`}>
-        {locale === 'en' ? '+ Add section' : '+ Agregar sección'}
+        className="flex w-full items-center justify-center gap-1.5 rounded-v border border-dashed border-v-border py-4 text-sm font-semibold text-v-subtle transition-colors hover:border-v-accent/40 hover:bg-v-accent-soft hover:text-v-accent">
+        <Layers size={15} /> {locale === 'en' ? 'Add section' : 'Agregar sección'}
       </button>
     </div>
   )
 }
 
+// Campo de texto sin caja que crece con el contenido (en celular el texto largo baja de línea, no se corta).
+function GrowText({ value, onChange, placeholder, className = '' }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = '0px'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+  return (
+    <textarea ref={ref} rows={1} value={value} placeholder={placeholder}
+      onChange={e => onChange(e.target.value.replace(/\n/g, ' '))}
+      onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
+      className={`block w-full resize-none overflow-hidden bg-transparent leading-snug outline-none ${className}`} />
+  )
+}
+
+// ── Bloque del constructor (preguntas generales o una sección) ─────────────────
+const FIELD_ICON: Record<string, any> = {
+  text: Type, textarea: AlignLeft, select: ListChecks, radio: CircleDot, date: Calendar, number: Hash, checkbox: CheckSquare,
+}
+
+function BuilderBlock({ title, subtitle, badge, titleInput, subtitleInput, count, onAdd, onRemove, children }: {
+  title?: string; subtitle?: string; badge?: string; titleInput?: React.ReactNode; subtitleInput?: React.ReactNode
+  count: number; onAdd: (type: Field['type']) => void; onRemove?: () => void; children: React.ReactNode
+}) {
+  const { locale } = useI18n()
+  return (
+    <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      className="overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v">
+      <div className="flex flex-wrap items-start gap-2 border-b border-v-border px-4 py-4 sm:flex-nowrap sm:gap-3 sm:px-5">
+        <div className="min-w-0 flex-[1_1_220px] space-y-1">
+          {badge && <span className="inline-flex rounded-full bg-v-accent-soft px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-v-accent">{badge}</span>}
+          {titleInput ?? <p className="text-[15px] font-semibold tracking-tight text-v-text">{title}</p>}
+          {subtitleInput ?? (subtitle && <p className="text-xs text-v-subtle">{subtitle}</p>)}
+        </div>
+        <span className="mt-1 shrink-0 rounded-full bg-v-fill px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-v-muted">
+          {count} {locale === 'en' ? (count === 1 ? 'question' : 'questions') : (count === 1 ? 'pregunta' : 'preguntas')}
+        </span>
+        {onRemove && (
+          <button onClick={onRemove} title={locale === 'en' ? 'Delete section' : 'Eliminar sección'}
+            className="grid size-8 shrink-0 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-danger/10 hover:text-v-danger">
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+      <div className="space-y-3 bg-v-bg p-4">
+        <AnimatePresence initial={false}>{children}</AnimatePresence>
+        {/* Añadir pregunta por tipo, con un toque */}
+        <div className={`rounded-v-sm border border-dashed border-v-border p-3 ${count === 0 ? 'py-5 text-center' : ''}`}>
+          {count === 0 && <p className="mb-3 text-sm text-v-subtle">{locale === 'en' ? 'No questions yet — pick a type to add one:' : 'Sin preguntas todavía — elige un tipo para agregar:'}</p>}
+          <div className={`flex flex-wrap gap-1.5 ${count === 0 ? 'justify-center' : ''}`}>
+            {count > 0 && <span className="mr-1 self-center text-xs font-medium text-v-subtle">{locale === 'en' ? 'Add:' : 'Agregar:'}</span>}
+            {FIELD_TYPES.map(ft => {
+              const Icon = FIELD_ICON[ft.id]
+              return (
+                <button key={ft.id} type="button" onClick={() => onAdd(ft.id as Field['type'])}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-3 py-1.5 text-xs font-semibold text-v-muted transition-colors hover:border-v-accent/40 hover:bg-v-accent-soft hover:text-v-accent">
+                  <Icon size={13} /> {locale === 'en' ? ft.labelEn : ft.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // ── Field Editor ──────────────────────────────────────────────────────────────
-function FieldEditor({ field, isDark, onChange, onDelete, onMoveUp, onMoveDown }: {
-  field: Field; isDark: boolean
+function FieldTypeMenu({ value, onChange }: { value: Field['type']; onChange: (t: Field['type']) => void }) {
+  const { locale } = useI18n()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+  const cur = FIELD_TYPES.find(f => f.id === value) ?? FIELD_TYPES[0]
+  const CurIcon = FIELD_ICON[cur.id]
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-elevated pl-3 pr-2 text-xs font-semibold text-v-text transition-colors hover:border-v-accent/40">
+        <CurIcon size={14} className="text-v-accent" /> {locale === 'en' ? cur.labelEn : cur.label}
+        <ChevronDown size={13} className={`text-v-subtle transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.14 }}
+            className="absolute right-0 top-full z-40 mt-1.5 w-48 origin-top-right rounded-v-sm border border-v-border bg-v-elevated p-1 shadow-v-lg">
+            {FIELD_TYPES.map(ft => {
+              const Icon = FIELD_ICON[ft.id]
+              const on = ft.id === value
+              return (
+                <button key={ft.id} type="button" onClick={() => { setOpen(false); onChange(ft.id as Field['type']) }}
+                  className={`flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left text-sm transition-colors ${on ? 'bg-v-accent-soft font-semibold text-v-accent' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+                  <Icon size={15} /> <span className="flex-1">{locale === 'en' ? ft.labelEn : ft.label}</span>
+                  {on && <Check size={14} />}
+                </button>
+              )
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function FieldEditor({ field, index, onChange, onDelete, onMoveUp, onMoveDown }: {
+  field: Field; index?: number; isDark: boolean
   onChange: (p: Partial<Field>) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void
 }) {
   const { t, locale } = useI18n()
-  const cc = {
-    border: isDark ? 'border-[#30363d]' : 'border-slate-200',
-    bg:     isDark ? 'bg-[#0d1117]'     : 'bg-slate-50',
-    txt3:   isDark ? 'text-slate-500'   : 'text-slate-400',
-    input:  isDark ? 'bg-[#161b22] border-[#21262d] text-slate-200 placeholder:text-slate-600' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400',
-  }
+  const hasOptions = ['select', 'radio'].includes(field.type)
+  const preview: Record<string, string> = locale === 'en'
+    ? { text: 'Short answer', textarea: 'Long answer', number: 'Number', date: 'dd/mm/yyyy', checkbox: 'Yes / No' }
+    : { text: 'Respuesta corta', textarea: 'Respuesta larga', number: 'Número', date: 'dd/mm/aaaa', checkbox: 'Sí / No' }
+
   return (
-    <div className={`${cc.bg} border-2 ${cc.border} rounded-xl p-3 space-y-2`}>
-      <div className="flex items-center gap-2">
-        <div className="flex flex-col gap-0.5 flex-shrink-0">
-          <button onClick={onMoveUp} className={`text-[9px] leading-none ${cc.txt3} hover:text-sky-500`}>▲</button>
-          <button onClick={onMoveDown} className={`text-[9px] leading-none ${cc.txt3} hover:text-sky-500`}>▼</button>
+    <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}
+      className="group rounded-v-sm border border-v-border bg-v-elevated shadow-v transition-shadow focus-within:border-v-accent/50 focus-within:ring-4 focus-within:ring-v-accent-soft">
+      <div className="flex items-start gap-2.5 p-3 pb-3 sm:gap-3 sm:p-4">
+        <div className="flex shrink-0 flex-col items-center gap-0.5 pt-1">
+          <button onClick={onMoveUp} title={locale === 'en' ? 'Move up' : 'Subir'} className="grid size-5 place-items-center rounded text-v-subtle opacity-40 transition-opacity hover:bg-v-fill hover:text-v-accent group-hover:opacity-100"><ChevronUp size={13} /></button>
+          <span className="grid size-6 place-items-center rounded-full bg-v-accent-soft text-[11px] font-bold text-v-accent">{index}</span>
+          <button onClick={onMoveDown} title={locale === 'en' ? 'Move down' : 'Bajar'} className="grid size-5 place-items-center rounded text-v-subtle opacity-40 transition-opacity hover:bg-v-fill hover:text-v-accent group-hover:opacity-100"><ChevronDown size={13} /></button>
         </div>
-        <input value={field.label} onChange={e => onChange({ label: e.target.value })}
-          placeholder={t("admin.phPreguntaCampo")}
-          className={`flex-1 px-3 py-2 rounded-lg text-sm border-2 outline-none focus:border-sky-400 transition-all ${cc.input}`} />
-        <select value={field.type} onChange={e => {
-          const newType = e.target.value as Field['type']
-          const needsOptions = ['select', 'radio'].includes(newType)
-          onChange({
-            type: newType,
-            options: needsOptions && (!field.options || field.options.length === 0) ? [''] : field.options
-          })
-        }}
-          className={`px-2 py-2 rounded-lg text-xs font-bold border-2 outline-none cursor-pointer ${isDark ? 'bg-[#161b22] border-[#21262d] text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}>
-          {FIELD_TYPES.map(ft => <option key={ft.id} value={ft.id}>{locale === 'en' ? ft.labelEn : ft.label}</option>)}
-        </select>
-        <label className="flex items-center gap-1 cursor-pointer flex-shrink-0" title={t("admin.campoObligatorio")}>
-          <input type="checkbox" checked={field.required} onChange={e => onChange({ required: e.target.checked })} className="rounded accent-sky-500" />
-          <span className={`text-[10px] font-bold ${cc.txt3}`}>*</span>
+        <div className="min-w-0 flex-1 space-y-2.5">
+          <div className="flex flex-wrap items-start gap-2">
+            <GrowText value={field.label} onChange={v => onChange({ label: v })} placeholder={t("admin.phPreguntaCampo")}
+              className="flex-[1_1_220px] border-b border-v-border pb-1.5 text-[15px] font-semibold text-v-text transition-colors placeholder:font-normal placeholder:text-v-subtle focus:border-v-accent" />
+            <FieldTypeMenu value={field.type} onChange={newType => onChange({
+              type: newType,
+              options: ['select', 'radio'].includes(newType) && (!field.options || field.options.length === 0) ? [''] : field.options,
+            })} />
+          </div>
+
+          {['text', 'textarea', 'number'].includes(field.type) && (
+            <GrowText value={field.placeholder || ''} onChange={v => onChange({ placeholder: v })} placeholder={t("admin.phTextoAyuda")}
+              className="text-xs text-v-muted placeholder:text-v-subtle" />
+          )}
+
+          {/* Vista de cómo se responde */}
+          {!hasOptions && (
+            <div className={`flex gap-2 rounded-v-sm border border-dashed border-v-border px-3 py-2 text-xs text-v-subtle ${field.type === 'textarea' ? 'min-h-14 items-start' : 'min-h-9 items-center'}`}>
+              {(() => { const I = FIELD_ICON[field.type]; return <I size={12} className="mt-0.5 shrink-0" /> })()}
+              <span className="line-clamp-3 min-w-0 [overflow-wrap:anywhere]">{field.type === 'checkbox' ? (field.placeholder || preview.checkbox) : (field.placeholder || preview[field.type])}</span>
+            </div>
+          )}
+
+          {hasOptions && (
+            <div className="space-y-1.5">
+              {(field.options || []).map((opt, idx) => (
+                <div key={idx} className="group/opt flex items-center gap-2">
+                  {field.type === 'radio'
+                    ? <span className="size-4 shrink-0 rounded-full border-2 border-v-border" />
+                    : <span className="w-4 shrink-0 text-right text-xs tabular-nums text-v-subtle">{idx + 1}.</span>}
+                  <input value={opt}
+                    onChange={e => { const n = [...(field.options || [])]; n[idx] = e.target.value; onChange({ options: n }) }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); onChange({ options: [...(field.options || []), ''] }) }
+                      if (e.key === 'Backspace' && opt === '' && (field.options || []).length > 1) onChange({ options: (field.options || []).filter((_, i) => i !== idx) })
+                    }}
+                    placeholder={locale === 'en' ? `Option ${idx + 1}` : `Opción ${idx + 1}`}
+                    autoFocus={idx === (field.options || []).length - 1 && opt === ''}
+                    className="flex-1 border-b border-transparent bg-transparent py-1 text-sm text-v-text outline-none transition-colors placeholder:text-v-subtle hover:border-v-border focus:border-v-accent" />
+                  <button onClick={() => { const n = (field.options || []).filter((_, i) => i !== idx); onChange({ options: n.length > 0 ? n : [''] }) }}
+                    className="grid size-6 place-items-center rounded-full text-v-subtle opacity-0 transition-opacity hover:bg-v-danger/10 hover:text-v-danger group-hover/opt:opacity-100">
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => onChange({ options: [...(field.options || []), ''] })}
+                className="ml-6 inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-v-accent transition-colors hover:bg-v-accent-soft">
+                <Plus size={12} /> {locale === 'en' ? 'Add option' : 'Añadir opción'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-3 border-t border-v-border px-4 py-2">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-v-muted" title={t("admin.campoObligatorio")}>
+          {locale === 'en' ? 'Required' : 'Obligatorio'}
+          <button type="button" role="switch" aria-checked={field.required} onClick={() => onChange({ required: !field.required })}
+            className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${field.required ? 'bg-v-accent' : 'bg-v-border'}`}>
+            <motion.span layout transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+              className={`absolute top-0.5 size-4 rounded-full bg-white shadow ${field.required ? 'right-0.5' : 'left-0.5'}`} />
+          </button>
         </label>
-        <button onClick={onDelete} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0">
-          <X size={13} />
+        <span className="h-5 w-px bg-v-border" />
+        <button onClick={onDelete} title={locale === 'en' ? 'Delete question' : 'Eliminar pregunta'}
+          className="grid size-8 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-danger/10 hover:text-v-danger">
+          <Trash2 size={14} />
         </button>
       </div>
-      {['text', 'textarea', 'number'].includes(field.type) && (
-        <input value={field.placeholder || ''} onChange={e => onChange({ placeholder: e.target.value })}
-          placeholder={t("admin.phTextoAyuda")}
-          className={`w-full px-3 py-1.5 rounded-lg text-xs border-2 outline-none ${cc.input}`} />
-      )}
-      {['select', 'radio'].includes(field.type) && (
-        <div className="space-y-1.5">
-          <p className={`text-[9px] font-bold ${cc.txt3}`}>{t("admin.opciones")}</p>
-          <div className="space-y-1">
-            {(field.options || []).map((opt, idx) => (
-              <div key={idx} className="flex items-center gap-1.5">
-                <span className={`text-[10px] ${cc.txt3} flex-shrink-0 w-4 text-right`}>{idx + 1}.</span>
-                <input
-                  value={opt}
-                  onChange={e => {
-                    const newOpts = [...(field.options || [])]
-                    newOpts[idx] = e.target.value
-                    onChange({ options: newOpts })
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      const newOpts = [...(field.options || []), '']
-                      onChange({ options: newOpts })
-                    }
-                    if (e.key === 'Backspace' && opt === '' && (field.options || []).length > 1) {
-                      const newOpts = (field.options || []).filter((_, i) => i !== idx)
-                      onChange({ options: newOpts })
-                    }
-                  }}
-                  placeholder={locale === 'en' ? `Option ${idx + 1}` : `Opción ${idx + 1}`}
-                  className={`flex-1 px-2.5 py-1.5 rounded-lg text-xs border-2 outline-none focus:border-sky-400 transition-all ${cc.input}`}
-                  autoFocus={idx === (field.options || []).length - 1 && opt === ''}
-                />
-                <button
-                  onClick={() => {
-                    const newOpts = (field.options || []).filter((_, i) => i !== idx)
-                    onChange({ options: newOpts.length > 0 ? newOpts : [''] })
-                  }}
-                  className="p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0">
-                  <X size={11} />
-                </button>
-              </div>
-            ))}
-            {/* Add option button */}
-            <button
-              onClick={() => onChange({ options: [...(field.options || []), ''] })}
-              className={`flex items-center gap-1 text-xs font-bold mt-1 px-2 py-1 rounded-lg transition-colors ${isDark ? 'text-sky-400 hover:bg-sky-900/20' : 'text-sky-600 hover:bg-sky-50'}`}>
-              <Plus size={11} /> Añadir opción
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    </motion.div>
   )
 }
 
@@ -485,22 +583,22 @@ function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
 }) {
   const { t, locale } = useI18n()
   const cc = {
-    card:  isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200',
-    txt1:  isDark ? 'text-slate-100' : 'text-slate-800',
-    txt3:  isDark ? 'text-slate-500' : 'text-slate-400',
-    input: isDark ? 'bg-[#0d1117] border-[#30363d] text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-600',
+    card:  'bg-v-elevated border-v-border',
+    txt1:  'text-v-text',
+    txt3:  'text-v-subtle',
+    input: 'bg-v-fill border-v-border text-v-muted',
   }
   const renderField = (f: Field) => (
     <div key={f.id}>
-      <label className={`block text-xs font-bold mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-        {f.label || (locale === 'en' ? '(No name)' : '(Sin nombre)')} {f.required && <span className="text-red-400">*</span>}
+      <label className={`block text-xs font-bold mb-1.5 ${'text-v-muted'}`}>
+        {f.label || (locale === 'en' ? '(No name)' : '(Sin nombre)')} {f.required && <span className="text-v-danger">*</span>}
       </label>
-      {f.type === 'textarea' && <textarea rows={3} disabled placeholder={f.placeholder} className={`w-full px-3 py-2 rounded-xl text-sm border-2 resize-none opacity-70 ${cc.input}`} />}
-      {f.type === 'text' && <input type="text" disabled placeholder={f.placeholder} className={`w-full px-3 py-2 rounded-xl text-sm border-2 opacity-70 ${cc.input}`} />}
-      {f.type === 'number' && <input type="number" disabled className={`w-full px-3 py-2 rounded-xl text-sm border-2 opacity-70 ${cc.input}`} />}
-      {f.type === 'date' && <input type="date" disabled className={`w-full px-3 py-2 rounded-xl text-sm border-2 opacity-70 ${cc.input}`} />}
+      {f.type === 'textarea' && <textarea rows={3} disabled placeholder={f.placeholder} className={`w-full px-3 py-2 rounded-v-sm text-sm border resize-none opacity-70 ${cc.input}`} />}
+      {f.type === 'text' && <input type="text" disabled placeholder={f.placeholder} className={`w-full px-3 py-2 rounded-v-sm text-sm border opacity-70 ${cc.input}`} />}
+      {f.type === 'number' && <input type="number" disabled className={`w-full px-3 py-2 rounded-v-sm text-sm border opacity-70 ${cc.input}`} />}
+      {f.type === 'date' && <input type="date" disabled className={`w-full px-3 py-2 rounded-v-sm text-sm border opacity-70 ${cc.input}`} />}
       {f.type === 'select' && (
-        <select disabled className={`w-full px-3 py-2 rounded-xl text-sm border-2 opacity-70 ${cc.input}`}>
+        <select disabled className={`w-full px-3 py-2 rounded-v-sm text-sm border opacity-70 ${cc.input}`}>
           <option>{t("common.seleccionar")}</option>
           {(f.options || []).map(o => <option key={o}>{o}</option>)}
         </select>
@@ -508,7 +606,7 @@ function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
       {f.type === 'radio' && (
         <div className="flex flex-wrap gap-2">
           {(f.options || []).map(o => (
-            <label key={o} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border-2 opacity-70 ${isDark ? 'border-[#30363d] text-slate-400' : 'border-slate-200 text-slate-600'}`}>
+            <label key={o} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-v-sm text-xs border opacity-70 ${'border-v-border text-v-muted'}`}>
               <input type="radio" disabled /> {o}
             </label>
           ))}
@@ -524,13 +622,13 @@ function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className={`p-2 rounded-xl ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}>
+        <button onClick={onBack} className={`p-2 rounded-v-sm ${'hover:bg-v-fill'}`}>
           <ArrowLeft size={16} className={cc.txt3} />
         </button>
         <p className={`font-bold text-sm ${cc.txt1}`}>{t("admin.vistaPreviaFicha")}</p>
       </div>
-      <div className={`${cc.card} border rounded-2xl p-6 space-y-5`}>
-        <div className={`pb-4 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
+      <div className={`${cc.card} border rounded-v p-6 space-y-5`}>
+        <div className={`pb-4 border-b ${'border-v-border'}`}>
           <p className={`font-bold text-lg ${cc.txt1}`}>{name || (locale === 'en' ? '(No name)' : '(Sin nombre)')}</p>
           {desc && <p className={`text-sm mt-1 ${cc.txt3}`}>{desc}</p>}
         </div>
@@ -540,7 +638,7 @@ function FormPreview({ name, desc, sections, fields, isDark, onBack }: {
         {sections.map(section => {
           const sf = fields.filter(f => f.section === section.id)
           return (
-            <div key={section.id} className={`rounded-xl p-4 border ${isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-50 border-slate-100'}`}>
+            <div key={section.id} className={`rounded-v-sm p-4 border ${'bg-v-fill border-v-border'}`}>
               <p className={`font-bold text-sm mb-0.5 ${cc.txt1}`}>{section.title}</p>
               {section.description && <p className={`text-xs mb-3 ${cc.txt3}`}>{section.description}</p>}
               <div className="space-y-4">{sf.map(renderField)}</div>
@@ -603,14 +701,12 @@ export function RellenarFicha({
   })
 
   const cc = {
-    card:  isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200',
-    txt1:  isDark ? 'text-slate-100' : 'text-slate-800',
-    txt3:  isDark ? 'text-slate-500' : 'text-slate-400',
-    input: isDark
-      ? 'bg-[#0d1117] border-[#30363d] text-slate-200 placeholder:text-slate-600 focus:border-sky-500'
-      : 'bg-slate-50 border-slate-200 text-slate-800 focus:border-sky-400',
+    card:  'bg-v-elevated border-v-border',
+    txt1:  'text-v-text',
+    txt3:  'text-v-subtle',
+    input: 'bg-v-bg border-v-border text-v-text placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft',
   }
-  const inputCls = `w-full px-3 py-2.5 rounded-xl text-sm border-2 outline-none transition-all ${cc.input}`
+  const inputCls = `w-full px-3.5 py-2.5 rounded-v-sm text-sm border outline-none transition-shadow ${cc.input}`
 
   const loadData = useCallback(async () => {
     const [{ data: tmpl }, { data: resp }] = await Promise.all([
@@ -660,8 +756,8 @@ export function RellenarFicha({
 
   const renderField = (field: Field) => (
     <div key={field.id}>
-      <label className={`block text-xs font-bold mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-        {field.label} {field.required && <span className="text-red-400">*</span>}
+      <label className={`block text-xs font-bold mb-1.5 ${'text-v-muted'}`}>
+        {field.label} {field.required && <span className="text-v-danger">*</span>}
       </label>
       {field.type === 'textarea' && <textarea rows={3} value={answers[field.id] || ''} placeholder={field.placeholder} onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))} className={`${inputCls} resize-none`} />}
       {field.type === 'text'     && <input type="text"   value={answers[field.id] || ''} placeholder={field.placeholder} onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))} className={inputCls} />}
@@ -676,9 +772,12 @@ export function RellenarFicha({
       {field.type === 'radio' && (
         <div className="flex flex-wrap gap-2">
           {(field.options || []).map(o => (
-            <button key={o} onClick={() => setAnswers(p => ({ ...p, [field.id]: o }))}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all
-                ${answers[field.id] === o ? 'bg-sky-600 border-sky-600 text-white' : isDark ? 'border-[#30363d] text-slate-400 hover:border-sky-700' : 'border-slate-200 text-slate-600 hover:border-sky-300'}`}>
+            <button key={o} type="button" onClick={() => setAnswers(p => ({ ...p, [field.id]: o }))}
+              className={`inline-flex items-center gap-2 rounded-v-sm border px-3.5 py-2 text-sm transition-all
+                ${answers[field.id] === o ? 'border-v-accent/50 bg-v-accent-soft font-semibold text-v-accent ring-4 ring-v-accent-soft' : 'border-v-border bg-v-elevated text-v-muted hover:border-v-accent/30 hover:text-v-text'}`}>
+              <span className={`grid size-4 place-items-center rounded-full border ${answers[field.id] === o ? 'border-transparent bg-v-accent text-white' : 'border-v-border'}`}>
+                {answers[field.id] === o && <Check size={10} />}
+              </span>
               {o}
             </button>
           ))}
@@ -693,27 +792,28 @@ export function RellenarFicha({
     </div>
   )
 
-  if (loading) return <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-sky-500" /></div>
+  if (loading) return <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-v-accent" /></div>
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 className={`font-bold text-base flex items-center gap-2 ${cc.txt1}`}>
-            <FileText size={16} className="text-sky-500" /> {locale === 'en' ? 'Clinical Forms' : 'Fichas Clínicas'}
+          <h3 className={`flex items-center gap-2.5 text-lg font-semibold tracking-tight ${cc.txt1}`}>
+            <span className="grid size-9 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><FileText size={17} /></span>
+            {locale === 'en' ? 'Clinical Forms' : 'Fichas Clínicas'}
           </h3>
-          <p className={`text-xs mt-0.5 ${cc.txt3}`}>{selected ? selected.name : (locale === 'en' ? `Forms of ${childName}` : `Fichas de ${childName}`)}</p>
+          <p className={`mt-1 text-sm ${cc.txt3}`}>{selected ? selected.name : (locale === 'en' ? `Forms of ${childName}` : `Fichas de ${childName}`)}</p>
         </div>
         {!selected && (
           <button onClick={() => setShowHistory(!showHistory)}
-            className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all ${isDark ? 'border-[#30363d] text-slate-400 hover:bg-[#21262d]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-4 text-xs font-semibold text-v-muted shadow-v transition-colors hover:text-v-accent">
             {showHistory ? (locale === 'en' ? 'New form' : 'Nueva ficha') : (locale === 'en' ? `History (${responses.length})` : `Historial (${responses.length})`)}
           </button>
         )}
         {selected && (
           <button onClick={() => { setSelected(null); setAnswers({}) }}
-            className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all ${isDark ? 'border-[#30363d] text-slate-400 hover:bg-[#21262d]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-            ← Cambiar ficha
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-4 text-xs font-semibold text-v-muted shadow-v transition-colors hover:text-v-accent">
+            <ArrowLeft size={13} /> {locale === 'en' ? 'Change form' : 'Cambiar ficha'}
           </button>
         )}
       </div>
@@ -722,7 +822,7 @@ export function RellenarFicha({
       {!selected && showHistory && (
         <div className="space-y-3">
           {responses.length === 0 ? (
-            <div className={`${cc.card} border rounded-2xl p-8 text-center`}>
+            <div className={`${cc.card} border rounded-v p-8 text-center`}>
               <FileText size={28} className={`mx-auto mb-2 ${cc.txt3}`} />
               <p className={`text-sm font-bold ${cc.txt3}`}>{t("admin.sinFichasRegistradas")}</p>
             </div>
@@ -733,29 +833,31 @@ export function RellenarFicha({
       {/* Selector de plantilla */}
       {!selected && !showHistory && (
         templates.length === 0 ? (
-          <div className={`${cc.card} border rounded-2xl p-10 text-center`}>
+          <div className={`${cc.card} border rounded-v p-10 text-center`}>
             <LayoutTemplate size={32} className={`mx-auto mb-3 ${cc.txt3}`} />
             <p className={`font-bold text-sm ${cc.txt3}`}>{t("admin.sinFichasDisponibles")}</p>
             <p className={`text-xs mt-1 opacity-70 ${cc.txt3}`}>{t("admin.adminCrearFichas")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {templates.map(t => (
-              <button key={t.id} onClick={() => { setSelected(t); setAnswers({}) }}
-                className={`${cc.card} border rounded-2xl p-4 text-left hover:border-sky-400 transition-all`}>
+            {templates.map((t, i) => (
+              <motion.button key={t.id} onClick={() => { setSelected(t); setAnswers({}) }}
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 8) * 0.04 }} whileHover={{ y: -2 }}
+                className={`group ${cc.card} border rounded-v p-4 text-left shadow-v transition-colors hover:border-v-accent/40`}>
                 <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDark ? 'bg-sky-900/30' : 'bg-sky-50'}`}>
-                    <FileText size={18} className="text-sky-500" />
-                  </div>
+                  <span className="grid size-11 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent transition-transform group-hover:-rotate-6 group-hover:scale-105">
+                    <FileText size={19} />
+                  </span>
                   <div className="flex-1 min-w-0">
                     <p className={`font-bold text-sm ${cc.txt1}`}>{t.name}</p>
                     {t.description && <p className={`text-xs mt-0.5 ${cc.txt3} line-clamp-2`}>{t.description}</p>}
-                    <p className={`text-[10px] mt-1 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+                    <p className={`text-[10px] mt-1 ${'text-v-subtle'}`}>
                       {t.fields?.length || 0} {locale === 'en' ? 'fields' : 'campos'}{t.sections?.length ? ` · ${t.sections.length} ${locale === 'en' ? 'sections' : 'secciones'}` : ''}
                     </p>
                   </div>
+                  <ChevronDown size={16} className="-rotate-90 self-center text-v-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-v-accent" />
                 </div>
-              </button>
+              </motion.button>
             ))}
           </div>
         )
@@ -763,25 +865,33 @@ export function RellenarFicha({
 
       {/* Rellenar ficha */}
       {selected && (
-        <div className={`${cc.card} border rounded-2xl p-5 space-y-5`}>
-          <div className={`pb-3 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-            <p className={`font-bold text-base ${cc.txt1}`}>{selected.name}</p>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`${cc.card} border rounded-v p-6 shadow-v space-y-5`}>
+          <div className={`pb-4 border-b ${'border-v-border'}`}>
+            <p className={`text-lg font-semibold tracking-tight ${cc.txt1}`}>{selected.name}</p>
             {selected.description && <p className={`text-xs mt-0.5 ${cc.txt3}`}>{selected.description}</p>}
           </div>
 
           {/* ── Header automatizado: Fecha / Alumno / Especialista ─────────────── */}
-          <div className={`rounded-xl p-4 border ${isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-sky-50/50 border-sky-100'}`}>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <p className={`text-[10px] font-bold mb-1 ${cc.txt3}`}>📅 Fecha</p>
-                <p className={`text-sm font-bold capitalize ${cc.txt1}`}>{fechaHoyFmt}</p>
+          <div className="rounded-v-sm border border-v-border bg-v-bg p-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="flex items-start gap-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-v-accent-soft text-v-accent"><Calendar size={14} /></span>
+                <div className="min-w-0">
+                  <p className={`text-[11px] font-medium ${cc.txt3}`}>{locale === 'en' ? 'Date' : 'Fecha'}</p>
+                  <p className={`text-sm font-semibold capitalize ${cc.txt1}`}>{fechaHoyFmt}</p>
+                </div>
               </div>
-              <div>
-                <p className={`text-[10px] font-bold mb-1 ${cc.txt3}`}>👤 Alumno</p>
-                <p className={`text-sm font-bold ${cc.txt1}`}>{childName}</p>
+              <div className="flex items-start gap-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-v-accent-soft text-v-accent"><User size={14} /></span>
+                <div className="min-w-0">
+                  <p className={`text-[11px] font-medium ${cc.txt3}`}>{locale === 'en' ? 'Student' : 'Alumno'}</p>
+                  <p className={`text-sm font-semibold ${cc.txt1}`}>{childName}</p>
+                </div>
               </div>
-              <div>
-                <p className={`text-[10px] font-bold mb-1 ${cc.txt3}`}>👨‍⚕️ Especialista a cargo</p>
+              <div className="flex items-start gap-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-v-accent-soft text-v-accent"><Stethoscope size={14} /></span>
+                <div className="min-w-0">
+                <p className={`text-[11px] font-medium ${cc.txt3}`}>{locale === 'en' ? 'Specialist in charge' : 'Especialista a cargo'}</p>
                 {currentUser ? (
                   <p className={`text-sm font-bold ${cc.txt1}`}>
                     {currentUser.full_name}
@@ -790,9 +900,10 @@ export function RellenarFicha({
                 ) : (
                   <p className={`text-xs italic ${cc.txt3}`}>{t("common.cargando")}</p>
                 )}
+                </div>
               </div>
             </div>
-            <p className={`text-[10px] mt-3 italic ${cc.txt3}`}>
+            <p className={`mt-3 flex items-center gap-1.5 text-[11px] ${cc.txt3}`}><Lock size={11} />
               {locale === 'en' ? 'These fields are recorded automatically when saving the form.' : 'Estos campos se registran automáticamente al guardar la ficha.'}
             </p>
           </div>
@@ -804,7 +915,7 @@ export function RellenarFicha({
             const sf = selected.fields.filter(f => f.section === section.id)
             if (sf.length === 0) return null
             return (
-              <div key={section.id} className={`rounded-xl p-4 border ${isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-50 border-slate-100'}`}>
+              <div key={section.id} className={`rounded-v-sm p-4 border ${'bg-v-fill border-v-border'}`}>
                 <p className={`font-bold text-sm mb-0.5 ${cc.txt1}`}>{section.title}</p>
                 {section.description && <p className={`text-xs mb-3 ${cc.txt3}`}>{section.description}</p>}
                 <div className="space-y-4">{sf.map(renderField)}</div>
@@ -815,12 +926,12 @@ export function RellenarFicha({
             <label className={`block text-xs font-bold mb-1.5 ${cc.txt3}`}>{t("admin.observacionesAdicionales")}</label>
             <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder={t("admin.phNotasClinico")} className={`${inputCls} resize-none`} />
           </div>
-          <button onClick={handleSave} disabled={saving}
-            className="w-full py-3 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-xl text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+          <motion.button whileTap={{ scale: 0.98 }} onClick={handleSave} disabled={saving}
+            className="v-brand flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold disabled:opacity-50">
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? (locale === 'en' ? 'Saving...' : 'Guardando...') : (locale === 'en' ? 'Save form' : 'Guardar ficha')}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       )}
     </div>
   )
@@ -835,9 +946,9 @@ function ResponseCard({ response, isDark }: { response: TemplateResponse; isDark
   const fields: Field[]    = template?.fields || []
   const sections: Section[] = template?.sections || []
   const cc = {
-    card: isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200',
-    txt1: isDark ? 'text-slate-100' : 'text-slate-800',
-    txt3: isDark ? 'text-slate-500' : 'text-slate-400',
+    card: 'bg-v-elevated border-v-border',
+    txt1: 'text-v-text',
+    txt3: 'text-v-subtle',
   }
   const handleWord = async () => {
     setDownloading(true)
@@ -854,38 +965,38 @@ function ResponseCard({ response, isDark }: { response: TemplateResponse; isDark
   const val = (fid: string) => { const v = response.responses[fid]; if (v === undefined || v === null || v === '') return null; return typeof v === 'boolean' ? (v ? 'Sí' : 'No') : String(v) }
 
   return (
-    <div className={`${cc.card} border rounded-2xl overflow-hidden`}>
+    <div className={`${cc.card} border rounded-v overflow-hidden`}>
       <div className="p-4 flex items-center gap-3">
         <button onClick={() => setOpen(!open)} className="flex-1 flex items-center gap-3 text-left min-w-0">
-          <FileText size={16} className="text-sky-500 flex-shrink-0" />
+          <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><FileText size={17} /></span>
           <div className="flex-1 min-w-0">
-            <p className={`text-sm font-bold ${cc.txt1}`}>{template?.name || 'Ficha'}</p>
+            <p className={`text-sm font-semibold ${cc.txt1}`}>{template?.name || 'Ficha'}</p>
             <p className={`text-xs ${cc.txt3}`}>{response.filler_name} · {new Date(response.created_at).toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
           {open ? <ChevronUp size={15} className={cc.txt3} /> : <ChevronDown size={15} className={cc.txt3} />}
         </button>
         <button onClick={handleWord} disabled={downloading}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all flex-shrink-0 disabled:opacity-50 ${isDark ? 'border-sky-700 text-sky-400 hover:bg-sky-900/20' : 'border-sky-200 text-sky-600 hover:bg-sky-50'}`}>
-          {downloading ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-v-accent/30 bg-v-accent-soft px-3.5 py-1.5 text-xs font-semibold text-v-accent transition-colors hover:bg-v-accent hover:text-white disabled:opacity-50">
+          {downloading ? <Loader2 size={12} className="animate-spin" /> : <FileDown size={12} />}
           {downloading ? '...' : 'Word'}
         </button>
       </div>
       {open && (
-        <div className={`p-4 pt-2 border-t space-y-3 ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-          {fields.filter(f => !f.section).map(f => { const v = val(f.id); if (!v) return null; return <div key={f.id}><p className={`text-[10px] font-bold mb-0.5 ${cc.txt3}`}>{f.label}</p><p className={`text-sm ${cc.txt1}`}>{v}</p></div> })}
+        <div className={`p-4 pt-2 border-t space-y-3 ${'border-v-border'}`}>
+          {fields.filter(f => !f.section).map(f => { const v = val(f.id); if (!v) return null; return <div key={f.id}><p className={`text-xs font-semibold mb-0.5 ${cc.txt3}`}>{f.label}</p><p className={`text-sm ${cc.txt1}`}>{v}</p></div> })}
           {sections.map(s => {
             const sf = fields.filter(f => f.section === s.id)
             if (!sf.some(f => val(f.id))) return null
             return (
-              <div key={s.id} className={`rounded-xl p-3 border ${isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-50 border-slate-100'}`}>
+              <div key={s.id} className={`rounded-v-sm p-3 border ${'bg-v-fill border-v-border'}`}>
                 <p className={`text-xs font-bold mb-2 ${cc.txt1}`}>{s.title}</p>
                 <div className="space-y-2">
-                  {sf.map(f => { const v = val(f.id); if (!v) return null; return <div key={f.id}><p className={`text-[10px] font-bold mb-0.5 ${cc.txt3}`}>{f.label}</p><p className={`text-sm ${cc.txt1}`}>{v}</p></div> })}
+                  {sf.map(f => { const v = val(f.id); if (!v) return null; return <div key={f.id}><p className={`text-xs font-semibold mb-0.5 ${cc.txt3}`}>{f.label}</p><p className={`text-sm ${cc.txt1}`}>{v}</p></div> })}
                 </div>
               </div>
             )
           })}
-          {response.notes && <div><p className={`text-[10px] font-bold mb-0.5 ${cc.txt3}`}>{t("admin.observaciones")}</p><p className={`text-sm ${cc.txt1}`}>{response.notes}</p></div>}
+          {response.notes && <div><p className={`text-xs font-semibold mb-0.5 ${cc.txt3}`}>{t("admin.observaciones")}</p><p className={`text-sm ${cc.txt1}`}>{response.notes}</p></div>}
         </div>
       )}
     </div>

@@ -4,6 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getCentroMoneda } from '@/lib/centro-moneda'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { getApiCaller, hasRole, ROLES, unauthorized } from '@/lib/api-auth'
+import { esc, fmtFechaLarga, fmtFechaCorta, RECIBO_CSS, RECIBO_FONTS } from '@/lib/recibo-html'
+import { cobradoDe, saldoDe, type Abono } from '@/lib/pagos'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,299 +17,159 @@ const supabase = createClient(
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function padRecibo(n: number) { return String(n).padStart(4, '0') }
 
-function fmtDate(iso: string, lang: string = 'es') {
-  return new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
-}
-
 function fmtCurrency(n: number, lang: string = 'es', symbol: string = 'S/') {
   return `${symbol}\u00a0${n.toLocaleString(lang === 'en' ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-// ── Fetch center config ───────────────────────────────────────────────────────
-async function getCenterInfo() {
-  // Try to get from centro_instrucciones table first, fallback to env
-  try {
-    const { data } = await supabase.from('centro_instrucciones').select('*').limit(1).single()
-    if (data) return {
-      nombre: data.nombre_centro || process.env.NEXT_PUBLIC_APP_NAME || 'Neuropsicología y Terapias SANTI',
-      ruc:    data.ruc || '',
-      direccion: data.direccion || '',
-      telefono:  data.telefono || '',
-      email:     data.email || '',
-    }
-  } catch {}
+// ── Center that owns the payment (multi-tenant: payments.centro_id, else the patient's) ───
+async function getCenterInfo(centroId: string | null, childId: string | null) {
+  const b = await getCentroBranding({ centroId, childId })
   return {
-    nombre:    process.env.NEXT_PUBLIC_APP_NAME || 'Neuropsicología y Terapias SANTI',
-    ruc:       process.env.CENTER_RUC || '',
-    direccion: process.env.CENTER_ADDRESS || '',
-    telefono:  process.env.CENTER_PHONE || '',
-    email:     process.env.CENTER_EMAIL || '',
+    nombre:    b.name,
+    ruc:       b.ruc || '',
+    direccion: b.direccion || '',
+    telefono:  b.telefono || '',
+    email:     b.email || '',
+    logoUrl:   b.logoUrl,
   }
 }
 
-// ── PDF generation (pure JS, no jsPDF import needed server-side) ──────────────
-// We generate an HTML template and return it as a self-printing page.
-// The client will open this in a new tab and the browser handles PDF via print.
+const iniciales = (nombre: string) =>
+  nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '·'
+
+// ── Recibo en HTML (el navegador lo imprime / guarda como PDF) ────────────────
 function generateReceiptHTML(payment: any, center: any, child: any, parentProfile: any, reciboNum: string, lang: string = 'es', symbol: string = 'S/') {
   const isEN = lang === 'en'
   const L = (en: string, es: string) => (isEN ? en : es)
-  const statusLabels: Record<string, string> = isEN ? {
-    paid: 'PAID', pending: 'PENDING', partial: 'PARTIAL',
-    cancelled: 'CANCELLED', refunded: 'REFUNDED',
-  } : {
-    paid: 'PAGADO', pending: 'PENDIENTE', partial: 'PARCIAL',
-    cancelled: 'CANCELADO', refunded: 'DEVUELTO',
+  const STATUS: Record<string, { es: string; en: string; fg: string; bg: string }> = {
+    paid:      { es: 'Pagado',    en: 'Paid',      fg: '#047857', bg: '#e7f8f0' },
+    pending:   { es: 'Pendiente', en: 'Pending',   fg: '#b45309', bg: '#fff5e0' },
+    partial:   { es: 'Parcial',   en: 'Partial',   fg: '#0069db', bg: '#e8f2ff' },
+    cancelled: { es: 'Cancelado', en: 'Cancelled', fg: '#c81e1e', bg: '#fdecec' },
+    refunded:  { es: 'Devuelto',  en: 'Refunded',  fg: '#475569', bg: '#eef2f6' },
   }
-  const statusColors: Record<string, string> = {
-    paid: '#059669', pending: '#b45309', partial: '#1d4ed8',
-    cancelled: '#dc2626', refunded: '#7c3aed',
+  const st = STATUS[payment.status] || { es: payment.status, en: payment.status, fg: '#475569', bg: '#eef2f6' }
+  const isPaid   = payment.status === 'paid'
+  // Solo hay fecha de pago si realmente se pagó; un pendiente no debe parecer cobrado
+  const paidDate = payment.paid_at ? fmtFechaLarga(payment.paid_at, lang) : null
+  const sinFecha = L('Not paid yet', 'Aún no pagado')
+  const totalLbl: Record<string, string> = {
+    paid: L('Total paid', 'Total pagado'), pending: L('Amount due', 'Total por pagar'), partial: L('Service total', 'Total del servicio'),
+    cancelled: L('Total (cancelled)', 'Total (anulado)'), refunded: L('Total refunded', 'Total devuelto'),
   }
-  const statusBg: Record<string, string> = {
-    paid: '#dcfce7', pending: '#fef9c3', partial: '#dbeafe',
-    cancelled: '#fee2e2', refunded: '#ede9fe',
+  const aviso: Record<string, string> = {
+    pending: L('This charge is pending payment.', 'Este cobro está pendiente de pago.'),
+    partial: L(`Down payment received. Balance due: ${fmtCurrency(saldoDe(payment), lang, symbol)}.`, `Adelanto recibido. Saldo pendiente: ${fmtCurrency(saldoDe(payment), lang, symbol)}.`),
+    cancelled: L('This charge was cancelled and has no value.', 'Este cobro fue anulado y no tiene valor.'),
+    refunded: L('This amount was refunded to the family.', 'Este monto fue devuelto a la familia.'),
   }
-
-  const isPaid    = payment.status === 'paid'
-  const statusLbl = statusLabels[payment.status] || payment.status.toUpperCase()
-  const statusClr = statusColors[payment.status] || '#374151'
-  const statusBgC = statusBg[payment.status]     || '#f3f4f6'
-  const paidDate  = payment.paid_at ? fmtDate(payment.paid_at, lang) : fmtDate(payment.created_at, lang)
-  const emitDate  = fmtDate(payment.created_at, lang)
-
-  const methodIcon: Record<string, string> = isEN ? {
-    yape: 'Yape', plin: 'Plin', efectivo: 'Cash',
-    transferencia: 'Bank Transfer', tarjeta: 'Card', otro: 'Other',
-  } : {
-    yape: 'Yape', plin: 'Plin', efectivo: 'Efectivo',
-    transferencia: 'Transferencia Bancaria', tarjeta: 'Tarjeta', otro: 'Otro',
-  }
-
-  // Logo URL — use public logo if exists
-  const logoUrl = process.env.NEXT_PUBLIC_APP_URL
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/images/logo.png`
-    : null
+  const emitDate = fmtFechaLarga(payment.created_at, lang)
+  const METHOD: Record<string, string> = isEN
+    ? { yape: 'Yape', plin: 'Plin', efectivo: 'Cash', transferencia: 'Bank transfer', tarjeta: 'Card', otro: 'Other' }
+    : { yape: 'Yape', plin: 'Plin', efectivo: 'Efectivo', transferencia: 'Transferencia bancaria', tarjeta: 'Tarjeta', otro: 'Otro' }
+  const paciente = child?.name || payment.paciente_externo || '—'
+  const externo  = !child?.name && !!payment.paciente_externo
+  const monto    = fmtCurrency(Number(payment.amount), lang, symbol)
+  const nota     = String(payment.notes || '').trim()
+  const abonos: Abono[] = Array.isArray(payment.abonos) ? payment.abonos : []
+  const esParcial = payment.status === 'partial'
+  const logoUrl: string | null = center.logoUrl || null
 
   return `<!DOCTYPE html>
 <html lang="${lang}">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>${L('Receipt','Recibo')} ${reciboNum}</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Helvetica,Arial,sans-serif;background:#eef2f7;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px}
-    .wrapper{width:100%;max-width:700px}
-    .doc{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.12)}
-
-    /* ── TOP HEADER: empresa ── */
-    .top{padding:24px 32px;border-bottom:1px solid #e5e7eb;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
-    .company{display:flex;align-items:flex-start;gap:12px;flex:1;min-width:0}
-    .company-logo{width:44px;height:44px;min-width:44px;border-radius:10px;background:#1e3a5f;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden}
-    .company-logo img{width:100%;height:100%;object-fit:contain}
-    .company-text{min-width:0;flex:1}
-    .company-text h1{font-size:17px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .company-text p{font-size:11px;color:#6b7280;margin-top:1px}
-    .company-meta{margin-top:6px;display:flex;flex-direction:column;gap:2px}
-    .company-meta span{font-size:11px;color:#374151}
-    .company-meta .ruc{font-weight:800;color:#1e3a5f;font-size:12px}
-
-    .recibo-info{text-align:right;flex-shrink:0}
-    .recibo-info .tipo{font-size:10px;font-weight:700;letter-spacing:2px;color:#9ca3af;text-transform:uppercase}
-    .recibo-info .num{font-size:26px;font-weight:900;color:#1e3a5f;line-height:1.1;margin-top:2px;white-space:nowrap}
-    .recibo-info .emitido{font-size:11px;color:#6b7280;margin-top:4px;white-space:nowrap}
-
-    /* ── STATUS STRIPE ── */
-    .stripe{padding:10px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:6px}
-    .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.5px}
-    .badge::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
-    .stripe-right{font-size:11px;color:#6b7280}
-
-    /* ── BODY ── */
-    .body{padding:24px 32px}
-
-    /* Section title */
-    .stitle{font-size:9px;font-weight:800;letter-spacing:2px;color:#9ca3af;text-transform:uppercase;padding-bottom:8px;border-bottom:1px solid #f1f5f9;margin-bottom:14px}
-
-    /* Grid info */
-    .igrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
-    .iitem label{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px}
-    .iitem p{font-size:13px;font-weight:600;color:#111827}
-    .iitem p.muted{color:#6b7280;font-weight:400}
-
-    /* ── TABLE ── */
-    .tbl{width:100%;border-collapse:collapse;margin-bottom:4px}
-    .tbl thead{background:#f8fafc}
-    .tbl thead th{font-size:9px;font-weight:800;letter-spacing:1.5px;color:#9ca3af;text-transform:uppercase;padding:10px 12px;text-align:left;border-bottom:2px solid #e5e7eb}
-    .tbl thead th.r{text-align:right}
-    .tbl thead th.c{text-align:center}
-    .tbl tbody tr{border-bottom:1px solid #f1f5f9}
-    .tbl tbody tr:last-child{border-bottom:none}
-    .tbl tbody td{padding:14px 12px;font-size:13px;color:#374151;vertical-align:top}
-    .tbl tbody td.r{text-align:right}
-    .tbl tbody td.c{text-align:center}
-    .tbl tbody td strong{color:#111827;display:block;font-weight:700;margin-bottom:2px}
-    .tbl tbody td .sub{font-size:11px;color:#9ca3af}
-    .tbl tbody td .amount{font-size:15px;font-weight:800;color:#059669;white-space:nowrap}
-
-    /* ── TOTAL BOX ── */
-    .total-box{background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin:20px 0}
-    .total-box .lbl{font-size:12px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:1px}
-    .total-box .val{font-size:32px;font-weight:900;color:#059669;white-space:nowrap}
-
-    /* ── PAYMENT INFO ── */
-    .pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
-    .pay-item label{font-size:9px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px}
-    .pill{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;color:#374151}
-    .pay-item .date{font-size:14px;font-weight:700;color:#111827}
-
-    /* ── CONFIRM BOX ── */
-    .confirm{background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;margin-top:20px}
-    .confirm p{font-size:12px;color:#166534;font-weight:600}
-
-    /* ── FOOTER ── */
-    .footer{background:#f8fafc;border-top:1px solid #e5e7eb;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-    .footer-l{font-size:11px;color:#6b7280;line-height:1.8}
-    .footer-l strong{color:#374151;display:block}
-    .footer-r{font-size:10px;color:#9ca3af;text-align:right;line-height:1.8}
-
-    /* Print button */
-    .actions{margin-top:16px;display:flex;gap:8px;justify-content:center}
-    .btn-print{background:#1e3a5f;color:white;border:none;padding:11px 28px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer}
-    .btn-close{background:#f1f5f9;color:#374151;border:none;padding:11px 20px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer}
-
-    @media print{
-      body{background:white;padding:0}
-      .doc{box-shadow:none;border-radius:0;max-width:100%}
-      .actions{display:none}
-      .wrapper{max-width:100%}
-    }
-  </style>
+  <title>${L('Receipt', 'Recibo')} ${esc(reciboNum)} · ${esc(center.nombre)}</title>
+  ${RECIBO_FONTS}
+  <style>${RECIBO_CSS}</style>
 </head>
 <body>
-  <div class="wrapper">
+  <div class="wrap">
     <div class="doc">
-
-      <!-- ── EMPRESA ─────────────────────────────── -->
       <div class="top">
         <div class="company">
-          <div class="company-logo">
-            ${logoUrl ? `<img src="${logoUrl}" alt="Logo" onerror="this.style.display='none';this.parentElement.textContent='JA'"/>` : '🎯'}
-          </div>
-          <div class="company-text">
-            <h1>${center.nombre}</h1>
-            <p>${L('ABA Therapy Center','Centro de Terapias ABA')}</p>
-            <div class="company-meta">
-              ${center.ruc ? `<span class="ruc">RUC: ${center.ruc}</span>` : ''}
-              ${center.direccion ? `<span>${center.direccion}</span>` : ''}
-              ${center.telefono ? `<span>${L('Phone','Tel')}: ${center.telefono}</span>` : ''}
-              ${center.email ? `<span>${center.email}</span>` : ''}
+          <div class="logo">${logoUrl ? `<img src="${esc(logoUrl)}" alt="" onerror="this.remove()"/>` : `<span>${esc(iniciales(center.nombre))}</span>`}</div>
+          <div style="min-width:0">
+            <h1>${esc(center.nombre)}</h1>
+            <p class="sub">${L('Therapy center', 'Centro de terapias')}</p>
+            <div class="meta">
+              ${center.ruc ? `<span>RUC <b>${esc(center.ruc)}</b></span>` : ''}
+              ${center.telefono ? `<span>${esc(center.telefono)}</span>` : ''}
+              ${center.email ? `<span>${esc(center.email)}</span>` : ''}
+              ${center.direccion ? `<span>${esc(center.direccion)}</span>` : ''}
             </div>
           </div>
         </div>
-        <div class="recibo-info">
-          <p class="tipo">${L('Payment Receipt','Recibo de Pago')}</p>
-          <p class="num">#${reciboNum}</p>
-          <p class="emitido">${L('Issued','Emitido')}: ${emitDate}</p>
+        <div class="rinfo">
+          <p class="kind">${L('Payment receipt', 'Recibo de pago')}</p>
+          <p class="num">N.° ${esc(reciboNum)}</p>
+          <p class="em">${L('Issued', 'Emitido')} ${emitDate}</p>
         </div>
       </div>
 
-      <!-- ── STATUS ─────────────────────────────── -->
-      <div class="stripe" style="background:${statusBgC}30">
-        <span class="badge" style="background:${statusBgC};color:${statusClr}">${statusLbl}</span>
-        <span class="stripe-right">${L('Payment date','Fecha de pago')}: <strong>${paidDate}</strong></span>
+      <div class="bar">
+        <span class="pill" style="background:${st.bg};color:${st.fg}"><i></i>${isEN ? st.en : st.es}</span>
+        <span class="d">${paidDate ? `${L('Payment date', 'Fecha de pago')}: <b>${paidDate}</b>` : `${L('Registered', 'Registrado')}: <b>${emitDate}</b>`}</span>
       </div>
 
-      <!-- ── BODY ──────────────────────────────── -->
       <div class="body">
-
-        <!-- DATOS CLIENTE -->
-        <p class="stitle">${L('Client details','Datos del cliente')}</p>
-        <div class="igrid">
-          <div class="iitem">
-            <label>${L('Patient','Paciente')}</label>
-            <p>${child?.name || '—'}</p>
+        <p class="sec">${L('Client', 'Cliente')}</p>
+        <div class="grid">
+          <div class="card">
+            <label>${L('Patient', 'Paciente')}</label>
+            <p>${esc(paciente)}${externo ? `<span class="tag">${L('not enrolled', 'sin inscribir')}</span>` : ''}</p>
           </div>
-          <div class="iitem">
-            <label>${L('Guardian / Tutor','Responsable / Tutor')}</label>
-            <p>${parentProfile?.full_name || '—'}</p>
-          </div>
-          ${parentProfile?.phone ? `<div class="iitem"><label>${L('Phone','Teléfono')}</label><p>${parentProfile.phone}</p></div>` : ''}
-          ${parentProfile?.email ? `<div class="iitem"><label>${L('Email','Correo')}</label><p class="muted">${parentProfile.email}</p></div>` : ''}
-        </div>
-
-        <!-- SERVICIOS -->
-        <p class="stitle">${L('Service details','Detalle de servicios')}</p>
-        <table class="tbl">
-          <thead>
-            <tr>
-              <th style="width:50%">${L('Description','Descripción')}</th>
-              <th class="c" style="width:10%">${L('Qty','Cant.')}</th>
-              <th class="r" style="width:20%">${L('Unit price','P. Unit.')}</th>
-              <th class="r" style="width:20%">${L('Total','Total')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <strong>${payment.concept}</strong>
-                ${payment.notes ? `<span class="sub">${payment.notes}</span>` : ''}
-              </td>
-              <td class="c">1</td>
-              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount), lang, symbol)}</span></td>
-              <td class="r"><span class="amount">${fmtCurrency(Number(payment.amount), lang, symbol)}</span></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <!-- TOTAL -->
-        <div class="total-box">
-          <div>
-            <p class="lbl">${L('Total','Total')}</p>
-            <p style="font-size:11px;color:#6b7280;margin-top:2px">${L('Includes all items','Incluye todos los conceptos')}</p>
-          </div>
-          <p class="val">${fmtCurrency(Number(payment.amount), lang, symbol)}</p>
-        </div>
-
-        <!-- MÉTODO DE PAGO -->
-        <div class="pay-grid">
-          <div class="pay-item">
-            <label>${L('Payment method','Método de pago')}</label>
-            <span class="pill">${methodIcon[payment.payment_method] || payment.payment_method}</span>
-          </div>
-          <div class="pay-item">
-            <label>${L('Payment date','Fecha de pago')}</label>
-            <p class="date">${paidDate}</p>
+          <div class="card">
+            <label>${L('Guardian', 'Responsable / tutor')}</label>
+            <p>${esc(parentProfile?.full_name || '—')}</p>
+            ${parentProfile?.phone || parentProfile?.email ? `<p class="m">${esc([parentProfile?.phone, parentProfile?.email].filter(Boolean).join(' · '))}</p>` : ''}
           </div>
         </div>
 
-        ${isPaid ? `
-        <div class="confirm">
-          <span style="font-size:12px;font-weight:900;color:#059669;background:#dcfce7;padding:3px 8px;border-radius:4px;font-family:monospace">OK</span>
-          <p>${L('Payment received and confirmed. Thank you for trusting','Pago recibido y confirmado. Gracias por confiar en')} ${center.nombre}.</p>
+        <p class="sec">${L('Detail', 'Detalle')}</p>
+        <div class="items">
+          <div class="row h"><span>${L('Description', 'Descripción')}</span><span class="c hide">${L('Qty', 'Cant.')}</span><span class="r hide">${L('Unit price', 'P. unit.')}</span><span class="r">${L('Amount', 'Importe')}</span></div>
+          <div class="row b"><span class="concept">${esc(payment.concept || '—')}</span><span class="c hide">1</span><span class="r hide">${monto}</span><span class="r">${monto}</span></div>
+        </div>
+
+        ${nota ? `
+        <div class="note">
+          <span class="ic">✎</span>
+          <div style="min-width:0"><label>${L('Note', 'Nota')}</label><p>${esc(nota)}</p></div>
         </div>` : ''}
 
+        ${esParcial ? `
+        <div class="items" style="margin-top:18px">
+          <div class="row h" style="grid-template-columns:1fr auto"><span>${L('Payments on account', 'Pagos a cuenta')}</span><span class="r">${L('Amount', 'Importe')}</span></div>
+          ${abonos.map((a, i) => `<div class="row b" style="grid-template-columns:1fr auto;font-size:13px"><span>${L('Payment', 'Abono')} ${i + 1} · ${fmtFechaCorta(a.fecha, lang)} · <span style="color:var(--muted)">${esc(METHOD[a.metodo] || a.metodo)}</span></span><span class="r">${fmtCurrency(Number(a.monto), lang, symbol)}</span></div>`).join('')}
+          <div class="row b" style="grid-template-columns:1fr auto;background:#e7f8f0"><span style="font-weight:600;color:#047857">${L('Paid so far', 'Pagado a la fecha')}</span><span class="r" style="color:#047857">${fmtCurrency(cobradoDe(payment), lang, symbol)}</span></div>
+          <div class="row b" style="grid-template-columns:1fr auto;background:#fff5e0"><span style="font-weight:600;color:#b45309">${L('Balance due', 'Saldo pendiente')}</span><span class="r" style="color:#b45309">${fmtCurrency(saldoDe(payment), lang, symbol)}</span></div>
+        </div>` : ''}
+
+        <div class="total">
+          <span class="lbl">${totalLbl[payment.status] || L('Total', 'Total')}</span>
+          <span class="val"${payment.status === 'cancelled' ? ' style="text-decoration:line-through;color:#8a98ad"' : ''}>${monto}</span>
+        </div>
+
+        <div class="pay">
+          <div class="card"><label>${L('Payment method', 'Método de pago')}</label><p>${esc(METHOD[payment.payment_method] || payment.payment_method || '—')}</p></div>
+          <div class="card"><label>${L('Payment date', 'Fecha de pago')}</label><p${paidDate ? '' : ' style="color:#8a98ad;font-weight:500"'}>${paidDate || sinFecha}</p></div>
+        </div>
+
+        ${!isPaid && aviso[payment.status] ? `<div class="ok" style="background:${st.bg};color:${st.fg}"><b style="background:${st.fg}">!</b><span>${aviso[payment.status]}</span></div>` : ''}
+        ${isPaid ? `<div class="ok"><b>✓</b><span>${L('Payment received. Thank you for trusting', 'Pago recibido. Gracias por confiar en')} ${esc(center.nombre)}.</span></div>` : ''}
       </div>
 
-      <!-- ── FOOTER ─────────────────────────────── -->
-      <div class="footer">
-        <div class="footer-l">
-          <strong>${center.nombre}</strong>
-          ${center.ruc ? `RUC: ${center.ruc}` : 'Centro de Terapias ABA'}
-          ${center.direccion ? `<br/>${center.direccion}` : ''}
-          <br/>${L('This document is an internal payment receipt.','Este documento es un recibo interno de pago.')}
-        </div>
-        <div class="footer-r">
-          ${L('Receipt No.','Recibo N°')} ${reciboNum}<br/>
-          ${new Date().toLocaleDateString(isEN ? 'en-US' : 'es-PE')}<br/>
-          <span style="color:#d1d5db">${L('Not valid as a SUNAT tax document','No válido como comprobante SUNAT')}</span>
-        </div>
+      <div class="foot">
+        <div><b>${esc(center.nombre)}</b><br/>${L('Internal payment receipt.', 'Recibo interno de pago.')}</div>
+        <div class="r">${L('Receipt', 'Recibo')} N.° ${esc(reciboNum)}<br/>${L('Not valid as a SUNAT tax document', 'No válido como comprobante SUNAT')}</div>
       </div>
     </div>
 
-    <!-- Botones (no imprimen) -->
     <div class="actions">
-      <button class="btn-print" onclick="window.print()">${L('Print / Save PDF','Imprimir / Guardar PDF')}</button>
-      <button class="btn-close" onclick="window.close()">${L('Close','Cerrar')}</button>
+      <button class="btn p" onclick="window.print()">${L('Print / Save PDF', 'Imprimir / Guardar PDF')}</button>
+      <button class="btn g" onclick="window.close()">${L('Close', 'Cerrar')}</button>
     </div>
   </div>
 </body>
@@ -323,6 +187,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Falta el ID del pago' }, { status: 400 })
   }
 
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+
   try {
     // 1. Fetch payment with child and parent profile
     const { data: payment, error } = await supabase
@@ -337,22 +204,28 @@ export async function GET(req: NextRequest) {
       .eq('id', paymentId)
       .single()
 
-    if (error || !payment) {
+    // Same 404 for "not yours" so payment ids can't be probed across centers.
+    const ownsAsStaff = hasRole(caller, ROLES.staff) && payment?.centro_id === caller.centroId
+    const ownsAsParent = (payment?.children as { parent_id?: string } | null)?.parent_id === caller.id
+    if (error || !payment || !(ownsAsStaff || ownsAsParent)) {
       return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
     }
 
-    // 2. Count prior payments for this child to generate sequential receipt number
+    // 2. Número de recibo correlativo por centro y año (antes era por paciente: se repetían entre niños
+    //    y fallaba con pacientes sin inscribir, que no tienen child_id)
+    const year = new Date(payment.created_at).getFullYear()
     const { count } = await supabase
       .from('payments')
       .select('*', { count: 'exact', head: true })
-      .eq('child_id', payment.child_id)
+      .eq('centro_id', payment.centro_id)
+      .gte('created_at', new Date(Date.UTC(year, 0, 1)).toISOString())
       .lte('created_at', payment.created_at)
 
-    const reciboNum = `${new Date(payment.created_at).getFullYear()}-${padRecibo(count || 1)}`
+    const reciboNum = `${year}-${padRecibo(count || 1)}`
 
     // 3. Get center info
-    const center = await getCenterInfo()
-    const cur = await getCentroMoneda()
+    const center = await getCenterInfo(payment.centro_id ?? null, payment.child_id ?? null)
+    const cur = await getCentroMoneda(payment.centro_id ?? null)
 
     // 4. Get child and parent info
     const child         = payment.children

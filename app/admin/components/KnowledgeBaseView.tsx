@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import { useTheme } from '@/components/ThemeContext'
+import { confirmar } from '@/components/ui/confirmar'
 
 type InputMode = 'archivo' | 'url' | 'texto' | 'buscar'
 type Tab = 'aprender' | 'biblioteca' | 'diagnosticos'
@@ -28,6 +29,9 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
   ].filter(t => !enabledTabs || enabledTabs[`cerebro_${t.id}`] !== false) as { id: Tab; label: string; icon: React.ReactNode }[]
   // If active tab got disabled, jump to first available
   const activeTab: Tab = cerebroTabs.find(t => t.id === tab) ? tab : (cerebroTabs[0]?.id ?? 'aprender')
+  const tieneTab = (id: Tab) => cerebroTabs.some(t => t.id === id)
+  // Planes públicos: solo consulta CIE-11 / DSM-5 (el Cerebro completo es del plan Fundador)
+  const soloConsulta = !tieneTab('aprender') && !tieneTab('biblioteca')
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -72,7 +76,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
 
   const handleSeedAblls = async () => {
     if (seedingAblls) return
-    if (!confirm(t('auto.knowledgeBaseView.estoCargaraElProtocoloAbllsr'))) return
+    if (!await confirmar(t('auto.knowledgeBaseView.estoCargaraElProtocoloAbllsr'))) return
     setSeedingAblls(true)
     setSeedProgress('Obteniendo lista de secciones…')
     try {
@@ -580,11 +584,11 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
       throw new Error(
         `No se pudo extraer texto del PDF ni con lectura digital ni con OCR (${totalPages} páginas, ${totalChars} chars).\n\n` +
         `POSIBLES CAUSAS:\n` +
-        `  • GEMINI_API_KEY no configurada → el OCR no puede correr\n` +
+        `  • GROQ_API_KEY no configurada → el OCR no puede correr\n` +
         `  • PDF protegido con contraseña o corrupto\n` +
         `  • Calidad del escaneo muy baja (imágenes borrosas)\n\n` +
         `OPCIONES:\n` +
-        `  1) Verificá que GEMINI_API_KEY esté en las variables de entorno\n` +
+        `  1) Verificá que GROQ_API_KEY esté en las variables de entorno\n` +
         `  2) Si tenés el contenido en Word/web, usá modo "📝 Pegar texto"`
       )
     }
@@ -758,7 +762,7 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('auto.knowledgeBaseView.eliminarEsteDocumento'))) return
+    if (!await confirmar(t('auto.knowledgeBaseView.eliminarEsteDocumento'))) return
     await fetch('/api/knowledge/ingest', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-locale': typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es' },
       body: JSON.stringify({ id, locale: localStorage.getItem('vanty_locale') || 'es' }),
@@ -786,8 +790,13 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
             <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('ui.baseConocimiento')}</p>
           </div>
         </div>
-        {/* Stats row: 3 equal columns */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* Stats row: 3 equal columns (solo plan Fundador) */}
+        {soloConsulta ? (
+          <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            {L('Search ICD-11 and DSM-5 diagnoses. ARIA and the reports of your center use the shared Vanty clinical knowledge base.',
+               'Consulta diagnósticos CIE-11 y DSM-5. ARIA y los informes de tu centro usan la base de conocimiento clínico compartida de Vanty.')}
+          </p>
+        ) : <div className="grid grid-cols-3 gap-2">
           {[
             { label: t('ui.documents'), value: documentos.length, color: 'text-sky-500' },
             { label: t('ui.fragments'), value: totalChunks.toLocaleString(), color: 'text-sky-500' },
@@ -798,36 +807,36 @@ export default function KnowledgeBaseView({ enabledTabs }: { enabledTabs?: Recor
               <p className={`text-[9px] md:text-[10px] font-bold leading-tight mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{s.label}</p>
             </div>
           ))}
-        </div>
+        </div>}
       </div>
 
       {/* Tabs */}
-      <div className={`flex rounded-2xl p-1.5 border gap-1.5 overflow-x-auto scrollbar-hide ${isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-50 border-slate-200'}`}>
-        <button onClick={() => setTab('aprender')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 md:px-4 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${tab === 'aprender'
+      {!soloConsulta && <div className={`flex rounded-2xl p-1.5 border gap-1.5 overflow-x-auto scrollbar-hide ${isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-50 border-slate-200'}`}>
+        {tieneTab('aprender') && <button onClick={() => setTab('aprender')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 md:px-4 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTab === 'aprender'
             ? isDark ? 'bg-[#161b22] text-sky-400 shadow border border-[#30363d]' : 'bg-white text-sky-700 shadow border border-slate-200'
             : isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
           <Sparkles size={13} />
           <span className="hidden sm:inline">{t('whatsapp.aprenderInternet')}</span>
           <span className="sm:hidden">{t("admin.aprender")}</span>
-        </button>
+        </button>}
         <button onClick={() => setTab('diagnosticos')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 md:px-4 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${tab === 'diagnosticos'
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 md:px-4 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTab === 'diagnosticos'
             ? isDark ? 'bg-[#161b22] text-sky-400 shadow border border-[#30363d]' : 'bg-white text-sky-700 shadow border border-slate-200'
             : isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
           <Stethoscope size={13} />
           <span className="hidden sm:inline">{L('ICD-11 / DSM-5', 'CIE-11 / DSM-5')}</span>
           <span className="sm:hidden">{L('ICD-11', 'CIE-11')}</span>
         </button>
-        <button onClick={() => setTab('biblioteca')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 md:px-4 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${tab === 'biblioteca'
+        {tieneTab('biblioteca') && <button onClick={() => setTab('biblioteca')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-2 md:px-4 rounded-xl text-xs md:text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTab === 'biblioteca'
             ? isDark ? 'bg-[#161b22] text-sky-400 shadow border border-[#30363d]' : 'bg-white text-sky-700 shadow border border-slate-200'
             : isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
           <BookMarked size={13} />
           <span className="hidden sm:inline">{L('Library', 'Biblioteca')} ({documentos.length})</span>
           <span className="sm:hidden">{L('Library', 'Biblio')} ({documentos.length})</span>
-        </button>
-      </div>
+        </button>}
+      </div>}
 
       {/* ══ TAB: APRENDER ══ */}
       {activeTab === 'aprender' && (

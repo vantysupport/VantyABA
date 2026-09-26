@@ -8,6 +8,10 @@ export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { safeFetch } from '@/lib/safe-fetch'
+import { storageObjectOf } from '@/lib/file-url'
+import { getApiCaller, hasRole, ROLES, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { esCentroFundador } from '@/lib/knowledge-base'
 import {
   extractTextFromPdf,
   extractTextFromHtml,
@@ -16,11 +20,15 @@ import {
 } from '@/lib/knowledge-base'
 
 // ── GET: Listar documentos de la base de conocimiento ──────────────────────
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { data, error } = await supabaseAdmin
       .from('knowledge_documents')
       .select('id, titulo, tipo, descripcion, procesado, total_chunks, source_url, created_at')
+      .eq('centro_id', caller.centroId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -32,21 +40,28 @@ export async function GET() {
 
 // ── DELETE: Eliminar documento y sus chunks ────────────────────────────────
 export async function DELETE(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const { id } = await request.json()
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('knowledge_documents', id, caller.centroId))) return notFound()
 
     // Borrar chunks primero
     await supabaseAdmin
       .from('knowledge_chunks')
       .delete()
       .eq('document_id', id)
+      .eq('centro_id', caller.centroId)
 
     // Borrar documento
     const { error } = await supabaseAdmin
       .from('knowledge_documents')
       .delete()
       .eq('id', id)
+      .eq('centro_id', caller.centroId)
 
     if (error) throw error
     return NextResponse.json({ success: true })
@@ -57,6 +72,10 @@ export async function DELETE(request: NextRequest) {
 
 // ── POST: Ingestar e indexar un documento nuevo ────────────────────────────
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const body = await request.json()
     const { titulo, tipo = 'libro', descripcion, storageUrl, fileName, sourceUrl, texto } = body
@@ -75,6 +94,7 @@ export async function POST(request: NextRequest) {
         procesado: false,
         total_chunks: 0,
         source_url: sourceUrl || null,
+        centro_id: caller.centroId,
       })
       .select('id')
       .single()
@@ -88,6 +108,9 @@ export async function POST(request: NextRequest) {
     // 2. Procesar de forma SÍNCRONA (maxDuration: 300s en vercel.json)
     // NO usar fire-and-forget: Vercel mata el proceso al enviar la respuesta
     const result = await processAndIndex(documentId, { storageUrl, fileName, sourceUrl, texto, titulo, tipo })
+
+    // Cerebro IA guarda solo el TEXTO indexado: el archivo original del libro se borra al terminar.
+    await borrarArchivoOriginal(storageUrl)
 
     if (!result.success) {
       return NextResponse.json({
@@ -163,7 +186,7 @@ async function processAndIndex(
     })
 
     if (!result.success) {
-      await markFailed(documentId, result.error || 'El indexado falló — verifica GEMINI_API_KEY')
+      await markFailed(documentId, result.error || 'El indexado falló — verifica GROQ_API_KEY')
       console.error(`[ingest] Falló indexado doc ${documentId}:`, result.error)
       return { success: false, chunks: 0, error: result.error }
     }
@@ -183,12 +206,13 @@ async function fetchAndExtractFromUrl(url: string): Promise<string> {
   // Convertir URLs de Google Drive al formato de descarga directa
   const processedUrl = convertGoogleDriveUrl(url)
 
-  const response = await fetch(processedUrl, {
+  const response = await safeFetch(processedUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; SANTI-Bot/1.0)',
+      'User-Agent': 'Mozilla/5.0 (compatible; Vanty-Bot/1.0)',
       'Accept': 'text/html,application/pdf,*/*',
     },
-    redirect: 'follow',
+  }).catch(() => {
+    throw new Error('La URL no es válida o apunta a una dirección no permitida.')
   })
 
   if (!response.ok) {
@@ -224,7 +248,7 @@ async function fetchAndExtractFromUrl(url: string): Promise<string> {
 // ── Descargar desde Supabase Storage y extraer texto ─────────────────────
 async function fetchAndExtractFromStorage(storageUrl: string, fileName: string): Promise<string> {
   const response = await fetch(storageUrl, {
-    headers: { 'User-Agent': 'SANTI-Bot/1.0' },
+    headers: { 'User-Agent': 'Vanty-Bot/1.0' },
   })
 
   if (!response.ok) {
@@ -234,9 +258,9 @@ async function fetchAndExtractFromStorage(storageUrl: string, fileName: string):
   const buffer = await response.arrayBuffer()
   const ext = fileName.toLowerCase().split('.').pop() || ''
 
-  // PDF — usar Gemini Vision (lee texto + imágenes + escaneados)
+  // PDF — texto digital con pdf-parse; si es escaneado, OCR con la visión de Groq
   if (ext === 'pdf') {
-    console.log(`[ingest] Extrayendo PDF con Gemini Vision (${Math.round(buffer.byteLength / 1024)}KB)`)
+    console.log(`[ingest] Extrayendo PDF (${Math.round(buffer.byteLength / 1024)}KB)`)
     return extractTextFromPdf(buffer)
   }
 
@@ -298,4 +322,12 @@ async function markFailed(documentId: string, errorMsg: string) {
       descripcion: `❌ Error: ${errorMsg.slice(0, 200)}`,
     })
     .eq('id', documentId)
+}
+
+
+// Borra el archivo subido para indexar (solo si está en el área de Cerebro IA).
+async function borrarArchivoOriginal(storageUrl?: string) {
+  const obj = storageObjectOf(storageUrl)
+  if (!obj || obj.bucket !== 'knowledge-base' || obj.r2) return
+  await supabaseAdmin.storage.from('knowledge-base').remove([obj.path]).catch(() => {})
 }

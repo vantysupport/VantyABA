@@ -9,31 +9,31 @@ import { toBCP47 } from '@/lib/i18n'
  * EVALUACIONES UNIFICADAS - Centro Clínico ABA
  * Fusiona Evaluaciones Clínicas (BRIEF2, ADOS2, WISC-V...) +
  * NeuroFormas (TDAH, TEA, Sensorial, Habilidades, Casa)
- * Con IA Gemini, envío a padres, análisis clínico profesional
+ * Con IA, envío a padres, análisis clínico profesional
  * =====================================================================
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createElement } from 'react'
 import {
   Brain, Send, ChevronRight, ChevronLeft, CheckCircle2, X, Loader2,
   Sparkles, FileText, Plus, Eye, Clock, AlertTriangle, Search,
   Zap, MessageCircle, BarChart3, RefreshCw, BookOpen, Target, Heart,
   Activity, Star, ChevronDown, ChevronUp, Save, ClipboardList,
   Filter, Users, TrendingUp, Shield, Stethoscope, Home, Baby,
-  CalendarDays, Lock, Unlock, Download, LayoutGrid, Puzzle, Gauge, Waves
+  CalendarDays, Lock, Unlock, Download, LayoutGrid, Puzzle, Gauge, Waves, ClipboardCheck, PenLine
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { TokensPrediccion, avisarTokens } from '@/components/TokensPrediccion'
+import { ElegirModoLlenado, ChipModoLlenado, CostoToken, type ModoLlenado } from '@/components/ModoLlenado'
 
 // ─── Mapeo categoría → ícono lucide + color clínico (no emojis) ─────────────
 const CAT_ICON: Record<string, any> = {
   all: LayoutGrid, conductual: Target, familia: Home, clinico: Stethoscope,
   tea: Puzzle, tdah: Zap, habilidades: Activity, cognitivo: Gauge, sensorial: Waves,
 }
-const CAT_ACCENT: Record<string, string> = {
-  all: '#64748b', conductual: '#0284c7', familia: '#06b6d4', clinico: '#0369a1',
-  tea: '#0ea5e9', tdah: '#0284c7', habilidades: '#10b981', cognitivo: '#0891b2', sensorial: '#0d9488',
-}
+const CAT_ACCENT: Record<string, string> = {}
 const formIcon = (f: any) => CAT_ICON[f?.category] || FileText
-const formAccent = (f: any) => CAT_ACCENT[f?.category] || '#0284c7'
+const formAccent = (f: any) => CAT_ACCENT[f?.category] || '#0069db'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import {
@@ -49,14 +49,14 @@ import { calcularEdadNumerica } from '../utils/helpers'
 
 // ─── CATEGORÍAS ORDENADAS POR ÁREA CLÍNICA ──────────────────────────────────
 const UNIFIED_CATEGORIES = [
-  { id: 'all',        label: 'Todas las plantillas', icon: '🗂️', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+  { id: 'all',        label: 'Todas las plantillas', icon: '🗂️', color: 'bg-v-fill text-v-text border-v-border' },
   { id: 'conductual', label: 'ABA / Sesión',          icon: '🎯', color: 'bg-orange-50 text-orange-700 border-orange-200' },
   { id: 'familia',    label: 'Familia / Hogar',       icon: '🏠', color: 'bg-pink-50 text-pink-700 border-pink-200' },
-  { id: 'clinico',    label: 'Historia Clínica',      icon: '📋', color: 'bg-slate-50 text-slate-700 border-slate-200' },
-  { id: 'tea',        label: 'TEA / Diagnóstico',     icon: '🧩', color: 'bg-sky-50 text-sky-700 border-sky-200' },
-  { id: 'tdah',       label: 'TDAH',                  icon: '⚡', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+  { id: 'clinico',    label: 'Historia Clínica',      icon: '📋', color: 'bg-v-fill text-v-text border-v-border' },
+  { id: 'tea',        label: 'TEA / Diagnóstico',     icon: '🧩', color: 'bg-v-accent-soft text-v-accent border-v-accent/30' },
+  { id: 'tdah',       label: 'TDAH',                  icon: '⚡', color: 'bg-v-accent-soft text-v-accent border-v-accent/30' },
   { id: 'habilidades',label: 'Conducta Adaptativa',   icon: '🌟', color: 'bg-green-50 text-green-700 border-green-200' },
-  { id: 'cognitivo',  label: 'Cognitivo / CI',        icon: '🧠', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+  { id: 'cognitivo',  label: 'Cognitivo / CI',        icon: '🧠', color: 'bg-v-accent-soft text-v-accent border-v-accent/30' },
   { id: 'sensorial',  label: 'Sensorial',             icon: '🌀', color: 'bg-teal-50 text-teal-700 border-teal-200' },
 ]
 
@@ -92,7 +92,7 @@ const CLINICAL_FORMS = [
   {
     id: 'ados2', title: 'ADOS-2', subtitle: 'Registro de resultados diagnósticos',
     category: 'tea', icon: '🔬', tags: ['TEA', 'ADOS', 'Diagnóstico'],
-    color: 'from-sky-600 to-sky-700', estimatedMinutes: 10, targetRole: 'admin',
+    color: 'from-v-brand-from to-v-brand-to', estimatedMinutes: 10, targetRole: 'admin',
     description: '⚠️ Corre en plataforma oficial ADOS-2. Aquí solo registrá los resultados y puntuaciones.',
     formKey: 'ados2', area: 'Resultados', externalPlatform: true
   },
@@ -106,7 +106,7 @@ const CLINICAL_FORMS = [
   {
     id: 'wiscv', title: 'WISC-V', subtitle: 'Registro de inteligencia (6-16 años)',
     category: 'cognitivo', icon: '📊', tags: ['CI', 'Inteligencia', 'WISC'],
-    color: 'from-sky-600 to-cyan-600', estimatedMinutes: 10, targetRole: 'admin',
+    color: 'from-v-brand-from to-v-brand-to', estimatedMinutes: 10, targetRole: 'admin',
     description: '⚠️ Corre en plataforma oficial WISC-V. Aquí solo registrá IQ y percentiles.',
     formKey: 'wiscv', area: 'Resultados', externalPlatform: true
   },
@@ -120,7 +120,7 @@ const CLINICAL_FORMS = [
   {
     id: 'abllsr', title: 'ABLLS-R', subtitle: 'Evaluación de habilidades básicas del lenguaje y aprendizaje',
     category: 'habilidades', icon: '📚', tags: ['ABA', 'Lenguaje', 'Habilidades', 'TEA'],
-    color: 'from-teal-500 to-cyan-600', estimatedMinutes: 45, targetRole: 'admin',
+    color: 'from-teal-500 to-v-brand-to', estimatedMinutes: 45, targetRole: 'admin',
     description: 'Assessment of Basic Language and Learning Skills - Revised. Evalúa habilidades de cooperación, lenguaje receptivo/expresivo, socialización, academia y AVD.',
     formKey: 'abllsr', area: 'Resultados', externalPlatform: false
   },
@@ -167,23 +167,53 @@ const ALL_UNIFIED_FORMS = [
 ]
 
 // ─── QUESTION RENDERER ───────────────────────────────────────────────────────
-function QuestionRenderer({ question, value, onChange }: any) {
+const qInput = 'w-full rounded-v-sm border border-v-border bg-v-bg px-4 py-3 text-sm text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft'
+
+function QLabel({ q, extra }: { q: any; extra?: React.ReactNode }) {
+  return (
+    <div className="mb-3">
+      <p className="flex flex-wrap items-center gap-1.5 text-[15px] font-semibold leading-snug text-v-text">{q.label}{extra}</p>
+      {q.helpText && <p className="mt-1 text-xs leading-relaxed text-v-subtle">{q.helpText}</p>}
+    </div>
+  )
+}
+
+function OptionPill({ on, onClick, children, full }: { on: boolean; onClick: () => void; children: React.ReactNode; full?: boolean }) {
+  return (
+    <motion.button type="button" whileTap={{ scale: 0.97 }} onClick={onClick}
+      className={`flex items-center gap-2 rounded-v-sm border px-3.5 py-2.5 text-left text-sm transition-all ${full ? 'w-full' : ''} ${on ? 'border-v-accent/50 bg-v-accent-soft font-semibold text-v-accent ring-4 ring-v-accent-soft' : 'border-v-border bg-v-elevated text-v-muted hover:border-v-accent/30 hover:text-v-text'}`}>
+      <span className={`grid size-4 shrink-0 place-items-center rounded-full border transition-colors ${on ? 'border-transparent bg-v-accent text-white' : 'border-v-border'}`}>
+        {on && <CheckCircle2 size={12} />}
+      </span>
+      <span className="min-w-0 flex-1">{children}</span>
+    </motion.button>
+  )
+}
+
+function QuestionRenderer({ question, value, onChange, manual = false }: any) {
   const { t, locale } = useI18n()
+  // Modo manual (sin costo): lo que normalmente completa la IA o se calcula, lo escribe el profesional.
+  if (manual && (question.aiGenerated || question.readonly) && (!question.type || ['textarea', 'text', 'number'].includes(question.type))) {
+    const badge = <span className="inline-flex items-center gap-1 rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold text-v-muted"><PenLine size={10} /> {locale === 'en' ? 'Written by you' : 'Lo escribes tú'}</span>
+    return (
+      <div>
+        <QLabel q={question} extra={badge} />
+        {question.type === 'textarea'
+          ? <textarea rows={3} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={question.placeholder}
+              className={`${qInput} resize-y leading-relaxed`} />
+          : <input type="text" value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={question.placeholder} className={qInput} />}
+      </div>
+    )
+  }
   const freq = ['Nunca', 'Raramente', 'A veces', 'Frecuentemente', 'Casi siempre', 'Siempre']
 
   if (question.type === 'frequency' || question.type === 'radio') {
     const opts = question.options || freq
     return (
       <div>
-        <p className="text-sm font-bold text-slate-700 mb-3">{question.label}</p>
-        {question.helpText && <p className="text-xs text-slate-400 mb-2">{question.helpText}</p>}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {opts.map((opt: string) => (
-            <button key={opt} type="button" onClick={() => onChange(opt)}
-              className={`p-2.5 rounded-xl border-2 text-xs font-bold transition-all text-left ${value === opt ? 'bg-sky-600 text-white border-sky-600 shadow-lg' : 'bg-white border-slate-200 text-slate-600 hover:border-sky-300'}`}>
-              {opt}
-            </button>
-          ))}
+        <QLabel q={question} />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {opts.map((opt: string) => <OptionPill key={opt} full on={value === opt} onClick={() => onChange(opt)}>{opt}</OptionPill>)}
         </div>
       </div>
     )
@@ -192,18 +222,11 @@ function QuestionRenderer({ question, value, onChange }: any) {
     const selected: string[] = Array.isArray(value) ? value : []
     return (
       <div>
-        <p className="text-sm font-bold text-slate-700 mb-3">{question.label}</p>
-        {question.helpText && <p className="text-xs text-slate-400 mb-2">{question.helpText}</p>}
+        <QLabel q={question} extra={<span className="text-xs font-normal text-v-subtle">· {selected.length > 0 ? `${selected.length} elegidas` : 'elige varias'}</span>} />
         <div className="flex flex-wrap gap-2">
           {(question.options || []).map((opt: string) => (
-            <button key={opt} type="button"
-              onClick={() => {
-                const s = selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt]
-                onChange(s)
-              }}
-              className={`px-3 py-2 rounded-xl border-2 text-xs font-bold transition-all ${selected.includes(opt) ? 'bg-sky-600 text-white border-sky-600' : 'bg-white border-slate-200 text-slate-600 hover:border-sky-300'}`}>
-              {opt}
-            </button>
+            <OptionPill key={opt} on={selected.includes(opt)}
+              onClick={() => onChange(selected.includes(opt) ? selected.filter(x => x !== opt) : [...selected, opt])}>{opt}</OptionPill>
           ))}
         </div>
       </div>
@@ -214,18 +237,16 @@ function QuestionRenderer({ question, value, onChange }: any) {
     const labels = question.scaleLabels || { min: 'Nunca/Leve', max: 'Siempre/Severo' }
     return (
       <div>
-        <p className="text-sm font-bold text-slate-700 mb-3">{question.label}</p>
-        <div className="flex gap-3">
+        <QLabel q={question} />
+        <div className="inline-flex gap-1.5 rounded-full bg-v-fill p-1.5">
           {scale.map(n => (
-            <button key={n} type="button" onClick={() => onChange(n)}
-              className={`w-12 h-12 rounded-xl border-2 font-bold text-lg transition-all ${value === n ? 'bg-sky-600 text-white border-sky-600 shadow-lg scale-110' : 'bg-white border-slate-200 text-slate-500 hover:border-sky-300'}`}>
-              {n}
-            </button>
+            <motion.button key={n} type="button" whileTap={{ scale: 0.9 }} onClick={() => onChange(n)}
+              className={`grid size-11 place-items-center rounded-full text-base font-semibold tabular-nums transition-all ${value === n ? 'v-brand' : 'text-v-muted hover:bg-v-elevated hover:text-v-text'}`}
+              style={value === n ? { boxShadow: 'none' } : undefined}>{n}</motion.button>
           ))}
         </div>
-        <div className="flex justify-between mt-1">
-          <span className="text-xs text-slate-400">{labels.min}</span>
-          <span className="text-xs text-slate-400">{labels.max}</span>
+        <div className="mt-1.5 flex max-w-[296px] justify-between px-1 text-[11px] text-v-subtle">
+          <span>{labels.min}</span><span>{labels.max}</span>
         </div>
       </div>
     )
@@ -233,152 +254,128 @@ function QuestionRenderer({ question, value, onChange }: any) {
   if (question.type === 'boolean') {
     return (
       <div>
-        <p className="text-sm font-bold text-slate-700 mb-3">{question.label}</p>
-        <div className="flex gap-3">
-          {['Sí', 'No'].map(opt => (
-            <button key={opt} type="button" onClick={() => onChange(opt)}
-              className={`flex-1 py-3 rounded-xl border-2 font-bold text-sm transition-all ${value === opt ? (opt === 'Sí' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-600 text-white border-slate-600') : 'bg-white border-slate-200 text-slate-600 hover:border-sky-300'}`}>
-              {opt}
-            </button>
-          ))}
+        <QLabel q={question} />
+        <div className="flex max-w-sm gap-2">
+          {['Sí', 'No'].map(opt => {
+            const on = value === opt
+            return (
+              <motion.button key={opt} type="button" whileTap={{ scale: 0.97 }} onClick={() => onChange(opt)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-full border py-2.5 text-sm font-semibold transition-all ${on
+                  ? (opt === 'Sí' ? 'border-transparent bg-v-success/15 text-v-success ring-4 ring-v-success/10' : 'border-transparent bg-v-fill text-v-text ring-4 ring-v-fill')
+                  : 'border-v-border bg-v-elevated text-v-muted hover:text-v-text'}`}>
+                {opt === 'Sí' ? <CheckCircle2 size={15} /> : <X size={15} />} {opt}
+              </motion.button>
+            )
+          })}
         </div>
       </div>
     )
   }
-  if (question.type === 'textarea') {
+  if (question.type === 'textarea' && !question.aiGenerated) {
     return (
       <div>
-        <label className="text-sm font-bold text-slate-700 block mb-2">{question.label}</label>
-        {question.helpText && <p className="text-xs text-slate-400 mb-2">{question.helpText}</p>}
-        <textarea rows={3} value={value || ''} onChange={e => onChange(e.target.value)}
-          placeholder={question.placeholder}
-          className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-sky-400 transition-all resize-none" />
+        <QLabel q={question} />
+        <textarea rows={3} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={question.placeholder}
+          className={`${qInput} resize-y leading-relaxed`} />
       </div>
     )
   }
   if (question.type === 'select') {
-    return (
-      <div>
-        <label className="text-sm font-bold text-slate-700 block mb-2">{question.label}</label>
-        {question.helpText && <p className="text-xs text-slate-400 mb-2">{question.helpText}</p>}
-        <select value={value || ''} onChange={e => onChange(e.target.value)}
-          className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all">
-          <option value="">{t('common.seleccionar')}</option>
-          {(question.options || []).map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-        </select>
-      </div>
-    )
-  }
-  // Range (escala deslizante 1-5 o 1-3)
-  if (question.type === 'range') {
-    const min = question.min || 1
-    const max = question.max || 5
-    const val = Number(value) || min
-    const labels = question.labels || []
-    return (
-      <div>
-        <p className="text-sm font-bold text-slate-700 mb-3">{question.label}</p>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-bold">{labels[0] || min}</span>
-            <span className="text-2xl font-bold text-sky-600">{val}</span>
-            <span className="text-xs text-slate-400 font-bold">{labels[labels.length-1] || max}</span>
-          </div>
-          <input type="range" min={min} max={max} step={1} value={val}
-            onChange={e => onChange(Number(e.target.value))}
-            className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer accent-sky-600" />
-          {labels.length > 0 && val >= min && (
-            <p className="text-xs text-center font-bold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-lg">
-              {labels[val - min] || ''}
-            </p>
-          )}
-        </div>
-      </div>
-    )
-  }
-  // Date
-  if (question.type === 'date') {
-    return (
-      <div>
-        <label className="text-sm font-bold text-slate-700 block mb-2">{question.label}</label>
-        <input type="date" value={value || ''} onChange={e => onChange(e.target.value)}
-          className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-sky-400 transition-all" />
-      </div>
-    )
-  }
-  // Campo generado por IA (aiGenerated: true) — solo lectura, muestra placeholder si vacío
-  if (question.aiGenerated) {
-    const hasValue = value && String(value).trim().length > 0
-    if (question.type === 'textarea') {
+    const opts: string[] = question.options || []
+    // Pocas opciones → pastillas (un toque); muchas → lista desplegable
+    if (opts.length > 0 && opts.length <= 6) {
       return (
         <div>
-          <label className="text-sm font-bold text-slate-700 block mb-2 flex items-center gap-1.5">
-            <Sparkles size={13} className="text-sky-500" /> {question.label}
-            <span className="text-[10px] font-bold text-sky-400 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200 ml-1">{t('evaluaciones.generadoIA')}</span>
-          </label>
-          {hasValue ? (
-            <textarea rows={4} value={value} onChange={e => onChange(e.target.value)}
-              className="w-full p-4 bg-sky-50 border-2 border-sky-200 rounded-xl text-sm font-medium outline-none focus:border-sky-400 transition-all resize-none text-slate-700" />
-          ) : (
-            <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center gap-2 text-slate-400 text-sm">
-              <Sparkles size={15} className="text-sky-300 flex-shrink-0" />
-              <span>{t('evaluaciones.seCompletara')} <strong className="text-sky-500">{t('evaluaciones.analizarConIA2')}</strong></span>
-            </div>
-          )}
+          <QLabel q={question} />
+          <div className="flex flex-wrap gap-2">
+            {opts.map(opt => <OptionPill key={opt} on={value === opt} onClick={() => onChange(opt)}>{opt}</OptionPill>)}
+          </div>
         </div>
       )
     }
     return (
       <div>
-        <label className="text-sm font-bold text-slate-700 block mb-2 flex items-center gap-1.5">
-          <Sparkles size={13} className="text-sky-500" /> {question.label}
-          <span className="text-[10px] font-bold text-sky-400 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200 ml-1">{t("evaluaciones.generadoIA")}</span>
-        </label>
-        {hasValue ? (
-          <input type="text" value={value} onChange={e => onChange(e.target.value)}
-            className="w-full p-4 bg-sky-50 border-2 border-sky-200 rounded-xl text-sm font-medium outline-none focus:border-sky-400 transition-all" />
-        ) : (
-          <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center gap-2 text-slate-400 text-sm">
-            <Sparkles size={15} className="text-sky-300 flex-shrink-0" />
-            <span>{t('evaluaciones.seCompletara2')} <strong className="text-sky-500">{t('evaluaciones.analizarConIA2')}</strong></span>
-          </div>
-        )}
+        <QLabel q={question} />
+        <select value={value || ''} onChange={e => onChange(e.target.value)} className={qInput}>
+          <option value="">{t('common.seleccionar')}</option>
+          {opts.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
       </div>
     )
   }
-
-  // Campo de solo lectura (readonly: true) — calculado automáticamente
-  if (question.readonly) {
-    const hasValue = value !== undefined && value !== null && String(value).trim().length > 0
+  if (question.type === 'range') {
+    const min = question.min || 1
+    const max = question.max || 5
+    const val = Number(value) || min
+    const labels = question.labels || []
+    const pct = max > min ? ((val - min) / (max - min)) * 100 : 0
     return (
       <div>
-        <label className="text-sm font-bold text-slate-700 block mb-2 flex items-center gap-1.5">
-          <Lock size={13} className="text-slate-400" /> {question.label}
-          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 ml-1">{t("evaluaciones.autoCalculado")}</span>
-        </label>
-        {hasValue ? (
-          <div className="w-full p-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl text-sm font-bold text-emerald-800">
-            {value}
+        <QLabel q={question} />
+        <div className="rounded-v-sm border border-v-border bg-v-bg p-4">
+          <div className="mb-3 flex items-center justify-between text-xs text-v-subtle">
+            <span>{labels[0] || min}</span>
+            <span className="v-brand-text text-2xl font-bold tabular-nums">{val}</span>
+            <span>{labels[labels.length - 1] || max}</span>
           </div>
+          <input type="range" min={min} max={max} step={1} value={val} onChange={e => onChange(Number(e.target.value))}
+            className="h-2 w-full cursor-pointer appearance-none rounded-full accent-[var(--v-accent)]"
+            style={{ background: `linear-gradient(90deg, var(--v-accent) ${pct}%, var(--v-fill) ${pct}%)` }} />
+          {labels.length > 0 && labels[val - min] && (
+            <p className="mt-3 rounded-full bg-v-accent-soft px-3 py-1.5 text-center text-xs font-semibold text-v-accent">{labels[val - min]}</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+  if (question.type === 'date') {
+    return (
+      <div>
+        <QLabel q={question} />
+        <input type="date" value={value || ''} onChange={e => onChange(e.target.value)} className={`${qInput} max-w-xs`} />
+      </div>
+    )
+  }
+  // Campo generado por IA — se completa con "Analizar con IA"
+  if (question.aiGenerated) {
+    const hasValue = value && String(value).trim().length > 0
+    const badge = <span className="inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-semibold text-v-accent"><Sparkles size={10} /> {t('evaluaciones.generadoIA')}</span>
+    return (
+      <div>
+        <QLabel q={question} extra={badge} />
+        {hasValue ? (
+          question.type === 'textarea'
+            ? <textarea rows={4} value={value} onChange={e => onChange(e.target.value)} className={`${qInput} resize-y border-v-accent/30 bg-v-accent-soft leading-relaxed`} />
+            : <input type="text" value={value} onChange={e => onChange(e.target.value)} className={`${qInput} border-v-accent/30 bg-v-accent-soft`} />
         ) : (
-          <div className="w-full p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm">
-            {t('auto.evaluacionesUnificadas.seCalcularaConElAnalisis')}
+          <div className="flex items-center gap-2.5 rounded-v-sm border border-dashed border-v-accent/30 bg-v-bg px-4 py-3 text-sm text-v-subtle">
+            <Sparkles size={15} className="shrink-0 text-v-accent" />
+            <span>{t(question.type === 'textarea' ? 'evaluaciones.seCompletara' : 'evaluaciones.seCompletara2')} <strong className="text-v-accent">{t('evaluaciones.analizarConIA2')}</strong></span>
           </div>
         )}
       </div>
     )
   }
-
-  // Default: text / number input
+  // Solo lectura — calculado automáticamente
+  if (question.readonly) {
+    const hasValue = value !== undefined && value !== null && String(value).trim().length > 0
+    const badge = <span className="inline-flex items-center gap-1 rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold text-v-subtle"><Lock size={10} /> {t('evaluaciones.autoCalculado')}</span>
+    return (
+      <div>
+        <QLabel q={question} extra={badge} />
+        {hasValue
+          ? <div className="rounded-v-sm bg-v-success/15 px-4 py-3 text-sm font-semibold text-v-success">{value}</div>
+          : <div className="rounded-v-sm border border-dashed border-v-border px-4 py-3 text-sm text-v-subtle">{t('auto.evaluacionesUnificadas.seCalcularaConElAnalisis')}</div>}
+      </div>
+    )
+  }
+  // Texto / número
   return (
     <div>
-      <label className="text-sm font-bold text-slate-700 block mb-2">{question.label}</label>
-      {question.helpText && <p className="text-xs text-slate-400 mb-2">{question.helpText}</p>}
-      <input type={question.type === 'number' ? 'number' : 'text'}
-        min={question.min} max={question.max}
-        value={value || ''} onChange={e => onChange(e.target.value)}
-        placeholder={question.placeholder}
-        className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-medium outline-none focus:border-sky-400 transition-all" />
+      <QLabel q={question} />
+      <input type={question.type === 'number' ? 'number' : 'text'} min={question.min} max={question.max}
+        value={value || ''} onChange={e => onChange(e.target.value)} placeholder={question.placeholder}
+        className={`${qInput} ${question.type === 'number' ? 'max-w-[200px] tabular-nums' : ''}`} />
     </div>
   )
 }
@@ -402,9 +399,9 @@ function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableAct
 
   if (!analysis) return null
   const alertColors: Record<string, string> = {
-    bajo: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-    moderado: 'bg-amber-50 border-amber-200 text-amber-800',
-    alto: 'bg-red-50 border-red-200 text-red-800',
+    bajo: 'bg-v-success/15 border-v-success/30 text-v-success',
+    moderado: 'bg-v-warning/15 border-v-warning/30 text-v-warning',
+    alto: 'bg-v-danger/10 border-v-danger/30 text-v-danger',
   }
   const alertIconCfg: Record<string, any> = { bajo: CheckCircle2, moderado: AlertTriangle, alto: AlertTriangle }
 
@@ -427,16 +424,16 @@ function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableAct
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-        <div className="w-8 h-8 bg-gradient-to-br from-sky-600 to-sky-700 rounded-xl flex items-center justify-center">
+      <div className="flex items-center gap-2 pb-2 border-b border-v-border">
+        <div className="w-8 h-8 bg-gradient-to-br from-v-brand-from to-v-brand-to rounded-v-sm flex items-center justify-center">
           <Sparkles size={16} className="text-white" />
         </div>
-        <h3 className="font-bold text-slate-800" style={{ color: "var(--text-primary)" }}>{t('evaluaciones.analisisIA')}</h3>
+        <h3 className="font-bold text-v-text" style={{ color: "var(--v-text)" }}>{t('evaluaciones.analisisIA')}</h3>
       </div>
 
       {/* Alert level */}
       {analysis.nivel_alerta && (
-        <div className={`px-4 py-3 rounded-xl border-2 font-bold text-sm flex items-center gap-2 ${alertColors[analysis.nivel_alerta] || alertColors.bajo}`}>
+        <div className={`px-4 py-3 rounded-v-sm border-2 font-bold text-sm flex items-center gap-2 ${alertColors[analysis.nivel_alerta] || alertColors.bajo}`}>
           {(() => { const AI = alertIconCfg[analysis.nivel_alerta] || CheckCircle2; return <AI size={18} /> })()}
           Nivel de alerta: <span className="uppercase">{analysis.nivel_alerta}</span>
         </div>
@@ -444,21 +441,21 @@ function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableAct
 
       {/* Clinical analysis */}
       {textoAnalisis ? (
-        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-          <h4 className="text-xs font-bold text-slate-500 mb-2">{t('evaluaciones.analisisClinico')}</h4>
-          <p className="text-sm text-slate-700 leading-relaxed">{textoAnalisis}</p>
+        <div className="bg-v-fill rounded-v-sm p-4 border border-v-border">
+          <h4 className="text-xs font-bold text-v-muted mb-2">{t('evaluaciones.analisisClinico')}</h4>
+          <p className="text-sm text-v-text leading-relaxed">{textoAnalisis}</p>
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Strengths */}
         {areasFortaleza.length > 0 && (
-          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
-            <h4 className="text-xs font-bold text-emerald-600 mb-2">💪 Fortalezas</h4>
+          <div className="bg-v-success/15 rounded-v-sm p-4 border border-v-success/30">
+            <h4 className="text-xs font-bold text-v-success mb-2">💪 Fortalezas</h4>
             <ul className="space-y-1">
               {areasFortaleza.map((f: string, i: number) => (
-                <li key={i} className="text-xs text-emerald-800 font-medium flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0" />{f}
+                <li key={i} className="text-xs text-v-success font-medium flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-v-success rounded-full shrink-0" />{f}
                 </li>
               ))}
             </ul>
@@ -466,12 +463,12 @@ function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableAct
         )}
         {/* Work areas */}
         {areasTrabajo.length > 0 && (
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
-            <h4 className="text-xs font-bold text-amber-600 mb-2">{t('evaluaciones.areasTrabajar')}</h4>
+          <div className="bg-v-warning/15 rounded-v-sm p-4 border border-v-warning/30">
+            <h4 className="text-xs font-bold text-v-warning mb-2">{t('evaluaciones.areasTrabajar')}</h4>
             <ul className="space-y-1">
               {areasTrabajo.map((f: string, i: number) => (
-                <li key={i} className="text-xs text-amber-800 font-medium flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full shrink-0" />{f}
+                <li key={i} className="text-xs text-v-warning font-medium flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-v-warning rounded-full shrink-0" />{f}
                 </li>
               ))}
             </ul>
@@ -481,11 +478,11 @@ function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableAct
 
       {/* Recommendations */}
       {recomendaciones.length > 0 && (
-        <div className="bg-sky-50 rounded-xl p-4 border border-sky-200">
-          <h4 className="text-xs font-bold text-sky-600 mb-2">💡 Recomendaciones</h4>
+        <div className="bg-v-accent-soft rounded-v-sm p-4 border border-v-accent/30">
+          <h4 className="text-xs font-bold text-v-accent mb-2">💡 Recomendaciones</h4>
           <ul className="space-y-1.5">
             {recomendaciones.map((r: string, i: number) => (
-              <li key={i} className="text-xs text-sky-800 font-medium flex items-start gap-1.5">
+              <li key={i} className="text-xs text-v-accent font-medium flex items-start gap-1.5">
                 <span className="w-1.5 h-1.5 bg-sky-500 rounded-full shrink-0 mt-1" />{r}
               </li>
             ))}
@@ -496,10 +493,10 @@ function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableAct
       {/* Key indicators */}
       {indicadoresClave.length > 0 && (
         <div>
-          <h4 className="text-xs font-bold text-slate-500 mb-2">🔍 Indicadores Clave</h4>
+          <h4 className="text-xs font-bold text-v-muted mb-2">🔍 Indicadores Clave</h4>
           <div className="flex flex-wrap gap-2">
             {indicadoresClave.map((ind: string, i: number) => (
-              <span key={i} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-200">{ind}</span>
+              <span key={i} className="px-3 py-1 bg-v-fill text-v-text rounded-full text-xs font-bold border border-v-border">{ind}</span>
             ))}
           </div>
         </div>
@@ -508,10 +505,10 @@ function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableAct
       {/* Next recommended forms */}
       {formsRecomendados.length > 0 && (
         <div>
-          <h4 className="text-xs font-bold text-sky-600 mb-2">{t('evaluaciones.proxEvals')}</h4>
+          <h4 className="text-xs font-bold text-v-accent mb-2">{t('evaluaciones.proxEvals')}</h4>
           <div className="flex flex-wrap gap-2">
             {formsRecomendados.map((f: string, i: number) => (
-              <span key={i} className="px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-700 rounded-full text-xs font-bold">{f}</span>
+              <span key={i} className="px-3 py-1.5 bg-v-accent-soft border border-v-accent/30 text-v-accent rounded-full text-xs font-bold">{f}</span>
             ))}
           </div>
         </div>
@@ -521,50 +518,50 @@ function AIAnalysisPanel({ analysis, editableMessage, onEditMessage, editableAct
       {(analysis.mensaje_padres || editableMessage !== undefined) && (
         <div className="space-y-4">
           {/* Sección 1: Mensaje al padre */}
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border-2 border-amber-200">
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-v p-5 border-2 border-v-warning/30">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center">
+              <div className="w-7 h-7 bg-v-warning rounded-lg flex items-center justify-center">
                 <MessageCircle size={14} className="text-white"/>
               </div>
-              <h4 className="font-bold text-amber-800">{t('ui.mensajePadres')}</h4>
-              <span className="ml-auto px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full border border-amber-300">✏️ Editable</span>
+              <h4 className="font-bold text-v-warning">{t('ui.mensajePadres')}</h4>
+              <span className="ml-auto px-2 py-0.5 bg-v-warning/15 text-v-warning text-[10px] font-bold rounded-full border border-v-warning/30">✏️ Editable</span>
             </div>
             {onEditMessage ? (
               <textarea
                 rows={4}
                 value={editableMessage !== undefined ? editableMessage : (analysis.mensaje_padres || '')}
                 onChange={e => onEditMessage(e.target.value)}
-                className="w-full p-3 /80 border-2 border-amber-200 rounded-xl text-amber-800 text-sm leading-relaxed resize-none outline-none focus:border-amber-400 transition-all font-medium mb-2" style={{ background: "var(--card)" }}
+                className="w-full p-3 /80 border-2 border-v-warning/30 rounded-v-sm text-v-warning text-sm leading-relaxed resize-none outline-none focus:border-v-warning/30 transition-all font-medium mb-2" style={{ background: "var(--v-bg-elevated)" }}
                 {...{placeholder: t('ui.edit_message')}}
               />
             ) : (
-              <p className="text-amber-700 text-sm leading-relaxed mb-3 italic">&quot;{editableMessage || analysis.mensaje_padres}&quot;</p>
+              <p className="text-v-warning text-sm leading-relaxed mb-3 italic">&quot;{editableMessage || analysis.mensaje_padres}&quot;</p>
             )}
-            <p className="text-amber-600 text-xs font-semibold bg-amber-100 rounded-xl px-3 py-2 border border-amber-200">
+            <p className="text-v-warning text-xs font-semibold bg-v-warning/15 rounded-v-sm px-3 py-2 border border-v-warning/30">
               {t('ui.approval_notice_parent')}
             </p>
           </div>
 
           {/* Sección 2: Actividad para casa */}
           {(analysis.actividades_casa || analysis.actividad_casa || editableActividades !== undefined) && (
-            <div className="bg-gradient-to-br from-sky-50 to-sky-50 rounded-2xl p-5 border-2 border-sky-200">
+            <div className="bg-gradient-to-br from-v-brand-from to-v-brand-to rounded-v p-5 border-2 border-v-accent/30">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 bg-sky-500 rounded-lg flex items-center justify-center">
                   <span className="text-white text-xs font-bold">🏠</span>
                 </div>
-                <h4 className="font-bold text-sky-800">{t('ui.home_activity')}</h4>
-                <span className="ml-auto px-2 py-0.5 bg-sky-100 text-sky-700 text-[10px] font-bold rounded-full border border-sky-300">✏️ Editable</span>
+                <h4 className="font-bold text-v-accent">{t('ui.home_activity')}</h4>
+                <span className="ml-auto px-2 py-0.5 bg-v-accent-soft text-v-accent text-[10px] font-bold rounded-full border border-v-accent/30">✏️ Editable</span>
               </div>
               {onEditActividades ? (
                 <textarea
                   rows={5}
                   value={editableActividades !== undefined ? editableActividades : (analysis.actividades_casa || analysis.actividad_casa || '')}
                   onChange={e => onEditActividades(e.target.value)}
-                  className="w-full p-3 /80 border-2 border-sky-200 rounded-xl text-sky-800 text-sm leading-relaxed resize-none outline-none focus:border-sky-400 transition-all font-medium" style={{ background: "var(--card)" }}
+                  className="w-full p-3 /80 border-2 border-v-accent/30 rounded-v-sm text-v-accent text-sm leading-relaxed resize-none outline-none focus:border-v-accent transition-all font-medium" style={{ background: "var(--v-bg-elevated)" }}
                   {...{placeholder: t('ui.home_activity_desc')}}
                 />
               ) : (
-                <p className="text-sky-700 text-sm leading-relaxed italic whitespace-pre-wrap">{editableActividades || analysis.actividades_casa || analysis.actividad_casa}</p>
+                <p className="text-v-accent text-sm leading-relaxed italic whitespace-pre-wrap">{editableActividades || analysis.actividades_casa || analysis.actividad_casa}</p>
               )}
             </div>
           )}
@@ -672,35 +669,35 @@ function HistorialFormCard({ sf, onReportGenerated }: { sf: any; onReportGenerat
   }
 
   return (
-    <div className=" rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-all" style={{ background: "var(--card)" }}>
+    <div className=" rounded-v border border-v-border shadow-sm p-5 hover:shadow-md transition-all" style={{ background: "var(--v-bg-elevated)" }}>
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <p className="font-bold text-slate-800 text-sm truncate" style={{ color: "var(--text-primary)" }}>
+            <p className="font-bold text-v-text text-sm truncate" style={{ color: "var(--v-text)" }}>
               {sf.form_title || sf.form_type || 'Formulario'}
             </p>
             {sf._source && (
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap">
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-v-fill text-v-muted border border-v-border whitespace-nowrap">
                 {sf._source === 'anamnesis_completa' ? 'Anamnesis' :
                  sf._source === 'registro_aba' ? 'ABA' :
                  sf._source === 'registro_entorno_hogar' ? 'Hogar' : 'NeuroForma'}
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 flex items-center gap-1">
+          <p className="text-xs text-v-subtle flex items-center gap-1">
             <Baby size={10} /> {(sf as any).children?.name || t('nav.pacientes')} · {new Date(sf.created_at).toLocaleDateString(toBCP47(locale))}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
           {sf.ai_analysis && (
-            <span className="px-2 py-1 bg-sky-50 text-sky-600 rounded-full text-[10px] font-bold border border-sky-200 flex items-center gap-1">
+            <span className="px-2 py-1 bg-v-accent-soft text-v-accent rounded-full text-[10px] font-bold border border-v-accent/30 flex items-center gap-1">
               <Sparkles size={9} /> Con IA
             </span>
           )}
           <button
             onClick={handleGenerateReport}
             disabled={generating}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-v-brand-from to-v-brand-to hover:from-v-brand-from hover:to-v-brand-to text-white rounded-v-sm text-xs font-bold shadow-sm hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed active:scale-95"
           >
             {generating ? (
               <><Loader2 size={12} className="animate-spin" /> {t('common.generando')}</>
@@ -732,45 +729,45 @@ function SendFormModal({ form, children, onSend, onClose }: any) {
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className=" rounded-3xl p-8 w-full max-w-md shadow-2xl" style={{ background: "var(--card)" }}>
+      <div className=" rounded-v-lg p-8 w-full max-w-md shadow-2xl" style={{ background: "var(--v-bg-elevated)" }}>
         <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-            <Send size={20} className="text-sky-600" /> {t('common.enviarPadres')}
+          <h3 className="font-bold text-xl text-v-text flex items-center gap-2" style={{ color: "var(--v-text)" }}>
+            <Send size={20} className="text-v-accent" /> {t('common.enviarPadres')}
           </h3>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-v-fill"><X size={20} /></button>
         </div>
 
-        <div className="bg-sky-50 rounded-xl p-4 mb-6 border border-sky-100">
-          <p className="text-xs font-bold text-sky-400 mb-1">{t('evaluaciones.titulo')}</p>
-          <p className="font-bold text-sky-800">{dTitle(form, locale)}</p>
-          <p className="text-xs text-sky-600 mt-0.5">{form.estimatedMinutes} min aprox.</p>
+        <div className="bg-v-accent-soft rounded-v-sm p-4 mb-6 border border-v-accent/30">
+          <p className="text-xs font-bold text-v-accent mb-1">{t('evaluaciones.titulo')}</p>
+          <p className="font-bold text-v-accent">{dTitle(form, locale)}</p>
+          <p className="text-xs text-v-accent mt-0.5">{form.estimatedMinutes} min aprox.</p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-400 block mb-2">{t('evaluaciones.pacienteStar')}</label>
+            <label className="text-xs font-bold text-v-subtle block mb-2">{t('evaluaciones.pacienteStar')}</label>
             <select value={childId} onChange={e => setChildId(e.target.value)}
-              className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all">
+              className="w-full p-4 bg-v-fill border-2 border-v-border rounded-v-sm text-sm font-bold outline-none focus:border-v-accent transition-all">
               <option value="">{t('ui.select_patient_option')}</option>
               {children.map((c: any) => <option key={c.id} value={c.id}>{c.name}{c.age ? ` (${c.age})` : ''}</option>)}
             </select>
-            <p className="text-xs text-slate-400 mt-1.5">{t('evaluaciones.irABiblioteca')}</p>
+            <p className="text-xs text-v-subtle mt-1.5">{t('evaluaciones.irABiblioteca')}</p>
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-400 block mb-2">{t('evaluaciones.mensaje')}</label>
+            <label className="text-xs font-bold text-v-subtle block mb-2">{t('evaluaciones.mensaje')}</label>
             <textarea rows={3} value={message} onChange={e => setMessage(e.target.value)}
               {...{placeholder: t('ui.send_form_msg')}}
-              className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all resize-none" />
+              className="w-full p-4 bg-v-fill border-2 border-v-border rounded-v-sm text-sm font-bold outline-none focus:border-v-accent transition-all resize-none" />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-400 block mb-2">{t('evaluaciones.fechaLimite2')}</label>
+            <label className="text-xs font-bold text-v-subtle block mb-2">{t('evaluaciones.fechaLimite2')}</label>
             <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
-              className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all" />
+              className="w-full p-4 bg-v-fill border-2 border-v-border rounded-v-sm text-sm font-bold outline-none focus:border-v-accent transition-all" />
           </div>
           <div className="flex gap-3 pt-2">
-            <button onClick={onClose} className="flex-1 py-4 text-slate-400 font-bold uppercase text-xs tracking-widest hover:bg-slate-50 rounded-xl border-2 border-slate-100 transition-all">{t('common.cancelar')}</button>
+            <button onClick={onClose} className="flex-1 py-4 text-v-subtle font-bold uppercase text-xs tracking-widest hover:bg-v-fill rounded-v-sm border-2 border-v-border transition-all">{t('common.cancelar')}</button>
             <button onClick={handleSend} disabled={sending || !childId}
-              className="flex-[2] py-4 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl font-bold text-sm shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              className="flex-[2] py-4 bg-gradient-to-r from-v-brand-from to-v-brand-to text-white rounded-v-sm font-bold text-sm shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               {sending ? 'Enviando...' : 'Enviar'}
             </button>
@@ -800,6 +797,8 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null)
   const [savedChildId, setSavedChildId] = useState<string>('')
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  // Cómo se llena: a mano (sin costo) o con apoyo de IA (1 token por análisis)
+  const [modo, setModo] = useState<ModoLlenado | null>(null)
 
   // Get sections based on form type
   const getSections = () => {
@@ -984,10 +983,13 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
         setEditedActividades(analysis?.actividades_casa || analysis?.actividad_casa || '')
       }
       toast.success(t('auto.evaluacionesUnificadas.analisisIaGenerado'))
+      avisarTokens(false)
     } catch (err: any) {
       const m = String(err.message || '')
+      if (/tokens/i.test(m)) avisarTokens(true)
       const isQuota = /Cuota|429|RESOURCE_EXHAUSTED|límite|limit|solicitada|exhaust/i.test(m)
-      toast.error(isQuota
+      if (/tokens/i.test(m)) toast.error(m) // sin tokens de análisis del centro
+      else toast.error(isQuota
         ? (locale === 'en'
             ? '⏳ ARIA reached its AI usage limit. The evaluation analysis sends a large request (full clinical context), so it hits the daily limit sooner than the chat. Try again in a few minutes or tomorrow.'
             : '⏳ ARIA alcanzó su límite de uso de IA. El análisis de evaluación envía una solicitud grande (todo el contexto clínico), por eso llega al tope diario antes que el chat. Intenta en unos minutos o mañana.')
@@ -1163,35 +1165,36 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
     }
 
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 p-8">
-        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center">
-          <CheckCircle2 size={40} className="text-emerald-500" />
-        </div>
+      <div className="v-scope flex min-h-[60vh] flex-col items-center justify-center gap-6 p-8">
+        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+          className="grid size-20 place-items-center rounded-full bg-v-success/15">
+          <CheckCircle2 size={40} className="text-v-success" />
+        </motion.span>
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-slate-800 mb-2" style={{ color: "var(--text-primary)" }}>{t('evaluaciones.formGuardado')}</h2>
-          <p className="text-slate-500 font-medium">{dTitle(form, locale)}</p>
+          <h2 className="text-2xl font-bold text-v-text mb-2" style={{ color: "var(--v-text)" }}>{t('evaluaciones.formGuardado')}</h2>
+          <p className="text-v-muted font-medium">{dTitle(form, locale)}</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
           <button
             onClick={handleGenerateAndDownload}
             disabled={isGeneratingReport}
-            className="flex-1 flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white rounded-2xl font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed active:scale-95"
+            className="v-brand flex flex-1 items-center justify-center gap-2 rounded-full py-3.5 text-sm font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isGeneratingReport ? (
               <><Loader2 size={18} className="animate-spin" /> {t("common.generandoReporte")}</>
             ) : (
-              <><Download size={18} /> {t("evaluaciones.genDescarga")}</>
+              <><Download size={18} /> {t("evaluaciones.genDescarga")} <CostoToken claro /></>
             )}
           </button>
           <button
             onClick={onBack}
-            className="flex-1 flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all"
+            className="flex flex-1 items-center justify-center gap-2 rounded-full border border-v-border py-3.5 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill hover:text-v-text"
           >
             <ChevronLeft size={18} /> {locale === 'en' ? 'Back' : 'Volver'}
           </button>
         </div>
         {aiAnalysis && (
-          <p className="text-xs text-sky-600 font-bold flex items-center gap-1">
+          <p className="text-xs text-v-accent font-bold flex items-center gap-1">
             <Sparkles size={12} /> {locale === 'en' ? 'AI analysis available — it will be included in the report' : 'Análisis IA disponible — se incluirá en el reporte'}
           </p>
         )}
@@ -1201,218 +1204,215 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
 
   if (!currentSection) return null
 
+  if (!modo) return (
+    <ElegirModoLlenado titulo={dTitle(form, locale)} subtitulo={dSubtitle(form, locale)}
+      icono={createElement(formIcon(form), { size: 17 })} onElegir={setModo} onBack={onBack} />
+  )
+
   const questions = currentSection.questions || currentSection.items || []
+  const isAnswered = (v: any) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0)
+  const sectionState = (sec: any) => {
+    const qs = sec.questions || sec.items || []
+    const n = qs.filter((q: any) => isAnswered(responses[q.id])).length
+    return { n, total: qs.length }
+  }
+  const pacienteNombre = initialChildName || children.find((c: any) => c.id === selectedChild)?.name
+  const esUltimo = currentStep === totalSteps - 1
+  const mostrarIA = modo === 'ia' && (esUltimo || (form.formKey === 'aba' && currentStep >= 5))
+  const irA = (i: number) => { setCurrentStep(i); document.getElementById('form-fill-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+  const circ = 2 * Math.PI * 16
 
   return (
-    <div className="flex flex-col h-full" style={{ background: "var(--background)" }}>
-      {/* Header barra */}
-      <div className="flex-shrink-0 border-b shadow-sm z-20" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-4">
-          <button onClick={onBack} className="flex items-center gap-1.5 hover:text-sky-500 font-bold transition-all text-sm group" style={{ color: "var(--text-muted)" }}>
-            <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> {locale === "en" ? "Back" : "Volver"}
+    <div id="form-fill-top" className="v-scope flex min-h-full flex-col bg-v-bg">
+      {/* ── Barra superior ── */}
+      <div className="sticky top-0 z-20 shrink-0 border-b border-v-border bg-v-elevated/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+          <button onClick={onBack} className="group inline-flex items-center gap-1 rounded-full py-1.5 pl-2 pr-3 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill hover:text-v-text">
+            <ChevronLeft size={17} className="transition-transform group-hover:-translate-x-0.5" /> {locale === 'en' ? 'Back' : 'Volver'}
           </button>
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>
-                {t('auto.evaluacionesUnificadas.seccionDe', { v1: String(currentStep + 1), v2: String(totalSteps) })}
-              </p>
-              <p className="text-xs font-bold text-sky-600">{Math.round(progress)}% completado</p>
-            </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--muted-bg)" }}>
-              <div className="h-full bg-gradient-to-r from-sky-500 to-cyan-500 rounded-full transition-all duration-500"
-                style={{ width: `${progress}%` }} />
-            </div>
+          <span className="h-6 w-px bg-v-border" />
+          <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent">{createElement(formIcon(form), { size: 17 })}</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold leading-tight text-v-text">{dTitle(form, locale)}</p>
+            <p className="truncate text-xs text-v-subtle">{dSubtitle(form, locale)}</p>
+          </div>
+          <ChipModoLlenado modo={modo} onCambiar={setModo} />
+          {initialChildId ? (
+            <span className="hidden items-center gap-1.5 rounded-full bg-v-accent-soft px-3 py-1.5 text-xs font-semibold text-v-accent sm:inline-flex">
+              <Users size={13} /> {pacienteNombre || '—'}
+            </span>
+          ) : (
+            <select value={selectedChild} onChange={e => setSelectedChild(e.target.value)}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold outline-none ${selectedChild ? 'border-v-accent/30 bg-v-accent-soft text-v-accent' : 'border-v-warning/40 bg-v-warning/10 text-v-warning'}`}>
+              <option value="">{t('evaluaciones.selecPac')}</option>
+              {children.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+          {/* Progreso en anillo */}
+          <div className="relative size-10 shrink-0" title={`${Math.round(progress)}%`}>
+            <svg viewBox="0 0 40 40" className="size-10 -rotate-90">
+              <circle cx="20" cy="20" r="16" fill="none" stroke="var(--v-fill)" strokeWidth="4" />
+              <motion.circle cx="20" cy="20" r="16" fill="none" stroke="var(--v-accent)" strokeWidth="4" strokeLinecap="round"
+                strokeDasharray={circ} animate={{ strokeDashoffset: circ * (1 - progress / 100) }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} />
+            </svg>
+            <span className="absolute inset-0 grid place-items-center text-[10px] font-bold tabular-nums text-v-text">{currentStep + 1}/{totalSteps}</span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto"><div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        {/* Form info card */}
-        <div className="rounded-2xl p-5 text-white shadow-lg" style={{ background: `linear-gradient(120deg, ${formAccent(form)} 0%, #0369a1 100%)` }}>
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <p className="text-white/80 text-xs font-bold mb-1 flex items-center gap-1.5">
-                {(() => { const FI = formIcon(form); return <FI size={13} /> })()}
-                {form.category?.toUpperCase()}
-              </p>
-              <h2 className="font-bold text-xl">{dTitle(form, locale)}</h2>
-              <p className="text-white/80 text-sm mt-0.5">{dSubtitle(form, locale)}</p>
+      <div className="flex-1">
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[240px_1fr]">
+          {/* ── Índice de secciones ── */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-24 rounded-v border border-v-border bg-v-elevated p-2 shadow-v">
+              <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-v-subtle">{locale === 'en' ? 'Sections' : 'Secciones'}</p>
+              {sections.map((sec: any, i: number) => {
+                const st = sectionState(sec)
+                const on = i === currentStep
+                const done = st.total > 0 && st.n === st.total
+                return (
+                  <button key={i} onClick={() => irA(i)}
+                    className={`relative flex w-full items-center gap-2.5 rounded-v-sm px-3 py-2 text-left text-[13px] transition-colors ${on ? 'text-v-accent' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+                    {on && <motion.span layoutId="form-section" className="absolute inset-0 rounded-v-sm bg-v-accent-soft" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                    <span className={`relative grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${done ? 'bg-v-success text-white' : on ? 'bg-v-accent text-white' : st.n > 0 ? 'bg-v-accent-soft text-v-accent' : 'bg-v-fill text-v-subtle'}`}>
+                      {done ? <CheckCircle2 size={11} /> : i + 1}
+                    </span>
+                    <span className={`relative line-clamp-2 flex-1 ${on ? 'font-semibold' : ''}`}>{String(sec.title || sec.section || '').replace(/^\d+\.\s*/, '')}</span>
+                  </button>
+                )
+              })}
             </div>
-            {initialChildId ? (
-              <div className="bg-white/20 backdrop-blur-sm border-2 border-white/30 rounded-xl px-4 py-2.5 text-sm font-bold text-white min-w-[180px] text-center">
-                {initialChildName || children.find((c: any) => c.id === selectedChild)?.name || '—'}
-              </div>
+          </aside>
+
+          <div className="min-w-0 space-y-5">
+            {/* ── Sección actual ── */}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.section key={currentStep} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
+                className="overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v">
+                <div className="flex items-start gap-3 border-b border-v-border px-6 py-5">
+                  <span className="v-brand grid size-9 shrink-0 place-items-center rounded-[30%] text-sm font-bold" style={{ boxShadow: 'none' }}>{currentStep + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-semibold leading-tight tracking-tight text-v-text">{String(currentSection.title || currentSection.section || '').replace(/^\d+\.\s*/, '')}</h3>
+                    {(currentSection.description || currentSection.subtitle) && <p className="mt-1 text-sm text-v-muted">{currentSection.description || currentSection.subtitle}</p>}
+                  </div>
+                  <span className="shrink-0 rounded-full bg-v-fill px-2.5 py-1 text-[11px] font-semibold tabular-nums text-v-muted">
+                    {sectionState(currentSection).n}/{questions.length}
+                  </span>
+                </div>
+                <div className="divide-y divide-v-border">
+                  {questions.map((q: any, qi: number) => (
+                    <div key={q.id} className="relative px-6 py-5">
+                      {isAnswered(responses[q.id]) && (
+                        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute right-5 top-5 text-v-success"><CheckCircle2 size={16} /></motion.span>
+                      )}
+                      <div className="pr-6">
+                        <span className="mb-1 block text-[11px] font-semibold tabular-nums text-v-subtle">{locale === 'en' ? 'Question' : 'Pregunta'} {qi + 1}</span>
+                        <QuestionRenderer question={q} value={responses[q.id]} manual={modo === 'manual'} onChange={(val: any) => handleResponse(q.id, val)} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.section>
+            </AnimatePresence>
+
+            {/* ── Navegación entre secciones ── */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-v border border-v-border bg-v-elevated px-4 py-3 shadow-v">
+              <div className="contents">
+          <button onClick={() => irA(currentStep - 1)} disabled={currentStep === 0}
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-v-border px-4 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill hover:text-v-text disabled:opacity-40">
+            <ChevronLeft size={16} /> {locale === 'en' ? 'Previous' : 'Anterior'}
+          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {mostrarIA && (
+              <motion.button whileTap={{ scale: 0.97 }} onClick={handleAnalyzeWithAI} disabled={isAnalyzing || answeredCount < 3}
+                title={answeredCount < 3 ? (locale === 'en' ? 'Answer at least 3 questions' : 'Responde al menos 3 preguntas') : undefined}
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-v-accent/40 bg-v-accent-soft px-4 text-sm font-semibold text-v-accent transition-opacity disabled:opacity-40">
+                {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                {isAnalyzing ? (locale === 'en' ? 'Analyzing…' : 'Analizando…') : (locale === 'en' ? 'Analyze with AI' : 'Analizar con IA')}
+                {!isAnalyzing && <CostoToken />}
+              </motion.button>
+            )}
+            {esUltimo ? (
+              <motion.button whileTap={{ scale: 0.97 }} onClick={handleSave} disabled={isSaving || !selectedChild}
+                title={!selectedChild ? t('evaluaciones.selecPac') : undefined}
+                className="v-brand inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold disabled:opacity-40">
+                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {t('auto.evaluacionesUnificadas.guardar')}
+              </motion.button>
             ) : (
-              <select value={selectedChild} onChange={e => setSelectedChild(e.target.value)}
-                className="bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:bg-white/30 transition-all min-w-[180px]">
-                <option value="" className="text-slate-800" style={{ color: "var(--text-primary)" }}>{t('evaluaciones.selecPac')}</option>
-                {children.map((c: any) => <option key={c.id} value={c.id} className="text-slate-800" style={{ color: "var(--text-primary)" }}>{c.name}</option>)}
-              </select>
+              <motion.button whileTap={{ scale: 0.97 }} onClick={() => irA(currentStep + 1)}
+                className="v-brand inline-flex h-10 items-center gap-1.5 rounded-full px-5 text-sm font-semibold">
+                {locale === 'en' ? 'Next' : 'Siguiente'} <ChevronRight size={16} />
+              </motion.button>
             )}
           </div>
         </div>
-
-        {/* Section */}
-        <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}>
-          <div className="px-6 py-4 border-b" style={{ background: "var(--muted-bg)", borderColor: "var(--card-border)" }}>
-            <h3 className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>{currentSection.title || currentSection.section}</h3>
-            {(currentSection.description || currentSection.subtitle) && (
-              <p className="text-sm text-slate-500 mt-1">{currentSection.description || currentSection.subtitle}</p>
-            )}
-          </div>
-          <div className="p-6 space-y-6">
-            {questions.map((q: any) => (
-              <QuestionRenderer
-                key={q.id}
-                question={q}
-                value={responses[q.id]}
-                onChange={(val: any) => handleResponse(q.id, val)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4">
-          <button onClick={() => setCurrentStep(s => s - 1)} disabled={currentStep === 0}
-            className="flex items-center gap-2 px-4 sm:px-6 py-3 border-2 border-slate-200 text-slate-600 rounded-xl font-bold hover:border-sky-300 disabled:opacity-40 transition-all" style={{ background: "var(--card)" }}>
-            <ChevronLeft size={18} /> {locale === 'en' ? 'Previous' : 'Anterior'}
-          </button>
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Show AI button from page 6+ for ABA, or on last step for others */}
-            {(currentStep === totalSteps - 1 || (form.formKey === 'aba' && currentStep >= 5)) && (
-              <>
-                <button onClick={handleAnalyzeWithAI} disabled={isAnalyzing || answeredCount < 3}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl font-bold disabled:opacity-40 transition-all shadow-lg shadow-sky-200 hover:opacity-90">
-                  {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                  {isAnalyzing ? (locale === 'en' ? 'Analyzing...' : 'Analizando...') : (locale === 'en' ? 'Analyze with AI' : 'Analizar con IA')}
-                </button>
-                {currentStep === totalSteps - 1 && (
-                  <button onClick={handleSave} disabled={isSaving || !selectedChild}
-                    className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold disabled:opacity-40 transition-all">
-                    {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    {t('auto.evaluacionesUnificadas.guardar')}
-                  </button>
-                )}
-              </>
-            )}
-            {currentStep < totalSteps - 1 && (
-              <>
-                {currentStep === totalSteps - 1 && (
-                  <button onClick={handleSave} disabled={isSaving || !selectedChild}
-                    className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold disabled:opacity-40 transition-all">
-                    {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    {t('auto.evaluacionesUnificadas.guardar2')}
-                  </button>
-                )}
-                <button onClick={() => setCurrentStep(s => s + 1)}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-sky-200 hover:opacity-90">
-                  {locale === 'en' ? 'Next' : 'Siguiente'} <ChevronRight size={18} />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* AI Analysis */}
-        {aiAnalysis && (
-          <div className=" rounded-2xl shadow-sm border border-sky-100 p-6" style={{ background: "var(--card)" }}>
-            <AIAnalysisPanel analysis={aiAnalysis} editableMessage={editedMessage} onEditMessage={setEditedMessage} editableActividades={editedActividades} onEditActividades={setEditedActividades} />
-          </div>
-        )}
       </div>
-    </div></div>
+            {/* ── Análisis de IA ── */}
+            {aiAnalysis && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-v border border-v-accent/30 bg-v-elevated p-6 shadow-v">
+                <AIAnalysisPanel analysis={aiAnalysis} editableMessage={editedMessage} onEditMessage={setEditedMessage} editableActividades={editedActividades} onEditActividades={setEditedActividades} />
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </div>
+
+    </div>
   )
 }
 
 // ─── FORM CARD ───────────────────────────────────────────────────────────────
-function FormCard({ form, onStart, onSend, catInfo }: any) {
+function FormCard({ form, onStart, onSend, index = 0 }: any) {
   const { t, locale } = useI18n()
   const isExternal = (form as any).externalPlatform
   const isPro = form.formKey
   const isParent = form.targetRole === 'parent' || form.targetRole === 'both'
-  const Icon = formIcon(form)
-  const accent = formAccent(form)
 
   return (
-    <div className="rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 group"
-      style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-      {/* Top accent bar — color de la categoría */}
-      <div className="h-1" style={{ background: `linear-gradient(90deg, ${accent}, transparent)` }} />
-
-      <div className="p-4">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110"
-              style={{ background: `${accent}18`, color: accent }}>
-              <Icon size={18} />
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-bold text-sm leading-tight truncate" style={{ color: 'var(--text-primary)' }}>{dTitle(form, locale)}</h3>
-              <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{dSubtitle(form, locale)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {isParent && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
-                style={{ background: 'rgba(2,132,199,0.1)', color: '#0284c7', border: '1px solid rgba(2,132,199,0.2)' }}>
-                Padres
-              </span>
-            )}
-            {isExternal && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
-                style={{ background: 'rgba(245,158,11,0.12)', color: '#b45309', border: '1px solid rgba(245,158,11,0.25)' }}>
-                Ext.
-              </span>
-            )}
-            {isPro && !isExternal && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
-                style={{ background: 'rgba(13,148,136,0.1)', color: '#0d9488', border: '1px solid rgba(13,148,136,0.2)' }}>
-                PRO
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Description */}
-        <p className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{dDesc(form, locale)}</p>
-
-        {/* Tags + time */}
-        <div className="flex flex-wrap gap-1 mb-4">
-          {dTags(form, locale).slice(0, 3).map((tag: string) => (
-            <span key={tag} className="px-2 py-0.5 rounded text-[9px] font-semibold"
-              style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
-              {tag}
-            </span>
-          ))}
-          <span className="px-2 py-0.5 rounded text-[9px] font-semibold flex items-center gap-1"
-            style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
-            <Clock size={8} /> {form.estimatedMinutes}m
-          </span>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          <button onClick={() => onStart(form)}
-            className="flex-1 py-2.5 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5"
-            style={{ background: 'var(--text-primary)', color: 'var(--card)' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.85'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}>
-            <FileText size={12} /> {t('evaluaciones.completar')}
-          </button>
-          {isParent && (
-            <button onClick={() => onSend(form)}
-              className="px-3 py-2.5 rounded-lg transition-all"
-              style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}
-              title={t("evaluaciones.enviarPadres")}>
-              <Send size={12} />
-            </button>
-          )}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index, 9) * 0.03, type: 'spring', stiffness: 220, damping: 24 }}
+      whileHover={{ y: -3 }}
+      className="group flex flex-col rounded-v border border-v-border bg-v-elevated p-5 shadow-v transition-shadow hover:shadow-v-lg">
+      <div className="mb-3 flex items-start gap-3">
+        <span className="grid size-11 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
+          {createElement(formIcon(form), { size: 19 })}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-[15px] font-semibold leading-tight tracking-tight text-v-text">{dTitle(form, locale)}</h3>
+          <p className="mt-0.5 truncate text-xs text-v-subtle">{dSubtitle(form, locale)}</p>
         </div>
       </div>
-    </div>
+
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {isParent && <span className="inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-semibold text-v-accent"><Users size={10} /> {locale === 'en' ? 'Parents' : 'Padres'}</span>}
+        {isExternal && <span className="inline-flex items-center gap-1 rounded-full bg-v-warning/15 px-2 py-0.5 text-[10px] font-semibold text-v-warning"><Lock size={10} /> {locale === 'en' ? 'External' : 'Externa'}</span>}
+        {isPro && !isExternal && <span className="inline-flex items-center gap-1 rounded-full bg-v-success/15 px-2 py-0.5 text-[10px] font-semibold text-v-success"><Sparkles size={10} /> PRO</span>}
+        <span className="inline-flex items-center gap-1 rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold text-v-muted"><Clock size={10} /> {form.estimatedMinutes} min</span>
+      </div>
+
+      <p className="mb-4 line-clamp-2 flex-1 text-sm leading-relaxed text-v-muted">{dDesc(form, locale)}</p>
+
+      <div className="mb-4 flex flex-wrap gap-1">
+        {dTags(form, locale).slice(0, 3).map((tag: string) => (
+          <span key={tag} className="rounded-full border border-v-border px-2 py-0.5 text-[10px] text-v-subtle">{tag}</span>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <motion.button whileTap={{ scale: 0.97 }} onClick={() => onStart(form)}
+          className="v-brand flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-semibold" style={{ boxShadow: 'none' }}>
+          <FileText size={14} /> {t('evaluaciones.completar')}
+        </motion.button>
+        {isParent && (
+          <button onClick={() => onSend(form)} title={t('evaluaciones.enviarPadres')}
+            className="grid size-10 place-items-center rounded-full border border-v-border text-v-muted transition-colors hover:border-v-accent/40 hover:bg-v-accent-soft hover:text-v-accent">
+            <Send size={15} />
+          </button>
+        )}
+      </div>
+    </motion.div>
   )
 }
 
@@ -1520,105 +1520,91 @@ export default function EvaluacionesUnificadas({ initialChildId, initialChildNam
     completed: sentForms.filter(f => f.status === 'completed').length,
   }
 
+  const TABS = [
+    { key: 'biblioteca', label: t('evaluaciones.biblioteca'), count: stats.total, Icon: LayoutGrid },
+    { key: 'enviados',   label: t('evaluaciones.enviados'),   count: stats.sent, Icon: Send },
+    { key: 'historial',  label: t('evaluaciones.historial'),  count: savedForms.length, Icon: ClipboardList },
+  ] as const
+  const catLabel = (id: string, fallback: string) => ({ all: t('evaluaciones.catTodas'), conductual: t('evaluaciones.catABA'), familia: t('evaluaciones.catFamilia'), clinico: t('evaluaciones.catClinico'), tea: t('evaluaciones.catTEA'), tdah: t('evaluaciones.catTDAH'), habilidades: t('evaluaciones.catAdaptativa'), cognitivo: t('evaluaciones.catCognitivo'), sensorial: t('evaluaciones.catSensorial') } as Record<string, string>)[id] || fallback
+
   return (
-    <div className="space-y-6 pb-8">
-      {/* ── HEADER STATS ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="v-scope space-y-5 pb-8">
+      <TokensPrediccion />
+      {/* ── Resumen — mismo ícono que la pestaña (portapapeles con check) ── */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
-          { label: 'Formularios',                      value: stats.total,     bar: '#0284c7', Icon: FileText },
-          { label: t('evaluaciones.enviados_stat'),    value: stats.sent,      bar: '#06b6d4', Icon: Send },
-          { label: 'Pendientes',                       value: stats.pending,   bar: '#f59e0b', Icon: Clock },
-          { label: 'Completados',                      value: stats.completed, bar: '#10b981', Icon: CheckCircle2 },
-        ].map(({ label, value, bar, Icon }) => (
-          <div key={label} className="group rounded-2xl p-4 relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
-            style={{ background: `linear-gradient(157deg, ${bar}0d 0%, var(--card) 46%)`, border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-            <div className="flex items-start justify-between mb-2">
-              <p className="text-3xl font-extrabold tabular-nums tracking-tight leading-none" style={{ color: bar }}>{value}</p>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                style={{ background: `${bar}1a`, color: bar }}>
-                <Icon size={15} />
-              </div>
+          { label: locale === 'en' ? 'Forms' : 'Formularios', value: stats.total, Icon: ClipboardCheck, tone: 'bg-v-accent-soft text-v-accent' },
+          { label: t('evaluaciones.enviados_stat'), value: stats.sent, Icon: Send, tone: 'bg-v-accent-soft text-v-accent' },
+          { label: locale === 'en' ? 'Pending' : 'Pendientes', value: stats.pending, Icon: Clock, tone: 'bg-v-warning/15 text-v-warning' },
+          { label: locale === 'en' ? 'Completed' : 'Completados', value: stats.completed, Icon: CheckCircle2, tone: 'bg-v-success/15 text-v-success' },
+        ].map(({ label, value, Icon, tone }, i) => (
+          <motion.div key={label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05, type: 'spring', stiffness: 220, damping: 24 }} whileHover={{ y: -3 }}
+            className="group rounded-v border border-v-border bg-v-elevated p-4 shadow-v">
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-medium text-v-muted">{label}</p>
+              <span className={`grid size-9 place-items-center rounded-[30%] transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${tone}`}><Icon size={16} /></span>
             </div>
-            <p className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>{label}</p>
-          </div>
+            <p className="mt-1 text-3xl font-bold leading-none tracking-tight tabular-nums text-v-text">{value}</p>
+          </motion.div>
         ))}
       </div>
 
-      {/* ── TABS ── */}
-      <div className="flex rounded-xl p-1 gap-1" style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
-        {[
-          { key: 'biblioteca', label: t('evaluaciones.biblioteca'), count: stats.total },
-          { key: 'enviados',   label: t('evaluaciones.enviados'),   count: stats.sent },
-          { key: 'historial',  label: t('evaluaciones.historial'),  count: savedForms.length },
-        ].map(({ key, label, count }) => (
-          <button key={key} onClick={() => setActiveTab(key as any)}
-            className="flex-1 py-2 px-3 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2"
-            style={activeTab === key
-              ? { background: 'var(--card)', color: 'var(--text-primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
-              : { background: 'transparent', color: 'var(--text-muted)' }}>
-            {label}
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-              style={activeTab === key
-                ? { background: 'var(--muted-bg)', color: 'var(--text-secondary)' }
-                : { background: 'var(--card-border)', color: 'var(--text-muted)' }}>
-              {count}
-            </span>
-          </button>
-        ))}
+      {/* ── Pestañas ── */}
+      <div className="flex rounded-full bg-v-fill p-1">
+        {TABS.map(({ key, label, count, Icon }) => {
+          const on = activeTab === key
+          return (
+            <button key={key} onClick={() => setActiveTab(key)}
+              className={`relative flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-semibold transition-colors ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+              {on && <motion.span layoutId="eval-tab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+              <Icon size={15} className="relative" />
+              <span className="relative">{label}</span>
+              <span className={`relative rounded-full px-2 py-0.5 text-[10px] font-bold ${on ? 'bg-v-accent-soft text-v-accent' : 'bg-v-border text-v-subtle'}`}>{count}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* ── BIBLIOTECA TAB ── */}
       {activeTab === 'biblioteca' && (
-        <div className="space-y-5">
-          {/* Search + Filters */}
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text" placeholder={t('ui.search_form')} value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-2xl text-sm font-medium outline-none transition-all" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', color: 'var(--text-primary)' }} />
-            </div>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2.5 rounded-full border border-v-border bg-v-elevated px-4 py-2.5 shadow-v transition-shadow focus-within:border-v-accent/50 focus-within:ring-4 focus-within:ring-v-accent-soft">
+            <Search size={16} className="shrink-0 text-v-subtle" />
+            <input type="text" placeholder={t('ui.search_form')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              className="flex-1 bg-transparent text-sm text-v-text outline-none placeholder:text-v-subtle" />
+            {searchTerm && <button onClick={() => setSearchTerm('')} className="text-v-subtle hover:text-v-text"><X size={14} /></button>}
           </div>
 
-          {/* Category pills */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             {UNIFIED_CATEGORIES.map(cat => {
               const CatIcon = CAT_ICON[cat.id] || LayoutGrid
-              const activo = activeCategory === cat.id
-              const accent = CAT_ACCENT[cat.id] || '#0284c7'
+              const on = activeCategory === cat.id
+              const n = cat.id === 'all' ? ALL_UNIFIED_FORMS.length : ALL_UNIFIED_FORMS.filter(f => f.category === cat.id).length
               return (
-              <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                className="px-3 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2"
-                style={activo
-                  ? { background: 'var(--text-primary)', color: 'var(--card)', border: '1px solid transparent' }
-                  : { background: 'var(--card)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
-                <CatIcon size={14} style={{ color: activo ? undefined : accent }} />
-                {({all: t('evaluaciones.catTodas'), conductual: t('evaluaciones.catABA'), familia: t('evaluaciones.catFamilia'), clinico: t('evaluaciones.catClinico'), tea: t('evaluaciones.catTEA'), tdah: t('evaluaciones.catTDAH'), habilidades: t('evaluaciones.catAdaptativa'), cognitivo: t('evaluaciones.catCognitivo'), sensorial: t('evaluaciones.catSensorial')} as Record<string,string>)[cat.id] || cat.label}
-              </button>
+                <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${on ? 'border-v-accent/40 bg-v-accent-soft text-v-accent' : 'border-v-border bg-v-elevated text-v-muted hover:text-v-text hover:shadow-v'}`}>
+                  <CatIcon size={13} />
+                  {catLabel(cat.id, cat.label)}
+                  <span className={`text-[10px] ${on ? 'text-v-accent/70' : 'text-v-subtle'}`}>{n}</span>
+                </button>
               )
             })}
           </div>
 
-          {/* Forms grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredForms.map(form => (
-              <FormCard
-                key={form.id}
-                form={form}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredForms.map((form, i) => (
+              <FormCard key={form.id} index={i} form={form}
                 onStart={(f: any) => setSelectedForm(f)}
-                onSend={(f: any) => setSendFormModal(f)}
-              />
+                onSend={(f: any) => setSendFormModal(f)} />
             ))}
           </div>
 
           {filteredForms.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="p-5 bg-slate-100 rounded-3xl mb-4">
-                <Search size={40} className="text-slate-300" />
-              </div>
-              <p className="font-bold text-slate-400">{t("evaluaciones.noFormularios")}</p>
-              <p className="text-xs text-slate-300 mt-1">{t('evaluaciones.otroBusqueda')}</p>
+            <div className="flex flex-col items-center justify-center rounded-v border border-dashed border-v-border py-16 text-center">
+              <span className="mb-3 grid size-14 place-items-center rounded-full bg-v-fill"><Search size={24} className="text-v-subtle" /></span>
+              <p className="font-semibold text-v-text">{t('evaluaciones.noFormularios')}</p>
+              <p className="mt-1 text-xs text-v-subtle">{t('evaluaciones.otroBusqueda')}</p>
             </div>
           )}
         </div>
@@ -1628,36 +1614,38 @@ export default function EvaluacionesUnificadas({ initialChildId, initialChildNam
       {activeTab === 'enviados' && (
         <div className="space-y-3">
           {sentForms.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center  rounded-3xl border border-slate-100" style={{ background: "var(--card)" }}>
-              <div className="p-5 bg-slate-100 rounded-3xl mb-4"><Send size={40} className="text-slate-300" /></div>
-              <p className="font-bold text-slate-400">{t('ui.no_forms_sent')}</p>
-              <p className="text-xs text-slate-300 mt-1">{t('evaluaciones.irBiblioteca2')}</p>
+            <div className="flex flex-col items-center justify-center rounded-v border border-dashed border-v-border py-16 text-center">
+              <span className="mb-3 grid size-14 place-items-center rounded-full bg-v-fill"><Send size={22} className="text-v-subtle" /></span>
+              <p className="font-bold text-v-subtle">{t('ui.no_forms_sent')}</p>
+              <p className="text-xs text-v-subtle mt-1">{t('evaluaciones.irBiblioteca2')}</p>
             </div>
           ) : sentForms.map(sf => (
-            <div key={sf.id} className=" rounded-2xl border border-slate-100 shadow-sm overflow-hidden" style={{ background: "var(--card)" }}>
-              <div className="flex items-center gap-4 p-5 cursor-pointer hover:bg-slate-50 transition-all"
+            <div key={sf.id} className="rounded-v border border-v-border bg-v-elevated shadow-v overflow-hidden">
+              <div className="flex items-center gap-4 p-5 cursor-pointer hover:bg-v-fill transition-all"
                 onClick={() => setExpandedResponse(expandedResponse === sf.id ? null : sf.id)}>
-                <div className={`w-3 h-3 rounded-full shrink-0 ${sf.status === 'completed' ? 'bg-emerald-500' : sf.status === 'pending' ? 'bg-amber-400 animate-pulse' : 'bg-slate-300'}`} />
+                <span className={`grid size-10 shrink-0 place-items-center rounded-[30%] ${sf.status === 'completed' ? 'bg-v-success/15 text-v-success' : 'bg-v-warning/15 text-v-warning'}`}>
+                  {sf.status === 'completed' ? <CheckCircle2 size={17} /> : <Clock size={17} />}
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                    <p className="font-bold text-slate-800 text-sm truncate" style={{ color: "var(--text-primary)" }}>{sf.form_title}</p>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase inline-flex items-center gap-1 ${sf.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                    <p className="font-bold text-v-text text-sm truncate" style={{ color: "var(--v-text)" }}>{sf.form_title}</p>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase inline-flex items-center gap-1 ${sf.status === 'completed' ? 'bg-v-success/15 text-v-success border-v-success/30' : 'bg-v-warning/15 text-v-warning border-v-warning/30'}`}>
                       {sf.status === 'completed' ? <><CheckCircle2 size={10} /> {t('evaluaciones.completado')}</> : <><Clock size={10} /> {t('evaluaciones.pendiente')}</>}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 font-medium">Para: {sf.profiles?.full_name || sf.profiles?.email}</p>
-                  <p className="text-xs text-slate-300 mt-0.5">{new Date(sf.created_at).toLocaleDateString(toBCP47(locale))}</p>
+                  <p className="text-xs text-v-subtle font-medium">Para: {sf.profiles?.full_name || sf.profiles?.email}</p>
+                  <p className="text-xs text-v-subtle mt-0.5">{new Date(sf.created_at).toLocaleDateString(toBCP47(locale))}</p>
                 </div>
-                {expandedResponse === sf.id ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                {expandedResponse === sf.id ? <ChevronUp size={16} className="text-v-subtle" /> : <ChevronDown size={16} className="text-v-subtle" />}
               </div>
               {expandedResponse === sf.id && sf.status === 'completed' && sf.responses && (
-                <div className="border-t border-slate-100 bg-slate-50/50 p-5">
-                  <h4 className="text-xs font-bold text-slate-400 mb-3">{t("evaluaciones.respuestas")}</h4>
+                <div className="border-t border-v-border bg-v-fill p-5">
+                  <h4 className="text-xs font-bold text-v-subtle mb-3">{t("evaluaciones.respuestas")}</h4>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {Object.entries(sf.responses).map(([k, v]) => (
-                      <div key={k} className=" rounded-xl p-3 border border-slate-100" style={{ background: "var(--card)" }}>
-                        <p className="text-xs font-bold text-slate-400">{k}</p>
-                        <p className="text-sm font-medium text-slate-700 mt-0.5">{Array.isArray(v) ? (v as string[]).join(', ') : String(v)}</p>
+                      <div key={k} className=" rounded-v-sm p-3 border border-v-border" style={{ background: "var(--v-bg-elevated)" }}>
+                        <p className="text-xs font-bold text-v-subtle">{k}</p>
+                        <p className="text-sm font-medium text-v-text mt-0.5">{Array.isArray(v) ? (v as string[]).join(', ') : String(v)}</p>
                       </div>
                     ))}
                   </div>
@@ -1672,9 +1660,9 @@ export default function EvaluacionesUnificadas({ initialChildId, initialChildNam
       {activeTab === 'historial' && (
         <div className="space-y-3">
           {savedForms.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center  rounded-3xl border border-slate-100" style={{ background: "var(--card)" }}>
-              <div className="p-5 bg-slate-100 rounded-3xl mb-4"><ClipboardList size={40} className="text-slate-300" /></div>
-              <p className="font-bold text-slate-400">{t("evaluaciones.sinFormsGuardados")}</p>
+            <div className="flex flex-col items-center justify-center rounded-v border border-dashed border-v-border py-16 text-center">
+              <span className="mb-3 grid size-14 place-items-center rounded-full bg-v-fill"><ClipboardList size={22} className="text-v-subtle" /></span>
+              <p className="font-bold text-v-subtle">{t("evaluaciones.sinFormsGuardados")}</p>
             </div>
           ) : savedForms.map(sf => (
             <HistorialFormCard

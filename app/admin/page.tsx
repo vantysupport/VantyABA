@@ -1,4 +1,7 @@
 'use client'
+import AvisoPago from '@/components/AvisoPago'
+import { useAvisos, AvisosLista, vistaDeAviso } from '@/components/AvisosCampana'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 import PWAInstallButton from '@/components/PWAInstallButton'
 import { useI18n } from '@/lib/i18n-context'
@@ -8,12 +11,15 @@ import { releaseSessionNow } from '@/lib/session-lock'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { AnimatePresence, motion } from 'motion/react'
+import { UserAvatar } from '@/components/ui/user-avatar'
+import { AriaGlyph } from '@/components/ui/aria-glyph'
 
 import {
   LayoutDashboard, Users, LogOut, Bell, Brain, Calendar, BookOpen, MessageCircle,
   X, User, FileText, Loader2, Key, BarChart3, ShieldCheck, Upload,
   ChevronRight, Settings, Crown, Stethoscope, ShoppingBag, Activity,
-  Database, Sparkles, Zap, Maximize2, Minimize2, Minus, DollarSign, Mic
+  Database, Sparkles, Zap, Maximize2, Minimize2, Minus, DollarSign
 } from 'lucide-react'
 
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
@@ -41,7 +47,8 @@ import ARIAFloatingChat from './components/ARIAFloatingChat'
 import ChatEspecialistas from './components/ChatEspecialistas'
 import AdminPagos from './components/AdminPagos'
 import AdminReportesFinancieros from './components/AdminReportesFinancieros'
-import FonemasAdminView from './components/FonemasAdminView'
+import { AriaSaludo } from '@/components/ui/aria-saludo'
+import PushNotificationBanner from '@/components/PushNotificationBanner'
 
 // ── Features & Roles types (mirrors control/route.ts) ────────────────────────
 type FeaturesConfig = {
@@ -54,7 +61,7 @@ type FeaturesConfig = {
   cerebro_aprender: boolean; cerebro_diagnosticos: boolean; cerebro_biblioteca: boolean
   pagos_dashboard: boolean; pagos_registros: boolean; pagos_agrupado: boolean; pagos_tarifas: boolean
   reportes_overview: boolean; reportes_pacientes: boolean; reportes_servicios: boolean
-  recursos_recursos: boolean; recursos_tienda: boolean; recursos_terapias: boolean; recursos_fonemas: boolean
+  recursos_recursos: boolean; recursos_tienda: boolean; recursos_terapias: boolean
 }
 type RolesConfig = { jefe: boolean; especialista: boolean; secretaria: boolean; padre: boolean }
 
@@ -68,7 +75,7 @@ const DEFAULT_FEATURES: FeaturesConfig = {
   cerebro_aprender: true, cerebro_diagnosticos: true, cerebro_biblioteca: true,
   pagos_dashboard: true, pagos_registros: true, pagos_agrupado: true, pagos_tarifas: true,
   reportes_overview: true, reportes_pacientes: true, reportes_servicios: true,
-  recursos_recursos: true, recursos_tienda: true, recursos_terapias: true, recursos_fonemas: true,
+  recursos_recursos: true, recursos_tienda: true, recursos_terapias: true,
 }
 
 const ROLE_ICON: Record<string, any> = {
@@ -77,25 +84,139 @@ const ROLE_ICON: Record<string, any> = {
   especialista: Stethoscope,
 }
 
-function SidebarLink({ icon: Icon, label, active, onClick, small, badge }: any) {
+function SidebarLink({ icon: Icon, label, active, onClick, small, badge, index = 0 }: any) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group text-left
-        ${active
-          ? 'bg-gradient-to-r from-sky-600 to-cyan-600 text-white shadow-md shadow-sky-500/30'
-          : 'text-slate-500 dark:text-slate-400 hover:bg-sky-50/70 dark:hover:bg-[#21262d] hover:text-slate-800 dark:hover:text-slate-200'
-        } ${small ? 'text-xs' : 'text-sm'}`}
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.03 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      whileTap={{ scale: 0.97 }}
+      className={`group relative flex w-full items-center gap-3 rounded-v-sm px-3 text-left transition-colors
+        ${small ? 'py-2 text-[13px]' : 'py-2.5 text-sm'}
+        ${active ? 'text-white' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}
     >
-      <Icon size={small ? 15 : 17} className={`flex-shrink-0 transition-colors ${active ? 'text-white' : 'text-slate-400 group-hover:text-sky-500'}`} />
-      <span className={`font-semibold truncate flex-1 ${small ? 'text-xs' : ''}`}>{label}</span>
+      {active && (
+        <motion.span
+          layoutId="admin-nav-active"
+          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+          className="v-brand absolute inset-0 overflow-hidden rounded-v-sm"
+        >
+          <span className="v-sweep block size-full" style={{ ['--v-sweep-duration' as string]: '5s' }} />
+        </motion.span>
+      )}
+      <Icon
+        size={small ? 16 : 18}
+        strokeWidth={active ? 2.2 : 1.8}
+        className={`relative z-[2] shrink-0 transition-transform duration-200 group-hover:scale-110 ${active ? 'text-white' : 'text-v-subtle group-hover:text-v-accent'}`}
+      />
+      <span className="relative z-[2] flex-1 truncate font-medium">{label}</span>
       {badge > 0 && (
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0
-          ${active ? 'bg-white/20 text-white' : 'bg-red-500 text-white'}`}>
+        <span className={`relative z-[2] shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? 'bg-white/25 text-white' : 'bg-v-danger text-white'}`}>
           {badge}
         </span>
       )}
-    </button>
+    </motion.button>
+  )
+}
+
+function SidebarPlanCard() {
+  const { t, locale } = useI18n()
+  const [plan, setPlan] = useState<{
+    status: string; trialEndsAt: string | null; planName: { es: string; en: string } | null
+    patients: { used: number; max: number | null }; professionals: { used: number; max: number | null }
+    trialDays: number | null
+    payDays: number | null
+    paidUntil: string | null
+  } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/centro/plan', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(p => p && setPlan({
+        ...p,
+        trialDays: p.status === 'trial' && p.trialEndsAt
+          ? Math.max(0, Math.ceil((new Date(p.trialEndsAt).getTime() - Date.now()) / 86_400_000))
+          : null,
+        // Días hasta el próximo pago (paid_until es una fecha: se compara al mediodía local)
+        payDays: p.status === 'active' && p.paidUntil
+          ? Math.ceil((new Date(`${String(p.paidUntil).slice(0, 10)}T12:00:00`).getTime() - Date.now()) / 86_400_000)
+          : null,
+      }))
+      .catch(() => {})
+  }, [])
+
+  if (!plan) return null
+  const { trialDays, payDays } = plan
+  const statusTone = plan.status === 'active' ? 'bg-v-success/15 text-v-success'
+    : plan.status === 'trial' ? 'bg-v-accent-soft text-v-accent' : 'bg-v-warning/15 text-v-warning'
+  const meters = [
+    { label: t('vanty.sidebarPlan.patients'), ...plan.patients },
+    { label: t('vanty.sidebarPlan.team'), ...plan.professionals },
+  ]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.35, type: 'spring', stiffness: 200, damping: 24 }}
+      className="relative mx-3 mb-3 overflow-hidden rounded-v border border-v-border bg-v-fill p-3.5"
+    >
+      <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full opacity-60 blur-2xl"
+        style={{ background: 'var(--v-brand-gradient)' }} />
+      <div className="relative flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-v-subtle">{t('vanty.sidebarPlan.plan')}</p>
+          <p className="truncate text-sm font-bold text-v-text">
+            {plan.planName ? plan.planName[locale === 'en' ? 'en' : 'es'] : t('vanty.sidebarPlan.noPlan')}
+          </p>
+        </div>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusTone}`}>
+          {t(`vanty.sidebarPlan.status.${plan.status}`)}
+        </span>
+      </div>
+      <div className="relative mt-3 space-y-2.5">
+        {meters.map((m, i) => {
+          const pct = m.max ? Math.min(100, Math.round((m.used / m.max) * 100)) : 100
+          return (
+            <div key={m.label}>
+              <div className="mb-1 flex justify-between text-[11px]">
+                <span className="text-v-muted">{m.label}</span>
+                <span className="font-semibold tabular-nums text-v-text">
+                  {m.used} / {m.max ?? t('vanty.sidebarPlan.unlimited')}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-v-border">
+                <motion.div
+                  className={`h-full rounded-full ${pct >= 90 && m.max ? 'bg-v-warning' : 'v-brand'}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${m.max ? pct : 100}%` }}
+                  transition={{ delay: 0.5 + i * 0.12, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                  style={m.max ? undefined : { opacity: 0.35 }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {trialDays !== null && (
+        <p className="relative mt-3 text-[11px] font-medium text-v-accent">{t('vanty.sidebarPlan.trialLeft', { n: String(trialDays) })}</p>
+      )}
+      {payDays != null && plan.paidUntil && (
+        <p className={`relative mt-3 text-[11px] font-medium ${payDays <= 3 ? 'text-v-warning' : 'text-v-muted'}`}>
+          {payDays > 0
+            ? (locale === 'en' ? `Next payment in ${payDays} ${payDays === 1 ? 'day' : 'days'}` : `Próximo pago en ${payDays} ${payDays === 1 ? 'día' : 'días'}`)
+            : (locale === 'en' ? 'Payment due today' : 'El pago vence hoy')}
+          <span className="text-v-subtle"> · {new Date(`${String(plan.paidUntil).slice(0, 10)}T12:00:00`).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { day: 'numeric', month: 'short' })}</span>
+        </p>
+      )}
+      {(plan.status === 'trial' || plan.status === 'pending_payment') && (
+        <a href={`/${locale}/suscripcion?motivo=elegir`}
+          className="v-brand relative mt-3 flex h-8 items-center justify-center rounded-full text-xs font-semibold" style={{ boxShadow: 'none' }}>
+          {locale === 'en' ? 'Choose plan' : 'Elegir plan'}
+        </a>
+      )}
+    </motion.div>
   )
 }
 
@@ -108,7 +229,6 @@ function RecursosAdicionalesView({ isDark, enabledTabs }: {
     { id: 'recursos' as const, icon: BookOpen,   label: t('nav.recursos') },
     { id: 'tienda' as const,   icon: ShoppingBag,label: t('nav.tienda') },
     { id: 'terapias' as const, icon: Sparkles,   label: t('nav.catalogoTerapias') },
-    { id: 'fonemas' as const,  icon: Mic,        label: t('nav.fonemas') },
   ]
   type RecursosTab = typeof allTabs[number]['id']
   const visibleTabs = allTabs.filter(t => !enabledTabs || enabledTabs[`recursos_${t.id}`] !== false)
@@ -117,31 +237,27 @@ function RecursosAdicionalesView({ isDark, enabledTabs }: {
   const activeTab = visibleTabs.find(t => t.id === tab) ? tab : (visibleTabs[0]?.id ?? 'recursos')
   return (
     <div className="flex flex-col gap-4">
-      <div className={`flex gap-1 p-1 rounded-xl w-fit flex-wrap ${isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>
-        {visibleTabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
-              ${activeTab === t.id
-                ? 'bg-sky-600 text-white shadow-md'
-                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'
-              }`}
-          >
-            <t.icon size={15} />
-            {t.label}
-          </button>
-        ))}
+      <div className="v-scope flex w-full gap-1 overflow-x-auto rounded-full bg-v-fill p-1 [scrollbar-width:none] sm:w-fit [&::-webkit-scrollbar]:hidden">
+        {visibleTabs.map(tb => {
+          const on = activeTab === tb.id
+          return (
+            <button key={tb.id} onClick={() => setTab(tb.id)}
+              className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+              {on && <motion.span layoutId="recursos-tab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+              <tb.icon size={15} className="relative" /><span className="relative">{tb.label}</span>
+            </button>
+          )
+        })}
       </div>
       {activeTab === 'recursos' && <ResourcesManagementView />}
       {activeTab === 'tienda'   && <StoreManagementView />}
       {activeTab === 'terapias' && <CatalogoTerapiasView />}
-      {activeTab === 'fonemas'  && <FonemasAdminView />}
     </div>
   )
 }
 
 export default function AdminDashboard() {
+  const { name: centroNombre, logoUrl: centroLogo } = useCentroBranding()
   const router = useRouter()
   const toast = useToast()
   const { isDark } = useTheme()
@@ -197,6 +313,14 @@ export default function AdminDashboard() {
   }
 
   const [currentView, setCurrentView] = useState('inicio')
+
+  // Enlace directo desde una notificación push: ?vista=agenda
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('vista')
+    if (!v) return
+    setCurrentView(v)
+    const u = new URL(window.location.href); u.searchParams.delete('vista'); window.history.replaceState(null, '', u.toString())
+  }, [])
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [selectedChildReport, setSelectedChildReport] = useState<{id: string, name: string} | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -210,6 +334,7 @@ export default function AdminDashboard() {
   const [changingPassword, setChangingPassword] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [userId, setUserId] = useState('')
+  const { avisos, marcarLeido } = useAvisos(userId)
   const [chatUnread, setChatUnread] = useState(0)
   const [ariaOpen, setAriaOpen] = useState(false)
   const [ariaExpanded, setAriaExpanded] = useState(false)
@@ -253,6 +378,9 @@ export default function AdminDashboard() {
         .select('*')
         .eq('id', user.id)
         .maybeSingle()
+      // Rol distinto al del panel (p. ej. cambiado mientras la pestaña estaba abierta): a su panel
+      const panel = profile?.role === 'especialista' ? '/especialista' : profile?.role === 'secretaria' ? '/secretaria' : profile?.role === 'padre' ? '/padre' : null
+      if (panel && !cancelled) { router.replace(panel); return }
       if (profile && !cancelled) setUserProfile(profile)
 
       const hace7dias = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -345,7 +473,6 @@ export default function AdminDashboard() {
   const RoleIcon = ROLE_ICON[role] || User
   const roleName = role === 'jefe' || role === 'admin' ? t('nav.rolJefe') : role === 'especialista' ? t('nav.rolEspecialista') : t('nav.rolUsuario')
   const userName = userProfile?.full_name || 'Usuario'
-  const userInitial = userName.charAt(0).toUpperCase()
 
   // ── Helper: check if a feature is enabled ──────────────────────────────────
   const feat = (key: keyof FeaturesConfig) => features[key] !== false
@@ -360,45 +487,58 @@ export default function AdminDashboard() {
   return (
     <>
     <PWAInstallButton />
-    <div className={`flex h-screen font-sans overflow-hidden transition-colors duration-200
-      ${isDark ? 'bg-[#0d1117]' : 'bg-slate-50'}`}>
+    <div className="v-root flex h-screen font-sans overflow-hidden transition-colors duration-200">
 
       {/* SIDEBAR */}
       <aside className={`
-        fixed md:static z-40 h-full w-[215px] flex flex-col sidebar-transition
-        border-r transition-transform duration-300
-        ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'} shadow-sm
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        v-scope fixed md:static z-40 h-full w-[232px] flex flex-col sidebar-transition
+        border-r border-v-border bg-v-elevated/90 backdrop-blur-xl transition-transform duration-300
+        ${sidebarOpen ? 'translate-x-0 shadow-v-lg' : '-translate-x-full md:translate-x-0'}
         ${focusMode ? 'md:-translate-x-full md:w-0 md:overflow-hidden md:border-0' : ''}
       `}>
-        {/* Logo */}
-        <div className={`flex items-center gap-3 px-4 h-[60px] border-b flex-shrink-0
-          ${isDark ? 'border-[#21262d]' : 'border-slate-100/80'}`}>
-          <div
-            className="relative w-10 h-10 flex-shrink-0 rounded-full shadow-md ring-2 overflow-hidden"
-            style={{ background: '#ffffff', padding: '3px', borderColor: '#ffffff', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
-          >
-            <Image src="/images/logo.png" alt="Logo" fill className="object-contain" />
+        {/* Soft brand glow behind the header */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-70"
+          style={{ background: 'radial-gradient(16rem 8rem at 20% 0%, var(--v-glow-1), transparent 70%)' }} />
+
+        {/* Center identity */}
+        <div className="relative shrink-0 px-4 pb-3 pt-6">
+          <div className="flex items-center gap-3">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[30%] shadow-v ring-1 ring-v-border"
+              style={{ backgroundColor: '#ffffff' }}
+            >
+              {centroLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={centroLogo} alt="" className="size-full object-contain p-1" />
+              ) : (
+                <Image src="/brand/vanty-logo-96.png" alt="" width={48} height={48} className="size-full object-cover" />
+              )}
+            </motion.div>
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-[13px] font-semibold leading-snug tracking-tight text-v-text" title={centroNombre}>
+                {centroNombre}
+              </p>
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-semibold text-v-accent">
+                <RoleIcon size={10} /> {roleName}
+              </span>
+            </div>
+            <button onClick={() => setSidebarOpen(false)} aria-label="Cerrar menú"
+              className="grid size-8 shrink-0 place-items-center rounded-full text-v-subtle hover:bg-v-fill hover:text-v-text md:hidden">
+              <X size={16} />
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className={`font-bold text-[13px] leading-tight truncate tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
-              Neuropsicología y Terapias SANTI
-            </p>
-            <p className={`text-[10px] font-semibold tracking-wide ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>
-              Panel {roleName}
-            </p>
-          </div>
-          <button onClick={() => setSidebarOpen(false)}
-            className="ml-auto md:hidden text-slate-400 hover:text-slate-600">
-            <X size={16} />
-          </button>
         </div>
+        <div className="mx-4 h-px bg-v-border" />
 
         {/* Main nav — filtered by features */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
-          {visibleNavItems.map(item => (
+        <nav className="relative flex-1 space-y-1 overflow-y-auto px-3 py-3">
+          {visibleNavItems.map((item, i) => (
             <SidebarLink
               key={item.id}
+              index={i}
               icon={item.icon}
               label={item.label}
               active={currentView === item.id}
@@ -407,13 +547,14 @@ export default function AdminDashboard() {
             />
           ))}
 
-          <div className={`pt-4 mt-2 border-t ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-            <p className={`text-[10px] font-bold px-3 mb-2 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+          <div className="mt-3 border-t border-v-border pt-4">
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-v-subtle">
               {t('nav.sistema')}
             </p>
-            {SECONDARY_NAV.filter((item: any) => !item.hidden && (!item.roles || item.roles.includes(role))).map(item => (
+            {SECONDARY_NAV.filter((item: any) => !item.hidden && (!item.roles || item.roles.includes(role))).map((item, i) => (
               <SidebarLink
                 key={item.id}
+                index={visibleNavItems.length + i}
                 icon={item.icon}
                 label={item.label}
                 active={currentView === item.id}
@@ -425,35 +566,30 @@ export default function AdminDashboard() {
           </div>
         </nav>
 
+        {role === 'jefe' || role === 'admin' ? <SidebarPlanCard /> : null}
+
         {/* User footer */}
-        <div className={`p-3 border-t flex-shrink-0 ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-          <div
-            className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors
-              ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-50'}`}
+        <div className="relative shrink-0 border-t border-v-border p-3">
+          <button
+            className="group flex w-full items-center gap-3 rounded-v-sm p-2 text-left transition-colors hover:bg-v-fill"
             onClick={() => { setCurrentView('config'); setSidebarOpen(false) }}
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
-              {userProfile?.avatar_url ? (
-                <img src={userProfile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                userInitial
-              )}
+            <UserAvatar seed={userProfile?.id ?? userEmail ?? 'vanty'} imageUrl={userProfile?.avatar_url} size={34} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-v-text">{userName}</p>
+              <p className="truncate text-[10px] text-v-subtle">{userEmail}</p>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs font-bold truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                {userName}
-              </p>
-              <p className={`text-[10px] truncate ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                {userEmail}
-              </p>
-            </div>
-            <Settings size={14} className="text-slate-400 flex-shrink-0" />
+            <Settings size={14} className="shrink-0 text-v-subtle transition-transform duration-500 group-hover:rotate-90 group-hover:text-v-accent" />
+          </button>
+          <div className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-v-subtle">
+            <span>powered by</span>
+            <span className="v-brand-text font-bold tracking-tight">Vanty ABA</span>
           </div>
         </div>
       </aside>
 
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-30 bg-[#081426]/40 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* MAIN */}
@@ -471,8 +607,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Topbar */}
-        <header className={`h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 border-b transition-all duration-300
-          ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200'}
+        <header className={`v-scope relative z-40 h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 border-b border-v-border bg-v-elevated/80 backdrop-blur-xl transition-all duration-300
           ${focusMode ? 'hidden' : ''}`}>
           <div className="flex items-center gap-2 md:gap-3">
             <button
@@ -483,11 +618,12 @@ export default function AdminDashboard() {
               <LayoutDashboard size={18} />
             </button>
             <div>
-              <h1 className={`text-sm md:text-lg font-bold tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+              <motion.h1 key={currentView} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                className="text-sm font-bold tracking-tight text-v-text md:text-lg">
                 {PAGE_TITLES[currentView] || 'Panel'}
-              </h1>
+              </motion.h1>
               <p className={`text-[10px] hidden sm:block ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                Neuropsicología y Terapias SANTI · {t('nav.gestionIntegral')}
+                {centroNombre} · {t('nav.gestionIntegral')}
               </p>
             </div>
           </div>
@@ -528,7 +664,7 @@ export default function AdminDashboard() {
                   ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
               >
                 <Bell size={18} />
-                {(notifications.length > 0 || chatUnread > 0) && (
+                {(notifications.length > 0 || chatUnread > 0 || avisos.length > 0) && (
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
                 )}
               </button>
@@ -540,6 +676,7 @@ export default function AdminDashboard() {
                     <button onClick={() => setShowNotifications(false)}><X size={16} className="text-slate-400" /></button>
                   </div>
                   <div className="space-y-2 max-h-72 overflow-y-auto">
+                    <AvisosLista avisos={avisos} onAbrir={a => { marcarLeido(a.id); const v = vistaDeAviso(a.tipo, 'admin'); if (v) navigateTo(v); setShowNotifications(false) }} />
                     {chatUnread > 0 && (
                       <div className="space-y-1.5">
                         <p className={`text-[10px] font-bold px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("nav.chatEquipo")}</p>
@@ -565,7 +702,7 @@ export default function AdminDashboard() {
                         ))}
                       </div>
                     )}
-                    {notifications.length === 0 && chatUnread === 0 && (
+                    {notifications.length === 0 && chatUnread === 0 && avisos.length === 0 && (
                       <p className="text-xs text-slate-400 text-center py-4">{t('ui.no_appts_today')}</p>
                     )}
                   </div>
@@ -579,8 +716,9 @@ export default function AdminDashboard() {
         <div className={`flex-1 overflow-y-auto transition-colors flex flex-col admin-content
           ${currentView === 'ninos' || currentView === 'agenda' || currentView === 'chat-especialistas' ? 'p-0 overflow-hidden' : 'p-3 md:p-4 pb-28 md:pb-8'}
           ${isDark ? 'bg-[#0d1117]' : 'bg-slate-50'}`}>
+          <AvisoPago />
           {currentView !== 'usuarios' && (
-            <div className={`flex-1 ${currentView === 'ninos' || currentView === 'chat-especialistas' ? 'min-h-0 h-full flex flex-col overflow-hidden' : ''}`}>
+            <div className={`flex-1 ${currentView === 'ninos' || currentView === 'agenda' || currentView === 'chat-especialistas' ? 'min-h-0 h-full flex flex-col overflow-hidden' : ''}`}>
               {currentView === 'inicio'       && <DashboardHome navigateTo={navigateTo} navigateToPatient={navigateToPatient} />}
               {currentView === 'agenda'       && feat('agenda') && <CalendarView />}
               {currentView === 'ninos'        && feat('ninos') && (
@@ -643,6 +781,8 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+        <AriaSaludo />
+        <PushNotificationBanner userId={userId || null} rol="equipo" />
       </main>
 
       {/* Change Password Modal */}
@@ -689,79 +829,81 @@ export default function AdminDashboard() {
       )}
 
       {/* ARIA Flotante */}
-      {ariaOpen && currentView !== 'chat-especialistas' && (
-        <div className={`fixed bottom-6 md:bottom-6 right-4 md:right-6 z-[90] w-[calc(100vw-2rem)] rounded-3xl shadow-2xl overflow-hidden border flex flex-col transition-all duration-300
-          ${isDark ? 'bg-[#161b22] border-[#30363d]' : 'bg-white border-slate-200'}`}
-          style={{
-            maxWidth: ariaExpanded ? '900px' : '448px',
-            height: ariaMinimized ? '54px' : ariaExpanded ? '860px' : '560px',
-          }}>
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-sky-600 to-cyan-600 flex-shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <svg width="18" height="18" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="6" y="9" width="16" height="13" rx="3" fill="white" fillOpacity="0.9"/>
-                  <rect x="9" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
-                  <rect x="16" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
-                  <rect x="11" y="17" width="6" height="1.5" rx="0.75" fill="#0284c7"/>
-                  <rect x="13" y="6" width="2" height="4" rx="1" fill="white" fillOpacity="0.9"/>
-                  <circle cx="14" cy="5.5" r="1.5" fill="white"/>
-                  <rect x="2" y="12" width="2.5" height="5" rx="1.25" fill="white" fillOpacity="0.7"/>
-                  <rect x="23.5" y="12" width="2.5" height="5" rx="1.25" fill="white" fillOpacity="0.7"/>
-                </svg>
-              </div>
-              <div>
-                <p className="text-white font-bold text-sm leading-tight flex items-center gap-2">
-                  ARIA <span className="px-1.5 py-0.5 bg-white/20 rounded-full text-[9px] font-bold">IA</span>
-                </p>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"/>
-                  <p className="text-sky-200 text-[10px] font-medium">{(currentView === 'ninos' && activeChild) ? `${locale === 'en' ? 'Case' : 'Caso'}: ${activeChild.name}` : (locale === 'en' ? 'Clinical Assistant · Active' : 'Asistente Clínico · Activa')}</p>
-                </div>
+      <AnimatePresence>
+        {ariaOpen && currentView !== 'chat-especialistas' && (
+          <motion.div
+            key="aria-panel"
+            initial={{ opacity: 0, scale: 0.9, y: 24 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 24 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+            style={{
+              transformOrigin: 'bottom right',
+              maxWidth: ariaExpanded ? '900px' : '440px',
+              height: ariaMinimized ? '64px' : ariaExpanded ? 'min(860px, calc(100vh - 3rem))' : 'min(600px, calc(100vh - 3rem))',
+            }}
+            className="v-scope fixed bottom-6 right-4 z-[90] flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-v-lg border border-v-border bg-v-elevated shadow-v-lg transition-[max-width,height] duration-300 md:right-6"
+          >
+            <div className="v-brand v-sweep relative flex shrink-0 items-center justify-between px-4 py-3" style={{ ['--v-sweep-duration' as string]: '8s' }}>
+              <button className="relative z-[2] flex min-w-0 items-center gap-3 text-left" onClick={() => setAriaMinimized(m => !m)}>
+                <span className="relative size-10 shrink-0 rounded-full ring-2 ring-white/40">
+                  <AriaGlyph />
+                  <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-emerald-400 ring-2 ring-[#0a7fe6]" />
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2 text-[15px] font-semibold leading-tight text-white">
+                    ARIA <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wide">IA</span>
+                  </span>
+                  <span className="block truncate text-[11px] text-white/80">
+                    {(currentView === 'ninos' && activeChild) ? `${locale === 'en' ? 'Case' : 'Caso'}: ${activeChild.name}` : (locale === 'en' ? 'Clinical Assistant · Online' : 'Asistente clínica · En línea')}
+                  </span>
+                </span>
+              </button>
+              <div className="relative z-[2] flex items-center gap-0.5">
+                {[
+                  { onClick: () => setAriaMinimized(m => !m), icon: <Minus size={15} />, title: ariaMinimized ? (locale === 'en' ? 'Restore' : 'Restaurar') : (locale === 'en' ? 'Minimize' : 'Minimizar') },
+                  { onClick: () => { setAriaExpanded(x => !x); setAriaMinimized(false) }, icon: ariaExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />, title: ariaExpanded ? (locale === 'en' ? 'Shrink' : 'Reducir') : (locale === 'en' ? 'Expand' : 'Ampliar') },
+                  { onClick: () => { setAriaOpen(false); setAriaExpanded(false); setAriaMinimized(false) }, icon: <X size={16} />, title: t('common.cerrar') },
+                ].map((b, i) => (
+                  <button key={i} onClick={b.onClick} title={b.title}
+                    className="grid size-8 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/20 hover:text-white">
+                    {b.icon}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setAriaMinimized(m => !m)} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaMinimized ? (locale === 'en' ? 'Restore' : 'Restaurar') : (locale === 'en' ? 'Minimize' : 'Minimizar')}>
-                <Minus size={15} className="text-white"/>
-              </button>
-              <button onClick={() => { setAriaExpanded(x => !x); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={ariaExpanded ? (locale === 'en' ? 'Shrink' : 'Reducir') : (locale === 'en' ? 'Expand' : 'Ampliar')}>
-                {ariaExpanded ? <Minimize2 size={15} className="text-white"/> : <Maximize2 size={15} className="text-white"/>}
-              </button>
-              <button onClick={() => { setAriaOpen(false); setAriaExpanded(false); setAriaMinimized(false) }} className="p-1.5 hover:bg-white/20 rounded-xl transition-all" title={t("common.cerrar")}>
-                <X size={16} className="text-white"/>
-              </button>
-            </div>
-          </div>
-          {!ariaMinimized && (
-          <div className="flex-1 min-h-0">
-            <ARIAAgentChat userId={userId} compact={true}
-              childId={currentView === 'ninos' ? activeChild?.id : undefined}
-              childName={currentView === 'ninos' ? activeChild?.name : undefined}
-              contexto={currentView === 'ninos' && activeChild ? 'paciente' : 'general'} />
-          </div>
-          )}
-        </div>
-      )}
+            {!ariaMinimized && (
+              <div className="min-h-0 flex-1">
+                <ARIAAgentChat userId={userId} compact={true}
+                  childId={currentView === 'ninos' ? activeChild?.id : undefined}
+                  childName={currentView === 'ninos' ? activeChild?.name : undefined}
+                  contexto={currentView === 'ninos' && activeChild ? 'paciente' : 'general'} />
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Botón flotante ARIA */}
-      {!ariaOpen && currentView !== 'chat-especialistas' && (
-        <button
-          onClick={() => setAriaOpen(true)}
-          className="fixed bottom-6 md:bottom-6 right-4 md:right-6 z-[91] w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 bg-gradient-to-br from-sky-600 to-cyan-600"
-          title={t("aria.ariaNombre")}>
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="6" y="9" width="16" height="13" rx="3" fill="white" fillOpacity="0.9"/>
-            <rect x="9" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
-            <rect x="16" y="13" width="3" height="3" rx="1" fill="#0284c7"/>
-            <rect x="11" y="17" width="6" height="1.5" rx="0.75" fill="#0284c7"/>
-            <rect x="13" y="6" width="2" height="4" rx="1" fill="white" fillOpacity="0.9"/>
-            <circle cx="14" cy="5.5" r="1.5" fill="white"/>
-            <rect x="2" y="12" width="2.5" height="5" rx="1.25" fill="white" fillOpacity="0.7"/>
-            <rect x="23.5" y="12" width="2.5" height="5" rx="1.25" fill="white" fillOpacity="0.7"/>
-          </svg>
-          <span className="pointer-events-none absolute inset-0 rounded-full bg-sky-400 animate-ping opacity-20"/>
-        </button>
-      )}
+      <AnimatePresence>
+        {!ariaOpen && currentView !== 'chat-especialistas' && (
+          <motion.button
+            key="aria-fab"
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.6 }}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.94 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 24 }}
+            onClick={() => setAriaOpen(true)}
+            className="v-brand fixed bottom-6 right-4 z-[91] grid size-14 place-items-center rounded-full md:right-6"
+            title={t('aria.ariaNombre')}
+          >
+            <span aria-hidden className="pointer-events-none absolute inset-0 animate-ping rounded-full bg-[#01abfc] opacity-20" />
+            <AriaGlyph className="ring-2 ring-white/60" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
     </>
   )

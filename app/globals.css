@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./vanty-theme.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -487,8 +488,11 @@ nav.fixed.bottom-0 {
   .px-8 { padding-left: 16px !important; padding-right: 16px !important; }
   .px-6 { padding-left: 12px !important; padding-right: 12px !important; }
 
-  /* Touch targets — solo altura mínima (min-width causaba desbordes horizontales) */
-  button, [role="button"] { min-height: 40px; }
+  /* Touch targets — solo altura mínima (min-width causaba desbordes horizontales).
+     Excluye los controles que ya definen su tamaño (interruptores, botones redondos size-*, alturas h-*):
+     estirarlos a 40px los deformaba. */
+  button:not([role="switch"]):not([class*="size-"]):not([class^="h-"]):not([class*=" h-"]),
+  [role="button"]:not([class*="size-"]) { min-height: 40px; }
   button svg, a svg { min-height: unset !important; min-width: unset !important; }
 
   /* Cards */
@@ -572,10 +576,11 @@ nav.fixed.bottom-0 {
   }
 
   /* 5. Modales: que entren en pantalla con margen y scroll interno propio */
-  .fixed.inset-0 > div,
-  .fixed.inset-0 > .rounded-xl,
-  .fixed.inset-0 > .rounded-2xl,
-  .fixed.inset-0 > .rounded-3xl {
+  /* (Las ventanas del diseño Vanty — .v-scope — ya se adaptan solas; esta regla es para las antiguas.) */
+  .fixed.inset-0:not(.v-scope) > div,
+  .fixed.inset-0:not(.v-scope) > .rounded-xl,
+  .fixed.inset-0:not(.v-scope) > .rounded-2xl,
+  .fixed.inset-0:not(.v-scope) > .rounded-3xl {
     max-width: calc(100vw - 1.5rem) !important;
     max-height: 92dvh !important;
     overflow-y: auto;

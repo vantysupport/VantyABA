@@ -37,6 +37,7 @@ const TIPO_LABEL: Record<TipoDocumento, string> = {
 export interface RegistrarDocOptions {
   codigoDoc:        string
   childId?:         string
+  centroId?:        string | null         // centro dueño (si no, se deriva de childId)
   tipo:             TipoDocumento
   tipoLabel?:       string                // override si querés un texto custom
   pacienteNombre?:  string
@@ -60,6 +61,19 @@ export async function registrarDocumentoEmitido(opts: RegistrarDocOptions): Prom
     }
     const tipoLabel = opts.tipoLabel || TIPO_LABEL[opts.tipo] || 'Documento Clínico'
 
+    // Multi-tenant: el documento pertenece al centro del paciente; nunca pisar el de otro centro.
+    let centroId: string | null = opts.centroId ?? null
+    if (!centroId && opts.childId) {
+      const { data: ch } = await supabaseAdmin.from('children').select('centro_id').eq('id', opts.childId).maybeSingle()
+      centroId = (ch as any)?.centro_id ?? null
+    }
+    const { data: prev } = await supabaseAdmin
+      .from('documentos_emitidos').select('centro_id').eq('codigo_doc', opts.codigoDoc).maybeSingle()
+    if (prev && (prev as any).centro_id && (prev as any).centro_id !== centroId) {
+      console.warn('[registrarDocumentoEmitido] codigo_doc pertenece a otro centro — skip')
+      return
+    }
+
     // upsert por codigo_doc (si se regenera el mismo doc, se actualiza)
     const { error } = await supabaseAdmin
       .from('documentos_emitidos')
@@ -71,12 +85,13 @@ export async function registrarDocumentoEmitido(opts: RegistrarDocOptions): Prom
         paciente_nombre:    opts.pacienteNombre || null,
         paciente_iniciales: opts.pacienteIniciales || null,
         fecha_emision:      new Date().toISOString(),
-        especialista:       opts.especialista || 'Equipo Clínico SANTI',
+        especialista:       opts.especialista || 'Equipo Clínico',
         generado_por:       opts.generadoPor || null,
         valido:             true,
         file_name:          opts.fileName || null,
         notas:              opts.notas || null,
         metadata:           opts.metadata || {},
+        ...(centroId ? { centro_id: centroId } : {}),
       }, { onConflict: 'codigo_doc' })
 
     if (error) {

@@ -1,8 +1,10 @@
 'use client'
 
+import { fileUrl } from '@/lib/file-url'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
+import { subirArchivoPrivado } from '@/lib/subir-archivo'
 import { useToast } from '@/components/Toast'
 import { useTheme } from '@/components/ThemeContext'
 import {
@@ -10,9 +12,11 @@ import {
   Search, RefreshCw, Users, Circle, Paperclip, Mic,
   MicOff, X, FileText, Play, Pause, Square,
   Reply, Copy, Forward, Pin, Star, Flag, Trash2,
-  MoreVertical, Camera, Smile, ChevronLeft, Heart
+  MoreVertical, Camera, Smile, ChevronLeft, Heart, MoreHorizontal
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import ChatFamilias from './ChatFamilias'
+import { ChatAudio } from '@/components/ui/chat-audio'
 
 // ─── Emojis de reacción (estilo WhatsApp) ────────────────────────────────────
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏']
@@ -53,39 +57,19 @@ interface ContextMenu {
 }
 
 // ─── Avatar helper ────────────────────────────────────────────────────────────
-function Avatar({
-  name,
-  avatarUrl,
-  size = 'md',
-  online = false,
-}: {
-  name: string
-  avatarUrl?: string | null
-  size?: 'sm' | 'md' | 'lg'
-  online?: boolean
-}) {
-  const sz = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm'
-  const dot = size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5'
+function Avatar({ name, avatarUrl, size = 'md', online = false }: { name: string; avatarUrl?: string | null; size?: 'sm' | 'md' | 'lg'; online?: boolean }) {
+  const sz = size === 'sm' ? 'size-8 text-xs' : size === 'lg' ? 'size-11 text-base' : 'size-10 text-sm'
+  const [error, setError] = useState(false)
   return (
-    <div className="relative flex-shrink-0">
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt={name}
-          className={`${sz} rounded-full object-cover ring-2 ring-white shadow-sm`}
-        />
+    <div className="relative shrink-0">
+      {avatarUrl && !error ? (
+        // El bucket de chat es privado: fileUrl() pasa por /api/files (URL firmada)
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={fileUrl(avatarUrl)} alt={name} onError={() => setError(true)} className={`${sz} rounded-full object-cover ring-2 ring-[var(--v-bg-elevated)]`} />
       ) : (
-        <div
-          className={`${sz} bg-gradient-to-br from-sky-500 to-sky-600 rounded-full flex items-center justify-center text-white font-bold shadow-sm`}
-        >
-          {name.charAt(0).toUpperCase()}
-        </div>
+        <div className={`${sz} grid place-items-center rounded-full bg-v-accent-soft font-semibold text-v-accent`}>{(name || '?').charAt(0).toUpperCase()}</div>
       )}
-      {online && (
-        <span
-          className={`absolute bottom-0 right-0 ${dot} bg-emerald-400 rounded-full ring-2 ring-white`}
-        />
-      )}
+      {online && <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-v-success ring-2 ring-[var(--v-bg-elevated)]" />}
     </div>
   )
 }
@@ -103,6 +87,7 @@ function AvatarUpload({
   onUpdate: (url: string) => void
 }) {
   const { t } = useI18n()
+  const toast = useToast()
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -110,7 +95,7 @@ function AvatarUpload({
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
-      alert(t('auto.chatEspecialistas.maximo5mbParaLaFoto'))
+      toast.error(t('auto.chatEspecialistas.maximo5mbParaLaFoto'))
       return
     }
     setUploading(true)
@@ -172,6 +157,8 @@ function MessageContextMenu({
   onDelete: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const { locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -190,62 +177,53 @@ function MessageContextMenu({
   }
 
   return (
-    <div ref={ref} style={style} className="animate-in fade-in zoom-in-95 duration-100">
-      {/* Emojis de reacción */}
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 px-3 py-2 mb-1.5 flex items-center gap-1">
+    <motion.div ref={ref} style={style} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.12 }} className="v-scope">
+      <div className="mb-1.5 flex items-center gap-1 rounded-full border border-v-border bg-v-elevated px-2.5 py-1.5 shadow-v-lg">
         {REACTION_EMOJIS.map(emoji => (
-          <button
-            key={emoji}
-            onClick={() => { onReact(emoji); onClose() }}
-            className="text-xl hover:scale-125 transition-transform active:scale-90 p-0.5"
-          >
-            {emoji}
-          </button>
+          <button key={emoji} onClick={() => { onReact(emoji); onClose() }} className="p-0.5 text-xl transition-transform hover:scale-125 active:scale-90">{emoji}</button>
         ))}
       </div>
-
-      {/* Acciones */}
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden min-w-[180px]">
+      <div className="min-w-[190px] overflow-hidden rounded-v-sm border border-v-border bg-v-elevated p-1 shadow-v-lg">
         {[
-          { icon: Reply, label: 'Responder', action: onReply },
-          { icon: Copy, label: 'Copiar', action: onCopy },
-          { icon: Smile, label: 'Reaccionar', action: () => {} },
-          { icon: Forward, label: 'Reenviar', action: onForward },
-          { icon: Pin, label: 'Fijar', action: onPin },
-          { icon: Star, label: 'Destacar', action: onStar },
+          { icon: Reply, label: L('Reply', 'Responder'), action: onReply },
+          { icon: Copy, label: L('Copy', 'Copiar'), action: onCopy },
+          { icon: Forward, label: L('Forward', 'Reenviar'), action: onForward },
+          { icon: Pin, label: L('Pin', 'Fijar'), action: onPin },
+          { icon: Star, label: L('Star', 'Destacar'), action: onStar },
         ].map(({ icon: Icon, label, action }) => (
-          <button
-            key={label}
-            onClick={() => { action(); onClose() }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-slate-700 text-sm transition-colors"
-          >
-            <Icon size={15} className="text-slate-500" />
-            {label}
+          <button key={label} onClick={() => { action(); onClose() }}
+            className="flex w-full items-center gap-3 rounded-v-sm px-3 py-2 text-sm text-v-text transition-colors hover:bg-v-fill">
+            <Icon size={15} className="text-v-muted" /> {label}
           </button>
         ))}
-        <div className="h-px bg-slate-100" />
-        {esMio && (
-          <button
-            onClick={() => { onDelete(); onClose() }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 text-red-500 text-sm transition-colors"
-          >
-            <Trash2 size={15} /> Eliminar
+        <div className="my-1 h-px bg-v-border" />
+        {esMio ? (
+          <button onClick={() => { onDelete(); onClose() }} className="flex w-full items-center gap-3 rounded-v-sm px-3 py-2 text-sm text-v-danger transition-colors hover:bg-v-danger/10">
+            <Trash2 size={15} /> {L('Delete', 'Eliminar')}
           </button>
-        )}
-        {!esMio && (
-          <button
-            onClick={() => { onReport(); onClose() }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-orange-500 text-sm transition-colors"
-          >
-            <Flag size={15} /> Reportar
+        ) : (
+          <button onClick={() => { onReport(); onClose() }} className="flex w-full items-center gap-3 rounded-v-sm px-3 py-2 text-sm text-v-warning transition-colors hover:bg-v-warning/10">
+            <Flag size={15} /> {L('Report', 'Reportar')}
           </button>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
+
+// El texto del chat del equipo se guarda cifrado: se envía y se lee por /api/chat-equipo.
+async function insertarMensaje(fila: Record<string, unknown>) {
+  const r = await fetch('/api/chat-equipo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fila) })
+  const j = await r.json().catch(() => ({}))
+  return { data: j.data ?? null, error: r.ok ? null : new Error(j.error || 'No se pudo enviar') }
+}
+async function mensajeCifradoPorId(id: string) {
+  const r = await fetch(`/api/chat-equipo?id=${encodeURIComponent(id)}`, { cache: 'no-store' })
+  return r.ok ? ((await r.json()).data ?? null) : null
+}
+
 export default function ChatEspecialistas({
   userId,
   userName,
@@ -259,13 +237,12 @@ export default function ChatEspecialistas({
 }) {
   const { t, locale } = useI18n()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
+  // Rol legible (en la base se guarda el código: "jefe", "especialista"…)
   const roleLabel = (r: string) => {
-    if (locale !== 'en') return r
-    const map: Record<string, string> = {
-      especialista: 'specialist', terapeuta: 'therapist', jefe: 'director',
-      admin: 'administrator', secretaria: 'secretary', padre: 'parent',
-    }
-    return map[String(r || '').toLowerCase()] || r
+    const es: Record<string, string> = { especialista: 'Especialista', terapeuta: 'Terapeuta', jefe: 'Director(a)', admin: 'Administrador(a)', secretaria: 'Secretaría', padre: 'Familia' }
+    const en: Record<string, string> = { especialista: 'Specialist', terapeuta: 'Therapist', jefe: 'Director', admin: 'Administrator', secretaria: 'Front desk', padre: 'Parent' }
+    const k = String(r || '').toLowerCase()
+    return (locale === 'en' ? en : es)[k] || r
   }
   const toast = useToast()
   const { isDark } = useTheme()
@@ -323,32 +300,16 @@ export default function ChatEspecialistas({
       // Excluir al propio usuario de la lista de contactos
       const perfiles = perfilesRaw.filter((p) => p.id !== userId)
 
-      const conInfo = await Promise.all(
-        perfiles.map(async (p) => {
-          const { data: msgs } = await supabase
-            .from('chat_especialista_admin')
-            .select('content, created_at, read_at, sender_id, message_type')
-            .or(`and(sender_id.eq.${userId},recipient_id.eq.${p.id}),and(sender_id.eq.${p.id},recipient_id.eq.${userId})`)
-            .order('created_at', { ascending: false })
-            .limit(1)
-          const { count } = await supabase
-            .from('chat_especialista_admin')
-            .select('id', { count: 'exact', head: true })
-            .eq('sender_id', p.id)
-            .eq('recipient_id', userId)
-            .is('read_at', null)
-          const last = msgs?.[0]
-          let preview = last?.content || null
-          if (last?.message_type === 'file') preview = '📎 ' + L('File', 'Archivo')
-          if (last?.message_type === 'audio') preview = '🎤 ' + L('Voice note', 'Nota de voz')
-          return {
-            ...p,
-            unread: count || 0,
-            lastMessage: preview,
-            lastTime: last?.created_at || null,
-          }
-        })
-      )
+      const resumenRes = await fetch('/api/chat-equipo?resumen=1', { cache: 'no-store' })
+      const resumen: Record<string, { last: { content: string | null; created_at: string; message_type: string | null } | null; unread: number }> = resumenRes.ok ? (await resumenRes.json()).data || {} : {}
+      const conInfo = perfiles.map((p) => {
+        const r = resumen[p.id]
+        const last = r?.last
+        let preview = last?.content || null
+        if (last?.message_type === 'file') preview = '📎 ' + L('File', 'Archivo')
+        if (last?.message_type === 'audio') preview = '🎤 ' + L('Voice note', 'Nota de voz')
+        return { ...p, unread: r?.unread || 0, lastMessage: preview, lastTime: last?.created_at || null }
+      })
       conInfo.sort((a, b) => {
         if (b.unread !== a.unread) return b.unread - a.unread
         if (a.lastTime && b.lastTime)
@@ -368,26 +329,14 @@ export default function ChatEspecialistas({
     async (espId: string) => {
       setLoadingMsg(true)
       try {
-        const { data, error } = await supabase
-          .from('chat_especialista_admin')
-          .select('*')
-          .or(`and(sender_id.eq.${userId},recipient_id.eq.${espId}),and(sender_id.eq.${espId},recipient_id.eq.${userId})`)
-          .order('created_at', { ascending: true })
-        if (error) throw error
+        const res = await fetch(`/api/chat-equipo?con=${espId}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error('chat')
+        const data = (await res.json()).data as Mensaje[]
         setMensajes(data || [])
         scrollAbajo()
-        const noLeidos = (data || []).filter(
-          (m: Mensaje) => m.sender_id === espId && !m.read_at
-        )
-        if (noLeidos.length > 0) {
-          await supabase
-            .from('chat_especialista_admin')
-            .update({ read_at: new Date().toISOString() })
-            .in('id', noLeidos.map((m: Mensaje) => m.id))
-          setEspecialistas((prev) =>
+        setEspecialistas((prev) =>
             prev.map((e) => (e.id === espId ? { ...e, unread: 0 } : e))
           )
-        }
       } catch {
         toast.error(t('auto.chatEspecialistas.errorAlCargarMensajes'))
       } finally {
@@ -410,11 +359,18 @@ export default function ChatEspecialistas({
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_especialista_admin' },
         (payload) => {
-          const nuevo = payload.new as Mensaje
-          setMensajes((prev) =>
-            prev.find((m) => m.id === nuevo.id) ? prev : [...prev, nuevo]
-          )
-          scrollAbajo()
+          const aviso = payload.new as Mensaje & { recipient_id?: string }
+          // Solo mensajes de ESTA conversación
+          const esEstaConv = (aviso.sender_id === userId && aviso.recipient_id === seleccionado.id) ||
+                             (aviso.sender_id === seleccionado.id && aviso.recipient_id === userId)
+          if (!esEstaConv) { cargarEspecialistas(); return }
+          // El aviso trae el texto cifrado: se pide el mensaje al servidor
+          mensajeCifradoPorId(aviso.id).then((nuevo: Mensaje | null) => {
+            if (!nuevo) return
+            setMensajes((prev) => prev.find((m) => m.id === nuevo.id) ? prev : [...prev.filter((m) => !(m.id.startsWith('temp_') && m.content === nuevo.content)), nuevo])
+            scrollAbajo()
+          })
+          const nuevo = aviso
           if (nuevo.sender_id !== userId) {
             supabase
               .from('chat_especialista_admin')
@@ -428,7 +384,7 @@ export default function ChatEspecialistas({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [seleccionado, cargarMensajes, userId, scrollAbajo])
+  }, [seleccionado, cargarMensajes, cargarEspecialistas, userId, scrollAbajo])
 
   useEffect(() => {
     scrollAbajo()
@@ -462,7 +418,7 @@ export default function ChatEspecialistas({
     scrollAbajo()
 
     try {
-      const { data, error } = await supabase.from('chat_especialista_admin').insert({
+      const { data, error } = await insertarMensaje({
         content: contentFinal,
         sender_id: userId,
         sender_role: 'jefe',
@@ -470,7 +426,7 @@ export default function ChatEspecialistas({
         recipient_id: seleccionado.id,
         message_type: 'text',
         read_at: null,
-      }).select().single()
+      })
       if (error) throw error
       // Reemplazar el mensaje temporal con el real (con id definitivo de BD)
       if (data) {
@@ -497,17 +453,10 @@ export default function ChatEspecialistas({
     }
     setSubiendo(true)
     try {
-      const ext = file.name.split('.').pop()
-      const path = `chat/${userId}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage
-        .from('chat-files')
-        .upload(path, file, { contentType: file.type, upsert: false })
-      if (upErr) throw new Error(upErr.message)
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('chat-files').getPublicUrl(path)
+      // Directo a R2 (privado); las fotos se comprimen antes de subir
+      const { url: publicUrl } = await subirArchivoPrivado('chat-files', `chat/${userId}`, file)
       const isImage = file.type.startsWith('image/')
-      const { error } = await supabase.from('chat_especialista_admin').insert({
+      const { error } = await insertarMensaje({
         content: isImage ? '📷 Imagen' : `📎 ${file.name}`,
         sender_id: userId,
         sender_role: 'jefe',
@@ -590,15 +539,8 @@ export default function ChatEspecialistas({
     setSubiendo(true)
     try {
       const audioName = `audio_${Date.now()}.webm`
-      const path = `chat/${userId}/${audioName}`
-      const { error: upErr } = await supabase.storage
-        .from('chat-files')
-        .upload(path, audioBlob, { contentType: 'audio/webm', upsert: false })
-      if (upErr) throw new Error(upErr.message)
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('chat-files').getPublicUrl(path)
-      const { error } = await supabase.from('chat_especialista_admin').insert({
+      const { url: publicUrl } = await subirArchivoPrivado('chat-files', `chat/${userId}`, new File([audioBlob], audioName, { type: 'audio/webm' }))
+      const { error } = await insertarMensaje({
         content: '🎤 ' + L('Voice note', 'Nota de voz'),
         sender_id: userId,
         sender_role: 'jefe',
@@ -675,7 +617,13 @@ export default function ChatEspecialistas({
   }
 
   const handleDelete = async (msgId: string) => {
+    const adjunto = mensajes.find((m) => m.id === msgId)?.file_url
     await supabase.from('chat_especialista_admin').delete().eq('id', msgId)
+    // Borra también el archivo del mensaje (imagen, documento o nota de voz)
+    if (adjunto) {
+      const { data: { session } } = await supabase.auth.getSession()
+      fetch('/api/files/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` }, body: JSON.stringify({ url: adjunto }) }).catch(() => {})
+    }
     setMensajes((prev) => prev.filter((m) => m.id !== msgId))
   }
 
@@ -694,7 +642,7 @@ export default function ChatEspecialistas({
   }
 
   const formatHora = (iso: string) =>
-    new Date(iso).toLocaleTimeString('es-PE', {
+    new Date(iso).toLocaleTimeString(locale === 'en' ? 'en-US' : 'es-PE', {
       hour: '2-digit',
       minute: '2-digit',
     })
@@ -728,10 +676,32 @@ export default function ChatEspecialistas({
 
   const contextMsg = contextMsgId ? mensajes.find((m) => m.id === contextMsgId) : null
 
+  // Fila de contacto (admins y especialistas comparten el mismo diseño)
+  const contactoRow = (esp: Especialista) => {
+    const sel = seleccionado?.id === esp.id
+    return (
+      <button key={esp.id} onClick={() => { setSeleccionado(esp); setMobileShowChat(true) }}
+        className={`flex w-full items-center gap-3 rounded-v-sm px-3 py-2.5 text-left transition-colors ${sel ? 'bg-v-accent-soft' : 'hover:bg-v-fill'}`}>
+        <Avatar name={esp.full_name} avatarUrl={esp.avatar_url} size="md" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <p className={`min-w-0 flex-1 truncate text-sm ${esp.unread > 0 ? 'font-bold text-v-text' : sel ? 'font-semibold text-v-accent' : 'font-semibold text-v-text'}`}>{esp.full_name}</p>
+            {esp.lastTime && <span className={`shrink-0 text-[11px] ${esp.unread > 0 ? 'font-semibold text-v-accent' : 'text-v-subtle'}`}>{formatHora(esp.lastTime)}</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <p className={`min-w-0 flex-1 truncate text-xs ${esp.unread > 0 ? 'font-medium text-v-text' : 'text-v-subtle'}`}>
+              {esp.lastMessage || esp.specialty || (['jefe', 'admin'].includes(esp.role) ? (esp.role === 'jefe' ? L('Director', 'Director(a)') : L('Administrator', 'Administrador')) : roleLabel(esp.role))}
+            </p>
+            {esp.unread > 0 && <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-v-accent px-1.5 text-[10px] font-bold text-white">{esp.unread > 9 ? '9+' : esp.unread}</span>}
+          </div>
+        </div>
+      </button>
+    )
+  }
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Context Menu overlay */}
       {contextMenu && contextMsg && (
         <MessageContextMenu
           menu={contextMenu}
@@ -748,183 +718,67 @@ export default function ChatEspecialistas({
         />
       )}
 
-      {/* Wrapper full-height con padding (chat ocupa todo el alto disponible) */}
-      <div className="flex flex-col h-full min-h-0 p-3 md:p-4">
+      <div className="v-scope flex h-full min-h-0 flex-col gap-3 p-3 md:p-4">
 
-      {/* ── Main tab selector ── */}
-      <div className={`flex items-center gap-1 mb-3 p-1 rounded-xl w-fit flex-shrink-0 ${isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>
-        {(['equipo', 'familias'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveMainTab(tab)}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeMainTab === tab
-              ? isDark ? 'bg-[#161b22] text-sky-400 shadow-sm' : 'bg-white text-sky-700 shadow-sm'
-              : isDark ? 'text-slate-500' : 'text-slate-500'
-            }`}>
-            {tab === 'equipo' ? <><Users size={14} /> {t("admin.chatEquipo")}</> : <><Heart size={14} /> {t("admin.chatFamilias")}</>}
-          </button>
-        ))}
+      {/* Equipo / Familias */}
+      <div className="flex w-full shrink-0 gap-1 rounded-full bg-v-fill p-1 sm:w-fit">
+        {(['equipo', 'familias'] as const).map(tab => {
+          const on = activeMainTab === tab
+          return (
+            <button key={tab} onClick={() => setActiveMainTab(tab)}
+              className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-5 py-2 text-sm font-semibold transition-colors sm:flex-none ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+              {on && <motion.span layoutId="chat-main-tab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+              {tab === 'equipo' ? <Users size={15} className="relative" /> : <Heart size={15} className="relative" />}
+              <span className="relative">{tab === 'equipo' ? t('admin.chatEquipo') : t('admin.chatFamilias')}</span>
+            </button>
+          )
+        })}
       </div>
 
       {activeMainTab === 'familias' ? (
-        <div className={`flex-1 min-h-0 rounded-2xl overflow-hidden shadow-sm`}>
+        <div className="min-h-0 flex-1 overflow-hidden rounded-v shadow-v">
           <ChatFamilias userId={userId} userName={userName} isDark={isDark} />
         </div>
       ) : (
-      <div className={`flex flex-1 min-h-0 rounded-2xl border overflow-hidden shadow-sm ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200'}`}>
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v">
 
-        {/* ── Panel izquierdo ── */}
-        <div className={`${mobileShowChat ? 'hidden md:flex' : 'flex'} w-full md:w-[280px] flex-shrink-0 border-r flex-col ${isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-50/50 border-slate-100'}`}>
-
-          {/* Header del panel con avatar propio */}
-          <div className={`px-4 py-4 border-b ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'}`}>
-            <div className="flex items-center gap-3 mb-3">
-              {/* Avatar propio con opción de cambiar foto */}
-              <AvatarUpload
-                userId={userId}
-                currentUrl={myAvatar}
-                name={userName}
-                onUpdate={(url) => { setMyAvatar(url); onAvatarUpdate?.(url) }}
-              />
-              <div className="flex-1 min-w-0">
-                <p className={`text-xs font-bold truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{userName}</p>
-                <p className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.tocaFoto")}</p>
+        {/* ── Contactos ── */}
+        <div className={`${mobileShowChat ? 'hidden md:flex' : 'flex'} w-full shrink-0 flex-col border-r border-v-border md:w-[300px]`}>
+          <div className="space-y-3 border-b border-v-border p-3">
+            <div className="flex items-center gap-3 px-1">
+              <AvatarUpload userId={userId} currentUrl={myAvatar} name={userName} onUpdate={(url) => { setMyAvatar(url); onAvatarUpdate?.(url) }} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-v-text">{userName}</p>
+                <p className="text-[11px] text-v-subtle">{t('admin.tocaFoto')}</p>
               </div>
-              <button
-                onClick={cargarEspecialistas}
-                className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-[#21262d] text-slate-500' : 'hover:bg-slate-100 text-slate-400'}`}
-              >
-                <RefreshCw size={13} />
+              <button onClick={cargarEspecialistas} title={L('Refresh', 'Actualizar')} className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-accent">
+                <RefreshCw size={14} />
               </button>
             </div>
-
-            <div className="flex items-center justify-between mb-2">
-              <h2 className={`text-xs font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                <Users size={13} className="text-sky-500" /> {L('Contacts', 'Contactos')}
-              </h2>
-            </div>
             <div className="relative">
-              <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder={t("admin.phBuscarSimple")}
-                className={`w-full pl-8 pr-3 py-2 text-xs rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 shadow-sm ${isDark ? 'bg-[#0d1117] border border-[#30363d] text-slate-300 placeholder-slate-600' : 'bg-white border border-slate-200 text-slate-700'}`}
-              />
+              <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
+              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={t('admin.phBuscarSimple')}
+                className="h-9 w-full rounded-full bg-v-fill pl-9 pr-3 text-sm sm:!text-sm [font-family:inherit] text-v-text outline-none placeholder:text-v-subtle focus:ring-2 focus:ring-v-accent-soft" />
             </div>
           </div>
 
-          {/* Lista contactos */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-2">
             {loadingEsp ? (
-              <div className="flex justify-center py-10">
-                <Loader2 size={18} className="animate-spin text-sky-400" />
-              </div>
+              <div className="flex justify-center py-10"><Loader2 size={18} className="animate-spin text-v-accent" /></div>
             ) : filtrados.length === 0 ? (
-              <div className="text-center py-10 px-4">
-                <p className="text-xs text-slate-400">{t("admin.sinContactos")}</p>
-              </div>
+              <p className="py-10 text-center text-xs text-v-subtle">{t('admin.sinContactos')}</p>
             ) : (
               <>
-                {/* ── Sección Admins ── */}
                 {filtradosAdmins.length > 0 && (
                   <>
-                    <div className={`px-4 py-2 border-b sticky top-0 z-10 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-slate-100/80 border-slate-200/60'}`}>
-                      <p className={`text-[10px] font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-                        <span className="w-1.5 h-1.5 bg-sky-500 rounded-full inline-block" />
-                        {L('Administrators', 'Administradores')}
-                      </p>
-                    </div>
-                    {filtradosAdmins.map((esp) => (
-                      <button
-                        key={esp.id}
-                        onClick={() => { setSeleccionado(esp); setMobileShowChat(true) }}
-                        className={`w-full text-left px-4 py-3.5 border-b transition-colors relative
-                          ${seleccionado?.id === esp.id
-                            ? isDark ? 'bg-sky-900/30 border-l-[3px] border-l-sky-500 border-[#21262d]' : 'bg-sky-50 border-l-[3px] border-l-sky-500 border-slate-100/70'
-                            : isDark ? 'hover:bg-[#21262d] border-[#21262d]' : 'hover:bg-white/80 border-slate-100/70'
-                          }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="relative flex-shrink-0">
-                            <Avatar name={esp.full_name} avatarUrl={esp.avatar_url} size="sm" />
-                            {esp.unread > 0 && (
-                              <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm">
-                                {esp.unread > 9 ? '9+' : esp.unread}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-bold truncate ${esp.unread > 0 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-300' : 'text-slate-700')}`}>
-                              {esp.full_name}
-                            </p>
-                            <p className="text-[10px] text-sky-400 truncate mt-0.5 font-semibold">
-                              {esp.specialty || (esp.role === 'jefe' ? L('Director', 'Director(a)') : L('Administrator', 'Administrador'))}
-                            </p>
-                            {esp.lastMessage && (
-                              <p className={`text-[10px] truncate mt-0.5 ${esp.unread > 0 ? (isDark ? 'text-slate-400 font-semibold' : 'text-slate-600 font-semibold') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}>
-                                {esp.lastMessage}
-                              </p>
-                            )}
-                          </div>
-                          {esp.lastTime && (
-                            <span className={`text-[9px] flex-shrink-0 mt-0.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                              {formatHora(esp.lastTime)}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                    <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-v-subtle">{L('Administrators', 'Administradores')}</p>
+                    {filtradosAdmins.map(contactoRow)}
                   </>
                 )}
-
-                {/* ── Sección Especialistas ── */}
                 {filtradosEspecialistas.length > 0 && (
                   <>
-                    <div className={`px-4 py-2 border-b sticky top-0 z-10 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-slate-100/80 border-slate-200/60'}`}>
-                      <p className={`text-[10px] font-bold flex items-center gap-1.5 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-                        <span className="w-1.5 h-1.5 bg-sky-500 rounded-full inline-block" />
-                        {L('Specialists', 'Especialistas')}
-                      </p>
-                    </div>
-                    {filtradosEspecialistas.map((esp) => (
-                      <button
-                        key={esp.id}
-                        onClick={() => { setSeleccionado(esp); setMobileShowChat(true) }}
-                        className={`w-full text-left px-4 py-3.5 border-b transition-colors relative
-                          ${seleccionado?.id === esp.id
-                            ? isDark ? 'bg-sky-900/30 border-l-[3px] border-l-sky-500 border-[#21262d]' : 'bg-sky-50 border-l-[3px] border-l-sky-500 border-slate-100/70'
-                            : isDark ? 'hover:bg-[#21262d] border-[#21262d]' : 'hover:bg-white/80 border-slate-100/70'
-                          }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="relative flex-shrink-0">
-                            <Avatar name={esp.full_name} avatarUrl={esp.avatar_url} size="sm" />
-                            {esp.unread > 0 && (
-                              <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm">
-                                {esp.unread > 9 ? '9+' : esp.unread}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-bold truncate ${esp.unread > 0 ? (isDark ? 'text-white' : 'text-slate-900') : (isDark ? 'text-slate-300' : 'text-slate-700')}`}>
-                              {esp.full_name}
-                            </p>
-                            <p className={`text-[10px] truncate mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                              {esp.specialty || roleLabel(esp.role)}
-                            </p>
-                            {esp.lastMessage && (
-                              <p className={`text-[10px] truncate mt-0.5 ${esp.unread > 0 ? (isDark ? 'text-slate-400 font-semibold' : 'text-slate-600 font-semibold') : (isDark ? 'text-slate-600' : 'text-slate-400')}`}>
-                                {esp.lastMessage}
-                              </p>
-                            )}
-                          </div>
-                          {esp.lastTime && (
-                            <span className={`text-[9px] flex-shrink-0 mt-0.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                              {formatHora(esp.lastTime)}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                    <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-v-subtle">{L('Specialists', 'Especialistas')}</p>
+                    {filtradosEspecialistas.map(contactoRow)}
                   </>
                 )}
               </>
@@ -932,273 +786,123 @@ export default function ChatEspecialistas({
           </div>
         </div>
 
-        {/* ── Panel derecho ── */}
-        <div className={`${mobileShowChat ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0`}>
+        {/* ── Conversación ── */}
+        <div className={`${mobileShowChat ? 'flex' : 'hidden md:flex'} min-w-0 flex-1 flex-col`}>
           {!seleccionado ? (
-            <div className={`flex-1 flex flex-col items-center justify-center gap-5 text-center px-8 ${isDark ? 'bg-[#0d1117]' : 'bg-gradient-to-br from-slate-50 to-sky-50/30'}`}>
-              <div className={`w-24 h-24 rounded-3xl flex items-center justify-center shadow-sm border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'}`}>
-                <MessageCircle size={40} className="text-sky-200" />
-              </div>
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-v-bg px-8 text-center">
+              <span className="grid size-16 place-items-center rounded-full bg-v-accent-soft text-v-accent"><MessageCircle size={28} /></span>
               <div>
-                <p className={`font-bold text-base ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{t("admin.selecContacto")}</p>
-                <p className={`text-sm mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {t('auto.chatEspecialistas.eligeUnEspecialistaOAdministrador')}
-                </p>
+                <p className="text-base font-semibold text-v-text">{t('admin.selecContacto')}</p>
+                <p className="mt-1 text-sm text-v-subtle">{t('auto.chatEspecialistas.eligeUnEspecialistaOAdministrador')}</p>
               </div>
             </div>
           ) : (
             <>
-              {/* Header conversación */}
-              <div className={`px-5 py-3.5 border-b flex items-center gap-3 shadow-sm ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'}`}>
-                {/* Botón volver en móvil */}
-                <button
-                  onClick={() => setMobileShowChat(false)}
-                  className={`md:hidden p-1.5 rounded-lg mr-1 transition-colors ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                {/* Avatar del especialista seleccionado (también actualizable) */}
+              <div className="flex items-center gap-3 border-b border-v-border px-3 py-3 sm:px-4">
+                <button onClick={() => setMobileShowChat(false)} className="grid size-9 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill md:hidden"><ChevronLeft size={20} /></button>
                 <AvatarUpload
-                  userId={seleccionado.id}
-                  currentUrl={seleccionado.avatar_url}
-                  name={seleccionado.full_name}
+                  userId={seleccionado.id} currentUrl={seleccionado.avatar_url} name={seleccionado.full_name}
                   onUpdate={(url) => {
                     setSeleccionado((prev) => prev ? { ...prev, avatar_url: url } : prev)
-                    setEspecialistas((prev) =>
-                      prev.map((e) => (e.id === seleccionado.id ? { ...e, avatar_url: url } : e))
-                    )
+                    setEspecialistas((prev) => prev.map((e) => (e.id === seleccionado.id ? { ...e, avatar_url: url } : e)))
                   }}
                 />
-                <div className="flex-1">
-                  <p className={`text-sm font-bold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{seleccionado.full_name}</p>
-                  <p className="text-[11px] text-emerald-500 font-semibold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full inline-block" />
-                    {seleccionado.specialty || seleccionado.role}
-                  </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-semibold text-v-text">{seleccionado.full_name}</p>
+                  <p className="truncate text-xs text-v-subtle">{seleccionado.specialty || roleLabel(seleccionado.role)}</p>
                 </div>
-                <button className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-[#21262d] text-slate-500' : 'hover:bg-slate-100 text-slate-400'}`}>
-                  <MoreVertical size={16} />
-                </button>
               </div>
 
-              {/* Banner reply */}
-              {replyTo && (
-                <div className={`border-b px-4 py-2 flex items-start gap-2 ${isDark ? 'bg-sky-900/20 border-sky-800/40' : 'bg-sky-50 border-sky-100'}`}>
-                  <Reply size={14} className="text-sky-500 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-sky-500">{replyTo.sender_name}</p>
-                    <p className={`text-[11px] truncate ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{replyTo.content.slice(0, 80)}</p>
-                  </div>
-                  <button
-                    onClick={() => setReplyTo(null)}
-                    className={`p-1 rounded-lg ${isDark ? 'hover:bg-sky-900/40 text-sky-400' : 'hover:bg-sky-100 text-sky-400'}`}
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              )}
-
-              {/* Área mensajes */}
-              <div
-                className="flex-1 overflow-y-auto px-4 py-4"
-                style={{
-                  background: isDark
-                    ? '#0d1117'
-                    : 'radial-gradient(ellipse at 20% 50%, rgba(239,246,255,0.6) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(238,242,255,0.4) 0%, transparent 60%), #f8fafc',
-                }}
-              >
-                {loadingMsg ? (
-                  <div className="flex justify-center py-10">
-                    <Loader2 size={20} className="animate-spin text-sky-400" />
-                  </div>
-                ) : mensajes.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'}`}>
-                      <MessageCircle size={24} className="text-sky-300" />
+              <AnimatePresence>
+                {replyTo && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="flex items-start gap-2 border-b border-v-border bg-v-accent-soft/60 px-4 py-2">
+                      <Reply size={14} className="mt-0.5 shrink-0 text-v-accent" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-semibold text-v-accent">{replyTo.sender_name}</p>
+                        <p className="truncate text-xs text-v-muted">{replyTo.content.slice(0, 80)}</p>
+                      </div>
+                      <button onClick={() => setReplyTo(null)} className="grid size-6 place-items-center rounded-full text-v-accent hover:bg-v-accent-soft"><X size={12} /></button>
                     </div>
-                    <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("admin.sinMensajesEsp")}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Mensajes */}
+              <div className="flex-1 overflow-y-auto bg-v-bg px-3 py-4 sm:px-5">
+                {loadingMsg ? (
+                  <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-v-accent" /></div>
+                ) : mensajes.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+                    <span className="grid size-14 place-items-center rounded-full bg-v-elevated text-v-accent shadow-v"><MessageCircle size={24} /></span>
+                    <p className="text-sm text-v-subtle">{t('admin.sinMensajesEsp')}</p>
                   </div>
                 ) : (
                   mensajesAgrupados.map((grupo) => (
                     <div key={grupo.fecha}>
-                      {/* Separador de fecha */}
-                      <div className="flex items-center gap-3 my-4">
-                        <div className={`flex-1 h-px ${isDark ? 'bg-[#21262d]' : 'bg-slate-200/70'}`} />
-                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full shadow-sm border ${isDark ? 'text-slate-500 bg-[#161b22] border-[#21262d]' : 'text-slate-500 bg-white border-slate-100'}`}>
-                          {grupo.fecha}
-                        </span>
-                        <div className={`flex-1 h-px ${isDark ? 'bg-[#21262d]' : 'bg-slate-200/70'}`} />
+                      <div className="my-4 flex justify-center">
+                        <span className="rounded-full bg-v-elevated px-3 py-1 text-[11px] font-semibold text-v-muted shadow-v">{grupo.fecha}</span>
                       </div>
-
-                      <div className="space-y-0.5">
+                      <div>
                         {grupo.items.map((msg, idx) => {
                           const esMio = msg.sender_id === userId
                           const prevMsg = idx > 0 ? grupo.items[idx - 1] : null
                           const mismoEmisor = prevMsg?.sender_id === msg.sender_id
                           const isAudio = msg.message_type === 'audio'
-                          const isImage =
-                            msg.message_type === 'file' &&
-                            msg.file_type?.startsWith('image/')
-                          const isFile =
-                            msg.message_type === 'file' &&
-                            !msg.file_type?.startsWith('image/')
-
-                          // Avatar del emisor en el mensaje
-                          const avatarSrc = esMio
-                            ? myAvatar
-                            : seleccionado.avatar_url
-
+                          const isImage = msg.message_type === 'file' && msg.file_type?.startsWith('image/')
+                          const isFile = msg.message_type === 'file' && !msg.file_type?.startsWith('image/')
+                          const burbuja = esMio ? 'bg-v-accent text-white' : 'bg-v-elevated text-v-text border border-v-border'
                           return (
-                            <div
-                              key={msg.id}
-                              className={`flex items-end gap-2 ${esMio ? 'justify-end' : 'justify-start'} ${mismoEmisor ? 'mt-0.5' : 'mt-3'}`}
-                            >
-                              {/* Avatar del emisor (solo si no es el mismo emisor consecutivo) */}
+                            <div key={msg.id} className={`group flex items-end gap-2 ${esMio ? 'justify-end' : 'justify-start'} ${mismoEmisor ? 'mt-1' : 'mt-3'}`}>
                               {!esMio && (
-                                <div className={`flex-shrink-0 ${mismoEmisor ? 'opacity-0 pointer-events-none' : ''}`}>
-                                  <Avatar
-                                    name={msg.sender_name}
-                                    avatarUrl={seleccionado.avatar_url}
-                                    size="sm"
-                                  />
-                                </div>
+                                <div className={`shrink-0 ${mismoEmisor ? 'invisible' : ''}`}><Avatar name={msg.sender_name} avatarUrl={seleccionado.avatar_url} size="sm" /></div>
+                              )}
+                              {/* Menú de opciones (también en celular, sin clic derecho) */}
+                              {esMio && (
+                                <button onClick={(e) => openContextMenu(e, msg.id)} title={L('Options', 'Opciones')}
+                                  className="mb-5 grid size-7 shrink-0 place-items-center rounded-full text-v-subtle opacity-100 transition-opacity hover:bg-v-fill sm:opacity-0 sm:group-hover:opacity-100"><MoreHorizontal size={15} /></button>
                               )}
 
-                              <div
-                                className={`max-w-[72%] flex flex-col group ${esMio ? 'items-end' : 'items-start'}`}
-                                onContextMenu={(e) => openContextMenu(e, msg.id)}
-                              >
-                                {!mismoEmisor && !esMio && (
-                                  <p className="text-[10px] font-bold text-sky-500 mb-1 ml-1">
-                                    {msg.sender_name}
-                                  </p>
-                                )}
-
-                                {/* Imagen */}
-                                {isImage && msg.file_url && (
-                                  <a href={msg.file_url} target="_blank" rel="noreferrer" className="relative">
-                                    <img
-                                      src={msg.file_url}
-                                      alt="imagen"
-                                      className="max-w-[240px] rounded-2xl border border-slate-200 shadow-sm hover:opacity-90 transition-opacity"
-                                    />
-                                    {msg.reaction && (
-                                      <span className="absolute -bottom-2 -right-1 text-base bg-white rounded-full shadow-sm px-1">
-                                        {msg.reaction}
-                                      </span>
-                                    )}
-                                  </a>
-                                )}
-
-                                {/* Archivo */}
-                                {isFile && msg.file_url && (
-                                  <a
-                                    href={msg.file_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-sm hover:opacity-80 transition-opacity
-                                      ${esMio
-                                        ? 'bg-sky-600 text-white border-sky-500'
-                                        : isDark
-                                          ? 'bg-[#21262d] text-slate-200 border-[#30363d]'
-                                          : 'bg-white text-slate-800 border-slate-200'
-                                      }`}
-                                  >
-                                    <div
-                                      className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${esMio ? 'bg-sky-500' : isDark ? 'bg-[#30363d]' : 'bg-slate-100'}`}
-                                    >
-                                      <FileText size={16} className={esMio ? 'text-white' : isDark ? 'text-slate-400' : 'text-slate-500'} />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p className="text-xs font-bold truncate max-w-[150px]">
-                                        {msg.file_name}
-                                      </p>
-                                      <p className={`text-[10px] ${esMio ? 'text-sky-200' : isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                        {t('auto.chatEspecialistas.tocaParaAbrir')}
-                                      </p>
-                                    </div>
-                                  </a>
-                                )}
-
-                                {/* Audio */}
-                                {isAudio && msg.file_url && (
-                                  <div
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-sm min-w-[200px]
-                                      ${esMio
-                                        ? 'bg-sky-600 border-sky-500'
-                                        : isDark
-                                          ? 'bg-[#21262d] border-[#30363d]'
-                                          : 'bg-white border-slate-200'
-                                      }`}
-                                  >
-                                    <button
-                                      onClick={() => toggleAudio(msg.id, msg.file_url!)}
-                                      className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors
-                                        ${esMio ? 'bg-sky-500 hover:bg-sky-400' : 'bg-sky-100 hover:bg-sky-200'}`}
-                                    >
-                                      {reproduciendo === msg.id ? (
-                                        <Pause size={15} className={esMio ? 'text-white' : 'text-sky-600'} />
-                                      ) : (
-                                        <Play size={15} className={esMio ? 'text-white' : 'text-sky-600'} />
+                              {(() => {
+                                const hora = (
+                                  <div className={`mt-1 flex items-center justify-end gap-1 ${isImage ? 'px-1.5 pb-1' : ''}`}>
+                                    <span className={`text-[10px] ${esMio ? 'text-white/70' : 'text-v-subtle'}`}>{formatHora(msg.created_at)}</span>
+                                    {esMio && (msg.read_at ? <CheckCheck size={12} className="text-white" /> : <Check size={12} className="text-white/60" />)}
+                                  </div>
+                                )
+                                const radio = esMio ? (mismoEmisor ? 20 : '20px 20px 6px 20px') : (mismoEmisor ? 20 : '20px 20px 20px 6px')
+                                return (
+                                  <div className={`relative flex flex-col ${isImage ? 'max-w-[250px]' : 'max-w-[78%] sm:max-w-[68%]'} ${esMio ? 'items-end' : 'items-start'}`} onContextMenu={(e) => openContextMenu(e, msg.id)}>
+                                    <div className={`overflow-hidden shadow-v ${isImage ? 'p-1' : 'px-3.5 py-2'} ${burbuja}`} style={{ borderRadius: radio }}>
+                                      {isImage && msg.file_url && (
+                                        <a href={fileUrl(msg.file_url)} target="_blank" rel="noreferrer">
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img src={fileUrl(msg.file_url)} alt="" className="block max-w-full rounded-[16px] transition-opacity hover:opacity-90" />
+                                        </a>
                                       )}
-                                    </button>
-                                    <div className="flex-1">
-                                      <div className={`h-1.5 rounded-full ${esMio ? 'bg-sky-400' : isDark ? 'bg-[#30363d]' : 'bg-slate-200'}`}>
-                                        <div
-                                          className={`h-full rounded-full transition-all ${esMio ? 'bg-white/60' : 'bg-sky-400'}`}
-                                          style={{ width: reproduciendo === msg.id ? '60%' : '0%' }}
-                                        />
-                                      </div>
-                                      <p className={`text-[10px] mt-1 ${esMio ? 'text-sky-200' : isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                        {t('auto.chatEspecialistas.notaDeVoz')}
-                                      </p>
+                                      {isFile && msg.file_url && (
+                                        <a href={fileUrl(msg.file_url)} target="_blank" rel="noreferrer" className="flex min-w-[190px] items-center gap-3 transition-opacity hover:opacity-90">
+                                          <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${esMio ? 'bg-white/20' : 'bg-v-accent-soft text-v-accent'}`}><FileText size={16} /></span>
+                                          <span className="min-w-0">
+                                            <span className="block max-w-[160px] truncate text-xs font-semibold">{msg.file_name}</span>
+                                            <span className={`block text-[11px] ${esMio ? 'text-white/75' : 'text-v-subtle'}`}>{t('auto.chatEspecialistas.tocaParaAbrir')}</span>
+                                          </span>
+                                        </a>
+                                      )}
+                                      {isAudio && msg.file_url && <ChatAudio url={fileUrl(msg.file_url)} isMe={esMio} />}
+                                      {(!msg.message_type || msg.message_type === 'text') && (
+                                        <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">{msg.content}</p>
+                                      )}
+                                      {hora}
                                     </div>
+                                    {msg.reaction && <span className="absolute -bottom-2 -right-1 rounded-full border border-v-border bg-v-elevated px-1 text-base shadow-v">{msg.reaction}</span>}
                                   </div>
-                                )}
+                                )
+                              })()}
 
-                                {/* Texto */}
-                                {(!msg.message_type || msg.message_type === 'text') && (
-                                  <div className="relative">
-                                    <div
-                                      className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm
-                                        ${esMio
-                                          ? 'bg-sky-600 text-white rounded-br-sm'
-                                          : isDark
-                                            ? 'bg-[#21262d] text-slate-200 border border-[#30363d] rounded-bl-sm'
-                                            : 'bg-white text-slate-800 border border-slate-100 rounded-bl-sm shadow-sm'
-                                        }`}
-                                    >
-                                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                                    </div>
-                                    {msg.reaction && (
-                                      <span className={`absolute -bottom-2 -right-1 text-base rounded-full shadow-sm px-1 border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'}`}>
-                                        {msg.reaction}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Hora + leído */}
-                                <div
-                                  className={`flex items-center gap-1 mt-1.5 ${esMio ? 'flex-row-reverse' : 'flex-row'}`}
-                                >
-                                  <span className={`text-[10px] ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                                    {formatHora(msg.created_at)}
-                                  </span>
-                                  {esMio &&
-                                    (msg.read_at ? (
-                                      <CheckCheck size={11} className="text-sky-400" />
-                                    ) : (
-                                      <Check size={11} className={isDark ? 'text-slate-600' : 'text-slate-300'} />
-                                    ))}
-                                </div>
-                              </div>
-
-                              {/* Avatar propio a la derecha */}
-                              {esMio && (
-                                <div className={`flex-shrink-0 ${mismoEmisor ? 'opacity-0 pointer-events-none' : ''}`}>
-                                  <Avatar name={userName} avatarUrl={myAvatar} size="sm" />
-                                </div>
+                              {!esMio && (
+                                <button onClick={(e) => openContextMenu(e, msg.id)} title={L('Options', 'Opciones')}
+                                  className="mb-5 grid size-7 shrink-0 place-items-center rounded-full text-v-subtle opacity-100 transition-opacity hover:bg-v-fill sm:opacity-0 sm:group-hover:opacity-100"><MoreHorizontal size={15} /></button>
                               )}
                             </div>
                           )
@@ -1210,117 +914,54 @@ export default function ChatEspecialistas({
                 <div ref={bottomRef} />
               </div>
 
-              {/* Preview audio grabado */}
+              {/* Audio grabado listo para enviar */}
               {audioUrl && !grabando && (
-                <div className={`border-t px-4 py-3 flex items-center gap-3 ${isDark ? 'bg-sky-900/20 border-sky-800/40' : 'bg-sky-50 border-sky-100'}`}>
-                  <Mic size={16} className="text-sky-500 flex-shrink-0" />
-                  <audio src={audioUrl} controls className="flex-1 h-8" style={{ minWidth: 0 }} />
-                  <button
-                    onClick={cancelarAudio}
-                    className={`p-1.5 rounded-lg flex-shrink-0 ${isDark ? 'hover:bg-sky-900/40 text-sky-400' : 'hover:bg-sky-100 text-sky-400'}`}
-                  >
-                    <X size={14} />
-                  </button>
-                  <button
-                    onClick={enviarAudio}
-                    disabled={subiendo}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 text-white rounded-xl text-xs font-bold hover:bg-sky-700 disabled:opacity-50 flex-shrink-0"
-                  >
-                    {subiendo ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Send size={12} />
-                    )}
-                    {t('auto.chatEspecialistas.enviar')}
+                <div className="flex items-center gap-3 border-t border-v-border bg-v-accent-soft/60 px-4 py-2.5">
+                  <Mic size={16} className="shrink-0 text-v-accent" />
+                  <audio src={audioUrl} controls className="h-8 min-w-0 flex-1" />
+                  <button onClick={cancelarAudio} className="grid size-8 shrink-0 place-items-center rounded-full text-v-muted hover:bg-v-fill"><X size={14} /></button>
+                  <button onClick={enviarAudio} disabled={subiendo} className="v-brand inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-semibold disabled:opacity-50">
+                    {subiendo ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} {t('auto.chatEspecialistas.enviar')}
                   </button>
                 </div>
               )}
 
-              {/* Barra grabando */}
               {grabando && (
-                <div className="bg-red-50 border-t border-red-100 px-4 py-3 flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse flex-shrink-0" />
-                  <span className="text-sm font-bold text-red-600 flex-1">
-                    Grabando... {formatTiempo(tiempoGrabacion)}
-                  </span>
-                  <button
-                    onClick={detenerGrabacion}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600"
-                  >
-                    <Square size={12} /> Detener
-                  </button>
+                <div className="flex items-center gap-3 border-t border-v-border bg-v-danger/10 px-4 py-2.5">
+                  <span className="size-2.5 shrink-0 animate-pulse rounded-full bg-v-danger" />
+                  <span className="flex-1 text-sm font-semibold tabular-nums text-v-danger">{L('Recording…', 'Grabando…')} {formatTiempo(tiempoGrabacion)}</span>
+                  <button onClick={detenerGrabacion} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-v-danger px-4 text-xs font-semibold text-white"><Square size={12} /> {L('Stop', 'Detener')}</button>
                 </div>
               )}
 
-              {/* Input */}
-              <div className={`border-t px-4 py-3 ${isDark ? 'bg-[#161b22] border-[#161b22]' : 'bg-white border-slate-100'}`}>
-                <div className="flex items-end gap-2">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={subiendo || grabando}
-                    className={`w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40
-                      ${isDark ? 'hover:bg-[#21262d] text-slate-500 hover:text-slate-300' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'}`}
-                    title={t("mensajes.adjuntar")}
-                  >
-                    {subiendo ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Paperclip size={16} />
-                    )}
+              {/* Escribir */}
+              <div className="border-t border-v-border px-3 py-3 sm:px-4">
+                <div className="flex items-end gap-1.5">
+                  <button onClick={() => fileInputRef.current?.click()} disabled={subiendo || grabando} title={t('mensajes.adjuntar')}
+                    className="grid size-10 shrink-0 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-accent disabled:opacity-40">
+                    {subiendo ? <Loader2 size={17} className="animate-spin" /> : <Paperclip size={17} />}
                   </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleArchivo}
-                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
-                  />
-
-                  <div className={`flex-1 rounded-2xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-sky-500/60 transition-all ${isDark ? 'bg-[#21262d] border border-[#21262d] focus-within:border-sky-500/50' : 'bg-slate-50 border border-slate-200 focus-within:border-sky-400'}`}>
-                    <textarea
-                      ref={textareaRef}
-                      value={texto}
-                      onChange={(e) => setTexto(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={`Escribe a ${seleccionado.full_name.split(' ')[0]}…`}
-                      rows={1}
-                      disabled={grabando}
-                      className={`w-full bg-transparent text-sm resize-none focus:outline-none max-h-32 disabled:opacity-50 ${isDark ? 'text-slate-200 placeholder-slate-600' : 'text-slate-800 placeholder-slate-400'}`}
-                      style={{ lineHeight: '1.5' }}
-                    />
+                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleArchivo} accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" />
+                  <div className="min-w-0 flex-1 rounded-[22px] border border-v-border bg-v-bg px-4 py-2 transition-colors focus-within:border-v-accent">
+                    <textarea ref={textareaRef} value={texto} onChange={(e) => setTexto(e.target.value)} onKeyDown={handleKeyDown}
+                      placeholder={L(`Message ${seleccionado.full_name.split(' ')[0]}…`, `Escribe a ${seleccionado.full_name.split(' ')[0]}…`)}
+                      rows={1} disabled={grabando}
+                      className="block max-h-32 w-full resize-none bg-transparent text-sm sm:!text-sm [font-family:inherit] leading-6 text-v-text outline-none placeholder:text-v-subtle disabled:opacity-50" />
                   </div>
-
-                  <button
-                    onMouseDown={iniciarGrabacion}
-                    onMouseUp={detenerGrabacion}
-                    onTouchStart={handleMicTouch}
-                    disabled={subiendo || !!audioUrl}
-                    className={`w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center transition-all disabled:opacity-40
-                      ${grabando
-                        ? 'bg-red-500 text-white animate-pulse'
-                        : isDark ? 'hover:bg-[#21262d] text-slate-500 hover:text-slate-300' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
-                      }`}
-                    title={grabando ? 'Toca para detener' : 'Mantén (PC) o toca (móvil) para grabar'}
-                  >
-                    {grabando ? <MicOff size={16} /> : <Mic size={16} />}
-                  </button>
-
-                  {texto.trim() && (
-                    <button
-                      onClick={enviar}
-                      disabled={enviando}
-                      className="w-9 h-9 flex-shrink-0 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:bg-slate-200 text-white flex items-center justify-center transition-all shadow-sm shadow-sky-200"
-                    >
-                      {enviando ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Send size={16} />
-                      )}
+                  {texto.trim() ? (
+                    <button onClick={enviar} disabled={enviando} className="v-brand grid size-10 shrink-0 place-items-center rounded-full disabled:opacity-50">
+                      {enviando ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
+                    </button>
+                  ) : (
+                    <button onMouseDown={iniciarGrabacion} onMouseUp={detenerGrabacion} onTouchStart={handleMicTouch} disabled={subiendo || !!audioUrl}
+                      title={grabando ? L('Tap to stop', 'Toca para detener') : L('Hold (PC) or tap (phone) to record', 'Mantén (PC) o toca (celular) para grabar')}
+                      className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-40 ${grabando ? 'animate-pulse bg-v-danger text-white' : 'bg-v-accent-soft text-v-accent hover:bg-v-accent hover:text-white'}`}>
+                      {grabando ? <MicOff size={17} /> : <Mic size={17} />}
                     </button>
                   )}
                 </div>
-                <p className={`text-[10px] mt-1.5 ml-1 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-                  Shift+Enter nueva línea · Mantén 🎤 para grabar · Clic derecho en mensaje para más opciones
+                <p className="mt-1.5 hidden px-1 text-[11px] text-v-subtle sm:block">
+                  {L('Shift+Enter for a new line · Hold the mic to record · Right-click or ⋯ on a message for more options', 'Shift+Enter nueva línea · Mantén el micrófono para grabar · Clic derecho o ⋯ en un mensaje para más opciones')}
                 </p>
               </div>
             </>

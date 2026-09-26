@@ -3,6 +3,7 @@
 // Busca el registro en registro_aba, luego llama a generate-session-report
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
@@ -14,8 +15,9 @@ import {
 import {
   portadaInstitucional, selloQRVerificacionAsync, piePaginaOficial,
   generarCodigoDocumento, generarIniciales, DOC_PAGE_PROPS,
-} from '@/lib/santi-report-template'
+} from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 // ── Helpers de formato ────────────────────────────────────────────────────────
 const BD = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' }
@@ -98,20 +100,23 @@ async function buildDoc(d: any, childName: string, childAge: string, analisisIA:
     .map(l => pp(l.replace(/^[*#\-–]+\s*/, '')))
 
   // Código de documento + QR de verificación
+  const centro = await getCentroBranding({ childId: d.child_id })
   const codigoDoc = generarCodigoDocumento(d.child_id || childName, 'sesion-aba')
   const sellosVerif = await selloQRVerificacionAsync({
+      branding: centro,
     codigoDoc,
     fechaEmision: hoy,
-    especialista: 'Equipo Clínico SANTI',
+    especialista: 'Equipo Clínico',
   })
 
   const children = [
     // ── PORTADA INSTITUCIONAL PROFESIONAL ──
     ...portadaInstitucional({
+        branding: centro,
       tipoInforme: 'REGISTRO DE SESIÓN ABA',
       nombrePaciente: childName,
       edadPaciente: childAge ? `${childAge} años` : '—',
-      especialista: 'Equipo Clínico SANTI',
+      especialista: 'Equipo Clínico',
       credenciales: 'Centro Especializado en Neuropsicología y Terapias',
       fechaEmision: hoy,
       codigoDoc,
@@ -258,7 +263,7 @@ async function buildDoc(d: any, childName: string, childAge: string, analisisIA:
     new Paragraph({
       spacing: { before: 320 },
       border: { top: { style: BorderStyle.SINGLE, size: 2, color: 'E2E8F0', space: 8 } },
-      children: [new TextRun({ text: 'Neuropsicología y Terapias SANTI  ·  Equipo Clínico ABA', size: 20, font: 'Arial', color: '1E3A8A', bold: true })],
+      children: [new TextRun({ text: `${centro.name}  ·  Equipo Clínico ABA`, size: 20, font: 'Arial', color: '1E3A8A', bold: true })],
     }),
     new Paragraph({
       spacing: { before: 40, after: 0 },
@@ -270,7 +275,7 @@ async function buildDoc(d: any, childName: string, childAge: string, analisisIA:
     styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
     sections: [{
       properties: DOC_PAGE_PROPS,
-      footers: { default: piePaginaOficial() },
+      footers: { default: piePaginaOficial(centro) },
       children,
     }],
   })
@@ -294,6 +299,9 @@ async function buildDoc(d: any, childName: string, childAge: string, analisisIA:
 
 // ── Handler principal ─────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { registroId } = body
@@ -312,6 +320,7 @@ export async function POST(req: NextRequest) {
     if (regError || !registro) {
       return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 })
     }
+    if ((registro as any).centro_id !== caller.centroId) return notFound()
 
     const d = (registro as any).datos || registro
     const child = (registro as any).children
@@ -330,7 +339,7 @@ export async function POST(req: NextRequest) {
     } else {
       // Generar análisis con IA
       try {
-        const ctx = await buildAIContext(childId, childName, childAge, 'sesión ABA')
+        const ctx = await buildAIContext(childId, childName, childAge, 'sesión ABA', caller.centroId)
         analisisIA = await callGroqSimple(
           'Eres neuropsicólogo clínico ABA. Redacta en párrafos fluidos, lenguaje técnico accesible. Sin bullets ni asteriscos.',
           `Análisis clínico de sesión ABA de ${childName} (${childAge} años):

@@ -1,9 +1,12 @@
 export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
+import { getCentroBranding } from '@/lib/centro-branding'
 import { callGroqSimple, GROQ_MODELS, GroqExhaustedError } from '@/lib/groq-client'
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 import { buildAdminChatContext } from '@/lib/ai-context-builder';
+import { getApiCaller, hasRole, ROLES, canAccessChild, unauthorized, forbidden, notFound } from '@/lib/api-auth';
+import { reglaIdiomaRespuesta } from '@/lib/idioma-ia'
 
 // FIX: calcular edad correctamente desde birth_date cuando age es null
 function calcularEdad(birthDate: string | null | undefined, ageFallback: number | null | undefined): string {
@@ -42,6 +45,9 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: Request) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { question, childId, useWebSearch } = await req.json();
 
@@ -53,6 +59,8 @@ export async function POST(req: Request) {
 
     // Validaciones iniciales
     if (!childId) return NextResponse.json({ text: "⚠️ Selecciona un paciente primero." });
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    const centro = await getCentroBranding({ childId })
 
 
     // ===========================================================================
@@ -510,9 +518,9 @@ RESPONDE AHORA:
     // ===========================================================================
     
     // Buscar conocimiento clínico relevante en el Cerebro IA (libros indexados)
-    const contextConCerebro = await buildAdminChatContext(question, context)
+    const contextConCerebro = await buildAdminChatContext(question, context, caller.centroId)
     
-    const systemPromptVADI = `Eres ARIA, neuropsicóloga clínica supervisora del Centro Neuropsicología y Terapias SANTI (Perú). 20+ años evaluando e interviniendo niños y adolescentes con TEA, TDAH, dificultades de aprendizaje, neurodesarrollo y regulación emocional. Tu rol con el equipo es el de una MENTORA — supervisas casos, enseñás clínica, acompañás la toma de decisiones.
+    const systemPromptVADI = `Eres ARIA, neuropsicóloga clínica supervisora del centro ${centro.name}. 20+ años evaluando e interviniendo niños y adolescentes con TEA, TDAH, dificultades de aprendizaje, neurodesarrollo y regulación emocional. Tu rol con el equipo es el de una MENTORA — supervisas casos, enseñás clínica, acompañás la toma de decisiones.
 
 ═══ REGLA NÚMERO UNO — LA MÁS IMPORTANTE ═══
 
@@ -652,9 +660,10 @@ Mi sugerencia concreta sería pedirle a la terapeuta una nota técnica de qué s
       ? systemPromptVADI + `\n\n═══ MODO BÚSQUEDA WEB ACTIVO ═══\nTenés acceso a búsqueda en internet en tiempo real. Cuando uses información de la web, citá con 🌐 "Fuente web:" y un resumen breve del origen. Verificá la veracidad — preferí fuentes oficiales (NIH, CDC, AAP, BACB, publicaciones revisadas).`
       : systemPromptVADI
 
+    const reglaIdioma = reglaIdiomaRespuesta(userLocale)
     const response = await callGroqSimple(
-        promptFinal,
-        contextConCerebro,
+        `${promptFinal}\n\n${reglaIdioma}`,
+        `${contextConCerebro}\n\n${reglaIdioma}`,
         { model: modeloElegido, temperature: 0.7, maxTokens: 2400 }
       );
     

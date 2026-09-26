@@ -9,11 +9,21 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+
+// Evaluación → su paciente/centro, para verificar acceso antes de tocarla.
+async function evalOwner(id: string | null | undefined) {
+  if (!id) return null
+  const { data } = await supabaseAdmin.from('evaluaciones_iniciales').select('child_id, centro_id').eq('id', id).maybeSingle()
+  return data as { child_id: string; centro_id: string | null } | null
+}
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { searchParams } = new URL(req.url)
 
@@ -21,6 +31,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await supabaseAdmin
         .from('evaluacion_servicios_catalogo')
         .select('*')
+        .eq('centro_id', caller.centroId || '')
         .eq('activo', true)
         .order('tipo')
       if (error) throw error
@@ -29,6 +40,8 @@ export async function GET(req: NextRequest) {
 
     const evalId = searchParams.get('evaluacion_id')
     if (!evalId) return NextResponse.json({ error: 'evaluacion_id requerido' }, { status: 400 })
+    const owner = await evalOwner(evalId)
+    if (!owner || !(await canAccessChild(caller, owner.child_id))) return notFound()
 
     const { data, error } = await supabaseAdmin
       .from('evaluacion_servicios')
@@ -45,6 +58,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { evaluacion_id, tipo, nombre, descripcion, por_que, precio, duracion, incluye, orden } = body
@@ -52,6 +68,7 @@ export async function POST(req: NextRequest) {
     if (!evaluacion_id || !nombre || !tipo) {
       return NextResponse.json({ error: 'evaluacion_id, tipo y nombre son obligatorios' }, { status: 400 })
     }
+    if (!(await rowInCentro('evaluaciones_iniciales', evaluacion_id, caller.centroId))) return notFound()
 
     const { data, error } = await supabaseAdmin
       .from('evaluacion_servicios')
@@ -66,6 +83,7 @@ export async function POST(req: NextRequest) {
         incluye: incluye ?? null,
         orden: orden ?? 0,
         activo: true,
+        centro_id: caller.centroId,
       })
       .select()
       .single()
@@ -86,10 +104,14 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { id, ...campos } = body
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('evaluacion_servicios', id, caller.centroId))) return notFound()
 
     const permitidos = ['tipo', 'nombre', 'descripcion', 'por_que', 'precio', 'duracion', 'incluye', 'orden', 'activo']
     const patch: Record<string, any> = {}
@@ -113,10 +135,14 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('evaluacion_servicios', id, caller.centroId))) return notFound()
 
     const force = searchParams.get('force') === '1'
 

@@ -1,30 +1,31 @@
-// app/api/centro/moneda/route.ts
-// Moneda global del centro (fila única en centro_config). GET público (solo lee
-// el código); POST guarda (lo usa el admin desde Configuración).
+// Currency of the caller's center (centros.currency). GET is public-safe (PEN without a session); POST is center admins only.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { createClient } from '@/lib/supabase-server'
 import { normalizeCurrency } from '@/lib/currency'
 
+async function callerCentro() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data } = await supabaseAdmin.from('profiles').select('role, centro_id, centros(currency)').eq('id', user.id).maybeSingle()
+  return data as { role: string | null; centro_id: string | null; centros: { currency: string } | null } | null
+}
+
 export async function GET() {
-  try {
-    const { data } = await supabaseAdmin.from('centro_config').select('moneda').eq('id', 1).maybeSingle()
-    return NextResponse.json({ moneda: normalizeCurrency((data as any)?.moneda) })
-  } catch {
-    return NextResponse.json({ moneda: 'PEN' })
-  }
+  const profile = await callerCentro().catch(() => null)
+  return NextResponse.json({ moneda: normalizeCurrency(profile?.centros?.currency) })
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json()
-    const moneda = normalizeCurrency(body?.moneda)
-    const { error } = await supabaseAdmin
-      .from('centro_config')
-      .upsert({ id: 1, moneda, updated_at: new Date().toISOString() }, { onConflict: 'id' })
-    if (error) throw error
-    return NextResponse.json({ ok: true, moneda })
-  } catch (e: any) {
-    return NextResponse.json({ error: process.env.NODE_ENV === 'production' ? 'Error' : e.message }, { status: 500 })
+  const profile = await callerCentro()
+  if (!profile?.centro_id || !['jefe', 'admin'].includes(profile.role ?? '')) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
+  const body = await req.json().catch(() => ({}))
+  const moneda = normalizeCurrency(body?.moneda)
+  const { error } = await supabaseAdmin.from('centros').update({ currency: moneda }).eq('id', profile.centro_id)
+  if (error) return NextResponse.json({ error: 'update_failed' }, { status: 500 })
+  return NextResponse.json({ ok: true, moneda })
 }

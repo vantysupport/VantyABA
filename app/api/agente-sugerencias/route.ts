@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
 
@@ -276,6 +277,9 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const userLocale = searchParams.get('locale') || req.headers.get('x-locale') || 'es'
   const isEN = String(userLocale).toLowerCase().startsWith('en')
@@ -283,11 +287,13 @@ export async function GET(req: NextRequest) {
   const soloGuardadas = searchParams.get('guardadas') === 'true'
 
   try {
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
     // Si pide las guardadas, retornarlas directamente
     if (soloGuardadas) {
       let q = supabaseAdmin
         .from('sugerencias_terapeutas')
         .select('*, children(name)')
+        .eq('centro_id', caller.centroId)
         .eq('resuelta', false)
         .order('prioridad_orden', { ascending: true })
         .order('created_at', { ascending: false })
@@ -298,7 +304,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Generar en tiempo real
-    let queryPacientes = supabaseAdmin.from('children').select('id, name')
+    let queryPacientes = supabaseAdmin.from('children').select('id, name').eq('centro_id', caller.centroId)
     if (childId) queryPacientes = queryPacientes.eq('id', childId)
     const { data: pacientes } = await queryPacientes.limit(30)
 
@@ -340,6 +346,7 @@ export async function GET(req: NextRequest) {
           dato_clave: s.dato_clave,
           semanas_detectado: s.semanas_detectado,
           resuelta: false,
+          centro_id: caller.centroId,
           updated_at: new Date().toISOString()
         }, { onConflict: 'child_id,tipo' })
       } catch { /* no bloquear */ }
@@ -350,7 +357,7 @@ export async function GET(req: NextRequest) {
     // ━━━ CEREBRO IA ━━━
     let _cerebroCtx = ''
     try {
-      const _kb = await buildAIContext(undefined, undefined, undefined, 'sugerencias estrategias ABA TEA intervención')
+      const _kb = await buildAIContext(undefined, undefined, undefined, 'sugerencias estrategias ABA TEA intervención', caller.centroId)
       _cerebroCtx = _kb.knowledgeContext
     } catch { /* fallback */ }
     // ━━━ FIN CEREBRO IA ━━━
@@ -388,8 +395,12 @@ CONTEXTO CLÍNICO DE APOYO (uso interno): ${_cerebroCtx || 'No disponible'}` + g
 
 // ── POST: Marcar sugerencia como resuelta ────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { sugerenciaId, nota } = await req.json()
+    if (!(await rowInCentro('sugerencias_terapeutas', sugerenciaId, caller.centroId))) return notFound()
     await supabaseAdmin.from('sugerencias_terapeutas').update({
       resuelta: true,
       nota_resolucion: nota || null,

@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
+import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { avisarEquipo, avisarFamilia } from '@/lib/avisos'
 
 
 // i18n: responder en el idioma del usuario
@@ -17,10 +19,14 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   const { searchParams } = new URL(req.url)
   const childId      = searchParams.get('child_id')
   const parentUserId = searchParams.get('parent_user_id')
   const soloActivas  = searchParams.get('activas') !== 'false'
+
+  if (childId && !(await canAccessChild(caller, childId))) return notFound()
 
   try {
     // FIX: si viene parentUserId, verificar que tiene acceso a ese child_id
@@ -43,6 +49,11 @@ export async function GET(req: NextRequest) {
       .order('fecha_asignada', { ascending: false })
 
     if (childId)     query = query.eq('child_id', childId)
+    else if (caller.role === 'padre') {
+      const { data: hijos } = await supabaseAdmin.from('children').select('id').eq('parent_id', caller.id)
+      query = query.in('child_id', (hijos || []).map((h: any) => h.id))
+    } else if (hasRole(caller, ROLES.staff)) query = query.eq('centro_id', caller.centroId)
+    else return forbidden()
     if (soloActivas) query = query.eq('activa', true)
 
     const { data, error } = await query
@@ -55,6 +66,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const body = await req.json()
     const userLocale = body.locale || req.headers.get('x-locale') || 'es'
@@ -67,6 +80,8 @@ export async function POST(req: NextRequest) {
       if (!child_id || !titulo) {
         return NextResponse.json({ error: 'child_id y titulo son requeridos' }, { status: 400 })
       }
+      if (!hasRole(caller, ROLES.staff)) return forbidden()
+      if (!(await canAccessChild(caller, child_id))) return notFound()
 
       const instrucciones = await generarInstruccionesIA(child_id, titulo, objetivo, userLocale)
 
@@ -74,6 +89,7 @@ export async function POST(req: NextRequest) {
         .from('tareas_hogar')
         .insert({
           child_id, terapeuta_id, sesion_id,
+          centro_id: caller.centroId,
           titulo, objetivo,
           instrucciones,
           fecha_asignada: new Date().toISOString().split('T')[0],
@@ -93,6 +109,8 @@ export async function POST(req: NextRequest) {
     // ── MARCAR COMO COMPLETADA (por padre) ───────────────────
     if (action === 'completar') {
       const { id, nota_padre, dificultad_reportada } = body
+      const { data: tareaActual } = await supabaseAdmin.from('tareas_hogar').select('child_id').eq('id', id).maybeSingle()
+      if (!tareaActual || !(await canAccessChild(caller, tareaActual.child_id))) return notFound()
 
       const { data, error } = await supabaseAdmin
         .from('tareas_hogar')
@@ -116,6 +134,9 @@ export async function POST(req: NextRequest) {
     // ── GENERAR INSTRUCCIONES IA para tarea existente ─────────
     if (action === 'regenerar_instrucciones') {
       const { id, child_id, titulo, objetivo } = body
+      if (!hasRole(caller, ROLES.staff)) return forbidden()
+      if (!(await rowInCentro('tareas_hogar', id, caller.centroId))) return notFound()
+      if (!(await canAccessChild(caller, child_id))) return notFound()
       const instrucciones = await generarInstruccionesIA(child_id, titulo, objetivo)
 
       const { data, error } = await supabaseAdmin
@@ -132,6 +153,8 @@ export async function POST(req: NextRequest) {
     // ── DESACTIVAR tarea ──────────────────────────────────────
     if (action === 'desactivar') {
       const { id } = body
+      if (!hasRole(caller, ROLES.staff)) return forbidden()
+      if (!(await rowInCentro('tareas_hogar', id, caller.centroId))) return notFound()
       const { error } = await supabaseAdmin
         .from('tareas_hogar')
         .update({ activa: false })
@@ -224,18 +247,17 @@ async function notificarPadresTareaNueva(childId: string, tarea: any) {
 
     if (!padres || padres.length === 0) return
 
-    const notifs = padres.map(p => ({
-      user_id: p.user_id,
-      child_id: childId,
-      tipo: 'tarea_nueva',
-      titulo: 'Nueva actividad para casa asignada',
-      mensaje: `Tu terapeuta asignó una nueva actividad: "${tarea.titulo}". Ingresa a la app para ver las instrucciones paso a paso.`,
-      prioridad: 2,
-      canal: 'in_app',
-      metadata: { tarea_id: tarea.id }
-    }))
-
-    await supabaseAdmin.from('notificaciones').insert(notifs)
+    const { data: nino } = await supabaseAdmin.from('children').select('name').eq('id', childId).maybeSingle()
+    const n = nino?.name || ''
+    for (const p of padres) {
+      await avisarFamilia({
+        parentId: p.user_id, centroId: tarea.centro_id, type: 'tarea_nueva', childId,
+        title: { es: 'Nueva actividad para casa', en: 'New home activity' },
+        message: { es: `Tu terapeuta asignó "${tarea.titulo}". Entra para ver los pasos.`, en: `Your therapist assigned "${tarea.titulo}". Open the app to see the steps.` },
+        push: { titulo: { es: `Nueva misión para ${n}`, en: `New mission for ${n}` }, cuerpo: { es: `"${tarea.titulo}". Son solo unos minutos y suman mucho.`, en: `"${tarea.titulo}". Just a few minutes that add up.` }, pose: 'laptop' },
+        metadata: { tarea_id: tarea.id },
+      })
+    }
   } catch (err) {
     console.error('Error notificando tarea nueva:', err)
   }
@@ -244,15 +266,16 @@ async function notificarPadresTareaNueva(childId: string, tarea: any) {
 async function notificarTerapeutaTareaCompletada(tarea: any) {
   try {
     if (!tarea.terapeuta_id) return
-    await supabaseAdmin.from('notificaciones').insert({
-      user_id: tarea.terapeuta_id,
-      child_id: tarea.child_id,
-      tipo: 'tarea_completada',
-      titulo: 'Actividad completada por la familia',
-      mensaje: `La familia completó la actividad "${tarea.titulo}"${tarea.nota_padre ? '. Nota: ' + tarea.nota_padre : ''}.`,
-      prioridad: 3,
-      canal: 'in_app',
-      metadata: { tarea_id: tarea.id }
+    const { data: nino } = await supabaseAdmin.from('children').select('name').eq('id', tarea.child_id).maybeSingle()
+    await avisarEquipo({
+      centroId: tarea.centro_id, roles: [], extra: [tarea.terapeuta_id], tipo: 'tarea_completada', childId: tarea.child_id, prioridad: 3,
+      titulo: { es: 'Actividad completada por la familia', en: 'Activity completed by the family' },
+      mensaje: {
+        es: `La familia completó "${tarea.titulo}"${tarea.nota_padre ? `. Nota: ${tarea.nota_padre}` : ''}.`,
+        en: `The family completed "${tarea.titulo}"${tarea.nota_padre ? `. Note: ${tarea.nota_padre}` : ''}.`,
+      },
+      push: { titulo: { es: `¡${nino?.name ?? 'Tu paciente'} practicó en casa!`, en: `${nino?.name ?? 'Your patient'} practiced at home!` }, pose: 'celebra' },
+      metadata: { tarea_id: tarea.id },
     })
   } catch (err) {
     console.error('Error notificando tarea completada:', err)

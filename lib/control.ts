@@ -9,7 +9,17 @@ export type ControlStatus = {
   limits: Record<string, number>
 }
 
+// Un error que se repite en bucle (p. ej. en cada render) no debe inundar error_logs:
+// el mismo mensaje se envía como máximo una vez por minuto y 20 errores por carga de página.
+const recentErrors = new Map<string, number>()
+let sentErrors = 0
+
 export async function logClientError(message: string, detail = '', source = 'client'): Promise<void> {
+  const key = `${source}:${message}`
+  const now = Date.now()
+  if (sentErrors >= 20 || now - (recentErrors.get(key) ?? 0) < 60_000) return
+  recentErrors.set(key, now)
+  sentErrors++
   try {
     await fetch('/api/control', {
       method: 'POST',

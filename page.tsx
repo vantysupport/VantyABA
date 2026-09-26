@@ -1,4 +1,7 @@
 'use client'
+import { PLATFORM_NAME } from '@/lib/branding'
+// Platform-level page (not a center's): no center contact data here.
+const CONTACTO = { telefono: '', telefonoDigitos: '', email: '', direccion: '' }
 
 import Link from 'next/link'
 import Image from 'next/image'
@@ -164,7 +167,7 @@ const CONTENT = {
       saturDayClosed: 'Sábado: Cerrado',
       sundayClosed: 'Domingo: Cerrado',
       serviceItems: ['Terapia ABA', 'Habilidades Sociales', 'Escuela para Padres', 'Evaluación Gratuita'],
-      copy: '© 2025 Neuropsicología y Terapias SANTI — Centro de Desarrollo Infantil · Pisco, Ica, Perú. Todos los derechos reservados.',
+      copy: `© 2025 ${PLATFORM_NAME}. Todos los derechos reservados.`,
     },
     wa: { msg: 'Hola, vi su página web y me interesa conocer más sobre sus servicios de terapia para mi hijo/a.' },
   },
@@ -292,7 +295,7 @@ const CONTENT = {
       saturDayClosed: 'Saturday: Closed',
       sundayClosed: 'Sunday: Closed',
       serviceItems: ['ABA Therapy', 'Social Skills', 'Parent School', 'Free Assessment'],
-      copy: '© 2025 Neuropsicología y Terapias SANTI — Child Development Center · Pisco, Ica, Peru. All rights reserved.',
+      copy: `© 2025 ${PLATFORM_NAME}. All rights reserved.`,
     },
     wa: { msg: "Hello, I saw your website and I'm interested in learning more about your therapy services for my child." },
   },
@@ -431,7 +434,7 @@ export default function LandingPage() {
   useEffect(() => { setActiveAccordion(null) }, [lang])
 
   const waMsg = encodeURIComponent(t.wa.msg)
-  const waUrl = `https://wa.me/51991070734?text=${waMsg}`
+  const waUrl = `https://wa.me/${CONTACTO.telefonoDigitos}?text=${waMsg}`
 
   const benefitIcons = [
     { icon: <ClipboardList size={20} color="#fff" />, bg: 'linear-gradient(135deg,#f97316,#fb923c)' },
@@ -602,9 +605,9 @@ export default function LandingPage() {
               <Image src="/images/logo.png?v=2" alt="Logo" fill style={{ objectFit: 'contain' }} priority unoptimized />
             </div>
             <div>
-              <p style={{ fontFamily: "'Baloo 2',cursive", fontWeight: 800, fontSize: 16, color: '#1c1917', lineHeight: 1.1 }}>Neuropsicología y Terapias SANTI</p>
+              <p style={{ fontFamily: "'Baloo 2',cursive", fontWeight: 800, fontSize: 16, color: '#1c1917', lineHeight: 1.1 }}>{PLATFORM_NAME}</p>
               <p style={{ fontSize: 10, color: '#a8a29e', fontWeight: 600 }}>
-                {'Centro de Desarrollo Infantil · Pisco'}
+                {'Gestión clínica para centros de terapia'}
               </p>
             </div>
           </div>
@@ -915,12 +918,16 @@ export default function LandingPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: '#44403c' }}>
               <Clock size={15} color="#f97316" /><span><strong>{t.map.schedule}</strong></span>
             </div>
+            {CONTACTO.telefono && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: '#44403c' }}>
-              <Phone size={15} color="#25d366" /><span>+51 991 070 734</span>
+              <Phone size={15} color="#25d366" /><span>{CONTACTO.telefono}</span>
             </div>
+            )}
+            {CONTACTO.email && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: '#44403c' }}>
-              <Mail size={15} color="#f59e0b" /><span>contacto@santi.com</span>
+              <Mail size={15} color="#f59e0b" /><span>{CONTACTO.email}</span>
             </div>
+            )}
           </div>
           <a href="https://maps.app.goo.gl/fv9HhtWj5R45a5paA" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '12px', background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', borderRadius: 99, fontFamily: "'Baloo 2',cursive", fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
             <MapPin size={16} /> {t.map.mapsBtn}
@@ -936,7 +943,7 @@ export default function LandingPage() {
               <div style={{ position: 'relative', width: 40, height: 40 }}>
                 <Image src="/images/logo.png?v=2" alt="Logo" fill style={{ objectFit: 'contain' }} unoptimized />
               </div>
-              <span style={{ fontFamily: "'Baloo 2',cursive", color: '#fff', fontWeight: 800, fontSize: 17 }}>Neuropsicología y Terapias SANTI</span>
+              <span style={{ fontFamily: "'Baloo 2',cursive", color: '#fff', fontWeight: 800, fontSize: 17 }}>{PLATFORM_NAME}</span>
             </div>
             <p style={{ fontSize: 13, lineHeight: 1.75, marginBottom: 18 }}>{t.footer.tagline}</p>
             <div>
@@ -964,7 +971,7 @@ export default function LandingPage() {
             <p style={{ fontSize: 13, marginBottom: 6 }}>{t.footer.scheduleHours}</p>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,.22)', marginBottom: 3 }}>{t.footer.saturDayClosed}</p>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,.22)', marginBottom: 14 }}>{t.footer.sundayClosed}</p>
-            <p style={{ fontSize: 12 }}>Independencia, Pisco, Ica</p>
+            {CONTACTO.direccion && <p style={{ fontSize: 12 }}>{CONTACTO.direccion}</p>}
           </div>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,.06)', paddingTop: 22, textAlign: 'center', fontSize: 12 }}>

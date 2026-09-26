@@ -3,7 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import { clientIp, isLoginLocked, logSecurityEvent, recordLoginFailure } from '@/lib/security-events'
+import { logAuditEvent } from '@/lib/audit-log'
+import { appBaseUrl, authMailConfigured, resendConfirmationEmail } from '@/lib/auth-emails'
 
 // Crear cliente de Supabase para server actions
 async function createClient() {
@@ -28,61 +31,52 @@ async function createClient() {
   )
 }
 
-/**
- * Función de login con validación de contraseña
- */
-export async function login(formData: FormData) {
+// Reenvío del correo de confirmación (cuenta creada pero sin verificar). Máximo uno por minuto por correo.
+const ultimoReenvio = new Map<string, number>()
+export async function reenviarConfirmacion(email: string, locale: 'es' | 'en' = 'es'): Promise<{ ok: boolean; espera?: number }> {
+  const normalized = String(email ?? '').trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) return { ok: false }
+  const antes = ultimoReenvio.get(normalized) ?? 0
+  const faltan = Math.ceil((antes + 60_000 - Date.now()) / 1000)
+  if (faltan > 0) return { ok: false, espera: faltan }
+  const siteUrl = appBaseUrl()
+  if (!siteUrl || !authMailConfigured()) return { ok: false }
+  ultimoReenvio.set(normalized, Date.now())
+  const ok = await resendConfirmationEmail(normalized, siteUrl, locale === 'en' ? 'en' : 'es')
+  return { ok }
+}
+
+export type SignInResult =
+  | { ok: true; userId: string }
+  | { ok: false; code: 'invalid' | 'unconfirmed' | 'locked' | 'rate_limited' | 'error'; minutes?: number }
+
+// Sign-in runs server-side so the brute-force lockout can't be skipped from the browser; the session lands in the shared auth cookies.
+export async function signInGuarded(email: string, password: string): Promise<SignInResult> {
+  const normalized = String(email ?? '').trim().toLowerCase()
+  if (!normalized || !password) return { ok: false, code: 'invalid' }
+
+  const ip = clientIp(await headers())
+  const lock = await isLoginLocked(normalized, ip)
+  if (lock.locked) {
+    await logSecurityEvent({ tipo: 'login_blocked_attempt', nivel: 'medio', descripcion: 'Intento durante bloqueo temporal', ip, metadata: { email: normalized } })
+    return { ok: false, code: 'locked', minutes: lock.minutes }
+  }
+
   const supabase = await createClient()
+  const { data, error } = await supabase.auth.signInWithPassword({ email: normalized, password })
 
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-
-  // Validaciones básicas
-  if (!email || !password) {
-    return { error: 'Por favor completa todos los campos' }
-  }
-
-  // Intentar login con Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
-
-  if (authError) {
-    console.error('Error en login:', authError)
-    
-    // Retornar mensajes amigables
-    if (authError.message.includes('Invalid login credentials')) {
-      return { error: 'Correo o contraseña incorrectos' }
+  if (error) {
+    if (error.message.includes('Email not confirmed')) return { ok: false, code: 'unconfirmed' }
+    if (error.status === 429) return { ok: false, code: 'rate_limited' }
+    if (error.message.includes('Invalid login credentials')) {
+      await recordLoginFailure(normalized, ip)
+      return { ok: false, code: 'invalid' }
     }
-    if (authError.message.includes('Email not confirmed')) {
-      return { error: 'Por favor confirma tu correo electrónico' }
-    }
-    
-    return { error: authError.message }
+    return { ok: false, code: 'error' }
   }
 
-  // Verificar el rol del usuario en la tabla profiles
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role, full_name')
-    .eq('id', authData.user.id)
-    .single()
-
-  if (profileError) {
-    console.error('Error obteniendo perfil:', profileError)
-  }
-
-  // Revalidar y redirigir según el rol
-  revalidatePath('/', 'layout')
-  
-  if (profile?.role === 'jefe' || profile?.role === 'admin' || profile?.role === 'especialista' || email === 'admin@santi.com') {
-    redirect('/admin')
-  } else if (profile?.role === 'secretaria') {
-    redirect('/secretaria')
-  } else {
-    redirect('/padre')
-  }
+  await logAuditEvent({ action: 'login', resource_type: 'auth', userId: data.user.id, userEmail: normalized, req: { headers: await headers() } })
+  return { ok: true, userId: data.user.id }
 }
 
 /**
@@ -205,6 +199,5 @@ export async function isAdmin() {
   return user.profile?.role === 'jefe' || 
          user.profile?.role === 'admin' || 
          user.profile?.role === 'especialista' ||
-         user.profile?.role === 'secretaria' ||
-         user.email === 'admin@santi.com'
+         user.profile?.role === 'secretaria'
 }

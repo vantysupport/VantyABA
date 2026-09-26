@@ -12,6 +12,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
+import { esCentroFundador } from '@/lib/knowledge-base'
 import { indexDocument } from '@/lib/knowledge-base'
 
 export const dynamic = 'force-dynamic'
@@ -40,11 +42,18 @@ function listarArchivos(): { archivo: string; bytes: number }[] {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   return NextResponse.json({ dir: 'knowledge-seed', archivos: listarArchivos() })
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.admins)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const { archivo, force } = await req.json().catch(() => ({}))
 
@@ -85,6 +94,7 @@ export async function POST(req: NextRequest) {
         .from('knowledge_documents')
         .select('id')
         .eq('titulo', titulo)
+        .eq('centro_id', caller.centroId)
         .maybeSingle()
 
       if (existente && !force) {
@@ -92,8 +102,8 @@ export async function POST(req: NextRequest) {
         continue
       }
       if (existente && force) {
-        await supabaseAdmin.from('knowledge_chunks').delete().eq('document_id', existente.id)
-        await supabaseAdmin.from('knowledge_documents').delete().eq('id', existente.id)
+        await supabaseAdmin.from('knowledge_chunks').delete().eq('document_id', existente.id).eq('centro_id', caller.centroId)
+        await supabaseAdmin.from('knowledge_documents').delete().eq('id', existente.id).eq('centro_id', caller.centroId)
       }
 
       // Crear documento e indexar (chunks + embeddings) — mismo pipeline que el resto del Cerebro IA
@@ -105,6 +115,7 @@ export async function POST(req: NextRequest) {
           descripcion: `Cargado desde knowledge-seed/${nombre}`,
           procesado: false,
           total_chunks: 0,
+          centro_id: caller.centroId,
         })
         .select('id')
         .single()

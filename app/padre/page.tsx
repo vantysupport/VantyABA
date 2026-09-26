@@ -1,4 +1,6 @@
 'use client'
+import { PLATFORM_NAME } from '@/lib/branding'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 import PWAInstallButton from '@/components/PWAInstallButton'
 import { useI18n } from '@/lib/i18n-context'
@@ -9,6 +11,7 @@ import { releaseSessionNow } from '@/lib/session-lock'
 import { useSessionTracker } from '@/lib/hooks/useSessionTracker'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { AnimatePresence, motion } from 'motion/react'
 import { 
   Home, Calendar, MessageCircle, User, LogOut, Plus, 
   Clock, Ticket, CheckCircle2, AlertCircle, ChevronRight, Menu, 
@@ -30,7 +33,9 @@ import ResourcesView from './components/ResourcesView'
 import ParentFormsView from './components/ParentFormsView'
 import MisCitasView from './components/MisCitasView'
 import ProfileView from './components/ProfileView'
+import { CambiarPassModal, EditarPerfilModal, NotificacionesModal, PrivacidadModal, AyudaModal } from './components/PerfilModales'
 import NotifWhatsAppPanel from './components/NotifWhatsAppPanel'
+import { SolicitudCitaModal, type CitaSolicitud } from './components/SolicitudCita'
 import StoreView from './components/StoreView'
 import DocumentosView from '@/app/admin/components/DocumentosView'
 import ChatInterface from './components/ChatInterface'
@@ -40,9 +45,14 @@ import EngagementView from './components/EngagementView'
 import EvaluacionInicialView from './components/EvaluacionInicialView'
 import PushNotificationBanner from '../../components/PushNotificationBanner'
 import { TIME_SLOTS, calculateAge } from './utils/helpers'
+import { AriaSaludo } from '@/components/ui/aria-saludo'
+import { confirmar } from '@/components/ui/confirmar'
 
 export default function ParentDashboard() {
+  const CONTACTO = useCentroBranding()
+  const centroNombre = CONTACTO.name
   const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const router = useRouter()
    
   const [loading, setLoading] = useState(true)
@@ -70,6 +80,14 @@ export default function ParentDashboard() {
     { id: 'perfil',      icon: User,      label: t('nav.miperfil') },
   ]
   const [activeView, setActiveView] = useState('home')
+
+  // Enlace directo desde una notificación push: ?vista=agenda
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('vista')
+    if (!v) return
+    setActiveView(v)
+    const u = new URL(window.location.href); u.searchParams.delete('vista'); window.history.replaceState(null, '', u.toString())
+  }, [])
   const [familiasUnread, setFamiliasUnread] = useState(0)
   const [showMoreMenu, setShowMoreMenu] = useState(false) 
   
@@ -78,7 +96,10 @@ export default function ParentDashboard() {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     if (params.get('gcal') || params.get('mscal')) {
-      setActiveView('profile')
+      // Vuelve a donde se inició la conexión (la Agenda la guarda); por defecto, Mi perfil
+      let volver = 'profile'
+      try { volver = sessionStorage.getItem('vanty_cal_volver') || 'profile'; sessionStorage.removeItem('vanty_cal_volver') } catch { /* sin storage */ }
+      setActiveView(volver)
     }
   }, [])
 
@@ -163,7 +184,8 @@ export default function ParentDashboard() {
 
         // Redirect if wrong role
         if (parent?.role === 'secretaria') { router.push('/secretaria'); return }
-        if (parent?.role === 'jefe' || parent?.role === 'admin' || parent?.role === 'especialista') { router.push('/admin'); return }
+        if (parent?.role === 'especialista') { router.push('/especialista'); return }
+        if (parent?.role === 'jefe' || parent?.role === 'admin') { router.push('/admin'); return }
 
         setProfile(parent)
 
@@ -253,20 +275,10 @@ export default function ParentDashboard() {
 
   // La clínica agenda las citas directamente desde el panel administrativo
 
-  const handleCancelAppointment = async (appointmentId: string, isReschedule: boolean = false) => {
-    if(!confirm(t('auto.page.seguroQueDeseasCancelarEsta'))) return
-
-    setBookingLoading(true)
-    try {
-        const { error: delError } = await supabase.from('appointments').delete().eq('id', appointmentId)
-        if(delError) throw delError
-        setRefreshTrigger(prev => prev + 1) 
-        triggerCelebration('Solicitud enviada al centro')
-    } catch (error: any) {
-        alert("Error al cancelar: " + error.message)
-    } finally {
-        setBookingLoading(false)
-    }
+  // Reprogramar / cancelar: abre la ventana de solicitud (la cita no se borra; el centro la gestiona)
+  const [solicitudCita, setSolicitudCita] = useState<CitaSolicitud | null>(null)
+  const handleCancelAppointment = (cita: { id: string; appointment_date: string; appointment_time: string | null; service_type?: string | null }, isReschedule: boolean = false) => {
+    setSolicitudCita({ id: cita.id, modo: isReschedule ? 'reprogramar' : 'cancelar', fecha: cita.appointment_date, hora: cita.appointment_time, servicio: cita.service_type })
   }
 
   const handleAddChild = async (e: any) => {
@@ -325,62 +337,11 @@ export default function ParentDashboard() {
         setMyChildren([...myChildren, data[0]])
         if(!selectedChild) setSelectedChild(data[0])
         setShowAddChild(false)
-        triggerCelebration(`${name} agregado correctamente`)
+        triggerCelebration(L(`${name} was added`, `${name} ya está registrado/a`))
         setRefreshTrigger(prev => prev + 1)
 
     } catch (err: any) {
         alert("Error inesperado: " + err.message)
-    }
-  }
-
-  const handleUpdateProfile = async (e: any) => {
-    e.preventDefault()
-    const fullName = e.target.fullName.value
-    const phone = e.target.phone.value
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          full_name: fullName,
-          phone: phone 
-        })
-        .eq('id', profile.id)
-      
-      if (error) throw error
-      
-      setProfile({...profile, full_name: fullName, phone: phone})
-      triggerCelebration('Perfil actualizado')
-      setShowEditProfile(false)
-      setRefreshTrigger(prev => prev + 1)
-    } catch (error: any) {
-      alert("Error al actualizar: " + error.message)
-    }
-  }
-
-  const handleChangePassword = async (e: any) => {
-    e.preventDefault()
-    const newPass = e.target.newPassword.value
-    const confirmPass = e.target.confirmPassword.value
-    
-    if (newPass !== confirmPass) {
-      alert(t('auto.page.lasContrasenasNoCoinciden'))
-      return
-    }
-    
-    if (newPass.length < 6) {
-      alert(t('auto.page.laContrasenaDebeTenerAl'))
-      return
-    }
-    
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPass })
-      if (error) throw error
-      
-      triggerCelebration('Contraseña actualizada')
-      setShowChangePass(false)
-    } catch (error: any) {
-      alert("Error: " + error.message)
     }
   }
 
@@ -408,13 +369,13 @@ export default function ParentDashboard() {
             <h1 className="text-xl font-bold text-slate-800 mb-2">{t("especialista.registroNoDisponible")}</h1>
             <p className="text-slate-500 text-sm leading-relaxed mb-6">
               {t('auto.page.elCentroAlcanzoElNumero3')}
-              Para habilitar tu acceso, comunícate con <strong className="text-sky-600">{t('auto.page.neuropsicologiaYTerapiasSanti')}</strong>.
+              Para habilitar tu acceso, comunícate con <strong className="text-sky-600">{centroNombre}</strong>.
             </p>
-            <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
+            {CONTACTO.telefono && (<a href={`https://wa.me/${CONTACTO.telefonoDigitos}`} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 w-full bg-gradient-to-r from-sky-600 to-cyan-600 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg shadow-sky-200 hover:opacity-90 transition-opacity">
               <Phone size={16} /> Contactar al centro
-            </a>
-            <button onClick={async () => { await supabase.auth.signOut(); router.replace('/') }}
+            </a>)}
+            <button onClick={async () => { await supabase.auth.signOut(); router.replace('/login') }}
               className="mt-3 text-xs font-bold text-slate-400 hover:text-slate-600">{t("common.cerrarSesion")}</button>
           </div>
         </div>
@@ -424,72 +385,95 @@ export default function ParentDashboard() {
 
   // ── ONBOARDING para primer acceso (sin hijos registrados) ─────────────────
   if (!loading && myChildren.length === 0 && profile && !showAddChild) {
+    const nombre = (profile?.full_name?.split(' ')[0] || '').replace(/^./, (c: string) => c.toUpperCase())
+    const pasos = [L('Welcome', 'Bienvenida'), L('Your child', 'Tu hijo/a'), L('First appointment', 'Primera cita')]
     return (
-      <div className="min-h-screen bg-gradient-to-br from-sky-50 via-cyan-50 to-sky-100 flex items-center justify-center p-6">
-        <div className="max-w-lg w-full">
-          {/* Progress steps */}
-          <div className="flex items-center justify-center gap-3 mb-10">
-            {[t('familias.bienvenida'), t('familias.tuHijoA'), t('familias.primeraCita')].map((step, i) => (
-              <div key={step} className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === 0 ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
-                  {i + 1}
-                </div>
-                <span className={`text-xs font-bold ${i === 0 ? 'text-sky-600' : 'text-slate-400'}`}>{step}</span>
-                {i < 2 && <div className="w-8 h-px bg-slate-200" />}
+      <div className="v-scope relative flex min-h-dvh items-center justify-center overflow-hidden bg-v-bg px-4 py-8 sm:py-12">
+        {/* Fondo suave de marca */}
+        <div aria-hidden className="pointer-events-none absolute -left-40 -top-40 size-[520px] rounded-full bg-[#01abfc]/15 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-48 -right-40 size-[560px] rounded-full bg-[#0063d8]/15 blur-3xl" />
+
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="relative w-full max-w-4xl overflow-hidden rounded-[28px] border border-v-border bg-v-elevated shadow-v lg:grid lg:grid-cols-[1.05fr_1fr]">
+
+          {/* Panel de marca con ARIA */}
+          <div className="v-brand relative flex flex-col overflow-hidden px-6 pb-0 pt-6 text-white sm:px-8 sm:pt-8">
+            <div className="flex items-center gap-3">
+              {CONTACTO.logoUrl
+                ? <img src={CONTACTO.logoUrl} alt="" className="size-10 rounded-[30%] bg-white object-cover p-0.5" />
+                : <span className="grid size-10 place-items-center rounded-[30%] bg-white/20 text-base font-bold">{centroNombre.charAt(0)}</span>}
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-white/70">{L('Your center', 'Tu centro')}</p>
+                <p className="text-sm font-semibold" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{centroNombre}</p>
               </div>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-3xl p-8 shadow-2xl shadow-sky-100 border border-sky-100 text-center">
-            {/* Avatar */}
-            <div className="w-20 h-20 bg-gradient-to-br from-sky-500 to-sky-600 rounded-[22px] flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-sky-200 mx-auto mb-6">
-              {profile?.full_name?.charAt(0) || 'F'}
             </div>
-
-            <h1 className="text-2xl font-bold text-slate-800 mb-3">
-              {t('auto.page.bienvenidoa', { v1: String(profile?.full_name?.split(' ')[0]) })}
+            <h1 className="mt-7 text-[28px] font-bold leading-[1.1] tracking-tight sm:text-4xl">
+              {L(`Hi, ${nombre}`, `Hola, ${nombre}`)}
             </h1>
-            <p className="text-slate-500 text-base leading-relaxed mb-8">
-              Estamos felices de tenerte en <strong className="text-sky-600">{t('auto.page.neuropsicologiaYTerapiasSanti')}</strong>.
-              Para comenzar, necesitamos registrar a tu hijo/a y podrás acceder a todo el sistema de seguimiento con IA.
+            <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-white/85">
+              {L(`Welcome to ${centroNombre}. I am ARIA and I will help you follow your child's progress every day.`,
+                 `Te damos la bienvenida a ${centroNombre}. Soy ARIA y te acompañaré a seguir el progreso de tu hijo/a cada día.`)}
             </p>
-
-            {/* Features preview */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              {[
-                { Icon: TrendingUp, label: t('familias.progresoTiempoReal') },
-                { Icon: Sparkles,   label: t('familias.asistenteIA247') },
-                { Icon: Calendar,   label: t('familias.citas1Click') },
-              ].map(({ Icon, label }) => (
-                <div key={label} className="bg-sky-50 rounded-2xl p-4 border border-sky-100">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ background: 'rgba(2,132,199,0.12)', color: '#0284c7' }}>
-                    <Icon size={18} />
-                  </div>
-                  <p className="text-xs font-bold text-sky-700 leading-tight">{label}</p>
-                </div>
-              ))}
+            <div className="relative mt-4 flex flex-1 items-end justify-end lg:mt-6">
+              <motion.img src="/aria/pose-1.webp" alt="ARIA" width={220} height={220}
+                initial={{ opacity: 0, y: 24, rotate: -4 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ delay: 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                className="h-auto w-36 drop-shadow-[0_18px_30px_rgba(0,30,90,0.35)] sm:w-44 lg:w-56" />
             </div>
-
-            <button
-              onClick={() => setShowAddChild(true)}
-              className="w-full bg-gradient-to-r from-sky-600 to-cyan-600 text-white py-4 rounded-2xl font-bold text-base shadow-lg shadow-sky-200 hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[.98] flex items-center justify-center gap-3"
-            >
-              <Baby size={20} /> Registrar a mi hijo/a ahora
-            </button>
-
-            <p className="text-xs text-slate-400 mt-4">
-              Solo toma 1 minuto · Tus datos están protegidos
-            </p>
           </div>
 
-          {/* Help contact */}
-          <p className="text-center text-sm text-slate-400 mt-6">
-            {t('auto.page.tienesDudasEscribenos', { v1: String(' ') })}
-            <a href="https://wa.me/51991070734" className="text-sky-600 font-bold hover:underline">
-              +51 991 070 734
-            </a>
-          </p>
-        </div>
+          {/* Panel de acción */}
+          <div className="flex flex-col p-6 sm:p-8">
+            {/* Pasos */}
+            <ol className="flex items-center gap-2">
+              {pasos.map((paso, i) => (
+                <li key={paso} className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold ${i === 0 ? 'v-brand' : 'bg-v-fill text-v-muted'}`}>{i + 1}</span>
+                  <span className={`text-xs font-semibold ${i === 0 ? 'text-v-text' : 'text-v-muted'}`} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{paso}</span>
+                  {i < pasos.length - 1 && <span className="hidden h-px flex-1 bg-v-border sm:block" />}
+                </li>
+              ))}
+            </ol>
+
+            <h2 className="mt-7 text-xl font-semibold tracking-tight text-v-text">{L('Register your child to begin', 'Registra a tu hijo/a para empezar')}</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-v-muted">{L('With that, your whole portal unlocks:', 'Con eso se activa todo tu portal:')}</p>
+
+            <ul className="mt-5 space-y-2.5">
+              {[
+                { Icon: TrendingUp, t: L('Real-time progress', 'Progreso en tiempo real'), d: L('Session results and goals, explained simply.', 'Resultados de sesiones y objetivos, explicados de forma simple.') },
+                { Icon: Sparkles, t: L('ARIA, your assistant', 'ARIA, tu asistente'), d: L('Answers and home activities designed for your child.', 'Respuestas y actividades en casa pensadas para tu hijo/a.') },
+                { Icon: Calendar, t: L('Appointments in one click', 'Citas en un clic'), d: L('Book, reschedule and get reminders.', 'Reserva, reprograma y recibe recordatorios.') },
+              ].map(({ Icon, t: titulo, d }, i) => (
+                <motion.li key={titulo} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.08 }}
+                  className="flex items-start gap-3 rounded-v-sm border border-v-border bg-v-bg/60 p-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Icon size={17} /></span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-v-text">{titulo}</p>
+                    <p className="text-xs leading-relaxed text-v-muted">{d}</p>
+                  </div>
+                </motion.li>
+              ))}
+            </ul>
+
+            <button onClick={() => setShowAddChild(true)}
+              className="v-brand mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold shadow-v transition-transform hover:scale-[1.01] active:scale-[.98]">
+              <Baby size={18} /> {L('Register my child', 'Registrar a mi hijo/a')} <ChevronRight size={17} />
+            </button>
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-v-muted">
+              <Shield size={13} /> {L('Takes 1 minute · Your data is protected', 'Toma 1 minuto · Tus datos están protegidos')}
+            </p>
+
+            <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-v-border pt-4 text-xs text-v-muted lg:mt-8">
+              {CONTACTO.telefono ? (
+                <a href={`https://wa.me/${CONTACTO.telefonoDigitos}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-semibold text-v-accent hover:underline">
+                  <Phone size={13} /> {L('Questions? ', '¿Dudas? ')}{CONTACTO.telefono}
+                </a>
+              ) : <span>{L('Questions? Contact ', '¿Dudas? Escribe a ')}<strong className="text-v-text">{centroNombre}</strong></span>}
+              <button onClick={async () => { await supabase.auth.signOut(); router.replace('/login') }} className="inline-flex items-center gap-1 font-semibold hover:text-v-text">
+                <LogOut size={13} /> {t('common.cerrarSesion')}
+              </button>
+            </div>
+          </div>
+        </motion.div>
 
         {/* El modal de agregar hijo ya existe en el código principal */}
         {showAddChild && (
@@ -545,15 +529,15 @@ export default function ParentDashboard() {
   }
 
   const PAGE_TITLES_MOBILE: Record<string, string> = {
-    home: 'Inicio', miscitas: 'Agenda', engagement: 'Practicar en Casa',
-    chat: 'Asistente IA', misformularios: 'Recursos adicionales',
-    tienda: 'Tienda', documentos: 'Documentos', profile: 'Mi Perfil',
-    'chat-familias': 'Chat', 'programas': 'Programas ABA',
-    'evaluacion-inicial': 'Evaluación Inicial',
+    home: L('Home', 'Inicio'), miscitas: L('Schedule', 'Agenda'), engagement: L('Practice at home', 'Practicar en casa'),
+    chat: L('AI assistant', 'Asistente IA'), misformularios: L('Extra resources', 'Recursos adicionales'),
+    tienda: L('Store', 'Tienda'), documentos: L('Documents', 'Documentos'), profile: L('My profile', 'Mi perfil'),
+    'chat-familias': 'Chat', 'programas': L('ABA programs', 'Programas ABA'),
+    'evaluacion-inicial': L('Initial evaluation', 'Evaluación inicial'),
   }
 
   return (
-    <div className="flex h-screen font-sans overflow-hidden" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+    <div className="v-root flex h-screen overflow-hidden bg-v-bg font-sans text-v-text">
         
         {/* 🔔 PUSH NOTIFICATIONS BANNER */}
         <PushNotificationBanner userId={profile?.id || null} />
@@ -569,170 +553,137 @@ export default function ParentDashboard() {
           />
         )}
 
-        {/* 🎉 ANIMACIÓN DE ÉXITO */}
-        {showSuccessAnimation && (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none">
-                <div className="bg-white/95 backdrop-blur-xl p-12 rounded-[3rem] shadow-2xl border-4 border-green-500 animate-bounce">
-                    <div className="flex flex-col items-center gap-6">
-                        <div className="relative">
-                            <PartyPopper size={80} className="text-green-500 animate-pulse"/>
-                            <div className="absolute inset-0 bg-green-400 blur-3xl opacity-50 animate-ping"></div>
-                        </div>
-                        <h2 className="text-4xl font-bold text-slate-800 text-center">{celebrationMessage}</h2>
-                        <div className="flex gap-3">
-                            <Star size={32} className="text-yellow-400 animate-spin"/>
-                            <Star size={32} className="text-yellow-400 animate-spin" style={{animationDelay: '0.2s'}}/>
-                            <Star size={32} className="text-yellow-400 animate-spin" style={{animationDelay: '0.4s'}}/>
-                        </div>
-                    </div>
+        <AnimatePresence>
+          {solicitudCita && (
+            <SolicitudCitaModal cita={solicitudCita} onClose={() => setSolicitudCita(null)}
+              onListo={msg => { setSolicitudCita(null); setRefreshTrigger(prev => prev + 1); triggerCelebration(msg) }} />
+          )}
+        </AnimatePresence>
+
+        {/* Confirmación de éxito (hijo registrado, solicitud enviada…) */}
+        <AnimatePresence>
+          {showSuccessAnimation && (
+            <motion.div key="exito" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="v-scope fixed inset-0 z-[200] flex items-center justify-center bg-black/25 p-4 backdrop-blur-[2px]"
+              onClick={() => setShowSuccessAnimation(false)}>
+              <motion.div role="status" aria-live="polite"
+                initial={{ scale: 0.9, y: 12, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                className="relative w-full max-w-sm overflow-hidden rounded-[28px] border border-v-border bg-v-elevated px-6 pb-6 pt-8 text-center shadow-v">
+                <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-1" />
+                <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(18rem 10rem at 50% 0%, var(--v-glow-1), transparent 70%)' }} />
+                <div className="relative mx-auto grid size-20 place-items-center">
+                  <motion.span aria-hidden className="absolute inset-0 rounded-full bg-v-success/20"
+                    initial={{ scale: 0.6, opacity: 0.9 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ duration: 1.2, repeat: 1 }} />
+                  <motion.span initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 16, delay: 0.08 }}
+                    className="relative grid size-16 place-items-center rounded-full bg-v-success text-white shadow-v">
+                    <CheckCircle2 size={32} strokeWidth={2.2} />
+                  </motion.span>
                 </div>
-            </div>
-        )}
+                <h2 className="relative mt-5 text-xl font-semibold tracking-tight text-v-text">{celebrationMessage}</h2>
+                <p className="relative mt-1.5 text-sm text-v-muted">{L('All set. You can continue.', 'Todo listo. Puedes continuar.')}</p>
+                <motion.div className="relative mx-auto mt-5 h-1 w-24 overflow-hidden rounded-full bg-v-fill">
+                  <motion.div className="v-brand h-full" initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ duration: 3, ease: 'linear' }} />
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* === SIDEBAR (PC) === */}
-        <aside className="hidden lg:flex w-[230px] border-r flex-col z-20" style={{ background: "var(--sidebar-bg)", borderColor: "var(--sidebar-border)" }}>
-
-            {/* Logo header */}
-            <div className="flex items-center gap-3 px-5 h-[60px] flex-shrink-0" style={{ borderBottom: "1px solid var(--sidebar-border)" }}>
-                <div className="w-8 h-8 bg-gradient-to-br from-sky-600 to-cyan-600 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-md shadow-sky-200/50">
-                    {profile?.full_name?.charAt(0) || 'F'}
-                </div>
+        <aside className="v-scope z-20 hidden w-[248px] shrink-0 flex-col border-r border-v-border bg-v-elevated lg:flex">
+            {/* Centro */}
+            <div className="flex items-center gap-3 px-4 pb-4 pt-5">
+                <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-[30%] shadow-v ring-1 ring-v-border" style={{ backgroundColor: '#ffffff' }}>
+                    {CONTACTO.logoUrl
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={CONTACTO.logoUrl} alt="" className="size-full object-contain p-1" />
+                        : <span className="text-base font-bold text-v-accent">{(centroNombre || 'V').charAt(0)}</span>}
+                </span>
                 <div className="min-w-0">
-                    <p className="text-[10px] font-bold leading-none mb-0.5" style={{ color: "var(--text-muted)" }}>{t("familias.bienvenidoA")}</p>
-                    <p className="font-bold text-[13px] truncate" style={{ color: "var(--text-primary)", fontSize: "12px", fontWeight: 700 }}>{t("familias.portalFamilias")}</p>
+                    <p className="line-clamp-2 text-[13px] font-semibold leading-tight text-v-text">{centroNombre}</p>
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-semibold text-v-accent"><Heart size={10} /> {t('familias.portalFamilias')}</span>
                 </div>
             </div>
+            <div className="mx-4 h-px bg-v-border" />
 
-            {/* Role badge */}
-            <div className="px-4 pt-4 pb-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(2,132,199,0.1)", border: "1px solid rgba(2,132,199,0.2)" }}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse flex-shrink-0" />
-                    <span className="text-[10px] font-bold" style={{ color: "#0284c7" }}>{t("familias.portalFamilias")}</span>
-                </div>
-            </div>
-
-            {/* Nav */}
-            <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
-                <NavBtnDesktop icon={<Home size={17}/>} label="Inicio" active={activeView==='home'} onClick={()=>setActiveView('home')} />
-                {!evalInicialCompleta && (
-                  <NavBtnDesktop icon={<ClipboardCheck size={17}/>} label={t('auto.page.evaluacionInicial')} active={activeView==='evaluacion-inicial'} onClick={()=>setActiveView('evaluacion-inicial')} badge="NUEVO" />
-                )}
-                <NavBtnDesktop icon={<Calendar size={17}/>} label="Agenda" active={activeView==='miscitas'} onClick={()=>setActiveView('miscitas')} />
-                <NavBtnDesktop icon={<Heart size={17}/>} label="Practicar en Casa" active={activeView==='engagement'} onClick={()=>setActiveView('engagement')} badge="IA" />
-                <NavBtnDesktop icon={<Sparkles size={17}/>} label={t('familias.asistente')} active={activeView==='chat'} onClick={()=>setActiveView('chat')} badge="NUEVO" />
-                <NavBtnDesktop icon={<BookOpen size={17}/>} label={t('auto.page.programasAba')} active={activeView==='programas'} onClick={()=>setActiveView('programas')} />
-                <NavBtnDesktop icon={<Users size={17}/>} label="Chat" active={activeView==='chat-familias'} onClick={()=>setActiveView('chat-familias')} badge={familiasUnread > 0 ? familiasUnread : null} />
-                <NavBtnDesktop icon={<FileText size={17}/>} label="Recursos adicionales" active={activeView==='misformularios'||activeView==='tienda'||activeView==='documentos'} onClick={()=>setActiveView('misformularios')} badge={pendingFormsCount > 0 ? pendingFormsCount : null} />
-                <NavBtnDesktop icon={<User size={17}/>} label="Mi Perfil" active={activeView==='profile'} onClick={()=>setActiveView('profile')} />
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+                <NavBtnDesktop icon={<Home size={18}/>} label={L('Home', 'Inicio')} active={activeView==='home'} onClick={()=>setActiveView('home')} />
+                {/* Siempre visible: queda como constancia de lo llenado */}
+                <NavBtnDesktop icon={<ClipboardCheck size={18}/>} label={t('auto.page.evaluacionInicial')} active={activeView==='evaluacion-inicial'} onClick={()=>setActiveView('evaluacion-inicial')} badge={evalInicialCompleta ? null : L('NEW', 'NUEVO')} />
+                <NavBtnDesktop icon={<Calendar size={18}/>} label={L('Schedule', 'Agenda')} active={activeView==='miscitas'} onClick={()=>setActiveView('miscitas')} />
+                <NavBtnDesktop icon={<Heart size={18}/>} label={L('Practice at home', 'Practicar en casa')} active={activeView==='engagement'} onClick={()=>setActiveView('engagement')} />
+                <NavBtnDesktop icon={<Sparkles size={18}/>} label={t('familias.asistente')} active={activeView==='chat'} onClick={()=>setActiveView('chat')} badge="IA" />
+                <NavBtnDesktop icon={<BookOpen size={18}/>} label={t('auto.page.programasAba')} active={activeView==='programas'} onClick={()=>setActiveView('programas')} />
+                <NavBtnDesktop icon={<MessageCircle size={18}/>} label="Chat" active={activeView==='chat-familias'} onClick={()=>setActiveView('chat-familias')} badge={familiasUnread > 0 ? familiasUnread : null} />
+                <NavBtnDesktop icon={<FolderOpen size={18}/>} label={L('Extra resources', 'Recursos adicionales')} active={activeView==='misformularios'||activeView==='tienda'||activeView==='documentos'} onClick={()=>setActiveView('misformularios')} badge={pendingFormsCount > 0 ? pendingFormsCount : null} />
+                <NavBtnDesktop icon={<User size={18}/>} label={L('My profile', 'Mi perfil')} active={activeView==='profile'} onClick={()=>setActiveView('profile')} />
             </nav>
 
-            {/* Bottom section */}
-            <div className="p-3 space-y-2 flex-shrink-0" style={{ borderTop: "1px solid var(--sidebar-border)" }}>
-                <div className="px-4 py-3 rounded-xl" style={{ background: "rgba(2,132,199,0.08)", border: "1px solid rgba(2,132,199,0.15)" }}>
-                    <p className="text-[10px] font-bold flex items-center gap-1.5 mb-1" style={{ color: "#0284c7" }}>
-                        <Calendar size={10}/> Tus citas
-                    </p>
-                    <p className="text-[10px] leading-relaxed" style={{ color: "var(--text-muted)" }}>{t("familias.programadasEquipoCentro")}</p>
-                </div>
-                <button
-                    onClick={handleOpenNotifications}
-                    className="w-full px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 active:scale-95 relative"
-                    style={{ background: "var(--muted-bg)", border: "1px solid var(--card-border)", color: "var(--text-secondary)" }}
-                >
-                    <Bell size={14}/>
-                    {t('auto.page.verNotificaciones')}
-                    {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">
-                            {unreadCount}
-                        </span>
-                    )}
+            {/* Usuario */}
+            <div className="border-t border-v-border p-3">
+                <button onClick={()=>setActiveView('profile')} className="flex w-full items-center gap-3 rounded-v-sm p-2 text-left transition-colors hover:bg-v-fill">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-v-accent-soft text-sm font-semibold text-v-accent">{(profile?.full_name || 'F').charAt(0).toUpperCase()}</span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-v-text">{profile?.full_name || L('Family', 'Familia')}</span>
+                        <span className="block truncate text-[11px] text-v-subtle">{profile?.email}</span>
+                    </span>
                 </button>
+                <p className="mt-2 px-2 text-[10px] text-v-subtle">powered by <span className="v-brand-text font-bold">{PLATFORM_NAME}</span></p>
             </div>
         </aside>
 
         {/* === CONTENIDO PRINCIPAL === */}
         <div className="flex-1 flex flex-col h-full relative min-w-0 overflow-x-hidden">
             
-            {/* 🖥️ HEADER DESKTOP */}
-            <header className="hidden lg:flex h-14 items-center justify-between px-6 flex-shrink-0 border-b" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-                <div>
-                    <h1 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-                        {PAGE_TITLES_MOBILE[activeView as keyof typeof PAGE_TITLES_MOBILE] || 'Inicio'}
-                    </h1>
-                    <p style={{ fontSize: "10px", color: "var(--text-muted)" }}>{t('auto.page.neuropsicologiaYTerapiasSantiPorta')}</p>
+            {/* Encabezado */}
+            <header className="v-scope relative z-40 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-v-border bg-v-elevated/90 px-3 backdrop-blur-xl sm:px-6">
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-[30%] ring-1 ring-v-border lg:hidden" style={{ backgroundColor: '#ffffff' }}>
+                        {CONTACTO.logoUrl
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={CONTACTO.logoUrl} alt="" className="size-full object-contain p-0.5" />
+                            : <span className="text-xs font-bold text-v-accent">{(centroNombre || 'V').charAt(0)}</span>}
+                    </span>
+                    <div className="min-w-0">
+                        <h1 className="truncate text-[15px] font-semibold tracking-tight text-v-text">{PAGE_TITLES_MOBILE[activeView as keyof typeof PAGE_TITLES_MOBILE] || L('Home', 'Inicio')}</h1>
+                        <p className="truncate text-[11px] text-v-subtle" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t('auto.page.centroPortalFamilias', { centro: centroNombre })}</p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1">
                     <LocaleSelector compact={true} />
-                    <ThemeToggleButton className="!w-8 !h-8 !rounded-lg" />
-                    <div className="relative">
-                        <button onClick={handleOpenNotifications}
-                            className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center relative transition-colors">
-                            <Bell size={16}/>
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"/>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            {/* 📱 HEADER MÓVIL — mismo estilo admin */}
-            <header className="lg:hidden h-14 flex items-center justify-between px-3 flex-shrink-0 border-b" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-                <div className="flex items-center gap-2">
-                    <div>
-                        <h1 className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-                            {PAGE_TITLES_MOBILE[activeView as keyof typeof PAGE_TITLES_MOBILE] || 'Inicio'}
-                        </h1>
-                        <p style={{ fontSize: "10px", color: "var(--text-muted)" }}>{t("familias.portalFamilias")}</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1">
-                    <LocaleSelector compact={true} />
-                    <ThemeToggleButton className="!w-8 !h-8 !rounded-lg" />
-                    <div className="relative">
-                        <button onClick={handleOpenNotifications}
-                            className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center relative transition-colors">
-                            <Bell size={16}/>
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"/>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            {/* 👶 SELECTOR DE HIJOS MEJORADO */}
-            <div className="backdrop-blur-sm border-b py-4 px-4 md:px-8 flex gap-3 overflow-x-auto items-center scrollbar-hide" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-                <span className="text-[10px] font-bold text-slate-400 shrink-0 mr-2 flex items-center gap-2">
-                    <User size={12}/> {t('ui.viendo')}
-                </span>
-                {myChildren.length > 0 ? myChildren.map(child => (
-                    <button 
-                        key={child.id} onClick={()=>setSelectedChild(child)}
-                        className={`flex items-center gap-3 px-5 py-2.5 rounded-2xl transition-all whitespace-nowrap border-2 shadow-sm hover:shadow-md group ${
-                            selectedChild?.id === child.id 
-                            ? 'bg-gradient-to-r from-sky-600 to-cyan-600 border-sky-500 text-white shadow-sky-200 scale-105' 
-                            : 'bg-white border-slate-200 text-slate-600 hover:border-sky-300'
-                        }`}
-                    >
-                        <div className={`w-2.5 h-2.5 rounded-full ${selectedChild?.id === child.id ? 'bg-white animate-pulse' : 'bg-slate-300 group-hover:bg-sky-400'}`}></div>
-                        <div className="text-left">
-                            <span className="font-bold text-sm block">{child.name.split(' ')[0]}</span>
-                            <span className={`text-[10px] font-semibold flex items-center gap-1 ${selectedChild?.id === child.id ? 'text-sky-100' : 'text-slate-400'}`}>
-                                <Baby size={10}/> {calculateAge(child.birth_date)} años
-                            </span>
-                        </div>
+                    <ThemeToggleButton className="!w-9 !h-9 !rounded-full" />
+                    <button onClick={handleOpenNotifications} title={L('Notifications', 'Notificaciones')}
+                        className="relative grid size-9 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-text">
+                        <Bell size={17}/>
+                        {unreadCount > 0 && <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-v-danger px-1 text-[9px] font-bold text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>}
                     </button>
-                )) : <span className="text-xs text-slate-400 italic">{t('ui.no_patients')}</span>}
-                <button 
-                    onClick={()=>setShowAddChild(true)} 
-                    className="w-10 h-10 rounded-2xl bg-sky-50 border-2 border-dashed border-sky-200 flex items-center justify-center text-sky-600 hover:bg-sky-600 hover:text-white hover:border-sky-600 transition-all shrink-0 hover:scale-110 active:scale-95 hover:rotate-90"
-                >
-                    <Plus size={18}/>
+                </div>
+            </header>
+
+            {/* Selector de hijos */}
+            <div className="v-scope flex shrink-0 items-center gap-2 overflow-x-auto border-b border-v-border bg-v-elevated px-3 py-2.5 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
+                <span className="mr-1 shrink-0 text-[11px] font-semibold text-v-subtle">{t('ui.viendo')}</span>
+                {myChildren.length > 0 ? myChildren.map(child => {
+                    const on = selectedChild?.id === child.id
+                    return (
+                        <button key={child.id} onClick={()=>setSelectedChild(child)}
+                            className={`flex shrink-0 items-center gap-2 rounded-full border py-1 pl-1 pr-3.5 transition-all ${on ? 'border-v-accent bg-v-accent-soft' : 'border-v-border bg-v-bg hover:border-v-accent/40'}`}>
+                            <span className={`grid size-7 place-items-center rounded-full text-xs font-bold ${on ? 'v-brand' : 'bg-v-fill text-v-muted'}`} style={on ? { boxShadow: 'none' } : undefined}>{child.name.charAt(0).toUpperCase()}</span>
+                            <span className="text-left leading-tight">
+                                <span className={`block text-sm font-semibold ${on ? 'text-v-accent' : 'text-v-text'}`}>{child.name.split(' ')[0]}</span>
+                                <span className="block text-[10px] text-v-subtle">{calculateAge(child.birth_date)} {L('years', 'años')}</span>
+                            </span>
+                        </button>
+                    )
+                }) : <span className="text-xs italic text-v-subtle">{t('ui.no_patients')}</span>}
+                <button onClick={()=>setShowAddChild(true)} title={L('Add child', 'Agregar hijo/a')}
+                    className="grid size-9 shrink-0 place-items-center rounded-full border border-dashed border-v-accent/40 text-v-accent transition-colors hover:bg-v-accent hover:text-white">
+                    <Plus size={17}/>
                 </button>
             </div>
 
-            <main className={`flex-1 ${activeView === 'chat' || activeView === 'chat-familias' ? 'overflow-hidden p-0 lg:p-4 lg:p-6 flex flex-col chat-main-mobile' : 'overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-20 lg:pb-6'}`} style={{ minHeight: 0, background: "var(--background)" }}>
+            <main className={`flex-1 ${activeView === 'chat' || activeView === 'chat-familias' ? 'overflow-hidden p-0 lg:p-4 lg:p-6 flex flex-col chat-main-mobile' : 'overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-20 lg:pb-6'}`} style={{ minHeight: 0 }}>
                 <div className={`w-full ${activeView === 'chat' || activeView === 'chat-familias' ? 'flex-1 flex flex-col min-h-0' : 'min-h-full'}`}>
                     {activeView === 'home' && (
                         <HomeViewInnovative
@@ -746,6 +697,7 @@ export default function ParentDashboard() {
                     {(activeView === 'agenda' || activeView === 'miscitas') && (
                         <div className="animate-fade-in">
                           <MisCitasView
+                            key={refreshTrigger}
                             profile={profile}
                             selectedChild={selectedChild}
                             onCancelAppointment={handleCancelAppointment}
@@ -768,12 +720,12 @@ export default function ParentDashboard() {
                       </div>
                     )}
                     {activeView === 'chat-familias' && !selectedChild && (
-                      <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
-                        <MessageCircle size={32} className="text-slate-300"/>
-                        <p className="font-bold text-slate-500">{t("familias.selecHijoChat")}</p>
+                      <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+                        <span className="grid size-14 place-items-center rounded-full bg-v-accent-soft text-v-accent"><MessageCircle size={24}/></span>
+                        <p className="font-semibold text-v-muted">{t("familias.selecHijoChat")}</p>
                       </div>
                     )}
-                    {activeView === 'engagement' && <EngagementView childId={selectedChild?.id || ''} />}
+                    {activeView === 'engagement' && <EngagementView childId={selectedChild?.id || ''} childName={selectedChild?.name} />}
                     {activeView === 'evaluacion-inicial' && (
                       <div className="animate-fade-in">
                         <EvaluacionInicialView child={selectedChild} profile={profile} />
@@ -793,77 +745,53 @@ export default function ParentDashboard() {
                         </div>
                     )}
                 </div>
+              <AriaSaludo />
             </main>
 
-            {/* 📱 NAVEGACIÓN INFERIOR MÓVIL MEJORADA */}
-            <nav className="lg:hidden backdrop-blur-xl border-t fixed bottom-0 w-full z-30" style={{ background: "var(--card)", borderColor: "var(--card-border)", paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
-              <div className="grid grid-cols-5 items-end px-1 pt-1">
-                {/* Inicio */}
-                <div className="flex justify-center">
-                  <NavBtnMobile icon={<Home size={22}/>} label="Inicio" active={activeView==='home'} onClick={()=>setActiveView('home')} />
-                </div>
-                {/* Agenda */}
-                <div className="flex justify-center">
-                  <NavBtnMobile icon={<Calendar size={22}/>} label="Agenda" active={activeView==='miscitas'} onClick={()=>setActiveView('miscitas')} badge={null} />
-                </div>
-                {/* Botón IA central flotante */}
-                <div className="flex justify-center">
-                  <div className="relative" style={{ marginBottom: "0.75rem" }}>
-                    <button 
-                      onClick={()=>setActiveView('chat')} 
-                      className={`w-14 h-14 rounded-[1.75rem] flex items-center justify-center shadow-xl border-4 transition-all active:scale-95 relative group ${
-                          activeView==='chat'
-                          ? 'bg-gradient-to-br from-sky-600 to-cyan-600 text-white shadow-sky-300' 
-                          : 'bg-gradient-to-br from-sky-600 to-cyan-600 text-white shadow-sky-300'
-                      }`}
-                      style={{ borderColor: "var(--card)", marginTop: "-1.75rem" }}
-                    >
-                      <Sparkles size={24} className="group-hover:animate-spin"/>
-                      {activeView !== 'chat' && (
-                          <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full animate-bounce">
-                              IA
-                          </span>
-                      )}
-                    </button>
-                    <span className="block text-center text-[10px] font-medium mt-0.5" style={{ color: activeView==='chat' ? '#0284c7' : 'var(--text-muted)' }}>{t("familias.asistente")}</span>
-                  </div>
-                </div>
-                {/* Perfil */}
-                <div className="flex justify-center">
-                  <NavBtnMobile icon={<User size={22}/>} label="Perfil" active={activeView==='profile'} onClick={()=>setActiveView('profile')} />
-                </div>
-                {/* Más */}
-                <div className="flex justify-center relative">
-                  <button
-                    onClick={()=>setShowMoreMenu(v=>!v)}
-                    className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${showMoreMenu ? 'text-sky-600' : 'text-slate-500'}`}
-                  >
-                    <MoreHorizontal size={22}/>
-                    <span className="text-[10px] font-medium">{t('auto.page.mas')}</span>
+            {/* Navegación inferior (celular) */}
+            <nav className="v-scope fixed bottom-0 z-30 w-full border-t border-v-border bg-v-elevated/95 backdrop-blur-xl lg:hidden" style={{ paddingBottom: "max(0.4rem, env(safe-area-inset-bottom))" }}>
+              <div className="grid grid-cols-5 items-end px-1 pt-1.5">
+                <NavBtnMobile icon={<Home size={21}/>} label={L('Home', 'Inicio')} active={activeView==='home'} onClick={()=>setActiveView('home')} />
+                <NavBtnMobile icon={<Calendar size={21}/>} label={L('Schedule', 'Agenda')} active={activeView==='miscitas'} onClick={()=>setActiveView('miscitas')} />
+                {/* Asistente IA al centro */}
+                <div className="flex flex-col items-center">
+                  <button onClick={()=>setActiveView('chat')} aria-label={t("familias.asistente")}
+                    className="v-brand -mt-6 grid size-14 place-items-center rounded-full ring-4 ring-[var(--v-bg-elevated)] transition-transform active:scale-95">
+                    <Sparkles size={22}/>
                   </button>
-                  {showMoreMenu && (
-                    <div className="absolute bottom-14 right-0 rounded-2xl shadow-2xl border p-2 w-56 z-50 flex flex-col gap-1" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-                      {[
-                        // Solo mostramos Evaluación Inicial si aún NO está completa
-                        ...(!evalInicialCompleta ? [{ id: 'evaluacion-inicial', icon: <ClipboardCheck size={18}/>, label: t('nav.evaluacionInicial'), badge: 'NUEVO' as any }] : []),
-                        { id: 'engagement',    icon: <Zap size={18}/>,            label: t('nav.actividades') },
-                        { id: 'chat-familias', icon: <MessageCircle size={18}/>,  label: t('nav.chat'), badge: familiasUnread > 0 ? familiasUnread : null },
-                        { id: 'programas',     icon: <BookOpen size={18}/>,       label: t('nav.programas') },
-                        { id: 'misformularios',icon: <FileText size={18}/>,       label: t('nav.recursosAdicionales'), badge: pendingFormsCount > 0 ? pendingFormsCount : null },
-                      ].map(item => (
-                        <button key={item.id} onClick={()=>{setActiveView(item.id);setShowMoreMenu(false)}}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${activeView===item.id ? 'bg-sky-50 text-sky-700' : 'text-slate-700 hover:bg-slate-50'}`}>
-                          {item.icon}
-                          <span className="flex-1 text-left">{item.label}</span>
-                          {(item as any).badge && (
-                            <span className="ml-auto min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                              {(item as any).badge}
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <span className={`mt-0.5 text-[10px] font-semibold ${activeView==='chat' ? 'text-v-accent' : 'text-v-subtle'}`}>{t("familias.asistente")}</span>
+                </div>
+                <NavBtnMobile icon={<User size={21}/>} label={L('Profile', 'Perfil')} active={activeView==='profile'} onClick={()=>setActiveView('profile')} />
+                <div className="relative flex justify-center">
+                  <NavBtnMobile icon={<MoreHorizontal size={21}/>} label={t('auto.page.mas')} active={showMoreMenu || ['evaluacion-inicial','engagement','chat-familias','programas','misformularios','tienda','documentos'].includes(activeView)}
+                    onClick={()=>setShowMoreMenu(v=>!v)} badge={(familiasUnread || 0) + (pendingFormsCount || 0)} />
+                  <AnimatePresence>
+                    {showMoreMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={()=>setShowMoreMenu(false)} />
+                        <motion.div initial={{ opacity: 0, y: 8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.97 }} transition={{ duration: 0.15 }}
+                          className="absolute bottom-16 right-1 z-50 w-60 rounded-v border border-v-border bg-v-elevated p-1.5 shadow-v-lg">
+                          {[
+                            { id: 'evaluacion-inicial', icon: <ClipboardCheck size={18}/>, label: t('nav.evaluacionInicial'), badge: (evalInicialCompleta ? null : L('NEW', 'NUEVO')) as any },
+                            { id: 'engagement',    icon: <Heart size={18}/>,          label: L('Practice at home', 'Practicar en casa') },
+                            { id: 'chat-familias', icon: <MessageCircle size={18}/>,  label: t('nav.chat'), badge: familiasUnread > 0 ? familiasUnread : null },
+                            { id: 'programas',     icon: <BookOpen size={18}/>,       label: t('nav.programas') },
+                            { id: 'misformularios',icon: <FolderOpen size={18}/>,     label: t('nav.recursosAdicionales'), badge: pendingFormsCount > 0 ? pendingFormsCount : null },
+                          ].map(item => {
+                            const on = activeView===item.id || (item.id==='misformularios' && (activeView==='tienda'||activeView==='documentos'))
+                            return (
+                              <button key={item.id} onClick={()=>{setActiveView(item.id);setShowMoreMenu(false)}}
+                                className={`flex w-full items-center gap-3 rounded-v-sm px-3 py-2.5 text-sm font-semibold transition-colors ${on ? 'bg-v-accent-soft text-v-accent' : 'text-v-text hover:bg-v-fill'}`}>
+                                <span className={on ? 'text-v-accent' : 'text-v-muted'}>{item.icon}</span>
+                                <span className="flex-1 text-left">{item.label}</span>
+                                {(item as any).badge && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${typeof (item as any).badge === 'number' ? 'min-w-5 bg-v-danger text-center text-white' : 'bg-v-accent-soft text-v-accent'}`}>{(item as any).badge}</span>}
+                              </button>
+                            )
+                          })}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </nav>
@@ -956,516 +884,14 @@ export default function ParentDashboard() {
             </div>
         )}
 
-        {/* 🔐 MODAL - CAMBIAR CONTRASEÑA */}
-        {showChangePass && (
-             <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-                <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl animate-scale-in">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
-                                <Lock size={24} className="text-white"/>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-2xl text-slate-800">{t('familias.cambiarPass2')}</h3>
-                                <p className="text-sm text-slate-400">{t('ui.new_access_key')}</p>
-                            </div>
-                        </div>
-                        <button onClick={()=>setShowChangePass(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all hover:rotate-90">
-                            <X size={22}/>
-                        </button>
-                    </div>
-                    <form onSubmit={handleChangePassword} className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 mb-2 block">
-                                {t('auto.page.nuevaContrasena')}
-                            </label>
-                            <input 
-                                name="newPassword" 
-                                type="password" 
-                                required 
-                                minLength={6}
-                                className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:border-sky-400 focus:bg-white transition-all" 
-                                placeholder={t('familias.minimo6')}
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 mb-2 block">
-                                {t('auto.page.confirmarContrasena')}
-                            </label>
-                            <input 
-                                name="confirmPassword" 
-                                type="password" 
-                                required 
-                                minLength={6}
-                                className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:border-sky-400 focus:bg-white transition-all" 
-                                placeholder={t('familias.repitePass')}
-                            />
-                        </div>
-                        <div className="flex gap-3 pt-2">
-                            <button 
-                                type="button" 
-                                onClick={()=>setShowChangePass(false)} 
-                                className="flex-1 py-4 font-bold text-slate-400 hover:bg-slate-50 rounded-2xl transition-all hover:scale-105 active:scale-95"
-                            >
-                                {t('auto.page.cancelar2')}
-                            </button>
-                            <button 
-                                type="submit" 
-                                className="flex-1 bg-gradient-to-r from-sky-600 to-cyan-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:bg-sky-700 transition-all hover:scale-105 active:scale-95"
-                            >
-                                Actualizar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-             </div>
-        )}
-
-        {/* ✏️ MODAL - EDITAR PERFIL */}
-        {showEditProfile && (
-            <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-                <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl animate-scale-in">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-                                <User size={24} className="text-white"/>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-2xl text-slate-800">{t('familias.editarPerfil2')}</h3>
-                                <p className="text-sm text-slate-400">{t('familias.actualizaInfo')}</p>
-                            </div>
-                        </div>
-                        <button onClick={()=>setShowEditProfile(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all hover:rotate-90">
-                            <X size={22}/>
-                        </button>
-                    </div>
-                    <form onSubmit={handleUpdateProfile} className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 mb-2 block flex items-center gap-2">
-                                <User size={14}/> Nombre Completo
-                            </label>
-                            <input 
-                                name="fullName" 
-                                defaultValue={profile?.full_name}
-                                required 
-                                className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-green-400 transition-all hover:bg-white" 
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 mb-2 block">
-                                <span className="flex items-center gap-2">
-                                  <span>📱</span> Número WhatsApp
-                                </span>
-                                <span className="text-[10px] font-normal text-green-600 mt-0.5 block">
-                                  {t('auto.page.recibirasAlertasDeCitasInformes')}
-                                </span>
-                            </label>
-                            <input 
-                                name="phone" 
-                                type="tel"
-                                defaultValue={profile?.phone}
-                                className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-green-400 transition-all hover:bg-white" 
-                                placeholder="+51 999 888 777"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 mb-2 block flex items-center gap-2">
-                                <Mail size={14}/> Email (no editable)
-                            </label>
-                            <input 
-                                value={profile?.email}
-                                disabled
-                                className="w-full p-4 bg-slate-100 rounded-2xl font-semibold text-slate-400 cursor-not-allowed" 
-                            />
-                        </div>
-                        <div className="flex gap-3 pt-2">
-                            <button 
-                                type="button" 
-                                onClick={()=>setShowEditProfile(false)} 
-                                className="flex-1 py-4 font-bold text-slate-400 hover:bg-slate-50 rounded-2xl transition-all hover:scale-105 active:scale-95"
-                            >
-                                {t('auto.page.cancelar3')}
-                            </button>
-                            <button 
-                                type="submit" 
-                                className="flex-1 bg-gradient-to-r from-green-600 to-teal-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
-                            >
-                                {t('auto.page.guardarCambios')}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        )}
-
-        {/* 🔔 MODAL - NOTIFICACIONES (FIXED: iconos + modal detalle) */}
-        {showNotifications && (
-            <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in" onClick={()=>{ setShowNotifications(false); setSelectedNoti(null) }}>
-                <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl animate-scale-in overflow-hidden max-h-[85vh] flex flex-col" onClick={e=>e.stopPropagation()}>
-                    <div className="bg-gradient-to-r from-sky-600 to-cyan-600 p-6 text-white flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                                <Bell size={24}/>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-lg">{t('familias.centrNotif')}</h3>
-                                <p className="text-xs text-sky-100">{notifications.length} notificacion{notifications.length!==1?'es':''} · {unreadCount > 0 ? `${unreadCount} sin leer` : 'todas leídas'}</p>
-                            </div>
-                        </div>
-                        <button onClick={()=>{ setShowNotifications(false); setSelectedNoti(null) }} className="p-2 hover:bg-white/10 rounded-xl transition-all hover:rotate-90">
-                            <X size={20}/>
-                        </button>
-                    </div>
-
-                    {/* Detalle de notificación seleccionada */}
-                    {selectedNoti ? (
-                        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                            <button onClick={()=>setSelectedNoti(null)} className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-                                <ChevronRight size={14} className="rotate-180"/> Volver
-                            </button>
-                            {(()=>{
-                                const ft = selectedNoti.metadata?.form_type || selectedNoti.metadata?.source || selectedNoti.type || ''
-                                const cfg =
-                                    ft==='aba'            ? {icon:<Activity size={20}/>,      bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:t('evaluaciones.sesionAba')} :
-                                    ft==='anamnesis'      ? {icon:<FileText size={20}/>,      bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:t('familias.historiaClinica')} :
-                                    ft==='entorno_hogar'  ? {icon:<Home size={20}/>,          bg:'bg-green-100',  text:'text-green-700',  border:'border-green-200',  label:t('evaluaciones.entornoHogar')} :
-                                    ['brief2','ados2','vineland3','wiscv','basc3'].includes(ft) ? {icon:<Brain size={20}/>, bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:t('familias.evaluacionClinica')} :
-                                    selectedNoti.type==='video_call'      ? {icon:<Video size={20}/>,         bg:'bg-sky-100', text:'text-sky-700', border:'border-sky-200', label:t('familias.videollamada')} :
-                                    selectedNoti.type==='form_request'    ? {icon:<FileText size={20}/>,      bg:'bg-orange-100', text:'text-orange-700', border:'border-orange-200', label:t('familias.nuevoFormulario')} :
-                                    selectedNoti.type==='parent_message'  ? {icon:<MessageCircle size={20}/>, bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:t('familias.mensajeDeTuTerapeuta')} :
-                                    selectedNoti.type==='success'         ? {icon:<Star size={20}/>,          bg:'bg-yellow-100', text:'text-yellow-700', border:'border-yellow-200', label:t('familias.buenasNoticias')} :
-                                    selectedNoti.type==='warning'         ? {icon:<AlertCircle size={20}/>,   bg:'bg-red-100',    text:'text-red-700',    border:'border-red-200',    label:t('familias.aviso')} :
-                                                                             {icon:<Bell size={20}/>,           bg:'bg-sky-100',   text:'text-sky-700',   border:'border-sky-200',   label:t('familias.notificacion')}
-                                return (
-                                    <div className="space-y-4">
-                                        <div className={`flex items-center gap-3 p-4 rounded-2xl border ${cfg.border}`}>
-                                            <div className={`${cfg.bg} ${cfg.text} p-3 rounded-xl`}>{cfg.icon}</div>
-                                            <div>
-                                                <p className="text-xs font-semibold text-slate-400">{cfg.label}</p>
-                                                <p className="font-bold text-slate-800 text-sm">{selectedNoti.title}</p>
-                                            </div>
-                                        </div>
-                                        <div className="bg-slate-50 rounded-2xl p-5">
-                                            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{selectedNoti.message}</p>
-                                        </div>
-                                        {/* ── Botón unirse a videollamada ── */}
-                                        {selectedNoti.type === 'video_call' && selectedNoti.metadata?.room_url && (
-                                          <button
-                                            onClick={() => {
-                                              setVideoCallSession({ roomUrl: selectedNoti.metadata.room_url, sessionId: selectedNoti.metadata.session_id || '' })
-                                              setShowNotifications(false)
-                                              setSelectedNoti(null)
-                                            }}
-                                            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-white text-base shadow-xl transition-all hover:scale-[1.02] active:scale-[.98]"
-                                            style={{background:'linear-gradient(135deg,#0284c7,#0ea5e9)',boxShadow:'0 8px 30px rgba(99,102,241,0.4)'}}
-                                          >
-                                            <Video size={20}/> Unirse a la videollamada
-                                          </button>
-                                        )}
-
-                                        {selectedNoti.metadata?.source_title && (
-                                            <div className="bg-sky-50 rounded-xl p-3 flex items-center gap-2">
-                                                <FileText size={14} className="text-sky-500 flex-shrink-0"/>
-                                                <div>
-                                                    <p className="text-xs text-sky-400">{t('familias.generadoPor')}</p>
-                                                    <p className="text-sm font-semibold text-sky-700">{selectedNoti.metadata.source_title}</p>
-                                                </div>
-                                            </div>
-                                        )}
-                                        <p className="text-xs text-slate-400 flex items-center gap-1">
-                                            <Clock size={11}/> {new Date(selectedNoti.created_at).toLocaleDateString(toBCP47(locale),{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-                                        </p>
-                                    </div>
-                                )
-                            })()}
-                        </div>
-                    ) : (
-                    <div className="p-5 space-y-3 overflow-y-auto flex-1">
-                        {/* ── Banner videollamadas activas ── */}
-                        {notifications.filter(n => n.type==='video_call' && n.metadata?.room_url).map(n => (
-                          <button key={`vcall-${n.id}`}
-                            onClick={() => { setVideoCallSession({roomUrl:n.metadata.room_url, sessionId:n.metadata.session_id||''}); setShowNotifications(false) }}
-                            className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-sky-300 text-left transition-all hover:scale-[1.01] active:scale-[.99]"
-                            style={{background:'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))'}}>
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 animate-pulse" style={{background:'linear-gradient(135deg,#0284c7,#0ea5e9)'}}>
-                              <Video size={20} className="text-white"/>
-                            </div>
-                            <div className="flex-1 text-left">
-                              <p className="font-bold text-sky-700 text-sm">📹 Videollamada activa</p>
-                              <p className="text-xs text-sky-500 font-semibold">{t('familias.terapeutaEspera')}</p>
-                            </div>
-                            <ChevronRight size={18} className="text-sky-400 shrink-0"/>
-                          </button>
-                        ))}
-                        {notifications.length === 0 ? (
-                            <div className="text-center py-16">
-                                <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                                    <Bell size={40} className="text-slate-300"/>
-                                </div>
-                                <p className="font-bold text-slate-400 text-base">{t('familias.sinNotificaciones')}</p>
-                                <p className="text-slate-300 text-sm mt-1">{t('familias.verasMensajes')}</p>
-                            </div>
-                        ) : (
-                            notifications.map((noti) => {
-                                const ft = noti.metadata?.form_type || noti.metadata?.source || noti.type || ''
-                                const iconConfig =
-                                    ft==='aba'            ? {icon:<Activity size={20}/>,      bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:t('evaluaciones.sesionAba')} :
-                                    ft==='anamnesis'      ? {icon:<FileText size={20}/>,      bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:t('familias.historiaClinica')} :
-                                    ft==='entorno_hogar'  ? {icon:<Home size={20}/>,          bg:'bg-green-100',  text:'text-green-600',  border:'border-green-200',  label:t('evaluaciones.entornoHogar')} :
-                                    ['brief2','ados2','vineland3','wiscv','basc3'].includes(ft) ? {icon:<Brain size={20}/>, bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:t('familias.evaluacionClinica')} :
-                                    noti.type==='video_call'     ? {icon:<Video size={20}/>,         bg:'bg-sky-100', text:'text-sky-600', border:'border-sky-200', label:t('familias.videollamada')} :
-                                    noti.type==='form_request'   ? {icon:<FileText size={20}/>,      bg:'bg-orange-100', text:'text-orange-600', border:'border-orange-200', label:t('familias.nuevoFormulario')} :
-                                    noti.type==='parent_message' ? {icon:<MessageCircle size={20}/>, bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:t('familias.mensajeDeTuTerapeuta')} :
-                                    noti.type==='success'        ? {icon:<Star size={20}/>,          bg:'bg-yellow-100', text:'text-yellow-600', border:'border-yellow-200', label:t('familias.buenasNoticias')} :
-                                    noti.type==='warning'        ? {icon:<AlertCircle size={20}/>,   bg:'bg-red-100',    text:'text-red-600',    border:'border-red-200',    label:t('familias.aviso')} :
-                                                                   {icon:<Bell size={20}/>,           bg:'bg-sky-100',   text:'text-sky-600',   border:'border-sky-200',   label:t('familias.notificacion')}
-                                return (
-                                    <button key={noti.id} onClick={()=>setSelectedNoti(noti)}
-                                        className={`w-full text-left bg-slate-50 rounded-2xl border ${iconConfig.border} overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all`}>
-                                        <div className="p-4 flex gap-3 items-start">
-                                            <div className={`${iconConfig.bg} ${iconConfig.text} p-3 rounded-xl shrink-0 shadow-sm`}>
-                                                {iconConfig.icon}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <p className="font-bold text-slate-800 text-sm leading-snug">{noti.title}</p>
-                                                    <ChevronRight size={14} className="text-slate-300 flex-shrink-0"/>
-                                                </div>
-                                                <p className="text-xs font-medium text-slate-400 mb-1">{iconConfig.label}</p>
-                                                <p className="text-slate-500 text-xs leading-relaxed line-clamp-2">{noti.message}</p>
-                                                <p className="text-slate-300 text-[10px] font-bold mt-2 flex items-center gap-1">
-                                                    <Clock size={10}/> {new Date(noti.created_at).toLocaleDateString(toBCP47(locale),{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-                                                    <span className="ml-1 text-sky-400">{t('familias.tocaParaLeer')}</span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </button>
-                                )
-                            })
-                        )}
-                    </div>
-                    )}
-                </div>
-            </div>
-        )}
-
-        {/* 🔒 MODAL - PRIVACIDAD Y SEGURIDAD */}
-        {showPrivacy && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowPrivacy(false)}>
-                <div
-                    className="rounded-3xl w-full max-w-2xl shadow-2xl animate-scale-in overflow-hidden max-h-[92vh] flex flex-col"
-                    style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)' }}
-                    onClick={e => e.stopPropagation()}
-                >
-                    {/* Header — gradiente Vanty con badges de cumplimiento */}
-                    <div className="relative overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(135deg,#0369a1 0%,#0284c7 50%,#db2777 100%)' }}>
-                        <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, background: 'rgba(255,255,255,.08)', borderRadius: '50%' }}/>
-                        <div style={{ position: 'absolute', bottom: -30, left: 30, width: 100, height: 100, background: 'rgba(255,255,255,.06)', borderRadius: '50%' }}/>
-
-                        <div className="relative z-10 p-6 text-white">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                                        <Shield size={24} strokeWidth={2.5}/>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-lg leading-tight">{t("familias.privacidadSeguridad")}</h3>
-                                        <p className="text-xs text-white/80 font-medium">{t("familias.comoVantyProtege")}</p>
-                                    </div>
-                                </div>
-                                <button onClick={()=>setShowPrivacy(false)} className="p-2 hover:bg-white/15 rounded-xl transition-all">
-                                    <X size={18}/>
-                                </button>
-                            </div>
-
-                            {/* Badges técnicos */}
-                            <div className="flex flex-wrap gap-1.5 mt-1">
-                                {[
-                                    { icon: <KeyRound size={10}/>, label: 'AES-256' },
-                                    { icon: <ServerCog size={10}/>, label: 'TLS 1.3' },
-                                    { icon: <Database size={10}/>, label: t('legal.rlsActivo') },
-                                    { icon: <CheckCircle2 size={10}/>, label: 'Ley 29733 PE' },
-                                ].map(b => (
-                                    <span key={b.label} className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', backdropFilter: 'blur(4px)' }}>
-                                        {b.icon} {b.label}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Contenido — scrolleable */}
-                    <div className="p-5 md:p-6 space-y-3 overflow-y-auto" style={{ background: 'var(--c-card)' }}>
-                        {/* 1. Cifrado y arquitectura */}
-                        <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
-                            <h4 className="font-bold text-sm mb-2 flex items-center gap-2" style={{ color: 'var(--c-text-primary)' }}>
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(2,132,199,0.15)' }}>
-                                    <KeyRound size={13} className="text-sky-500"/>
-                                </div>
-                                Cifrado y arquitectura
-                            </h4>
-                            <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--c-text-secondary)' }}>
-                                Toda la información clínica de tu familia se almacena cifrada con <strong>AES-256</strong> {t('auto.page.enReposoYSeTransmite')} <strong>TLS 1.3</strong>{t('auto.page.cadaFilaEnNuestraBase')} <strong>Row Level Security</strong> — solo cuentas autorizadas pueden verla.
-                            </p>
-                        </div>
-
-                        {/* 2. Quién accede */}
-                        <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
-                            <h4 className="font-bold text-sm mb-2 flex items-center gap-2" style={{ color: 'var(--c-text-primary)' }}>
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(2,132,199,0.15)' }}>
-                                    <UserCog size={13} className="text-sky-500"/>
-                                </div>
-                                {t('auto.page.quienPuedeAcceder')}
-                            </h4>
-                            <ul className="text-xs space-y-1.5" style={{ color: 'var(--c-text-secondary)' }}>
-                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>Vos</strong> {t('auto.page.padremadretutorTitularDeLaCuenta')}</span></li>
-                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>{t("familias.terapeutasCentro")}</strong> {t('auto.page.asignadosAlPaciente')}</span></li>
-                                <li className="flex items-start gap-2"><CheckCircle2 size={12} className="text-emerald-500 mt-0.5 flex-shrink-0"/> <span><strong>{t("familias.soporteTecnico")}</strong> {t('auto.page.deVantySoloBajoConsentimiento')}</span></li>
-                                <li className="flex items-start gap-2 pt-1 mt-1" style={{ borderTop: '1px dashed var(--c-border)' }}>
-                                    <X size={12} className="text-red-500 mt-0.5 flex-shrink-0"/>
-                                    <span><strong>Nunca:</strong> {t('auto.page.anunciantesBrokersDeDatosNi')}</span>
-                                </li>
-                            </ul>
-                        </div>
-
-                        {/* 3. Inteligencia Artificial (ARIA) */}
-                        <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
-                            <h4 className="font-bold text-sm mb-2 flex items-center gap-2" style={{ color: 'var(--c-text-primary)' }}>
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(219,39,119,0.15)' }}>
-                                    <Brain size={13} className="text-pink-500"/>
-                                </div>
-                                Inteligencia Artificial (ARIA)
-                            </h4>
-                            <p className="text-xs leading-relaxed" style={{ color: 'var(--c-text-secondary)' }}>
-                                Los datos clínicos <strong>{t('auto.page.noSeUtilizanParaEntrenar')}</strong>. ARIA procesa cada consulta de forma contextual — solo se envía la información mínima necesaria al proveedor de IA y se descarta después de generar la respuesta. La generación de reportes y análisis se realiza con datos anonimizados cuando es posible.
-                            </p>
-                        </div>
-
-                        {/* 4. Tus derechos */}
-                        <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
-                            <h4 className="font-bold text-sm mb-2 flex items-center gap-2" style={{ color: 'var(--c-text-primary)' }}>
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.15)' }}>
-                                    <ScrollText size={13} className="text-emerald-500"/>
-                                </div>
-                                Tus derechos (Ley 29733 · Perú)
-                            </h4>
-                            <div className="grid grid-cols-2 gap-1.5">
-                                {[
-                                    { label: t('legal.accesoLbl'), desc: t('legal.accesoDesc') },
-                                    { label: t('legal.rectificacionLbl'), desc: t('legal.rectificacionDesc') },
-                                    { label: t('legal.eliminacionLbl'), desc: t('legal.eliminacionDesc') },
-                                    { label: t('legal.portabilidadLbl'), desc: t('legal.portabilidadDesc') },
-                                    { label: t('legal.oposicionLbl'), desc: t('legal.oposicionDesc') },
-                                    { label: t('legal.informacionLbl'), desc: t('legal.informacionDesc') },
-                                ].map(d => (
-                                    <div key={d.label} className="p-2 rounded-lg" style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)' }}>
-                                        <p className="text-[11px] font-bold" style={{ color: 'var(--c-text-primary)' }}>{d.label}</p>
-                                        <p className="text-[10px] leading-tight" style={{ color: 'var(--c-text-muted)' }}>{d.desc}</p>
-                                    </div>
-                                ))}
-                            </div>
-                            <p className="text-[10px] mt-2.5" style={{ color: 'var(--c-text-muted)' }}>
-                                {t('auto.page.paraEjercerCualquierDerecho', { v1: String(' ') })}
-                                <a href="mailto:aprendizaje.santi@gmail.com" className="font-bold underline" style={{ color: '#0284c7' }}>
-                                    aprendizaje.santi@gmail.com
-                                </a>
-                            </p>
-                        </div>
-
-                        {/* 5. Retención */}
-                        <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
-                            <h4 className="font-bold text-sm mb-2 flex items-center gap-2" style={{ color: 'var(--c-text-primary)' }}>
-                                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.15)' }}>
-                                    <Database size={13} className="text-amber-500"/>
-                                </div>
-                                {t('auto.page.conservacionDeDatos')}
-                            </h4>
-                            <p className="text-xs leading-relaxed" style={{ color: 'var(--c-text-secondary)' }}>
-                                Los datos clínicos se conservan durante el período activo de tratamiento y hasta <strong>{t('auto.page.5Anos')}</strong> luego del último servicio, según la normativa peruana de registros clínicos. Podés solicitar la eliminación anticipada en cualquier momento.
-                            </p>
-                        </div>
-
-                        {/* CTAs */}
-                        <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                            <a
-                                href="/privacidad"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 flex items-center justify-center gap-2 text-white py-3.5 rounded-2xl font-bold text-sm shadow-lg transition-all hover:shadow-xl active:scale-[.98]"
-                                style={{ background: 'linear-gradient(135deg,#0369a1,#0284c7,#db2777)' }}
-                            >
-                                <ScrollText size={15}/> {t('auto.page.leerPoliticaCompleta')} <ExternalLink size={12}/>
-                            </a>
-                            <a
-                                href="mailto:aprendizaje.santi@gmail.com?subject=Consulta%20sobre%20privacidad%20de%20datos"
-                                className="flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl font-bold text-sm transition-all hover:opacity-80"
-                                style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', color: 'var(--c-text-primary)' }}
-                            >
-                                <Mail size={14}/> Contactar DPO
-                            </a>
-                        </div>
-
-                        <p className="text-[10px] text-center pt-1" style={{ color: 'var(--c-text-muted)' }}>
-                            Plataforma Vanty · Neuropsicología y Terapias SANTI · Pueblo Libre, Lima
-                        </p>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* ❓ MODAL - AYUDA */}
-        {showHelp && (
-            <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-                <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl animate-scale-in overflow-hidden max-h-[90vh] flex flex-col">
-                    <div className="bg-gradient-to-r from-green-600 to-teal-600 p-6 text-white flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
-                                <HelpCircle size={24}/>
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-lg">{t('auto.page.centroDeAyuda')}</h3>
-                                <p className="text-xs text-green-100">{t('auto.page.estamosAquiParaTi')}</p>
-                            </div>
-                        </div>
-                        <button onClick={()=>setShowHelp(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all hover:rotate-90">
-                            <X size={20}/>
-                        </button>
-                    </div>
-                    <div className="p-6 space-y-3 overflow-y-auto">
-                        <HelpItem 
-                            icon={<Calendar className="text-sky-600"/>}
-                            title={t('auto.page.comoVerMisCitas')}
-                            description="En la sección 'Agenda' podés ver todas las citas programadas por el centro. Para cambios o cancelaciones, contactá a recepción directamente."
-                        />
-                        <HelpItem 
-                            icon={<MessageCircle className="text-sky-600"/>}
-                            title={t('auto.page.comoUsarElAsistenteIa')}
-                            description="El asistente puede responder dudas sobre el progreso de tu hijo/a, dar consejos y explicar los reportes de las sesiones."
-                        />
-                        <HelpItem 
-                            icon={<Book className="text-green-600"/>}
-                            title={t('auto.page.dondeEncuentroRecursos')}
-                            description="En la sección 'Biblioteca' encontrarás guías, videos y artículos sobre terapia ABA y desarrollo infantil."
-                        />
-                        
-                        <div className="mt-6 bg-gradient-to-br from-green-50 to-teal-50 p-6 rounded-2xl border border-green-200">
-                            <h4 className="font-bold text-green-900 mb-3 flex items-center gap-2">
-                                <Phone size={18}/> Contacto Directo
-                            </h4>
-                            <div className="space-y-2 text-sm text-green-700">
-                                <p className="flex items-center gap-2">
-                                    <Mail size={14}/> <a href="mailto:contacto@santi.com" className="hover:underline">contacto@santi.com</a>
-                                </p>
-                                <p className="flex items-center gap-2">
-                                    <Phone size={14}/> <a href="tel:+51991070734" className="hover:underline">+51 991 070 734</a>
-                                </p>
-                                <p className="text-xs text-green-600 mt-2">Horario: Lun-Vie 8:00 AM - 6:00 PM</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
+        <AnimatePresence>
+          {showChangePass && <CambiarPassModal key="pass" onClose={()=>setShowChangePass(false)} />}
+          {showEditProfile && <EditarPerfilModal key="edit" profile={profile} onClose={()=>setShowEditProfile(false)} onSaved={(patch)=>{ setProfile((p: any)=>({ ...p, ...patch })); setRefreshTrigger(prev=>prev+1) }} />}
+          {showNotifications && <NotificacionesModal key="noti" notifications={notifications} unreadCount={unreadCount} onClose={()=>{ setShowNotifications(false); setSelectedNoti(null) }}
+            onJoinCall={(roomUrl, sessionId)=>{ setVideoCallSession({ roomUrl, sessionId }); setShowNotifications(false); setSelectedNoti(null) }} />}
+          {showPrivacy && <PrivacidadModal key="priv" onClose={()=>setShowPrivacy(false)} />}
+          {showHelp && <AyudaModal key="help" onClose={()=>setShowHelp(false)} />}
+        </AnimatePresence>
     </div>
   )
 }

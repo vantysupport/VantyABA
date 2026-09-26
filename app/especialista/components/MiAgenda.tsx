@@ -1,490 +1,313 @@
 'use client'
+// app/especialista/components/MiAgenda.tsx
+// Agenda del especialista: calendario mensual, detalle del día y próximas citas. Sincroniza con Google / Outlook.
 
 import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
 import { useState, useEffect, useCallback } from 'react'
-import {
-  Calendar, ChevronLeft, ChevronRight, Clock,
-  Loader2, CalendarDays, Check, Users, Video, MapPin
-} from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Clock, Loader2, CalendarDays, Check, Video, MapPin, CalendarCheck, CalendarClock, Sun } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmar } from '@/components/ui/confirmar'
 
-/* ── Google Calendar mini ──────────────────────────────────────────────── */
-function GoogleCalendarMini({ userId, isDark }: { userId: string; isDark: boolean }) {
-  const { t, locale } = useI18n()
+const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+function GoogleLogo() {
+  return <svg width="14" height="14" viewBox="0 0 48 48" aria-hidden><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" /><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" /><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" /><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" /></svg>
+}
+function MicrosoftLogo() {
+  return <svg width="13" height="13" viewBox="0 0 21 21" aria-hidden><rect x="1" y="1" width="9" height="9" fill="#f25022" /><rect x="11" y="1" width="9" height="9" fill="#7fba00" /><rect x="1" y="11" width="9" height="9" fill="#00a4ef" /><rect x="11" y="11" width="9" height="9" fill="#ffb900" /></svg>
+}
+
+/* ── Conectar calendario externo (Google / Outlook) ─────────────────────── */
+function CalendarioExterno({ userId, api, param, nombre, Logo }: { userId: string; api: string; param: string; nombre: string; Logo: () => React.ReactElement }) {
+  const { locale } = useI18n()
+  const L = (e: string, s: string) => (locale === 'en' ? e : s)
   const toast = useToast()
-  const [status,     setStatus]     = useState<'loading' | 'connected' | 'disconnected'>('loading')
-  const [busy,       setBusy]       = useState(false)
+  const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
+  const [busy, setBusy] = useState(false)
 
   const check = async () => {
-    try {
-      const res  = await fetch(`/api/google-calendar?action=status&userId=${userId}`)
-      const data = await res.json()
-      setStatus(data.connected ? 'connected' : 'disconnected')
-    } catch { setStatus('disconnected') }
+    try { const d = await (await fetch(`/api/${api}?action=status&userId=${userId}`)).json(); setStatus(d.connected ? 'connected' : 'disconnected') }
+    catch { setStatus('disconnected') }
   }
-
   useEffect(() => {
     if (!userId) return
     check()
-    const p = new URLSearchParams(window.location.search)
-    if (p.get('gcal') === 'connected') {
-      toast.success(locale === 'en' ? 'Google Calendar connected' : 'Google Calendar conectado'); check()
+    if (new URLSearchParams(window.location.search).get(param) === 'connected') {
+      toast.success(L(`${nombre} connected`, `${nombre} conectado`)); check()
       window.history.replaceState({}, '', window.location.pathname)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
   const connect = async () => {
     setBusy(true)
-    try {
-      const res  = await fetch(`/api/google-calendar?action=auth-url&userId=${userId}&role=especialista`)
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } catch { toast.error(t('auto.miAgenda.errorConectandoGoogleCalendar')); setBusy(false) }
+    try { const d = await (await fetch(`/api/${api}?action=auth-url&userId=${userId}&role=especialista`)).json(); if (d.url) window.location.href = d.url; else throw new Error() }
+    catch { toast.error(L(`Could not connect ${nombre}`, `No se pudo conectar ${nombre}`)); setBusy(false) }
   }
-
   const disconnect = async () => {
-    if (!confirm(t('auto.miAgenda.desconectarGoogleCalendar'))) return
-    await fetch(`/api/google-calendar?action=disconnect&userId=${userId}`)
-    setStatus('disconnected')
-    toast.success(locale === 'en' ? 'Google Calendar disconnected' : 'Google Calendar desconectado')
+    if (!await confirmar(L(`Disconnect ${nombre}?`, `¿Desconectar ${nombre}?`))) return
+    await fetch(`/api/${api}?action=disconnect&userId=${userId}`)
+    setStatus('disconnected'); toast.success(L(`${nombre} disconnected`, `${nombre} desconectado`))
   }
 
-  if (status === 'loading') return null
+  if (status === 'loading') return <span className="h-10 w-36 animate-pulse rounded-full bg-v-fill" />
   return status === 'connected' ? (
-    <button onClick={disconnect}
-      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all
-        ${isDark
-          ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800 hover:bg-red-900/30 hover:text-red-400 hover:border-red-800'
-          : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200'
-        }`}>
-      <Check size={12} /> Google Calendar
+    <button onClick={disconnect} title={L('Click to disconnect', 'Clic para desconectar')}
+      className="group inline-flex h-10 items-center gap-2 rounded-full border border-v-success/30 bg-v-success/10 px-4 text-xs font-semibold text-v-success transition-colors hover:border-v-danger/30 hover:bg-v-danger/10 hover:text-v-danger">
+      <Logo /> {nombre} <Check size={13} className="group-hover:hidden" />
     </button>
   ) : (
     <button onClick={connect} disabled={busy}
-      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50
-        ${isDark
-          ? 'bg-[#21262d] text-slate-300 border border-[#30363d] hover:bg-sky-900/30 hover:text-sky-400 hover:border-sky-700'
-          : 'bg-white text-slate-600 border border-slate-200 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200'
-        }`}>
-      {busy ? <Loader2 size={13} className="animate-spin" /> : <CalendarDays size={13} />}
-      Conectar Google
+      className="inline-flex h-10 items-center gap-2 rounded-full border border-v-border bg-v-elevated px-4 text-xs font-semibold text-v-text shadow-v transition-colors hover:border-v-accent/40 disabled:opacity-60">
+      {busy ? <Loader2 size={14} className="animate-spin" /> : <Logo />} {L(`Connect ${nombre.split(' ')[0]}`, `Conectar ${nombre.split(' ')[0]}`)}
     </button>
   )
 }
 
-/* ── Microsoft mini ─────────────────────────────────────────────────────── */
-function MicrosoftCalendarMini({ userId, isDark }: { userId: string; isDark: boolean }) {
-  const { t, locale } = useI18n()
-  const toast = useToast()
-  const [status,     setStatus]     = useState<'loading' | 'connected' | 'disconnected'>('loading')
-  const [busy,       setBusy]       = useState(false)
-
-  const check = async () => {
-    try {
-      const res  = await fetch(`/api/microsoft-calendar?action=status&userId=${userId}`)
-      const data = await res.json()
-      setStatus(data.connected ? 'connected' : 'disconnected')
-    } catch { setStatus('disconnected') }
-  }
-
-  useEffect(() => {
-    if (!userId) return
-    check()
-    const p = new URLSearchParams(window.location.search)
-    if (p.get('mscal') === 'connected') {
-      toast.success(locale === 'en' ? 'Outlook Calendar connected' : 'Outlook Calendar conectado'); check()
-      window.history.replaceState({}, '', window.location.pathname)
-    }
-  }, [userId])
-
-  const connect = async () => {
-    setBusy(true)
-    try {
-      const res  = await fetch(`/api/microsoft-calendar?action=auth-url&userId=${userId}&role=especialista`)
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } catch { toast.error(t('auto.miAgenda.errorConectandoOutlookCalendar')); setBusy(false) }
-  }
-
-  const disconnect = async () => {
-    if (!confirm(t('auto.miAgenda.desconectarOutlookCalendar'))) return
-    await fetch(`/api/microsoft-calendar?action=disconnect&userId=${userId}`)
-    setStatus('disconnected')
-    toast.success(locale === 'en' ? 'Outlook Calendar disconnected' : 'Outlook Calendar desconectado')
-  }
-
-  const MSIcon = () => (
-    <svg width="13" height="13" viewBox="0 0 21 21">
-      <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-      <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-      <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-      <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-    </svg>
-  )
-
-  if (status === 'loading') return null
-  return status === 'connected' ? (
-    <button onClick={disconnect}
-      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all
-        ${isDark
-          ? 'bg-sky-900/30 text-sky-400 border border-sky-800 hover:bg-red-900/30 hover:text-red-400 hover:border-red-800'
-          : 'bg-sky-50 text-sky-700 border border-sky-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200'
-        }`}>
-      <MSIcon /> Outlook
-    </button>
-  ) : (
-    <button onClick={connect} disabled={busy}
-      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50
-        ${isDark
-          ? 'bg-[#21262d] text-slate-300 border border-[#30363d] hover:bg-sky-900/30 hover:text-sky-400 hover:border-sky-700'
-          : 'bg-white text-slate-600 border border-slate-200 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200'
-        }`}>
-      {busy ? <Loader2 size={13} className="animate-spin" /> : <MSIcon />}
-      {locale === 'en' ? 'Connect Outlook' : 'Conectar Outlook'}
-    </button>
-  )
+const ESTADO: Record<string, { tone: string; dot: string; chip: string }> = {
+  confirmed: { tone: 'bg-v-success/15 text-v-success', dot: 'bg-v-success', chip: 'bg-v-success text-white' },
+  pending: { tone: 'bg-v-warning/15 text-v-warning', dot: 'bg-v-warning', chip: 'bg-v-warning text-white' },
+  cancelled: { tone: 'bg-v-danger/10 text-v-danger', dot: 'bg-v-danger', chip: 'bg-v-danger/80 text-white line-through' },
+  completed: { tone: 'bg-v-accent-soft text-v-accent', dot: 'bg-v-accent', chip: 'v-brand' },
 }
 
-/* ── Constants ──────────────────────────────────────────────────────────── */
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const MESES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December']
-const DIAS  = ['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB']
-const DIAS_EN = ['SUN','MON','TUE','WED','THU','FRI','SAT']
-
-const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string; badgeLight: string; badgeDark: string; bar: string }> = {
-  confirmed: { bg: 'bg-sky-500',    text: 'text-white', dot: 'bg-emerald-500', badgeLight: 'bg-emerald-50 text-emerald-700 border-emerald-200',  badgeDark: 'bg-emerald-900/40 text-emerald-400 border-emerald-800', bar: '#10b981' },
-  pending:   { bg: 'bg-amber-400',   text: 'text-white', dot: 'bg-amber-400',   badgeLight: 'bg-amber-50 text-amber-700 border-amber-200',        badgeDark: 'bg-amber-900/40 text-amber-400 border-amber-800',       bar: '#f59e0b' },
-  cancelled: { bg: 'bg-red-400',     text: 'text-white', dot: 'bg-red-400',     badgeLight: 'bg-red-50 text-red-700 border-red-200',              badgeDark: 'bg-red-900/40 text-red-400 border-red-800',             bar: '#ef4444' },
-  completed: { bg: 'bg-sky-500',  text: 'text-white', dot: 'bg-sky-500',    badgeLight: 'bg-sky-50 text-sky-700 border-sky-200',           badgeDark: 'bg-sky-900/40 text-sky-400 border-sky-800',          bar: '#0284c7' },
-}
-const STATUS_LABEL: Record<string, string> = {
-  confirmed: 'Confirmada', pending: 'Pendiente', cancelled: 'Cancelada', completed: 'Completada',
-}
-
-/* ── Component ──────────────────────────────────────────────────────────── */
-export default function MiAgenda({ isDark = false }: { isDark?: boolean }) {
+/* ── Componente ─────────────────────────────────────────────────────────── */
+export default function MiAgenda(_: { isDark?: boolean }) {
   const toast = useToast()
   const { t, locale } = useI18n()
-  const L = (en: string, es: string) => (locale === 'en' ? en : es)
-  const MESL = locale === 'en' ? MESES_EN : MESES
-  const DIASL = locale === 'en' ? DIAS_EN : DIAS
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
+  const bcp = toBCP47(locale)
 
-  const [citas,           setCitas]           = useState<any[]>([])
-  const [loading,         setLoading]         = useState(true)
-  const [mes,             setMes]             = useState(new Date())
-  const [diaSeleccionado, setDiaSeleccionado] = useState<string>(() => new Date().toISOString().split('T')[0])
-  const [userId,          setUserId]          = useState<string | null>(null)
+  const [citas, setCitas] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [mes, setMes] = useState(() => new Date())
+  const [dir, setDir] = useState(0)
+  const [diaSel, setDiaSel] = useState<string>(() => iso(new Date()))
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
-      if (session?.user?.id) setUserId(session.user.id)
-    })
+    supabase.auth.getSession().then(({ data: { session } }: any) => { if (session?.user?.id) setUserId(session.user.id) })
   }, [])
 
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await supabase
-        .from('appointments')
-        .select('*, children(name, profiles!children_parent_id_fkey(full_name))')
-        .order('appointment_date')
-        .order('appointment_time')
+      const { data, error } = await supabase.from('appointments').select('*, children(name, profiles!fk_children_parent(full_name))').order('appointment_date').order('appointment_time')
+      if (error) throw error
       setCitas(data || [])
     } catch (e: any) { toast.error('Error: ' + e.message) }
     finally { setLoading(false) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
   useEffect(() => { cargar() }, [cargar])
 
-  const año       = mes.getFullYear()
-  const mesN      = mes.getMonth()
-  const hoy       = new Date().toISOString().split('T')[0]
+  const año = mes.getFullYear()
+  const mesN = mes.getMonth()
+  const hoy = iso(new Date())
   const primerDia = new Date(año, mesN, 1).getDay()
   const diasEnMes = new Date(año, mesN + 1, 0).getDate()
+  const semanas = Math.ceil((primerDia + diasEnMes) / 7)
+  const diasSemana = Array.from({ length: 7 }, (_, i) => new Date(2026, 1, 1 + i).toLocaleDateString(bcp, { weekday: 'short' }).replace('.', ''))
 
-  const citasPorFecha: Record<string, any[]> = {}
-  citas.forEach(c => {
-    if (!citasPorFecha[c.appointment_date]) citasPorFecha[c.appointment_date] = []
-    citasPorFecha[c.appointment_date].push(c)
-  })
+  const porFecha: Record<string, any[]> = {}
+  citas.forEach(c => { (porFecha[c.appointment_date] ||= []).push(c) })
+  const citasDia = (porFecha[diaSel] || []).slice().sort((a, b) => (a.appointment_time || '').localeCompare(b.appointment_time || ''))
+  const proximas = citas.filter(c => c.appointment_date >= hoy && c.status !== 'cancelled').slice(0, 8)
+  const prefMes = `${año}-${String(mesN + 1).padStart(2, '0')}`
+  const delMes = citas.filter(c => c.appointment_date?.startsWith(prefMes) && c.status !== 'cancelled').length
+  const deHoy = (porFecha[hoy] || []).filter(c => c.status !== 'cancelled').length
+  const virtuales = citas.filter(c => c.is_virtual && c.appointment_date >= hoy && c.status !== 'cancelled').length
 
-  const citasDelDia   = diaSeleccionado ? (citasPorFecha[diaSeleccionado] || []) : []
-  const proximasCitas = citas.filter(c => c.appointment_date >= hoy && c.status !== 'cancelled').slice(0, 10)
-  const citasVirtuales = citas.filter(c => c.is_virtual).length
+  const cambiarMes = (d: number) => { setDir(d); setMes(new Date(año, mesN + d, 1)) }
+  const irHoy = () => { const n = new Date(); setDir(0); setMes(n); setDiaSel(iso(n)) }
+  const fechaSel = new Date(diaSel + 'T00:00:00')
+  const esHoySel = diaSel === hoy
+  const tituloMes = mes.toLocaleDateString(bcp, { month: 'long' })
 
-  const fechaSelFmt = diaSeleccionado
-    ? new Date(diaSeleccionado + 'T00:00:00').toLocaleDateString(toBCP47(locale), { weekday: 'long', day: 'numeric', month: 'long' })
-    : ''
-
-  /* Color helpers — mismo patrón page.tsx */
-  const card    = isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200'
-  const divLine = isDark ? 'border-[#21262d]'              : 'border-slate-200'
-  const txt1    = isDark ? 'text-slate-100'                : 'text-slate-800'
-  const txt3    = isDark ? 'text-slate-500'                : 'text-slate-400'
-  const hoverBg = isDark ? 'hover:bg-[#1c2128]'           : 'hover:bg-slate-50'
-  const cellBorder = isDark ? 'border-[#21262d]'           : 'border-slate-100'
+  const kpis = [
+    { label: L('Month', 'Este mes'), value: delMes, Icon: CalendarDays, tone: 'bg-v-accent-soft text-v-accent' },
+    { label: L('Today', 'Hoy'), value: deHoy, Icon: Sun, tone: 'bg-v-warning/15 text-v-warning' },
+    { label: L('Next', 'Próximas'), value: proximas.length, Icon: CalendarClock, tone: 'bg-v-success/15 text-v-success' },
+    { label: L('Online', 'Virtuales'), value: virtuales, Icon: Video, tone: 'bg-[#8b5cf6]/12 text-[#8b5cf6]' },
+  ]
 
   return (
-    <div className="pb-28 md:pb-8">
-
-      {/* ── Header — igual al admin ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-        <div>
-          <h2 className={`font-bold text-2xl md:text-3xl tracking-tight flex items-center gap-3 ${txt1}`}>
-            <div className="p-2.5 rounded-2xl flex-shrink-0" style={{ background: 'rgba(2,132,199,0.15)' }}>
-              <Calendar className="text-sky-500" size={28} />
+    <div className="v-scope space-y-4 pb-8 md:space-y-5">
+      {/* Encabezado */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`relative overflow-hidden ${cardClass}`}>
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(40rem 14rem at 0% 0%, var(--v-glow-1), transparent 70%)' }} />
+        <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
+        <div className="relative flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-v-muted">{L('My schedule', 'Mi agenda')}</p>
+            <h2 className="v-headline mt-1 text-[1.6rem] capitalize leading-tight text-v-text sm:text-[2rem]">{tituloMes} <span className="v-brand-text">{año}</span></h2>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {userId && <>
+                <CalendarioExterno userId={userId} api="google-calendar" param="gcal" nombre="Google Calendar" Logo={GoogleLogo} />
+                <CalendarioExterno userId={userId} api="microsoft-calendar" param="mscal" nombre="Outlook Calendar" Logo={MicrosoftLogo} />
+              </>}
             </div>
-            {L('Schedule', 'Agenda')}
-          </h2>
-          <p className={`text-sm font-medium mt-1 ml-1 ${txt3}`}>
-            {t('auto.miAgenda.citasHoyVirtuales', { v1: String(citas.length), v2: String(citasDelDia.length), v3: String(citasVirtuales) })}
-          </p>
-        </div>
-
-        {userId && (
-          <div className="flex items-center gap-2">
-            <GoogleCalendarMini userId={userId} isDark={isDark} />
-            <MicrosoftCalendarMini userId={userId} isDark={isDark} />
           </div>
-        )}
-      </div>
-
-      {/* ── Layout principal ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-
-        {/* ════ CALENDARIO — mismo estilo admin ════ */}
-        <div className={`xl:col-span-8 ${card} rounded-3xl border shadow-sm overflow-hidden`}>
-
-          {/* Nav mes */}
-          <div className={`flex items-center justify-between p-5 border-b ${divLine}`}>
-            <button
-              onClick={() => setMes(new Date(año, mesN - 1, 1))}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${txt3}
-                ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <h3 className={`font-bold text-lg capitalize ${txt1}`}>
-              {MESL[mesN]} <span className={`font-semibold ${txt3}`}>{año}</span>
-            </h3>
-            <button
-              onClick={() => setMes(new Date(año, mesN + 1, 1))}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${txt3}
-                ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-
-          {/* Cabecera días */}
-          <div className={`grid grid-cols-7 border-b ${divLine}`}>
-            {DIASL.map((d, di) => (
-              <div key={di} className={`text-center py-3 text-[10px] font-bold ${txt3}`}>
-                {d}
+          <div className="grid grid-cols-[repeat(4,minmax(0,1fr))] gap-2 lg:w-[26rem]">
+            {kpis.map(k => (
+              <div key={k.label} className="rounded-v-sm bg-v-elevated/80 p-3 text-center shadow-v">
+                <span className={`mx-auto grid size-8 place-items-center rounded-[30%] ${k.tone}`}><k.Icon size={15} /></span>
+                <p className="v-headline mt-1.5 text-xl tabular-nums text-v-text">{loading ? '—' : k.value}</p>
+                <p className="truncate text-[10px] font-medium text-v-muted">{k.label}</p>
               </div>
             ))}
           </div>
-
-          {/* Celdas — misma estructura que admin */}
-          {loading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 size={22} className="animate-spin text-sky-500" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-7">
-              {Array.from({ length: primerDia }, (_, i) => (
-                <div key={`e-${i}`} className={`min-h-[56px] sm:min-h-[80px] border-b border-r ${cellBorder}
-                  ${isDark ? 'bg-[#0d1117]/50' : 'bg-slate-50/30'}`} />
-              ))}
-
-              {Array.from({ length: diasEnMes }, (_, i) => {
-                const dia      = i + 1
-                const fechaStr = `${año}-${String(mesN + 1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`
-                const citasDia = citasPorFecha[fechaStr] || []
-                const esHoy    = fechaStr === hoy
-                const esSel    = fechaStr === diaSeleccionado
-
-                return (
-                  <button
-                    key={dia}
-                    onClick={() => setDiaSeleccionado(esSel ? '' : fechaStr)}
-                    className={`min-h-[56px] sm:min-h-[80px] border-b border-r ${cellBorder} p-1.5 text-left transition-all
-                      flex flex-col gap-1 group
-                      ${esSel
-                        ? isDark ? 'bg-sky-900/30' : 'bg-sky-50'
-                        : esHoy
-                          ? isDark ? 'bg-sky-950/40' : 'bg-sky-50/60'
-                          : isDark ? 'hover:bg-[#1c2128]' : 'hover:bg-slate-50'
-                      }`}
-                  >
-                    {/* Número del día */}
-                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-all
-                      ${esSel
-                        ? 'bg-sky-600 text-white'
-                        : esHoy
-                          ? 'bg-sky-600 text-white'
-                          : isDark ? 'text-slate-300 group-hover:text-slate-100' : 'text-slate-700 group-hover:text-slate-900'
-                      }`}>
-                      {dia}
-                    </span>
-
-                    {/* Citas del día — misma pill que admin */}
-                    <div className="flex flex-col gap-0.5 w-full">
-                      {citasDia.slice(0, 2).map((c, idx) => {
-                        const col = STATUS_COLORS[c.status] || STATUS_COLORS.confirmed
-                        return (
-                          <div
-                            key={idx}
-                            className={`w-full px-1.5 py-0.5 rounded-md text-[9px] font-bold truncate flex items-center gap-1 ${col.bg} ${col.text}`}
-                          >
-                            {c.is_virtual
-                              ? <Video size={8} className="flex-shrink-0 opacity-80" />
-                              : <MapPin size={8} className="flex-shrink-0 opacity-80" />
-                            }
-                            {c.appointment_time?.slice(0,5)} {c.children?.name}
-                          </div>
-                        )
-                      })}
-                      {citasDia.length > 2 && (
-                        <span className={`text-[9px] font-bold px-1 ${txt3}`}>
-                          {t('auto.miAgenda.mas', { v1: String(citasDia.length - 2) })}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
         </div>
+      </motion.div>
 
-        {/* ════ PANEL DERECHO ════ */}
-        <div className="xl:col-span-4 flex flex-col gap-4">
-
-          {/* HOY */}
-          <div className={`${card} rounded-3xl border shadow-sm overflow-hidden flex flex-col`}>
-            <div className={`px-5 py-4 border-b ${divLine} flex items-center gap-3`}>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0
-                ${isDark ? 'bg-sky-900/40' : 'bg-sky-50'}`}>
-                <Calendar size={15} className={isDark ? 'text-sky-400' : 'text-sky-600'} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-[10px] font-bold ${txt3}`}>{L('TODAY', 'HOY')}</p>
-                <p className={`text-sm font-bold capitalize truncate ${txt1}`}>
-                  {new Date().toLocaleDateString(toBCP47(locale), { weekday: 'long', day: 'numeric', month: 'long' })}
-                </p>
-              </div>
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0
-                ${isDark ? 'bg-[#21262d] text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                {t('auto.miAgenda.citas', { v1: String(citasDelDia.length) })}
-              </span>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        {/* Calendario */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }} className={`${cardClass} overflow-hidden`}>
+          <div className="flex items-center justify-between gap-2 border-b border-v-border px-3 py-3 sm:px-5">
+            <button onClick={() => cambiarMes(-1)} aria-label={L('Previous month', 'Mes anterior')} className="grid size-9 place-items-center rounded-full text-v-muted hover:bg-v-fill"><ChevronLeft size={18} /></button>
+            <div className="flex items-center gap-2">
+              <p className="text-base font-semibold capitalize text-v-text">{tituloMes} <span className="text-v-subtle">{año}</span></p>
+              {(mesN !== new Date().getMonth() || año !== new Date().getFullYear() || !esHoySel) && (
+                <button onClick={irHoy} className="rounded-full bg-v-accent-soft px-2.5 py-1 text-[11px] font-semibold text-v-accent hover:bg-v-accent hover:text-white">{L('Today', 'Hoy')}</button>
+              )}
             </div>
-
-            {citasDelDia.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 px-5 text-center">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3
-                  ${isDark ? 'bg-[#1c2128]' : 'bg-slate-50'}`}>
-                  <CalendarDays size={22} className={isDark ? 'text-slate-600' : 'text-slate-300'} />
-                </div>
-                <p className={`text-sm font-bold ${txt3}`}>{t('auto.miAgenda.sinCitasEsteDia')}</p>
-                <p className={`text-xs mt-1 ${isDark ? 'text-slate-600' : 'text-slate-300'}`}>
-                  {t('auto.miAgenda.seleccionaOtroDiaDelCalendario')}
-                </p>
-              </div>
-            ) : (
-              <div className={`divide-y ${divLine} max-h-56 overflow-y-auto`}>
-                {citasDelDia
-                  .sort((a, b) => (a.appointment_time || '').localeCompare(b.appointment_time || ''))
-                  .map(c => {
-                    const col = STATUS_COLORS[c.status] || STATUS_COLORS.confirmed
-                    return (
-                      <div key={c.id}
-                        className={`px-4 py-3 flex items-center gap-3 transition-colors ${hoverBg}`}>
-                        <div className="w-0.5 h-9 rounded-full flex-shrink-0" style={{ background: col.bar }} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-bold truncate ${txt1}`}>{c.children?.name}</p>
-                          <p className={`text-xs flex items-center gap-1 mt-0.5 ${txt3}`}>
-                            <Clock size={9} /> {c.appointment_time?.slice(0,5)}
-                            {c.service_type && <> · {c.service_type}</>}
-                          </p>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0
-                          ${isDark ? col.badgeDark : col.badgeLight}`}>
-                          {t('estado.' + c.status)}
-                        </span>
-                      </div>
-                    )
-                  })}
-              </div>
-            )}
+            <button onClick={() => cambiarMes(1)} aria-label={L('Next month', 'Mes siguiente')} className="grid size-9 place-items-center rounded-full text-v-muted hover:bg-v-fill"><ChevronRight size={18} /></button>
           </div>
 
-          {/* CITAS */}
-          <div className={`${card} rounded-3xl border shadow-sm overflow-hidden flex-1`}>
-            <div className={`px-5 py-4 border-b ${divLine} flex items-center gap-3`}>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0
-                ${isDark ? 'bg-emerald-900/30' : 'bg-emerald-50'}`}>
-                <Clock size={15} className={isDark ? 'text-emerald-400' : 'text-emerald-600'} />
-              </div>
-              <h3 className={`font-bold text-sm flex-1 ${txt1}`}>{L('Appointments', 'Citas')}</h3>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full border
-                ${isDark
-                  ? 'bg-[#21262d] text-slate-500 border-[#30363d]'
-                  : 'bg-slate-50 text-slate-400 border-slate-100'
-                }`}>
-                {proximasCitas.length}
-              </span>
-            </div>
+          <div className="grid grid-cols-[repeat(7,minmax(0,1fr))] border-b border-v-border bg-v-fill/40">
+            {diasSemana.map((d, i) => <p key={i} className="py-2.5 text-center text-[11px] font-semibold capitalize text-v-subtle">{d}</p>)}
+          </div>
 
-            {loading ? (
-              <div className="flex justify-center py-10">
-                <Loader2 size={18} className="animate-spin text-sky-500" />
+          {loading ? (
+            <div className="grid place-items-center py-24"><Loader2 size={24} className="animate-spin text-v-accent" /></div>
+          ) : (
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={prefMes} initial={{ opacity: 0, x: dir * 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -24 }} transition={{ duration: 0.18 }}
+                className="grid grid-cols-[repeat(7,minmax(0,1fr))]" style={{ gridTemplateRows: `repeat(${semanas}, minmax(0, 1fr))` }}>
+                {Array.from({ length: primerDia }, (_, i) => <div key={`e${i}`} className="min-h-14 border-b border-r border-v-border bg-v-fill/30 sm:min-h-24" />)}
+                {Array.from({ length: diasEnMes }, (_, i) => {
+                  const dia = i + 1
+                  const f = `${prefMes}-${String(dia).padStart(2, '0')}`
+                  const lista = porFecha[f] || []
+                  const esHoy = f === hoy
+                  const sel = f === diaSel
+                  const finde = (primerDia + i) % 7 === 0 || (primerDia + i) % 7 === 6
+                  return (
+                    <button key={f} onClick={() => setDiaSel(f)}
+                      className={`group relative flex min-h-14 flex-col gap-1 border-b border-r border-v-border p-1 text-left transition-colors sm:min-h-24 sm:p-1.5 ${sel ? 'bg-v-accent-soft/70' : finde ? 'bg-v-fill/25 hover:bg-v-fill/60' : 'hover:bg-v-fill/60'}`}>
+                      {sel && <motion.span layoutId="agenda-sel" className="pointer-events-none absolute inset-0 ring-2 ring-inset ring-v-accent/60" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                      <span className={`grid size-7 place-items-center rounded-full text-xs font-semibold tabular-nums ${esHoy ? 'v-brand' : sel ? 'text-v-accent' : 'text-v-text'}`} style={esHoy ? { boxShadow: 'none' } : undefined}>{dia}</span>
+                      {/* Celular: puntos. Escritorio: chips con hora y paciente */}
+                      {lista.length > 0 && (
+                        <>
+                          <span className="flex flex-wrap gap-0.5 px-1 sm:hidden">{lista.slice(0, 3).map((c, k) => <span key={k} className={`size-1.5 rounded-full ${(ESTADO[c.status] || ESTADO.confirmed).dot}`} />)}</span>
+                          <span className="hidden w-full flex-col gap-0.5 sm:flex">
+                            {lista.slice(0, 2).map((c, k) => (
+                              <span key={k} className={`flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${(ESTADO[c.status] || ESTADO.confirmed).chip}`} style={{ boxShadow: 'none' }}>
+                                {c.is_virtual ? <Video size={9} className="shrink-0" /> : <MapPin size={9} className="shrink-0" />}
+                                <span className="truncate">{c.appointment_time?.slice(0, 5)} {c.children?.name}</span>
+                              </span>
+                            ))}
+                            {lista.length > 2 && <span className="px-1 text-[10px] font-semibold text-v-subtle">+{lista.length - 2} {L('more', 'más')}</span>}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )
+                })}
+              </motion.div>
+            </AnimatePresence>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-v-border px-4 py-2.5 text-[11px] text-v-muted">
+            {[['confirmed', L('Confirmed', 'Confirmada')], ['pending', L('Pending', 'Pendiente')], ['completed', L('Completed', 'Completada')], ['cancelled', L('Cancelled', 'Cancelada')]].map(([k, l]) => (
+              <span key={k} className="inline-flex items-center gap-1.5"><span className={`size-2 rounded-full ${ESTADO[k].dot}`} /> {l}</span>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Panel lateral */}
+        <div className="grid gap-4 md:grid-cols-2 xl:flex xl:flex-col">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`${cardClass} overflow-hidden`}>
+            <div className="flex items-center gap-3 border-b border-v-border px-4 py-3.5 sm:px-5">
+              <span className="v-brand grid h-12 w-12 shrink-0 place-items-center rounded-v-sm text-center leading-none" style={{ boxShadow: 'none' }}>
+                <span><span className="block text-[10px] font-semibold uppercase opacity-80">{fechaSel.toLocaleDateString(bcp, { month: 'short' }).replace('.', '')}</span><span className="block text-lg font-bold">{fechaSel.getDate()}</span></span>
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-v-subtle">{esHoySel ? L('Today', 'Hoy') : L('Selected day', 'Día seleccionado')}</p>
+                <p className="truncate text-sm font-semibold text-v-text first-letter:uppercase">{fechaSel.toLocaleDateString(bcp, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
               </div>
-            ) : proximasCitas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 px-5 text-center">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3
-                  ${isDark ? 'bg-[#1c2128]' : 'bg-slate-50'}`}>
-                  <Users size={22} className={isDark ? 'text-slate-600' : 'text-slate-300'} />
-                </div>
-                <p className={`text-sm font-bold ${txt3}`}>{t('auto.miAgenda.sinCitasProximas')}</p>
+              <span className="shrink-0 rounded-full bg-v-fill px-2.5 py-1 text-[11px] font-semibold tabular-nums text-v-muted">{citasDia.length} {citasDia.length === 1 ? L('appt.', 'cita') : L('appts.', 'citas')}</span>
+            </div>
+            {citasDia.length === 0 ? (
+              <div className="flex flex-col items-center px-5 py-10 text-center">
+                <span className="grid size-12 place-items-center rounded-full bg-v-fill text-v-subtle"><CalendarDays size={20} /></span>
+                <p className="mt-3 text-sm font-semibold text-v-text">{L('No appointments this day', 'Sin citas este día')}</p>
+                <p className="mt-0.5 text-xs text-v-muted">{L('Pick another day on the calendar.', 'Elige otro día en el calendario.')}</p>
               </div>
             ) : (
-              <div className={`divide-y ${divLine} max-h-80 overflow-y-auto`}>
-                {proximasCitas.map(c => {
-                  const col       = STATUS_COLORS[c.status] || STATUS_COLORS.confirmed
-                  const fecha     = new Date(c.appointment_date + 'T00:00:00')
+              <div className="max-h-80 space-y-2 overflow-y-auto p-3">
+                {citasDia.map(c => {
+                  const e = ESTADO[c.status] || ESTADO.confirmed
+                  return (
+                    <div key={c.id} className="flex items-center gap-3 rounded-v-sm border border-v-border bg-v-bg p-3">
+                      <span className="w-12 shrink-0 text-center">
+                        <span className="block text-sm font-bold tabular-nums text-v-text">{c.appointment_time?.slice(0, 5) || '—'}</span>
+                        <span className="mt-0.5 inline-flex items-center gap-0.5 text-[10px] text-v-subtle">{c.is_virtual ? <><Video size={9} /> {L('Online', 'Virtual')}</> : <><MapPin size={9} /> {L('On-site', 'Presencial')}</>}</span>
+                      </span>
+                      <span className="h-9 w-px shrink-0 bg-v-border" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-v-text">{c.children?.name || L('Patient', 'Paciente')}</span>
+                        <span className="block truncate text-xs text-v-subtle">{c.service_type || c.children?.profiles?.full_name || L('Therapy session', 'Sesión de terapia')}</span>
+                      </span>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${e.tone}`}>{t('estado.' + c.status)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className={`${cardClass} flex flex-col overflow-hidden xl:min-h-0 xl:flex-1`}>
+            <div className="flex items-center gap-3 border-b border-v-border px-4 py-3.5 sm:px-5">
+              <span className="grid size-9 place-items-center rounded-[30%] bg-v-success/15 text-v-success"><CalendarCheck size={16} /></span>
+              <p className="flex-1 text-sm font-semibold text-v-text">{L('Upcoming appointments', 'Próximas citas')}</p>
+              <span className="rounded-full bg-v-fill px-2 py-0.5 text-[11px] font-semibold tabular-nums text-v-muted">{proximas.length}</span>
+            </div>
+            {loading ? (
+              <div className="grid place-items-center py-10"><Loader2 size={18} className="animate-spin text-v-accent" /></div>
+            ) : proximas.length === 0 ? (
+              <div className="flex flex-1 flex-col items-center justify-center px-5 py-10 text-center">
+                <span className="grid size-12 place-items-center rounded-full bg-v-fill text-v-subtle"><Calendar size={20} /></span>
+                <p className="mt-3 text-sm font-semibold text-v-text">{L('No upcoming appointments', 'Sin citas próximas')}</p>
+                <p className="mt-0.5 text-xs text-v-muted">{L('New bookings will appear here.', 'Las nuevas citas aparecerán aquí.')}</p>
+              </div>
+            ) : (
+              <div className="max-h-96 flex-1 space-y-1 overflow-y-auto p-2 xl:max-h-none">
+                {proximas.map(c => {
+                  const f = new Date(c.appointment_date + 'T00:00:00')
                   const esHoyItem = c.appointment_date === hoy
                   return (
-                    <button key={c.id}
-                      onClick={() => { setDiaSeleccionado(c.appointment_date); setMes(fecha) }}
-                      className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors ${hoverBg}`}>
-                      <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center flex-shrink-0
-                        ${esHoyItem
-                          ? 'bg-sky-600 text-white'
-                          : isDark ? 'bg-[#21262d] text-slate-400' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                        <span className="text-[8px] font-bold leading-none uppercase">
-                          {MESL[fecha.getMonth()].slice(0,3)}
-                        </span>
-                        <span className="text-sm font-bold leading-tight">{fecha.getDate()}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-bold truncate ${txt1}`}>{c.children?.name}</p>
-                        <p className={`text-xs flex items-center gap-1 mt-0.5 ${txt3}`}>
-                          <Clock size={9} /> {c.appointment_time?.slice(0,5)}
-                          {esHoyItem && <span className={`font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>· {L('Today', 'Hoy')}</span>}
-                        </p>
-                      </div>
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${col.dot}`} />
+                    <button key={c.id} onClick={() => { setDiaSel(c.appointment_date); setDir(0); setMes(f) }}
+                      className="flex w-full items-center gap-3 rounded-v-sm p-2.5 text-left transition-colors hover:bg-v-fill/60">
+                      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-v-sm text-center leading-none ${esHoyItem ? 'v-brand' : 'bg-v-fill text-v-text'}`} style={esHoyItem ? { boxShadow: 'none' } : undefined}>
+                        <span><span className="block text-[9px] font-semibold uppercase opacity-70">{f.toLocaleDateString(bcp, { month: 'short' }).replace('.', '')}</span><span className="block text-sm font-bold">{f.getDate()}</span></span>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-v-text">{c.children?.name || L('Patient', 'Paciente')}</span>
+                        <span className="flex items-center gap-1 text-xs text-v-subtle"><Clock size={10} /> {c.appointment_time?.slice(0, 5)}{esHoyItem && <span className="font-semibold text-v-accent"> · {L('Today', 'Hoy')}</span>}{c.is_virtual && <> · <Video size={10} /></>}</span>
+                      </span>
+                      <span className={`size-2 shrink-0 rounded-full ${(ESTADO[c.status] || ESTADO.confirmed).dot}`} />
                     </button>
                   )
                 })}
               </div>
             )}
-          </div>
-
+          </motion.div>
         </div>
       </div>
     </div>

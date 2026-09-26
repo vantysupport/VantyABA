@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,6 +15,9 @@ const supabase = createClient(
  *   summary     – if "true", return aggregated totals per parent
  */
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const parentId = searchParams.get('parent_id')
   const days = parseInt(searchParams.get('days') || '30')
@@ -33,10 +37,11 @@ export async function GET(req: NextRequest) {
           ended_at,
           duration_seconds,
           device,
-          profiles!parent_session_logs_parent_id_fkey (
+          profiles!fk_psl_parent (
             id, full_name, email, phone
           )
         `)
+        .eq('centro_id', caller.centroId)
         .gte('started_at', since.toISOString())
         .order('started_at', { ascending: false })
 
@@ -93,6 +98,7 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from('parent_session_logs')
       .select('*')
+      .eq('centro_id', caller.centroId)
       .gte('started_at', since.toISOString())
       .order('started_at', { ascending: false })
       .limit(100)
@@ -113,15 +119,20 @@ export async function GET(req: NextRequest) {
  * Upsert/update a session log (called from client hook as fallback)
  */
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const body = await req.json()
     const { action, id, parent_id, duration_seconds } = body
+    // Solo el propio padre registra sus sesiones
+    if (parent_id && parent_id !== caller.id) return forbidden()
 
     if (action === 'end' && id) {
       const { error } = await supabase
         .from('parent_session_logs')
         .update({ ended_at: new Date().toISOString(), duration_seconds })
         .eq('id', id)
+        .eq('parent_id', caller.id)
       if (error) throw error
       return NextResponse.json({ ok: true })
     }
@@ -130,7 +141,7 @@ export async function POST(req: NextRequest) {
       const device = body.device || 'unknown'
       const { data, error } = await supabase
         .from('parent_session_logs')
-        .insert({ parent_id, started_at: new Date().toISOString(), device })
+        .insert({ parent_id, centro_id: caller.centroId, started_at: new Date().toISOString(), device })
         .select('id')
         .single()
       if (error) throw error

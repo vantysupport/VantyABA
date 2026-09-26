@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { notifyParentDirect } from '@/lib/notifications'
+import { getCentroBranding } from '@/lib/centro-branding'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
     const { childId, tipo, vars } = await req.json()
     if (!childId || !tipo) return NextResponse.json({ error: 'childId y tipo requeridos' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
 
     // Buscar teléfono del padre
     const { data: parentLink } = await supabaseAdmin
@@ -15,7 +21,7 @@ export async function POST(req: NextRequest) {
       const { data: parentProf } = await supabaseAdmin
         .from('profiles').select('phone').eq('id', parentLink.user_id).maybeSingle()
       if ((parentProf as any)?.phone) {
-        notifyParentDirect((parentProf as any).phone, tipo, vars || {})
+        notifyParentDirect((parentProf as any).phone, tipo, vars || {}, await getCentroBranding({ childId }))
         return NextResponse.json({ ok: true })
       }
     }

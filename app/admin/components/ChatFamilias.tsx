@@ -2,14 +2,18 @@
 // app/admin/components/ChatFamilias.tsx
 // Chat familias con soporte completo: texto, imágenes, documentos y audio
 
+import { fileUrl } from '@/lib/file-url'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useI18n } from '@/lib/i18n-context'
 import {
   MessageCircle, Send, Loader2, Search, Users, CheckCheck, Check,
   ChevronLeft, Paperclip, Mic, Image, FileText, X,
-  Play, Pause, Download, StopCircle,
+  Download, StopCircle,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
+import { subirArchivoPrivado } from '@/lib/subir-archivo'
+import { ChatAudio } from '@/components/ui/chat-audio'
 
 interface Msg {
   id: string; content: string; sender_id: string; sender_role: string
@@ -23,13 +27,13 @@ interface Family {
 }
 interface Props { profile?: any; userId?: string; userName?: string; isDark?: boolean }
 
-const ROLE_CFG: Record<string, { label: string; color: string; bg: string }> = {
-  jefe:         { label: 'Dirección',   color: '#0284c7', bg: '#f0f9ff' },
-  admin:        { label: 'Admin',       color: '#0284c7', bg: '#eff6ff' },
-  especialista: { label: 'Terapeuta',   color: '#059669', bg: '#f0fdf4' },
-  terapeuta:    { label: 'Terapeuta',   color: '#059669', bg: '#f0fdf4' },
-  secretaria:   { label: 'Secretaría',  color: '#d97706', bg: '#fffbeb' },
-  padre:        { label: 'Familia',     color: '#64748b', bg: '#f8fafc' },
+const ROLE_CFG: Record<string, { label: string; labelEn: string; pill: string; tile: string }> = {
+  jefe:         { label: 'Dirección',  labelEn: 'Director',   pill: 'bg-v-accent-soft text-v-accent',   tile: 'bg-v-accent-soft text-v-accent' },
+  admin:        { label: 'Admin',      labelEn: 'Admin',      pill: 'bg-v-accent-soft text-v-accent',   tile: 'bg-v-accent-soft text-v-accent' },
+  especialista: { label: 'Terapeuta',  labelEn: 'Therapist',  pill: 'bg-v-success/15 text-v-success',   tile: 'bg-v-success/15 text-v-success' },
+  terapeuta:    { label: 'Terapeuta',  labelEn: 'Therapist',  pill: 'bg-v-success/15 text-v-success',   tile: 'bg-v-success/15 text-v-success' },
+  secretaria:   { label: 'Secretaría', labelEn: 'Front desk', pill: 'bg-v-warning/15 text-v-warning',   tile: 'bg-v-warning/15 text-v-warning' },
+  padre:        { label: 'Familia',    labelEn: 'Family',     pill: 'bg-v-fill text-v-muted',           tile: 'bg-v-fill text-v-muted' },
 }
 
 function formatTime(iso: string) {
@@ -61,107 +65,57 @@ function getFileIcon(name?: string) {
   return '📎'
 }
 
-function DayDivider({ date }: { date: string }) {
+function DayDivider({ date, locale }: { date: string; locale: string }) {
   const d = new Date(date)
-  const label = d.toDateString() === new Date().toDateString() ? 'Hoy'
-    : d.toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^\w/, c => c.toUpperCase())
+  const label = d.toDateString() === new Date().toDateString() ? (locale === 'en' ? 'Today' : 'Hoy')
+    : d.toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^\w/, c => c.toUpperCase())
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0' }}>
-      <div style={{ flex: 1, height: 1, background: 'var(--card-border,#e5e7eb)' }}/>
-      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap',
-        padding: '3px 12px', background: 'var(--card,#fff)', border: '1px solid var(--card-border,#e5e7eb)', borderRadius: 20 }}>
-        {label}
-      </span>
-      <div style={{ flex: 1, height: 1, background: 'var(--card-border,#e5e7eb)' }}/>
+    <div className="my-4 flex justify-center">
+      <span className="rounded-full bg-v-elevated px-3 py-1 text-[11px] font-semibold text-v-muted shadow-v">{label}</span>
     </div>
   )
 }
 
-function AudioPlayer({ url, isMe }: { url: string; isMe: boolean }) {
-  const [playing, setPlaying] = useState(false)
-  const [current, setCurrent] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const audioRef = useRef<HTMLAudioElement>(null)
-  useEffect(() => {
-    const a = audioRef.current; if (!a) return
-    const onT = () => setCurrent(a.currentTime)
-    const onL = () => setDuration(a.duration)
-    const onE = () => { setPlaying(false); setCurrent(0) }
-    a.addEventListener('timeupdate', onT); a.addEventListener('loadedmetadata', onL); a.addEventListener('ended', onE)
-    return () => { a.removeEventListener('timeupdate', onT); a.removeEventListener('loadedmetadata', onL); a.removeEventListener('ended', onE) }
-  }, [])
-  const toggle = () => {
-    const a = audioRef.current; if (!a) return
-    if (playing) { a.pause(); setPlaying(false) } else { a.play(); setPlaying(true) }
-  }
-  const progress = duration ? (current / duration) * 100 : 0
-  const fill   = isMe ? '#fff' : '#0284c7'
-  const track  = isMe ? 'rgba(255,255,255,0.25)' : '#e2e8f0'
-  const btnBg  = isMe ? 'rgba(255,255,255,0.2)' : '#eff6ff'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
-      <audio ref={audioRef} src={url} preload="metadata" />
-      <button onClick={toggle} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none',
-        background: btnBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0, color: isMe ? '#fff' : '#0284c7' }}>
-        {playing ? <Pause size={16}/> : <Play size={16}/>}
-      </button>
-      <div style={{ flex: 1 }}>
-        <div style={{ height: 4, background: track, borderRadius: 4, cursor: 'pointer', marginBottom: 6 }}
-          onClick={e => { const r = e.currentTarget.getBoundingClientRect(); if (audioRef.current) audioRef.current.currentTime = ((e.clientX-r.left)/r.width)*duration }}>
-          <div style={{ width: `${progress}%`, height: '100%', background: fill, borderRadius: 4 }}/>
-        </div>
-        <div style={{ display: 'flex', gap: 2, alignItems: 'center', height: 18, marginBottom: 4 }}>
-          {[4,6,10,8,14,12,16,10,8,12,16,14,10,8,6,10,14,12,8,16,10,8,12,14,8,10,6,4].map((h,i) => (
-            <div key={i} style={{ width: 2, height: h, borderRadius: 2, background: (i/28)*100<progress ? fill : track }}/>
-          ))}
-        </div>
-        <span style={{ fontSize: 10, color: isMe ? 'rgba(255,255,255,0.85)' : 'var(--text-muted)' }}>
-          {formatDuration(playing ? current : (duration || 0))}
-        </span>
-      </div>
-    </div>
-  )
-}
+const AudioPlayer = ChatAudio
 
 function MsgContent({ msg, isMe }: { msg: Msg; isMe: boolean }) {
   const { t } = useI18n()
   if (msg.message_type === 'image' && msg.file_url) return (
     <div>
-      <img src={msg.file_url} alt="imagen"
+      <img src={fileUrl(msg.file_url)} alt="imagen"
         style={{ width: '100%', maxWidth: 220, borderRadius: 10, display: 'block', cursor: 'pointer' }}
-        onClick={() => window.open(msg.file_url, '_blank')} />
+        onClick={() => window.open(fileUrl(msg.file_url), '_blank')} />
       {msg.content && msg.content !== '📷 Imagen' && (
-        <p style={{ margin: '6px 2px 0', fontSize: 13, whiteSpace: 'pre-wrap', color: isMe ? '#fff' : 'var(--text-primary)' }}>{msg.content}</p>
+        <p style={{ margin: '6px 2px 0', fontSize: 13, whiteSpace: 'pre-wrap', color: isMe ? '#fff' : 'var(--v-text)' }}>{msg.content}</p>
       )}
     </div>
   )
-  if (msg.message_type === 'audio' && msg.file_url) return <AudioPlayer url={msg.file_url} isMe={isMe} />
+  if (msg.message_type === 'audio' && msg.file_url) return <AudioPlayer url={fileUrl(msg.file_url)} isMe={isMe} />
   if (msg.message_type === 'document' && msg.file_url) return (
-    <a href={msg.file_url} target="_blank" rel="noreferrer" download={msg.file_name}
+    <a href={fileUrl(msg.file_url)} target="_blank" rel="noreferrer" download={msg.file_name}
       style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none',
-        background: isMe ? 'rgba(255,255,255,0.15)' : 'var(--muted-bg,#f8fafc)',
-        border: isMe ? 'none' : '1px solid var(--card-border,#e2e8f0)',
+        background: isMe ? 'rgba(255,255,255,0.15)' : 'var(--v-fill)',
+        border: isMe ? 'none' : '1px solid var(--v-border)',
         borderRadius: 12, padding: '10px 14px', minWidth: 190 }}>
       <span style={{ fontSize: 28 }}>{getFileIcon(msg.file_name)}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: isMe ? '#fff' : 'var(--text-primary)',
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: isMe ? '#fff' : 'var(--v-text)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>
           {msg.file_name || 'Documento'}
         </p>
-        <p style={{ margin: '2px 0 0', fontSize: 10, color: isMe ? 'rgba(255,255,255,.65)' : 'var(--text-muted)' }}>
+        <p style={{ margin: '2px 0 0', fontSize: 10, color: isMe ? 'rgba(255,255,255,.65)' : 'var(--v-text-tertiary)' }}>
           {t('auto.chatFamilias.tocaParaAbrir', { v1: String(formatFileSize(msg.file_size)) })}
         </p>
       </div>
-      <Download size={14} color={isMe ? 'rgba(255,255,255,.75)' : 'var(--text-muted,#94a3b8)'}/>
+      <Download size={14} color={isMe ? 'rgba(255,255,255,.75)' : 'var(--v-text-tertiary)'}/>
     </a>
   )
   // Compat: mensajes del portal Familias guardados como texto plano
   const audioLegacy = msg.content?.match(/^🎤 \[Audio\] (https?:\/\/\S+)\s*$/)
-  if (audioLegacy) return <AudioPlayer url={audioLegacy[1]} isMe={isMe} />
+  if (audioLegacy) return <AudioPlayer url={fileUrl(audioLegacy[1])} isMe={isMe} />
   const fileLegacy = msg.content?.match(/^📎 \[(.+?)\] (https?:\/\/\S+)\s*$/)
   if (fileLegacy) {
-    const name = fileLegacy[1], url = fileLegacy[2]
+    const name = fileLegacy[1], url = fileUrl(fileLegacy[2])
     if (/\.(png|jpe?g|gif|webp|avif)(\?|$)/i.test(url)) return (
       <img src={url} alt={name}
         style={{ width: '100%', maxWidth: 220, borderRadius: 10, display: 'block', cursor: 'pointer' }}
@@ -170,16 +124,16 @@ function MsgContent({ msg, isMe }: { msg: Msg; isMe: boolean }) {
     return (
       <a href={url} target="_blank" rel="noreferrer"
         style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none',
-          background: isMe ? 'rgba(255,255,255,0.15)' : 'var(--muted-bg,#f8fafc)',
-          border: isMe ? 'none' : '1px solid var(--card-border,#e2e8f0)',
+          background: isMe ? 'rgba(255,255,255,0.15)' : 'var(--v-fill)',
+          border: isMe ? 'none' : '1px solid var(--v-border)',
           borderRadius: 12, padding: '10px 14px', minWidth: 190 }}>
         <span style={{ fontSize: 28 }}>{getFileIcon(name)}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: isMe ? '#fff' : 'var(--text-primary)',
+          <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: isMe ? '#fff' : 'var(--v-text)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{name}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 10, color: isMe ? 'rgba(255,255,255,.65)' : 'var(--text-muted)' }}>{t("admin.tocaAbrir")}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 10, color: isMe ? 'rgba(255,255,255,.65)' : 'var(--v-text-tertiary)' }}>{t("admin.tocaAbrir")}</p>
         </div>
-        <Download size={14} color={isMe ? 'rgba(255,255,255,.75)' : 'var(--text-muted,#94a3b8)'}/>
+        <Download size={14} color={isMe ? 'rgba(255,255,255,.75)' : 'var(--v-text-tertiary)'}/>
       </a>
     )
   }
@@ -187,7 +141,8 @@ function MsgContent({ msg, isMe }: { msg: Msg; isMe: boolean }) {
 }
 
 export default function ChatFamilias({ profile, userId: _userId, userName: _userName, isDark: _isDark }: Props) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [families, setFamilies]       = useState<Family[]>([])
   const [selected, setSelected]       = useState<Family | null>(null)
   const [messages, setMessages]       = useState<Msg[]>([])
@@ -218,10 +173,10 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
   const isDark   = _isDark ?? false
 
   const bg          = isDark ? '#0d1117'  : 'var(--card,#fff)'
-  const borderColor = isDark ? '#21262d'  : 'var(--card-border,#e2e8f0)'
-  const mutedBg     = isDark ? '#161b22'  : 'var(--muted-bg,#f8fafc)'
+  const borderColor = isDark ? '#21262d'  : 'var(--v-border)'
+  const mutedBg     = isDark ? '#161b22'  : 'var(--v-fill)'
   const textPrimary = isDark ? '#e6edf3'  : 'var(--text-primary,#0f172a)'
-  const textMuted   = isDark ? '#7d8590'  : 'var(--text-muted,#94a3b8)'
+  const textMuted   = isDark ? '#7d8590'  : 'var(--v-text-tertiary)'
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
@@ -230,10 +185,9 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
   const loadFamilies = useCallback(async () => {
     setLoadingList(true)
     try {
-      const { data } = await supabase
-        .from('chat_familias')
-        .select('child_id, content, message_type, sender_name, sender_id, sender_role, read_by, created_at, children(name)')
-        .order('created_at', { ascending: false }).limit(300)
+      // Los mensajes se guardan cifrados: el servidor los descifra
+      const r = await fetch('/api/chat-familias?resumen=1', { cache: 'no-store' })
+      const { data } = r.ok ? await r.json() : { data: null }
       if (!data) return
       const map: Record<string, any> = {}
       data.forEach((m: any) => {
@@ -264,8 +218,8 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
     return () => { supabase.removeChannel(ch) }
   }, [loadFamilies])
 
-  const loadMessages = useCallback(async (childId: string) => {
-    setLoadingMsgs(true)
+  const loadMessages = useCallback(async (childId: string, silencioso = false) => {
+    if (!silencioso) setLoadingMsgs(true)
     try {
       const res = await fetch(`/api/chat-familias?child_id=${childId}&user_id=${userId}`)
       const json = await res.json()
@@ -287,26 +241,18 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
     if (channelRef.current) supabase.removeChannel(channelRef.current)
     channelRef.current = supabase.channel(`cf_msgs_v3_${selected.child_id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_familias',
-        filter: `child_id=eq.${selected.child_id}` }, (payload) => {
-          const m = payload.new as Msg
-          setMessages(prev => prev.find(x => x.id === m.id) ? prev : [...prev, m])
-          scrollToBottom()
-          if (m.sender_id !== userId) {
-            fetch('/api/chat-familias', { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ child_id: selected.child_id, user_id: userId }) }).catch(() => {})
-            setFamilies(prev => prev.map(f => f.child_id === selected.child_id
-              ? { ...f, unread: 0, lastMsg: m.content, lastTime: m.created_at, lastSender: m.sender_name } : f))
-          }
+        filter: `child_id=eq.${selected.child_id}` }, () => {
+          // El aviso trae el texto cifrado: se recarga la conversación ya descifrada
+          loadMessages(selected.child_id, true).then(() => scrollToBottom())
+          loadFamilies()
         }).subscribe()
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
   }, [selected, userId, scrollToBottom])
 
   const uploadFile = async (file: File) => {
-    const fd = new FormData(); fd.append('file', file); fd.append('child_id', selected!.child_id)
-    const res = await fetch('/api/chat-familias/upload', { method: 'POST', body: fd })
-    const json = await res.json()
-    if (!res.ok) throw new Error(json.error || 'Error al subir')
-    return { url: json.url as string, fileName: json.fileName as string, fileSize: json.fileSize as number }
+    // Privado (R2), directo desde el navegador; las fotos se comprimen antes de subir
+    const subido = await subirArchivoPrivado('chat-media', `chat-familias/${selected!.child_id}`, file)
+    return { url: subido.url, fileName: file.name, fileSize: subido.size }
   }
 
   const sendMessage = async (opts?: { text?: string; type?: string; fileUrl?: string; fileName?: string; fileSize?: number }) => {
@@ -396,309 +342,208 @@ export default function ChatFamilias({ profile, userId: _userId, userName: _user
   const filtered = families.filter(f => f.child_name.toLowerCase().includes(search.toLowerCase()))
   const canSend  = !!(input.trim() || attachedFile)
 
-  return (
-    <div style={{ display: 'flex', height: '100%', background: bg, borderRadius: 20,
-      border: `1px solid ${borderColor}`, overflow: 'hidden' }}>
+  const rol = (r: string) => { const c = ROLE_CFG[r] || ROLE_CFG.admin; return { ...c, nombre: locale === 'en' ? c.labelEn : c.label } }
+  void bg; void borderColor; void mutedBg; void textPrimary; void textMuted
 
-      {/* LISTA */}
-      <div style={{ width: 280, flexShrink: 0, borderRight: `1px solid ${borderColor}`, flexDirection: 'column' }}
-        className={`${mobileShowChat ? 'hidden' : 'flex'} lg:flex`}>
-        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${borderColor}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Users size={16} style={{ color: textMuted }}/>
-            <p style={{ fontWeight: 800, fontSize: 13, color: textPrimary, margin: 0 }}>{t("admin.familias")}</p>
+  return (
+    <div className="v-scope flex h-full overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v">
+
+      {/* ── Familias ── */}
+      <div className={`${mobileShowChat ? 'hidden md:flex' : 'flex'} w-full shrink-0 flex-col border-r border-v-border md:w-[300px]`}>
+        <div className="space-y-3 border-b border-v-border p-3">
+          <div className="flex items-center gap-2 px-1">
+            <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Users size={17} /></span>
+            <p className="flex-1 text-[15px] font-semibold tracking-tight text-v-text">{t('admin.familias')}</p>
             {families.some(f => f.unread > 0) && (
-              <span style={{ marginLeft: 'auto', background: '#0284c7', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>
-                {families.filter(f => f.unread > 0).length} sin leer
-              </span>
+              <span className="rounded-full bg-v-accent px-2 py-0.5 text-[11px] font-semibold text-white">{families.filter(f => f.unread > 0).length} {L('unread', 'sin leer')}</span>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: mutedBg, borderRadius: 10, padding: '7px 10px', border: `1px solid ${borderColor}` }}>
-            <Search size={13} style={{ color: textMuted, flexShrink: 0 }}/>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("admin.buscarFamilia")}
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: textPrimary }}/>
+          <div className="relative">
+            <Search size={14} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('admin.buscarFamilia')}
+              className="h-9 w-full rounded-full bg-v-fill pl-9 pr-3 text-sm sm:!text-sm [font-family:inherit] text-v-text outline-none placeholder:text-v-subtle focus:ring-2 focus:ring-v-accent-soft" />
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div className="flex-1 overflow-y-auto p-2">
           {loadingList ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
-              <Loader2 size={18} style={{ color: textMuted, animation: 'cf3spin 1s linear infinite' }}/>
-            </div>
+            <div className="flex justify-center py-10"><Loader2 size={18} className="animate-spin text-v-accent" /></div>
           ) : filtered.length === 0 ? (
-            <p style={{ textAlign: 'center', fontSize: 12, color: textMuted, padding: 20 }}>{t("admin.sinFamilias")}</p>
-          ) : filtered.map(f => (
-            <button key={f.child_id} onClick={() => selectFamily(f)}
-              style={{ width: '100%', textAlign: 'left', padding: '11px 16px',
-                background: selected?.child_id === f.child_id ? (isDark ? '#1c2128' : '#f0f9ff') : 'transparent',
-                border: 'none', borderBottom: `1px solid ${borderColor}`,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#eff6ff,#dbeafe)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: '#0284c7', flexShrink: 0,
-                border: f.unread > 0 ? '2px solid #0284c7' : '2px solid transparent' }}>
-                {f.child_name[0]?.toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <p style={{ fontWeight: f.unread > 0 ? 800 : 600, fontSize: 13, color: textPrimary, margin: 0,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.child_name}</p>
-                  {f.lastTime && <span style={{ fontSize: 10, color: textMuted, flexShrink: 0, marginLeft: 4 }}>{formatTime(f.lastTime)}</span>}
-                </div>
-                {f.lastMsg && <p style={{ fontSize: 11, color: f.unread > 0 ? textPrimary : textMuted, margin: '1px 0 0',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: f.unread > 0 ? 600 : 400 }}>
-                  {f.lastSender ? `${f.lastSender.split(' ')[0]}: ` : ''}{f.lastMsg}
-                </p>}
-              </div>
-              {f.unread > 0 && <span style={{ background: '#0284c7', color: '#fff', fontSize: 10, fontWeight: 800,
-                width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {f.unread > 9 ? '9+' : f.unread}
-              </span>}
-            </button>
-          ))}
+            <p className="py-10 text-center text-xs text-v-subtle">{t('admin.sinFamilias')}</p>
+          ) : filtered.map(f => {
+            const sel = selected?.child_id === f.child_id
+            return (
+              <button key={f.child_id} onClick={() => selectFamily(f)}
+                className={`flex w-full items-center gap-3 rounded-v-sm px-3 py-2.5 text-left transition-colors ${sel ? 'bg-v-accent-soft' : 'hover:bg-v-fill'}`}>
+                <span className={`grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${f.unread > 0 ? 'v-brand' : 'bg-v-accent-soft text-v-accent'}`} style={f.unread > 0 ? { boxShadow: 'none' } : undefined}>{f.child_name[0]?.toUpperCase()}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline gap-2">
+                    <span className={`min-w-0 flex-1 truncate text-sm ${f.unread > 0 ? 'font-bold text-v-text' : sel ? 'font-semibold text-v-accent' : 'font-semibold text-v-text'}`}>{f.child_name}</span>
+                    {f.lastTime && <span className={`shrink-0 text-[11px] ${f.unread > 0 ? 'font-semibold text-v-accent' : 'text-v-subtle'}`}>{formatTime(f.lastTime)}</span>}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className={`min-w-0 flex-1 truncate text-xs ${f.unread > 0 ? 'font-medium text-v-text' : 'text-v-subtle'}`}>
+                      {f.lastMsg ? `${f.lastSender ? `${f.lastSender.split(' ')[0]}: ` : ''}${f.lastMsg}` : L('No messages yet', 'Sin mensajes aún')}
+                    </span>
+                    {f.unread > 0 && <span className="grid min-w-5 shrink-0 place-items-center rounded-full bg-v-accent px-1.5 text-[10px] font-bold text-white">{f.unread > 9 ? '9+' : f.unread}</span>}
+                  </span>
+                </span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* CHAT */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      {/* ── Conversación ── */}
+      <div className={`${mobileShowChat ? 'flex' : 'hidden md:flex'} min-w-0 flex-1 flex-col`}>
         {!selected ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            <div style={{ width: 60, height: 60, background: mutedBg, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MessageCircle size={28} style={{ color: textMuted }}/>
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-v-bg px-8 text-center">
+            <span className="grid size-16 place-items-center rounded-full bg-v-accent-soft text-v-accent"><MessageCircle size={28} /></span>
+            <div>
+              <p className="text-base font-semibold text-v-text">{t('admin.selecFamilia')}</p>
+              <p className="mt-1 text-sm text-v-subtle">{t('admin.eligeFamilia')}</p>
             </div>
-            <p style={{ fontWeight: 700, fontSize: 14, color: textPrimary, margin: 0 }}>{t("admin.selecFamilia")}</p>
-            <p style={{ fontSize: 12, color: textMuted, margin: 0 }}>{t("admin.eligeFamilia")}</p>
           </div>
         ) : (<>
-          {/* Header */}
-          <div style={{ padding: '12px 18px', borderBottom: `1px solid ${borderColor}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, background: bg }}>
-            <button onClick={() => { setMobileShowChat(false); setSelected(null) }} className="lg:hidden"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: textMuted, display: 'flex' }}>
-              <ChevronLeft size={20}/>
-            </button>
-            <div style={{ width: 36, height: 36, background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', borderRadius: 12,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#0284c7', flexShrink: 0 }}>
-              {selected.child_name[0]?.toUpperCase()}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: 800, fontSize: 14, color: textPrimary, margin: 0 }}>Familia de {selected.child_name}</p>
-              <p style={{ fontSize: 11, color: textMuted, margin: '1px 0 0' }}>{t("admin.chatPrivadoPadre")}</p>
+          <div className="flex items-center gap-3 border-b border-v-border px-3 py-3 sm:px-4">
+            <button onClick={() => { setMobileShowChat(false); setSelected(null) }} className="grid size-9 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill md:hidden"><ChevronLeft size={20} /></button>
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-v-accent-soft text-sm font-semibold text-v-accent">{selected.child_name[0]?.toUpperCase()}</span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-semibold text-v-text">{L('Family of', 'Familia de')} {selected.child_name}</p>
+              <p className="truncate text-xs text-v-subtle">{t('admin.chatPrivadoPadre')}</p>
             </div>
           </div>
 
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 2, background: mutedBg }}>
+          <div className="flex-1 overflow-y-auto bg-v-bg px-3 py-4 sm:px-5">
             {loadingMsgs ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-                <Loader2 size={20} style={{ color: textMuted, animation: 'cf3spin 1s linear infinite' }}/>
-              </div>
+              <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-v-accent" /></div>
             ) : messages.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, gap: 8 }}>
-                <MessageCircle size={28} style={{ color: textMuted }}/>
-                <p style={{ fontSize: 13, color: textMuted, margin: 0 }}>{t("admin.sinMensajesInicia")}</p>
+              <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+                <span className="grid size-14 place-items-center rounded-full bg-v-elevated text-v-accent shadow-v"><MessageCircle size={24} /></span>
+                <p className="text-sm text-v-subtle">{t('admin.sinMensajesInicia')}</p>
               </div>
             ) : messages.map((msg, i) => {
               const isMe    = msg.sender_id === userId
-              const cfg     = ROLE_CFG[msg.sender_role] || ROLE_CFG.admin
+              const cfg     = rol(msg.sender_role)
               const showDay = isNewDay(msg.created_at, messages[i-1]?.created_at)
               const isRead  = msg.read_by?.length > 1
               const isMedia = msg.message_type === 'image'
+              const primero = i === 0 || messages[i-1]?.sender_id !== msg.sender_id || showDay
+              const avatar = (
+                <span className={`grid size-8 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-semibold ${primero ? '' : 'invisible'} ${cfg.tile}`}>
+                  {msg.sender_avatar
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={fileUrl(msg.sender_avatar)} alt="" className="size-full object-cover" />
+                    : (msg.sender_name?.[0]?.toUpperCase() || '?')}
+                </span>
+              )
               return (
                 <div key={msg.id}>
-                  {showDay && <DayDivider date={msg.created_at}/>}
-                  {!isMe && (i===0 || messages[i-1]?.sender_id !== msg.sender_id) && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, marginTop: 8, paddingLeft: 42 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: cfg.color }}>{msg.sender_name}</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, background: cfg.bg, color: cfg.color,
-                        padding: '1px 7px', borderRadius: 20, border: `1px solid ${cfg.color}25` }}>{cfg.label}</span>
+                  {showDay && <DayDivider date={msg.created_at} locale={locale} />}
+                  {!isMe && primero && (
+                    <div className="mb-1 mt-3 flex items-center gap-1.5 pl-10">
+                      <span className="text-[11px] font-semibold text-v-text">{msg.sender_name}</span>
+                      <span className={`rounded-full px-2 py-px text-[10px] font-semibold ${cfg.pill}`}>{cfg.nombre}</span>
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 8, marginBottom: 2 }}>
-                    {!isMe && (
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-                        border: `2px solid ${cfg.color}40`, background: cfg.bg, display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', alignSelf: 'flex-end', marginBottom: 2 }}>
-                        {msg.sender_avatar
-                          ? <img src={msg.sender_avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-                          : <span style={{ fontSize: 13, fontWeight: 800, color: cfg.color }}>{msg.sender_name?.[0]?.toUpperCase()||'?'}</span>}
-                      </div>
-                    )}
-                    <div style={{ maxWidth: isMedia ? 250 : '68%', padding: isMedia ? '5px 5px 0' : '9px 13px',
-                      borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                      background: isMe ? 'linear-gradient(135deg,#0284c7,#0369a1)' : (isDark ? '#1c2128' : '#fff'),
-                      color: isMe ? '#fff' : textPrimary,
-                      border: isMe ? 'none' : `1px solid ${borderColor}`,
-                      boxShadow: isMe ? '0 2px 10px rgba(37,99,235,.2)' : '0 1px 3px rgba(0,0,0,.05)',
-                      overflow: 'hidden' }}>
-                      <MsgContent msg={msg} isMe={isMe}/>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4,
-                        marginTop: 4, padding: isMedia ? '0 6px 4px' : '0' }}>
-                        <span style={{ fontSize: 10, color: isMe ? 'rgba(255,255,255,.7)' : textMuted }}>
-                          {formatTime(msg.created_at)}
-                        </span>
-                        {isMe && (isRead
-                          ? <CheckCheck size={11} style={{ color: '#93c5fd' }}/>
-                          : <Check size={11} style={{ color: 'rgba(255,255,255,.6)' }}/>
-                        )}
+                  <div className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'} ${primero && isMe ? 'mt-3' : 'mt-1'}`}>
+                    {!isMe && avatar}
+                    <div className={`overflow-hidden shadow-v ${isMedia ? 'max-w-[250px] p-1' : 'max-w-[78%] px-3.5 py-2 sm:max-w-[68%]'} ${isMe ? 'bg-v-accent text-white' : 'border border-v-border bg-v-elevated text-v-text'}`}
+                      style={{ borderRadius: isMe ? (primero ? '20px 20px 6px 20px' : 20) : (primero ? '20px 20px 20px 6px' : 20) }}>
+                      <MsgContent msg={msg} isMe={isMe} />
+                      <div className={`mt-1 flex items-center justify-end gap-1 ${isMedia ? 'px-1.5 pb-1' : ''}`}>
+                        <span className={`text-[10px] ${isMe ? 'text-white/70' : 'text-v-subtle'}`}>{formatTime(msg.created_at)}</span>
+                        {isMe && (isRead ? <CheckCheck size={12} className="text-white" /> : <Check size={12} className="text-white/60" />)}
                       </div>
                     </div>
-                    {isMe && (
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-                        border: '2px solid rgba(37,99,235,.3)', background: '#eff6ff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end', marginBottom: 2 }}>
-                        {msg.sender_avatar
-                          ? <img src={msg.sender_avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
-                          : <span style={{ fontSize: 13, fontWeight: 800, color: '#0284c7' }}>{msg.sender_name?.[0]?.toUpperCase()||'?'}</span>}
-                      </div>
-                    )}
+                    {isMe && avatar}
                   </div>
                 </div>
               )
             })}
-            <div ref={bottomRef}/>
+            <div ref={bottomRef} />
           </div>
 
-          {/* INPUT AREA */}
-          <div style={{ padding: '8px 14px 12px', borderTop: `1px solid ${borderColor}`, flexShrink: 0, background: bg }}>
-
-            {/* File preview */}
+          {/* Escribir */}
+          <div className="border-t border-v-border px-3 py-3 sm:px-4">
             {attachedFile && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-                background: isDark ? '#1c2128' : '#f0f9ff',
-                border: `1.5px solid ${isDark ? '#30363d' : '#bae6fd'}`, borderRadius: 12, marginBottom: 8 }}>
-                {attachedFile.type.startsWith('image/') ? (
-                  <img src={URL.createObjectURL(attachedFile)} alt=""
-                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }}/>
-                ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: 8, background: isDark ? '#21262d' : '#e0f2fe',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                    {getFileIcon(attachedFile.name)}
-                  </div>
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: textPrimary,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{attachedFile.name}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: 11, color: textMuted }}>{formatFileSize(attachedFile.size)}</p>
+              <div className="mb-2 flex items-center gap-3 rounded-v-sm border border-v-accent/25 bg-v-accent-soft/60 p-2">
+                {attachedFile.type.startsWith('image/')
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={URL.createObjectURL(attachedFile)} alt="" className="size-12 rounded-v-sm object-cover" />
+                  : <span className="grid size-12 place-items-center rounded-v-sm bg-v-elevated text-v-accent"><FileText size={20} /></span>}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-v-text">{attachedFile.name}</p>
+                  <p className="text-[11px] text-v-subtle">{formatFileSize(attachedFile.size)}</p>
                 </div>
-                <button onClick={() => setAttachedFile(null)}
-                  style={{ border: 'none', background: '#fee2e2', borderRadius: '50%', width: 24, height: 24,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <X size={12} color="#ef4444"/>
-                </button>
+                <button onClick={() => setAttachedFile(null)} className="grid size-8 shrink-0 place-items-center rounded-full text-v-muted hover:bg-v-danger/10 hover:text-v-danger"><X size={14} /></button>
               </div>
             )}
 
-            {/* Recording bar */}
             {recording && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
-                background: isDark ? '#1a0a0a' : '#fff5f5',
-                border: `1.5px solid ${isDark ? '#7f1d1d' : '#fecaca'}`, borderRadius: 12, marginBottom: 8 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444', animation: 'cf3pulse 1s ease-in-out infinite' }}/>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#dc2626' }}>{t("admin.grabando")}</span>
-                <span style={{ fontSize: 13, color: '#ef4444', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                  {formatDuration(recSeconds)}
-                </span>
-                <button onClick={() => stopRecording(true)}
-                  style={{ marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: textMuted }}>
-                  {t('auto.chatFamilias.cancelar')}
-                </button>
+              <div className="mb-2 flex items-center gap-3 rounded-v-sm bg-v-danger/10 px-3.5 py-2.5">
+                <span className="size-2.5 animate-pulse rounded-full bg-v-danger" />
+                <span className="text-sm font-semibold text-v-danger">{t('admin.grabando')}</span>
+                <span className="text-sm font-semibold tabular-nums text-v-danger">{formatDuration(recSeconds)}</span>
+                <button onClick={() => stopRecording(true)} className="ml-auto h-8 rounded-full px-3 text-xs font-semibold text-v-muted hover:bg-v-fill">{t('auto.chatFamilias.cancelar')}</button>
               </div>
             )}
 
-            {/* Attach menu */}
-            {showAttach && !recording && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <button onClick={() => { imageInputRef.current?.click(); setShowAttach(false) }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '12px 0',
-                    background: isDark ? '#1c2128' : '#eff6ff', border: `1.5px solid ${isDark ? '#30363d' : '#bfdbfe'}`,
-                    borderRadius: 14, cursor: 'pointer', flex: 1 }}>
-                  <Image size={22} color="#0284c7"/>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7' }}>{t("recursos.imagen")}</span>
-                </button>
-                <button onClick={() => { fileInputRef.current?.click(); setShowAttach(false) }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '12px 0',
-                    background: isDark ? '#0d1e17' : '#f0fdf4', border: `1.5px solid ${isDark ? '#14532d' : '#bbf7d0'}`,
-                    borderRadius: 14, cursor: 'pointer', flex: 1 }}>
-                  <FileText size={22} color="#059669"/>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#059669' }}>{t("recursos.documento")}</span>
-                </button>
-              </div>
-            )}
+            <AnimatePresence>
+              {showAttach && !recording && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="mb-2 grid grid-cols-2 gap-2">
+                    <button onClick={() => { imageInputRef.current?.click(); setShowAttach(false) }}
+                      className="flex items-center justify-center gap-2 rounded-v-sm bg-v-accent-soft py-3 text-sm font-semibold text-v-accent transition-colors hover:bg-v-accent hover:text-white">
+                      <Image size={18} /> {t('recursos.imagen')}
+                    </button>
+                    <button onClick={() => { fileInputRef.current?.click(); setShowAttach(false) }}
+                      className="flex items-center justify-center gap-2 rounded-v-sm bg-v-success/15 py-3 text-sm font-semibold text-v-success transition-colors hover:bg-v-success hover:text-white">
+                      <FileText size={18} /> {t('recursos.documento')}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* Main row */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+            <div className="flex items-end gap-1.5">
               {!recording && (
-                <button onClick={() => setShowAttach(v => !v)} disabled={sending || uploading} title={t("admin.adjuntar")}
-                  style={{ width: 36, height: 36, borderRadius: 11, border: 'none', flexShrink: 0,
-                    background: showAttach ? '#0284c7' : (isDark ? '#21262d' : '#f1f5f9'),
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all .2s', opacity: (sending||uploading) ? .5 : 1 }}>
-                  {showAttach ? <X size={15} color="#fff"/> : <Paperclip size={15} color={textMuted}/>}
+                <button onClick={() => setShowAttach(v => !v)} disabled={sending || uploading} title={t('admin.adjuntar')}
+                  className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-40 ${showAttach ? 'bg-v-accent text-white' : 'text-v-muted hover:bg-v-fill hover:text-v-accent'}`}>
+                  {showAttach ? <X size={17} /> : <Paperclip size={17} />}
                 </button>
               )}
               {!recording && (
-                <div style={{ flex: 1, background: isDark ? '#21262d' : '#f8fafc', borderRadius: 18,
-                  padding: '8px 8px 8px 14px', border: `1.5px solid ${borderColor}` }}>
-                  <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={`Responder a la familia de ${selected.child_name}...`}
+                <div className="min-w-0 flex-1 rounded-[22px] border border-v-border bg-v-bg px-4 py-2 transition-colors focus-within:border-v-accent">
+                  <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
+                    placeholder={L(`Reply to ${selected.child_name}'s family…`, `Responder a la familia de ${selected.child_name}…`)}
                     rows={1} disabled={sending}
-                    style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none',
-                      fontSize: 13, color: textPrimary, resize: 'none', maxHeight: 100,
-                      lineHeight: 1.5, fontFamily: 'inherit' }}
-                    onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight,100)+'px' }}
-                  />
+                    className="block max-h-[100px] w-full resize-none bg-transparent text-sm sm:!text-sm [font-family:inherit] leading-6 text-v-text outline-none placeholder:text-v-subtle"
+                    onInput={e => { const el = e.target as HTMLTextAreaElement; el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px' }} />
                 </div>
               )}
               {recording ? (
-                <button onClick={() => stopRecording(false)}
-                  style={{ width: 36, height: 36, borderRadius: 11, border: 'none', flexShrink: 0,
-                    background: 'linear-gradient(135deg,#ef4444,#dc2626)', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    animation: 'cf3glow 1.2s ease-in-out infinite' }}>
-                  <StopCircle size={16} color="#fff"/>
-                </button>
+                <button onClick={() => stopRecording(false)} title={L('Send recording', 'Enviar grabación')}
+                  className="grid size-10 shrink-0 animate-pulse place-items-center rounded-full bg-v-danger text-white"><StopCircle size={18} /></button>
               ) : canSend ? (
-                <button onClick={() => sendMessage()} disabled={sending || uploading}
-                  style={{ width: 36, height: 36, borderRadius: 11, border: 'none', flexShrink: 0,
-                    background: 'linear-gradient(135deg,#0284c7,#0369a1)', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(37,99,235,.35)' }}>
-                  {(sending||uploading)
-                    ? <Loader2 size={15} color="#fff" style={{ animation: 'cf3spin 1s linear infinite' }}/>
-                    : <Send size={15} color="#fff"/>}
+                <button onClick={() => sendMessage()} disabled={sending || uploading} className="v-brand grid size-10 shrink-0 place-items-center rounded-full disabled:opacity-50">
+                  {(sending || uploading) ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
                 </button>
               ) : (
-                <button
-                  onMouseDown={startRecording}
-                  onMouseUp={() => stopRecording(false)}
-                  onTouchStart={handleMicTouch}
-                  disabled={sending || uploading}
-                  title={t("admin.mantenGrabar")}
-                  style={{ width: 36, height: 36, borderRadius: 11, border: 'none', flexShrink: 0,
-                    background: 'linear-gradient(135deg,#0284c7,#0369a1)', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(37,99,235,.3)', opacity: (sending||uploading) ? .5 : 1 }}>
-                  <Mic size={15} color="#fff"/>
-                </button>
+                <button onMouseDown={startRecording} onMouseUp={() => stopRecording(false)} onTouchStart={handleMicTouch} disabled={sending || uploading} title={t('admin.mantenGrabar')}
+                  className="grid size-10 shrink-0 place-items-center rounded-full bg-v-accent-soft text-v-accent transition-colors hover:bg-v-accent hover:text-white disabled:opacity-40"><Mic size={17} /></button>
               )}
             </div>
-
-            <p style={{ fontSize: 10, color: textMuted, textAlign: 'center', margin: '6px 0 0' }}>
-              {recording ? 'Suelta/toca para enviar · Cancelar para descartar'
-                : canSend ? 'Enter para enviar · Shift+Enter para nueva línea'
-                : '🎤 Mantén/toca para grabar · 📎 Adjuntar archivos'}
+            <p className="mt-1.5 hidden px-1 text-[11px] text-v-subtle sm:block">
+              {recording ? L('Release/tap to send · Cancel to discard', 'Suelta/toca para enviar · Cancelar para descartar')
+                : canSend ? L('Enter to send · Shift+Enter for a new line', 'Enter para enviar · Shift+Enter para nueva línea')
+                : L('Hold the mic to record · Clip to attach files', 'Mantén el micrófono para grabar · Clip para adjuntar archivos')}
             </p>
           </div>
         </>)}
       </div>
 
-      <input ref={imageInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange}/>
-      <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.txt,.csv" style={{ display: 'none' }} onChange={handleFileChange}/>
-
-      <style>{`
-        @keyframes cf3spin  { from{transform:rotate(0)}   to{transform:rotate(360deg)} }
-        @keyframes cf3pulse { 0%,100%{opacity:1}          50%{opacity:.3} }
-        @keyframes cf3glow  { 0%,100%{box-shadow:0 2px 10px rgba(239,68,68,.4)} 50%{box-shadow:0 2px 20px rgba(239,68,68,.7)} }
-      `}</style>
+      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.txt,.csv" className="hidden" onChange={handleFileChange} />
     </div>
   )
 }

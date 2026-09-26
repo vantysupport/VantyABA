@@ -7,10 +7,13 @@ export const maxDuration = 60;
 // ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding, type CentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS, GroqExhaustedError } from '@/lib/groq-client'
 import { getLangInstruction, getDocLabels } from '@/lib/lang'
 import { buildAIContext } from '@/lib/ai-context-builder'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 
 // ── Helper: parseo robusto de nivel_logro → número 0-100 ─────────────────────
 function parseNivelLogroReport(val: any): number | null {
@@ -624,7 +627,7 @@ RECUERDA: usa SIEMPRE pasado perfecto compuesto en todos los verbos ("ha logrado
 
 // ── Generar DOCX en base64 — v2 (diseño Vanty ABA profesional) ──────────────
 //
-// Usa santi-report-template para producir documentos que superan el estilo
+// Usa report-template para producir documentos que superan el estilo
 // CentralReach: header institucional, títulos con fondo azul, tabla de datos
 // con franjas alternas, badges semánticos de logro y pie paginado completo.
 interface CamposExtra {
@@ -640,12 +643,13 @@ async function generarDocx(
   childAge: number | undefined,
   contenidoReporte: string,
   locale = 'es',
-  extra: CamposExtra = {}
+  extra: CamposExtra = {},
+  centro: CentroBranding
 ): Promise<string> {
   const config = REPORTE_CONFIG[tipo] || REPORTE_CONFIG.aba
   const fechaHoy = formatearFechaHoy()
 
-  // Importar docx + plantilla SANTI v2
+  // Importar docx + plantilla de informes v2
   const docx = await import('docx')
   const {
     Document, Packer, Paragraph, TextRun, AlignmentType,
@@ -654,7 +658,7 @@ async function generarDocx(
   } = docx
 
   // ── Importar helpers de plantilla ──────────────────────────────────────────
-  const tmpl = await import('@/lib/santi-report-template')
+  const tmpl = await import('@/lib/report-template')
   const {
     COLOR, FONT, BDR, DOC_PAGE_PROPS, DOC_STYLES,
     tituloSeccion, subseccion, parrafo, items,
@@ -683,7 +687,7 @@ async function generarDocx(
   // ── Cabecera del documento (antes del contenido IA) ─────────────────────
   const children: any[] = []
 
-  // Título principal estilo SANTI
+  // Título principal
   children.push(
     new Paragraph({
       spacing: { before: 0, after: 60 }, alignment: AlignmentType.CENTER,
@@ -708,7 +712,7 @@ async function generarDocx(
       ['Edad', childAge ? `${childAge} años` : 'No especificada'],
       ['Tipo de evaluación', config.subtitulo],
       ['Fecha del informe', fechaHoy],
-      ['Centro', 'Neuropsicología y Terapias SANTI'],
+      ['Centro', centro.name],
       ['Plataforma', 'Vanty ABA'],
       ...(extra.grado       ? [['Grado (estudiantil)', extra.grado]] as [string, string][]       : []),
       ...(extra.periodo     ? [['Periodo de trabajo',  extra.periodo]] as [string, string][]     : []),
@@ -733,7 +737,7 @@ async function generarDocx(
     const esMayusculas = t === t.toUpperCase() && t.length > 4 && t.length < 120 && /[A-ZÁÉÍÓÚÑ]{3,}/.test(t) && !t.match(/^\d/)
 
     if (mdHeading || esSeccionNumerada) {
-      // ── Título de sección con fondo azul (estilo SANTI) ──────────────────
+      // ── Título de sección con fondo azul (estilo institucional) ──────────────────
       const rawTxt = mdHeading ? mdHeading[2] : t
       children.push(tituloSeccion(rawTxt.replace(/\*\*/g, '')))
 
@@ -781,7 +785,7 @@ async function generarDocx(
   }
 
   // ── Firma final ───────────────────────────────────────────────────────────
-  children.push(...firmaEquipo())
+  children.push(...firmaEquipo(centro))
 
   // ── Construir documento ───────────────────────────────────────────────────
   const doc = new Document({
@@ -797,8 +801,8 @@ async function generarDocx(
     },
     sections: [{
       properties: DOC_PAGE_PROPS as any,
-      headers: { default: headerInstitucional(config.titulo) },
-      footers: { default: piePaginaOficial() },
+      headers: { default: headerInstitucional(config.titulo, centro) },
+      footers: { default: piePaginaOficial(centro) },
       children,
     }],
   })
@@ -813,6 +817,9 @@ async function generarDocx(
 // ============================================================================
 
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   let userLocale = 'es'
   try {
     const body = await request.json()
@@ -846,6 +853,10 @@ export async function POST(request: NextRequest) {
 
     // 1. Obtener childId desde múltiples fuentes posibles
     const childId = reportData?.child_id || reportData?.childId || body.childId
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
+    const bloqueo = await sinTokens(caller.centroId, String(userLocale).startsWith('en'))
+    if (bloqueo) return bloqueo
+    const centro = await getCentroBranding({ childId })
 
     // 2. Obtener contexto clínico completo del niño desde la BD
     let contextoClinico = ''
@@ -853,8 +864,8 @@ export async function POST(request: NextRequest) {
 
     try {
       if (childId) {
-        const ctx = await buildAIContext(childId, childName, childAge?.toString(), reportType)
-        contextoClinico = (ctx.historialTexto || '').slice(0, 12000)  // tope duro: evita exceder tokens
+        const ctx = await buildAIContext(childId, childName, childAge?.toString(), reportType, caller.centroId)
+        contextoClinico = (ctx.historialTexto || '').slice(0, 6000)  // tope duro: menos tokens de IA
 
         // Enriquecer con datos reales de sesiones ABA
         const { data: sesionesRecientes } = await supabaseAdmin
@@ -938,9 +949,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Convertir a DOCX profesional
-    const fileData = await generarDocx(reportType, childName, childAge, contenido, userLocale, { grado, periodo, supervisor, setsAlcanzados })
+    const fileData = await generarDocx(reportType, childName, childAge, contenido, userLocale, { grado, periodo, supervisor, setsAlcanzados }, centro)
     const fileName = getTituloArchivo(reportType, childName)
 
+    await descontarToken(caller.centroId)
     return NextResponse.json({
       success: true,
       fileData,

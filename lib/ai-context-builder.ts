@@ -32,14 +32,14 @@ async function getPatientSummary(childId: string): Promise<string> {
 // FIX: antes llamaba al RPC con `query_text` (firma incorrecta) → caía al
 // fallback de keywords. Ahora usa el módulo unificado `searchKnowledge`
 // que genera el embedding y usa la firma correcta del RPC.
-async function searchCerebroIA(query: string, maxResults = 8): Promise<string> {
-  if (!query?.trim()) return ''
+async function searchCerebroIA(query: string, maxResults = 8, centroId: string | null = null): Promise<string> {
+  if (!query?.trim() || !centroId) return ''
   const db = getAdmin()
 
   try {
     // 1. Búsqueda semántica con embeddings reales (vía módulo unificado)
     const { searchKnowledge } = await import('@/lib/knowledge-base')
-    const resultados = await searchKnowledge(query, { maxResults, threshold: 0.5 })
+    const resultados = await searchKnowledge(query, { maxResults, threshold: 0.5, centroId })
     if (resultados.length > 0) {
       return formatKnowledgeResults(
         resultados.map(r => ({ contenido: r.contenido, fuente: r.fuente, similitud: r.similitud })),
@@ -61,9 +61,12 @@ async function searchCerebroIA(query: string, maxResults = 8): Promise<string> {
 
     if (keywords.length === 0) return ''
 
+    // Centro propio + base compartida (Cerebro de los centros Fundador)
+    const { centrosConocimiento } = await import('@/lib/knowledge-base')
     const { data: keywordResults } = await db
       .from('knowledge_chunks')
       .select('contenido, metadata, knowledge_documents(titulo, tipo)')
+      .in('centro_id', await centrosConocimiento(centroId))
       .or(keywords.map(k => `contenido.ilike.%${k}%`).join(','))
       .limit(maxResults)
 
@@ -97,12 +100,14 @@ function formatKnowledgeResults(results: any[], tipo: string): string {
 }
 
 // ── Instrucciones del centro ──────────────────────────────────────────────────
-async function getCentroContext(): Promise<string> {
+async function getCentroContext(centroId: string | null): Promise<string> {
+  if (!centroId) return ''
   try {
     const db = getAdmin()
     const { data } = await db
       .from('centro_instrucciones')
       .select('titulo, contenido, prioridad')
+      .eq('centro_id', centroId)
       .eq('activo', true)
       .order('prioridad', { ascending: false })
       .limit(6)
@@ -140,15 +145,27 @@ export interface AIContextResult {
   fullContext:     string
 }
 
+// Multi-tenant: el conocimiento y las instrucciones salen SOLO del centro del paciente
+// (o de `centroId` si se pasa). Si `centroId` se pasa y el paciente es de otro centro,
+// no se carga su historia. Sin paciente ni centroId → sin conocimiento del centro.
 export async function buildAIContext(
   childId?:           string,
   childNameFallback?: string,
   childAgeFallback?:  string,
-  searchQuery?:       string
+  searchQuery?:       string,
+  centroId?:          string | null
 ): Promise<AIContextResult> {
 
+  let childCentro: string | null = null
+  if (childId) {
+    const { data: ch } = await getAdmin().from('children').select('centro_id').eq('id', childId).maybeSingle()
+    childCentro = (ch as { centro_id?: string | null } | null)?.centro_id ?? null
+  }
+  const childAllowed = !!childId && (!centroId || childCentro === centroId)
+  const effectiveCentro = centroId || childCentro
+
   const [childHistory, knowledgeCtx, centroCtx, aiSummary] = await Promise.all([
-    childId
+    childAllowed && childId
       ? getChildHistory(childId, childNameFallback, childAgeFallback)
       : Promise.resolve({
           nombre: childNameFallback || 'Paciente',
@@ -156,9 +173,9 @@ export async function buildAIContext(
           diagnostico: 'No especificado',
           historialTexto: '',
         }),
-    searchQuery ? searchCerebroIA(searchQuery) : Promise.resolve(''),
-    getCentroContext(),
-    childId ? getPatientSummary(childId) : Promise.resolve(''),
+    searchQuery ? searchCerebroIA(searchQuery, 5, effectiveCentro) : Promise.resolve(''),
+    getCentroContext(effectiveCentro),
+    childAllowed && childId ? getPatientSummary(childId) : Promise.resolve(''),
   ])
 
   // Si el paciente ya tiene un RESUMEN CLÍNICO persistente, lo usamos como base
@@ -193,32 +210,35 @@ export async function buildAIContext(
 // Para especialistas/admin: 8 chunks (más contexto técnico)
 export async function buildAdminChatContext(
   question: string,
-  existingContext: string
+  existingContext: string,
+  centroId: string | null
 ): Promise<string> {
-  const knowledgeCtx = await searchCerebroIA(question, 8)
-  const centroCtx    = await getCentroContext()
+  const knowledgeCtx = await searchCerebroIA(question, 8, centroId)
+  const centroCtx    = await getCentroContext(centroId)
   return [centroCtx, knowledgeCtx, existingContext].filter(Boolean).join('\n')
 }
 
 // ── Conectar parent-chat al Cerebro IA ────────────────────────────────────────
 // Para padres: 6 chunks orientados a consejos prácticos
+// `centroId`: centro del padre/paciente. Sin él no se agrega conocimiento del centro.
 export async function buildParentChatContext(
   question: string,
-  existingContext: string
+  existingContext: string,
+  centroId?: string | null
 ): Promise<string> {
   // Para padres: búsqueda más orientada a consejos prácticos
   const query = `estrategias para padres ${question}`
-  const knowledgeCtx = await searchCerebroIA(query, 6)
+  const knowledgeCtx = await searchCerebroIA(query, 6, centroId ?? null)
   return [knowledgeCtx, existingContext].filter(Boolean).join('\n')
 }
 
 // ── Para endpoints clínicos (evaluación, recomendación, informes) ──────────
 // 10 chunks con threshold más bajo para captar más contexto técnico
-export async function buildClinicalContext(question: string, maxResults = 10): Promise<string> {
-  if (!question?.trim()) return ''
+export async function buildClinicalContext(question: string, centroId: string | null, maxResults = 5): Promise<string> {
+  if (!question?.trim() || !centroId) return ''
   try {
     const { searchKnowledge } = await import('@/lib/knowledge-base')
-    const resultados = await searchKnowledge(question, { maxResults, threshold: 0.45 })
+    const resultados = await searchKnowledge(question, { maxResults, threshold: 0.45, centroId })
     if (resultados.length === 0) return ''
     return formatKnowledgeResults(
       resultados.map(r => ({ contenido: r.contenido, fuente: r.fuente, similitud: r.similitud })),

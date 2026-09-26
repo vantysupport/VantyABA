@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.admins)) return forbidden()
   const childId = new URL(request.url).searchParams.get('child_id')
   if (!childId) return NextResponse.json({ error: 'child_id requerido' })
+  if (!(await canAccessChild(caller, childId))) return notFound()
 
   // Query 1: con filtro child_id (como hace la API)
   const { data: conFiltro } = await supabaseAdmin
@@ -16,6 +21,7 @@ export async function GET(request: NextRequest) {
   const { data: sinFiltro } = await supabaseAdmin
     .from('registro_aba')
     .select('id, fecha_sesion, child_id')
+    .eq('centro_id', caller.centroId)
     .order('fecha_sesion', { ascending: false })
     .limit(20)
 
@@ -23,6 +29,7 @@ export async function GET(request: NextRequest) {
   const { data: sinChildId } = await supabaseAdmin
     .from('registro_aba')
     .select('id, fecha_sesion, child_id')
+    .eq('centro_id', caller.centroId)
     .is('child_id', null)
     .limit(10)
 
@@ -30,6 +37,7 @@ export async function GET(request: NextRequest) {
   const { data: children } = await supabaseAdmin
     .from('children')
     .select('id, name')
+    .eq('centro_id', caller.centroId)
     .limit(20)
 
   return NextResponse.json({

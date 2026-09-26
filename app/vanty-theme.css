@@ -1,0 +1,173 @@
+/* Vanty design system — Apple-inspired calm layouts in the Vanty brand blues (logo: #01ABFC → #005CD4).
+   Tokens are namespaced --v-* so legacy screens (which use --c-*) keep working until migrated. */
+
+:root {
+  --v-brand-from: #01abfc;
+  --v-brand-to: #0063d8;
+  --v-brand-gradient: linear-gradient(135deg, var(--v-brand-from) 0%, var(--v-brand-to) 100%);
+
+  --v-bg: #f3f8fe;
+  --v-bg-elevated: #ffffff;
+  --v-surface: rgba(255, 255, 255, 0.72);
+  --v-surface-strong: rgba(255, 255, 255, 0.92);
+  --v-border: rgba(0, 72, 168, 0.1);
+  --v-border-strong: rgba(0, 72, 168, 0.18);
+  --v-text: #0b1b33;
+  --v-text-secondary: #4a5b78;
+  --v-text-tertiary: #7a8ba6;
+  --v-accent: #0069db;
+  --v-accent-hover: #0059c4;
+  --v-accent-soft: rgba(1, 153, 245, 0.1);
+  --v-fill: rgba(0, 72, 168, 0.05);
+  --v-success: #1fae6b;
+  --v-warning: #f59e0b;
+  --v-danger: #e5484d;
+  --v-glow-1: rgba(1, 171, 252, 0.16);
+  --v-glow-2: rgba(0, 99, 216, 0.1);
+  --v-radius-sm: 10px;
+  --v-radius: 18px;
+  --v-radius-lg: 28px;
+  --v-shadow: 0 1px 2px rgba(0, 45, 110, 0.05), 0 8px 24px rgba(0, 45, 110, 0.07);
+  --v-shadow-lg: 0 2px 6px rgba(0, 45, 110, 0.05), 0 24px 64px rgba(0, 45, 110, 0.13);
+  --v-shadow-brand: 0 8px 24px rgba(0, 105, 219, 0.3);
+  --v-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", var(--font-sans), "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Dark mode uses the app's original neutral greys (GitHub-like), with Vanty blue only as accent. */
+.dark {
+  --v-bg: #0d1117;
+  --v-bg-elevated: #161b22;
+  --v-surface: rgba(22, 27, 34, 0.8);
+  --v-surface-strong: rgba(22, 27, 34, 0.95);
+  --v-border: #21262d;
+  --v-border-strong: #30363d;
+  --v-text: #e6edf3;
+  --v-text-secondary: #9ba7b4;
+  --v-text-tertiary: #6e7681;
+  --v-accent: #3bb6ff;
+  --v-accent-hover: #62c4ff;
+  --v-accent-soft: rgba(59, 182, 255, 0.14);
+  --v-fill: rgba(177, 186, 196, 0.08);
+  --v-success: #34d399;
+  --v-warning: #fbbf24;
+  --v-danger: #ff6b6f;
+  --v-glow-1: rgba(56, 189, 248, 0.07);
+  --v-glow-2: rgba(56, 189, 248, 0.04);
+  --v-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --v-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --v-shadow-brand: 0 8px 24px rgba(1, 153, 245, 0.25);
+}
+
+@theme inline {
+  --color-v-bg: var(--v-bg);
+  --color-v-elevated: var(--v-bg-elevated);
+  --color-v-surface: var(--v-surface);
+  --color-v-border: var(--v-border);
+  --color-v-text: var(--v-text);
+  --color-v-muted: var(--v-text-secondary);
+  --color-v-subtle: var(--v-text-tertiary);
+  --color-v-accent: var(--v-accent);
+  --color-v-accent-soft: var(--v-accent-soft);
+  --color-v-fill: var(--v-fill);
+  --color-v-success: var(--v-success);
+  --color-v-warning: var(--v-warning);
+  --color-v-danger: var(--v-danger);
+  --color-v-brand-from: var(--v-brand-from);
+  --color-v-brand-to: var(--v-brand-to);
+  --radius-v-sm: var(--v-radius-sm);
+  --radius-v: var(--v-radius);
+  --radius-v-lg: var(--v-radius-lg);
+  --shadow-v: var(--v-shadow);
+  --shadow-v-lg: var(--v-shadow-lg);
+  --shadow-v-brand: var(--v-shadow-brand);
+  --font-v: var(--v-font);
+}
+
+/* Primary actions and brand accents use the logo gradient. */
+@utility v-brand {
+  background-image: var(--v-brand-gradient);
+  color: #fff;
+  box-shadow: var(--v-shadow-brand);
+}
+
+@utility v-brand-text {
+  background-image: var(--v-brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.v-root {
+  font-family: var(--v-font);
+  color: var(--v-text);
+  background-color: var(--v-bg);
+  background-image:
+    radial-gradient(60rem 40rem at 10% -10%, var(--v-glow-1), transparent 60%),
+    radial-gradient(50rem 36rem at 110% 10%, var(--v-glow-2), transparent 60%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+.v-scope {
+  font-family: var(--v-font);
+  color: var(--v-text);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+.v-glass {
+  background: var(--v-surface);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid var(--v-border);
+}
+
+.v-headline {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+/* Light sweeping across a surface (brand panels, feature pills). Parent must be position:relative. */
+.v-sweep { position: relative; overflow: hidden; isolation: isolate; }
+.v-sweep::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: translateX(-160%) skewX(-18deg);
+  animation: v-sweep var(--v-sweep-duration, 7s) ease-in-out infinite;
+  animation-delay: var(--v-sweep-delay, 0s);
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes v-sweep {
+  0% { transform: translateX(-160%) skewX(-18deg); }
+  45%, 100% { transform: translateX(360%) skewX(-18deg); }
+}
+
+.v-shine-text {
+  background-image: linear-gradient(110deg, #ffffff 42%, #b9e8ff 50%, #ffffff 58%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: v-text-shine 6s linear infinite;
+}
+@keyframes v-text-shine {
+  from { background-position: 130% 0; }
+  to { background-position: -130% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v-sweep::after, .v-shine-text { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v-root *, .v-root *::before, .v-root *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,14 +1,24 @@
-// lib/centro-moneda.ts — Lee la moneda global del centro (server-side).
-// La usan reportes y recibos generados en el servidor.
+// Currency of the requesting user's center, for server-generated reports and receipts.
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { createClient } from '@/lib/supabase-server'
 import { CURRENCIES, normalizeCurrency, type CurrencyInfo } from '@/lib/currency'
 
-/** Devuelve la info de moneda del centro (fila única centro_config). Nunca lanza. */
-export async function getCentroMoneda(): Promise<CurrencyInfo> {
+/** Never throws; falls back to PEN. Pass centroId when there is no user session (e.g. background jobs). */
+export async function getCentroMoneda(centroId?: string | null): Promise<CurrencyInfo> {
   try {
-    const { data } = await supabaseAdmin.from('centro_config').select('moneda').eq('id', 1).maybeSingle()
-    return CURRENCIES[normalizeCurrency((data as any)?.moneda)]
+    let id = centroId ?? null
+    if (!id) {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabaseAdmin.from('profiles').select('centro_id').eq('id', user.id).maybeSingle()
+        id = data?.centro_id ?? null
+      }
+    }
+    if (!id) return CURRENCIES.PEN
+    const { data } = await supabaseAdmin.from('centros').select('currency').eq('id', id).maybeSingle()
+    return CURRENCIES[normalizeCurrency(data?.currency)]
   } catch {
     return CURRENCIES.PEN
   }

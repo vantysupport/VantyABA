@@ -6,11 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { invalidarDocumento } from '@/lib/registrar-documento'
+import { getApiCaller, hasRole, ROLES, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { searchParams } = new URL(req.url)
     const childId = searchParams.get('child_id')
@@ -22,6 +26,7 @@ export async function GET(req: NextRequest) {
     let query = supabaseAdmin
       .from('documentos_emitidos')
       .select('codigo_doc, child_id, tipo, tipo_label, paciente_nombre, paciente_iniciales, fecha_emision, especialista, valido, file_name, metadata, notas')
+      .eq('centro_id', caller.centroId)
       .order('fecha_emision', { ascending: false })
       .limit(limit)
 
@@ -41,6 +46,7 @@ export async function GET(req: NextRequest) {
     const { data: stats } = await supabaseAdmin
       .from('documentos_emitidos')
       .select('tipo, valido')
+      .eq('centro_id', caller.centroId)
       .limit(5000)
 
     const conteoPorTipo: Record<string, number> = {}
@@ -71,12 +77,16 @@ export async function GET(req: NextRequest) {
 
 // Invalidar un documento (admin) — soft delete (queda en BD pero marcado como inválido)
 export async function PATCH(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { codigo_doc, motivo } = body
     if (!codigo_doc) {
       return NextResponse.json({ error: 'codigo_doc requerido' }, { status: 400 })
     }
+    if (!(await rowInCentro('documentos_emitidos', codigo_doc, caller.centroId, 'codigo_doc'))) return notFound()
     await invalidarDocumento(codigo_doc, motivo)
     return NextResponse.json({ ok: true })
   } catch (e: any) {
@@ -88,6 +98,9 @@ export async function PATCH(req: NextRequest) {
 //   El QR del .docx ya impreso seguirá apuntando a /verificar/<codigo> pero
 //   la página mostrará "Código no encontrado" porque ya no existe en BD.
 export async function DELETE(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { searchParams } = new URL(req.url)
     const codigo = searchParams.get('codigo_doc')
@@ -98,6 +111,7 @@ export async function DELETE(req: NextRequest) {
       .from('documentos_emitidos')
       .delete()
       .eq('codigo_doc', codigo)
+      .eq('centro_id', caller.centroId)
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (e: any) {

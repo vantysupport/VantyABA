@@ -11,6 +11,8 @@ export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
+import { esCentroFundador } from '@/lib/knowledge-base'
 import { indexDocument } from '@/lib/knowledge-base'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { getLangInstruction } from '@/lib/lang'
@@ -450,6 +452,10 @@ Escribe en español técnico-clínico. Integra información de todas las fuentes
 
 // ─── Handler POST principal ────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const body = await req.json()
     const { keywords, modo = 'completo', incluirWeb = true } = body
@@ -603,6 +609,7 @@ export async function POST(req: NextRequest) {
         procesado: false,
         source_url: `auto:${temaEs}`,
         texto_extraido: resumenIA,
+        centro_id: caller.centroId,
       })
       .select().single()
 
@@ -628,6 +635,7 @@ export async function POST(req: NextRequest) {
               procesado: false,
               source_url: fuente.url,
               texto_extraido: fuente.texto,
+              centro_id: caller.centroId,
             })
             .select().single()
 
@@ -666,10 +674,14 @@ export async function POST(req: NextRequest) {
 }
 
 // ─── GET: ver temas aprendidos ────────────────────────────────────────────────
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { data } = await supabaseAdmin
     .from('knowledge_documents')
     .select('id, titulo, tipo, descripcion, procesado, total_chunks, created_at')
+    .eq('centro_id', caller.centroId)
     .ilike('source_url', 'auto:%')
     .order('created_at', { ascending: false })
     .limit(50)

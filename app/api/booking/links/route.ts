@@ -4,16 +4,17 @@
 // POST → crea un link nuevo. Devuelve el token/URL.
 
 import { NextRequest, NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { getCentroBranding } from '@/lib/centro-branding'
 
 export const dynamic = 'force-dynamic'
 
 function genToken(): string {
-  // token corto, legible, no adivinable
-  return (
-    Math.random().toString(36).slice(2, 10) +
-    Math.random().toString(36).slice(2, 6)
-  ).toUpperCase()
+  // token corto, legible, no adivinable (it is the only credential of the public booking page, so use a CSPRNG)
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  return Array.from(randomBytes(16), b => alphabet[b % alphabet.length]).join('')
 }
 
 export async function GET(req: NextRequest) {
@@ -23,7 +24,8 @@ export async function GET(req: NextRequest) {
     const childId = searchParams.get('child_id')
 
     if (token) {
-      // Carga pública del link (para la página de reserva) — incluye datos del paciente/especialista
+      // Carga pública del link (para la página de reserva) — incluye datos del paciente/especialista.
+      // Public by design: the token is the secret; everything returned is scoped to that link's row.
       const { data: link, error } = await supabaseAdmin
         .from('booking_links').select('*').eq('token', token).maybeSingle()
       if (error) throw error
@@ -39,10 +41,16 @@ export async function GET(req: NextRequest) {
         const { data: s } = await supabaseAdmin.from('profiles').select('full_name, specialty').eq('id', link.specialist_id).maybeSingle()
         specialistName = (s as any)?.full_name || null
       }
-      return NextResponse.json({ ok: true, link, childName, specialistName })
+      // Only the center's public identity (name + logo), to brand the booking page.
+      const centro = await getCentroBranding({ centroId: link.centro_id })
+      return NextResponse.json({ ok: true, link, childName, specialistName, centro: { name: centro.name, logoUrl: centro.logoUrl } })
     }
 
-    let q = supabaseAdmin.from('booking_links').select('*').order('created_at', { ascending: false }).limit(100)
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
+
+    let q = supabaseAdmin.from('booking_links').select('*').eq('centro_id', caller.centroId).order('created_at', { ascending: false }).limit(100)
     if (childId) q = q.eq('child_id', childId)
     const { data, error } = await q
     if (error) throw error
@@ -54,11 +62,17 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
+
     const body = await req.json()
     const {
       child_id, specialist_id, max_slots, plan_type,
-      service_type, modalidad, notas, expires_in_days, created_by,
+      service_type, modalidad, notas, expires_in_days,
     } = body
+    if (child_id && !(await canAccessChild(caller, child_id))) return notFound()
+    if (specialist_id && !(await rowInCentro('profiles', specialist_id, caller.centroId))) return notFound()
 
     const token = genToken()
     const expires_at = expires_in_days
@@ -75,7 +89,8 @@ export async function POST(req: NextRequest) {
       modalidad: modalidad || 'presencial',
       notas: notas || null,
       expires_at,
-      created_by: created_by || null,
+      created_by: caller.id,
+      centro_id: caller.centroId,
     }).select().single()
     if (error) throw error
 
@@ -89,9 +104,13 @@ export async function POST(req: NextRequest) {
 // PATCH → desactivar / reactivar un link
 export async function PATCH(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
     const { id, active } = await req.json()
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
-    const { error } = await supabaseAdmin.from('booking_links').update({ active }).eq('id', id)
+    if (!(await rowInCentro('booking_links', id, caller.centroId))) return notFound()
+    const { error } = await supabaseAdmin.from('booking_links').update({ active }).eq('id', id).eq('centro_id', caller.centroId)
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (e: any) {
@@ -102,10 +121,14 @@ export async function PATCH(req: NextRequest) {
 // DELETE → eliminar un link permanentemente
 export async function DELETE(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.staff)) return forbidden()
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
-    const { error } = await supabaseAdmin.from('booking_links').delete().eq('id', id)
+    if (!(await rowInCentro('booking_links', id, caller.centroId))) return notFound()
+    const { error } = await supabaseAdmin.from('booking_links').delete().eq('id', id).eq('centro_id', caller.centroId)
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (e: any) {

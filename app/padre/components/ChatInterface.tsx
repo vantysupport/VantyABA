@@ -1,11 +1,16 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
 
 import { useState, useEffect, useRef, useCallback, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Send, Sparkles, Heart, ShoppingBag, Mic, MicOff, Volume2, VolumeX, RefreshCw, StopCircle, ClipboardList, Home, Target } from 'lucide-react'
+import { Send, Heart, ShoppingBag, Mic, MicOff, Volume2, VolumeX, RefreshCw, StopCircle, ClipboardList, Home, Target, ArrowRight, Smile, Meh, Frown, Coins } from 'lucide-react'
+import { TokensChip } from '@/components/ui/tokens-chip'
+import ComprarTokensPadre from '@/components/ComprarTokensPadre'
+import { AnimatePresence, motion } from 'motion/react'
+import { AriaGlyph } from '@/components/ui/aria-glyph'
 
 // ── Tipos para Web Speech API ─────────────────────────────────────────────────
 declare global {
@@ -16,72 +21,87 @@ declare global {
 }
 
 // ── Hook de Text-to-Speech con ElevenLabs (Ivanna) ───────────────────────────
+// Limpia el texto para voz y lo parte en frases cortas: así ARIA empieza a hablar apenas
+// está lista la primera frase, mientras se preparan las siguientes (antes esperaba el audio
+// de toda la respuesta, que podía tardar muchos segundos).
+function partirParaVoz(texto: string): string[] {
+  const limpio = texto
+    .replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/#{1,6}\s/g, '')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .replace(/^\s*[-•*]\s+/gm, '').replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/\n+/g, '. ').replace(/\s+/g, ' ').replace(/(\.\s*){2,}/g, '. ').trim()
+  const frases = limpio.match(/[^.!?¡¿]+[.!?]+|[^.!?]+$/g) || [limpio]
+  const trozos: string[] = []
+  let actual = ''
+  for (const f of frases) {
+    const x = f.trim(); if (!x) continue
+    // el primer trozo corto para arrancar rápido; los demás más largos (menos pausas)
+    const max = trozos.length === 0 ? 140 : 380
+    if ((actual + ' ' + x).trim().length > max && actual) { trozos.push(actual.trim()); actual = x }
+    else actual = `${actual} ${x}`
+  }
+  if (actual.trim()) trozos.push(actual.trim())
+  return trozos.slice(0, 30)
+}
+
 function useTextToSpeech() {
-  const { t, locale } = useI18n()
+  const { locale } = useI18n()
   const [speaking, setSpeaking] = useState(false)
   const [voiceEnabled, setVoiceEnabled] = useState(true)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const turnoRef = useRef(0)
 
   const speak = useCallback(async (text: string) => {
     if (!voiceEnabled || !text.trim()) return
-
-    // Cancelar cualquier audio en curso
     abortRef.current?.abort()
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.src = ''
-    }
-
-    abortRef.current = new AbortController()
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
+    const turno = ++turnoRef.current
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
     setSpeaking(true)
 
-    try {
-      const res = await fetch('/api/elevenlabs-tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-locale': locale || 'es' },
-        body: JSON.stringify({ text, locale: localStorage.getItem('vanty_locale') || 'es' }),
-        signal: abortRef.current.signal,
-      })
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-      const blob = await res.blob()
-      const url  = URL.createObjectURL(blob)
-      const audio = new Audio(url)
+    const trozos = partirParaVoz(text)
+    const urlDe = (t: string) => `/api/elevenlabs-tts?${new URLSearchParams({ text: t, locale: locale || 'es' })}`
+    // Crea el <audio> y empieza a descargar (streaming) sin reproducir todavía
+    const preparar = (t: string) => { const a = new Audio(); a.preload = 'auto'; a.src = urlDe(t); a.load(); return a }
+    const reproducir = (audio: HTMLAudioElement) => new Promise<boolean>((resolve) => {
       audioRef.current = audio
+      audio.onended = () => resolve(true)
+      audio.onerror = () => resolve(false)
+      audio.play().catch(() => resolve(false))
+    })
 
-      audio.onended = () => {
-        setSpeaking(false)
-        URL.revokeObjectURL(url)
-      }
-      audio.onerror = () => {
-        setSpeaking(false)
-        URL.revokeObjectURL(url)
-      }
-      audio.play()
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        console.warn('ElevenLabs TTS falló, usando voz del navegador como fallback')
-        // Fallback al TTS del navegador si ElevenLabs falla
-        if ('speechSynthesis' in window) {
-          const clean = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\n{2,}/g, '. ').trim().slice(0, 4000)
-          const utter = new SpeechSynthesisUtterance(clean)
-          utter.lang = toBCP47(locale)
-          utter.rate = 1.05
-          utter.onend = () => setSpeaking(false)
-          utter.onerror = () => setSpeaking(false)
-          window.speechSynthesis.speak(utter)
-        } else {
-          setSpeaking(false)
-        }
-      } else {
-        setSpeaking(false)
-      }
+    let siguiente: HTMLAudioElement | null = trozos.length ? preparar(trozos[0]) : null
+    let ok = true
+    for (let k = 0; k < trozos.length && siguiente; k++) {
+      const actual = siguiente
+      // mientras suena este trozo, el siguiente ya se va descargando
+      siguiente = k + 1 < trozos.length ? preparar(trozos[k + 1]) : null
+      if (turno !== turnoRef.current) return
+      ok = await reproducir(actual)
+      if (turno !== turnoRef.current) return
+      if (!ok) break
     }
-  }, [voiceEnabled])
+    if (turno !== turnoRef.current) return
+    if (!ok && k0Fallback()) return
+    setSpeaking(false)
+
+    // Respaldo: voz del navegador si el servicio de voz falló
+    function k0Fallback() {
+      if (!('speechSynthesis' in window)) return false
+      const utter = new SpeechSynthesisUtterance(trozos.join(' ').slice(0, 4000))
+      utter.lang = toBCP47(locale)
+      utter.rate = 1.05
+      utter.onend = () => setSpeaking(false)
+      utter.onerror = () => setSpeaking(false)
+      window.speechSynthesis.speak(utter)
+      return true
+    }
+  }, [voiceEnabled, locale])
 
   const stopSpeaking = useCallback(() => {
+    turnoRef.current++
     abortRef.current?.abort()
     if (audioRef.current) {
       audioRef.current.pause()
@@ -93,6 +113,7 @@ function useTextToSpeech() {
 
   const toggleVoice = useCallback(() => {
     if (speaking) {
+      turnoRef.current++
       abortRef.current?.abort()
       if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = '' }
       if ('speechSynthesis' in window) window.speechSynthesis.cancel()
@@ -152,7 +173,8 @@ const EMOTIONAL_KEYWORDS = [
   'sin esperanza','desesperado','desesperada','culpa','culpable',
   'difícil','no puedo','rendirme','solo','sola','nadie entiende',
   'necesito ayuda','estoy mal','me siento mal','deprimido','deprimida',
-  'preocupado','preocupada','angustiado','angustiada','miedo',
+  'preocupado','preocupada','angustiado','angustiada','miedo','apoyo emocional',
+  'hard for me','tired','exhausted','overwhelmed','sad','emotional support','i need support','worried','anxious',
 ]
 
 function detectsEmotion(t: string) {
@@ -161,286 +183,189 @@ function detectsEmotion(t: string) {
   return EMOTIONAL_KEYWORDS.some(kw => l.includes(kw))
 }
 
-function getEmotionalPrefix(text: string): string {
-  const { t } = useI18n()
-
+function getEmotionalPrefix(text: string, centroNombre: string, en: boolean): string {
   const l = text.toLowerCase()
-  if (l.includes('cansad') || l.includes('agotad'))
-    return '💙 Entiendo que estás cansado/a, y eso es completamente válido. Acompañar a un hijo en este proceso requiere muchísima energía.\n\n'
-  if (l.includes('culpa'))
-    return '💙 No hay culpa aquí. Eres un papá/mamá que busca lo mejor para su hijo/a — eso ya dice todo de ti.\n\n'
-  if (l.includes('no avanza') || l.includes('no mejora'))
-    return '💙 El progreso en terapia ABA no siempre es lineal, pero sí real. Hay avances que se acumulan aunque no los veamos cada día.\n\n'
-  if (l.includes('solo') || l.includes('sola') || l.includes('nadie entiende'))
-    return '💙 No estás solo/a. Todo el equipo de Neuropsicología y Terapias SANTI está aquí para acompañarte — a ti y a tu familia.\n\n'
-  return '💙 Escucho cómo te sientes, y es completamente válido. Estoy aquí.\n\n'
+  if (/cansad|agotad|tired|exhausted/.test(l))
+    return en ? 'I understand you are tired, and that is completely valid. Supporting a child through this process takes a lot of energy.\n\n'
+              : 'Entiendo que estás cansado/a, y eso es completamente válido. Acompañar a un hijo en este proceso requiere muchísima energía.\n\n'
+  if (/culpa|guilt/.test(l))
+    return en ? 'There is no blame here. You are a parent looking for the best for your child, and that says everything about you.\n\n'
+              : 'No hay culpa aquí. Eres un papá o mamá que busca lo mejor para su hijo/a, y eso ya dice todo de ti.\n\n'
+  if (/no avanza|no mejora|not improving|no progress/.test(l))
+    return en ? 'Progress in ABA therapy is not always linear, but it is real. Gains add up even when we do not see them every day.\n\n'
+              : 'El progreso en terapia ABA no siempre es lineal, pero sí real. Hay avances que se acumulan aunque no los veamos cada día.\n\n'
+  if (/\bsolo\b|\bsola\b|nadie entiende|alone|nobody understands/.test(l))
+    return en ? `You are not alone. The whole ${centroNombre} team is here for you and your family.\n\n`
+              : `No estás solo/a. Todo el equipo de ${centroNombre} está aquí para acompañarte a ti y a tu familia.\n\n`
+  return en ? 'I hear how you feel, and it is completely valid. I am here with you.\n\n'
+            : 'Escucho cómo te sientes, y es completamente válido. Estoy aquí contigo.\n\n'
 }
 
-// ── Robot SVG mascota ─────────────────────────────────────────────────────────
-function RobotAvatar({ size = 36, animated = false }: { size?: number; animated?: boolean }) {
-  const { t } = useI18n()
-
+// ── Avatar de ARIA (la mascota) ───────────────────────────────────────────────
+function AriaAvatar({ size = 36, pulso = false }: { size?: number; pulso?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"
-      style={animated ? { animation: 'robotBob 2.4s ease-in-out infinite' } : {}}>
-      {/* Halo suave */}
-      <circle cx="40" cy="42" r="26" fill="white" opacity=".10"/>
-      {/* Spark principal — glifo de IA */}
-      <path d="M40 12 C43.5 30, 50 36.5, 68 40 C50 43.5, 43.5 50, 40 68 C36.5 50, 30 43.5, 12 40 C30 36.5, 36.5 30, 40 12 Z"
-        fill="url(#ariaSpark)"/>
-      {/* Brillo interno */}
-      <path d="M40 24 C41.6 33, 47 38.4, 56 40 C47 41.6, 41.6 47, 40 56 C38.4 47, 33 41.6, 24 40 C33 38.4, 38.4 33, 40 24 Z"
-        fill="white" opacity=".55"/>
-      {/* Spark secundario */}
-      <path d="M61 16 C62 20.5, 63.5 22, 68 23 C63.5 24, 62 25.5, 61 30 C60 25.5, 58.5 24, 54 23 C58.5 22, 60 20.5, 61 16 Z"
-        fill="#a5f3fc" style={animated ? { animation: 'eyeGlow 1.8s ease-in-out infinite' } : {}}/>
-      {/* Punto orbital */}
-      <circle cx="18" cy="58" r="3" fill="#bae6fd" style={animated ? { animation: 'chestPulse 1.6s ease-in-out infinite .3s' } : {}}/>
-      <defs>
-        <linearGradient id="ariaSpark" x1="12" y1="12" x2="68" y2="68" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ffffff"/>
-          <stop offset="1" stopColor="#e0f2fe"/>
-        </linearGradient>
-      </defs>
-    </svg>
+    <span className="relative block shrink-0 overflow-hidden rounded-full ring-2 ring-v-elevated shadow-v" style={{ width: size, height: size }}>
+      <AriaGlyph />
+      {pulso && <motion.span className="absolute inset-0 rounded-full ring-2 ring-v-accent" animate={{ opacity: [0.9, 0, 0.9], scale: [1, 1.25, 1] }} transition={{ duration: 1.6, repeat: Infinity }} />}
+    </span>
   )
 }
 
-// ── Burbuja de mensaje ────────────────────────────────────────────────────────
-// ── Simple markdown renderer ─────────────────────────────────────────────────
+// ── Markdown sencillo ─────────────────────────────────────────────────────────
 function renderMarkdown(text: string) {
   if (!text) return null
   const lines = text.split('\n')
   const elements: ReactNode[] = []
-  let i = 0
-  while (i < lines.length) {
+  for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-    // Empty line
-    if (!line.trim()) { elements.push(<div key={i} className="h-2"/>); i++; continue }
-    // H3 ### 
-    if (line.startsWith('### ')) {
-      elements.push(<p key={i} className="font-bold text-sm mt-3 mb-1" style={{ color: "var(--c-text-primary)" }}>{parseInline(line.slice(4))}</p>); i++; continue
-    }
-    // Bold line **text** alone
-    if (line.startsWith('**') && line.endsWith('**') && line.length > 4) {
-      elements.push(<p key={i} className="font-bold text-sm mt-2 mb-0.5" style={{ color: "var(--c-text-primary)" }}>{line.slice(2, -2)}</p>); i++; continue
-    }
-    // Bullet
+    if (!line.trim()) { elements.push(<div key={i} className="h-1.5" />); continue }
+    if (line.startsWith('### ')) { elements.push(<p key={i} className="mt-2 text-sm font-semibold text-v-text">{parseInline(line.slice(4))}</p>); continue }
+    if (line.startsWith('**') && line.endsWith('**') && line.length > 4) { elements.push(<p key={i} className="mt-2 text-sm font-semibold text-v-text">{line.slice(2, -2)}</p>); continue }
     if (line.startsWith('- ') || line.startsWith('• ')) {
-      elements.push(
-        <div key={i} className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: "var(--c-text-secondary)" }}>
-          <span className="text-sky-400 font-bold mt-0.5 flex-shrink-0">·</span>
-          <span>{parseInline(line.slice(2))}</span>
-        </div>
-      ); i++; continue
+      elements.push(<div key={i} className="flex items-start gap-2 text-sm leading-relaxed text-v-text"><span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-v-accent" /><span>{parseInline(line.slice(2))}</span></div>)
+      continue
     }
-    // Numbered list
-    const numMatch = line.match(/^(\d+)\. (.+)/)
-    if (numMatch) {
-      elements.push(
-        <div key={i} className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: "var(--c-text-secondary)" }}>
-          <span className="text-sky-500 font-bold text-xs mt-0.5 flex-shrink-0 w-4">{numMatch[1]}.</span>
-          <span>{parseInline(numMatch[2])}</span>
-        </div>
-      ); i++; continue
+    const num = line.match(/^(\d+)\. (.+)/)
+    if (num) {
+      elements.push(<div key={i} className="flex items-start gap-2 text-sm leading-relaxed text-v-text"><span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-v-accent-soft text-[10px] font-bold text-v-accent">{num[1]}</span><span>{parseInline(num[2])}</span></div>)
+      continue
     }
-    // Regular paragraph
-    elements.push(<p key={i} className="text-sm leading-relaxed" style={{ color: "var(--c-text-secondary)" }}>{parseInline(line)}</p>)
-    i++
+    elements.push(<p key={i} className="text-sm leading-relaxed text-v-text">{parseInline(line)}</p>)
   }
   return <div className="flex flex-col gap-1">{elements}</div>
 }
 
 function parseInline(text: string): ReactNode {
-  // Handle **bold** inline
   const parts = text.split(/\*\*(.*?)\*\*/g)
   if (parts.length === 1) return text
-  return (
-    <>
-      {parts.map((p, i) =>
-        i % 2 === 1 ? <strong key={i} className="font-bold" style={{ color: "var(--c-text-primary)" }}>{p}</strong> : p
-      )}
-    </>
-  )
+  return <>{parts.map((p, i) => (i % 2 === 1 ? <strong key={i} className="font-semibold text-v-text">{p}</strong> : p))}</>
 }
 
+// ── Burbujas ──────────────────────────────────────────────────────────────────
+const OPCIONES_BIENESTAR = [
+  { es: 'Bien, con energía', en: 'Good, with energy', Icon: Smile, tone: 'text-v-success' },
+  { es: 'Regular, algo cansado/a', en: 'So-so, a bit tired', Icon: Meh, tone: 'text-v-warning' },
+  { es: 'Difícil, necesito apoyo', en: 'Hard, I need support', Icon: Frown, tone: 'text-v-danger' },
+]
+
 function MessageBubble({ m, onNavigateToStore, onWellbeingAnswer }: { m: any; onNavigateToStore?: () => void; onWellbeingAnswer?: (opt: string) => void }) {
-  const { t } = useI18n()
-
-  const isUser = m.role === 'user'
-
-  if (isUser) {
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  if (m.role === 'user') {
     return (
-      <div className="flex justify-end mb-3">
-        <div className="max-w-[78%] px-5 py-3.5 rounded-3xl rounded-br-lg text-sm font-medium leading-relaxed text-white shadow-lg"
-          style={{ background: 'linear-gradient(135deg,#0369a1,#0284c7)', boxShadow: '0 4px 18px rgba(79,70,229,.35)' }}>
-          {m.text}
-        </div>
-      </div>
+      <motion.div initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 380, damping: 30 }} className="mb-3 flex justify-end">
+        <div className="v-brand max-w-[80%] rounded-[22px] rounded-br-md px-4 py-2.5 text-sm leading-relaxed" style={{ boxShadow: 'none' }}>{m.text}</div>
+      </motion.div>
     )
   }
-
   if (m.type === 'wellbeing') {
     return (
-      <div className="flex gap-3 mb-4 items-start">
-        <div className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg,#fce7f3,#ede9fe)' }}>
-          <Heart size={15} className="text-pink-600" />
-        </div>
-        <div className="max-w-[82%] rounded-3xl rounded-tl-lg overflow-hidden shadow-sm border border-pink-100"
-          style={{ background: 'var(--c-surface)' }}>
-          <div className="px-5 pt-4 pb-2">
-            <p className="text-xs font-bold text-pink-500 mb-2">{t('ui.checkBienestar')}</p>
-            <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--c-text-secondary)" }}>
-              ¿Cómo te has sentido tú esta semana acompañando el proceso de tu hijo/a?
-            </p>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 flex items-start gap-2.5">
+        <AriaAvatar size={32} />
+        <div className="max-w-[85%] overflow-hidden rounded-[22px] rounded-tl-md border border-v-border bg-v-elevated shadow-v">
+          <div className="px-4 pb-2 pt-3.5">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-v-accent"><Heart size={11} /> {en ? 'Wellbeing check-in' : 'Chequeo de bienestar'}</p>
+            <p className="mt-1 text-sm leading-relaxed text-v-text">{en ? 'How have you felt this week supporting your child?' : '¿Cómo te has sentido esta semana acompañando a tu peque?'}</p>
           </div>
-          <div className="px-4 pb-4 flex flex-col gap-2">
-            {['😊 Bien, con energía', '😐 Regular, algo cansado/a', '😔 Difícil, necesito apoyo'].map(opt => (
-              <button key={opt}
-                onClick={() => onWellbeingAnswer?.(opt)}
-                className="text-left px-4 py-3 text-sm font-semibold rounded-2xl border-2 transition-all w-full" style={{ background: "var(--c-surface)", borderColor: "var(--c-border)", color: "var(--c-text-primary)" }}>
-                {opt}
+          <div className="flex flex-col gap-1.5 px-3 pb-3">
+            {OPCIONES_BIENESTAR.map(o => (
+              <button key={o.es} onClick={() => onWellbeingAnswer?.(en ? o.en : o.es)}
+                className="flex items-center gap-2.5 rounded-v-sm border border-v-border px-3 py-2.5 text-left text-sm font-medium text-v-text transition-colors hover:bg-v-fill">
+                <o.Icon size={17} className={o.tone} /> {en ? o.en : o.es}
               </button>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
     )
   }
-
+  const emocional = m.type === 'emotional'
   return (
-    <div className="flex gap-3 mb-4 items-start">
-      {/* Avatar del robot */}
-      <div className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center shadow-md"
-        style={{ background: 'linear-gradient(135deg,#0369a1,#0284c7)', padding: 4 }}>
-        <RobotAvatar size={28} />
-      </div>
-
-      <div className="max-w-[82%] flex flex-col gap-2">
-        {/* Burbuja principal */}
-        <div className={`rounded-3xl rounded-tl-lg px-5 py-4 shadow-sm text-sm font-medium leading-relaxed
-          ${m.type === 'emotional'
-            ? 'border-2 border-sky-200 dark:border-sky-700 bg-gradient-to-br from-sky-50 to-cyan-50 dark:from-sky-900/30 dark:to-sky-900/30 text-slate-700 dark:text-slate-200'
-            : 'text-slate-700 dark:text-slate-100'
-          }`}
-          style={{
-            background: m.type === 'emotional' ? undefined : 'var(--c-card)',
-            border: m.type === 'emotional' ? undefined : '1px solid var(--c-border)',
-            boxShadow: '0 2px 16px rgba(0,0,0,.06)'
-          }}>
-          {m.type === 'emotional' && (
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-sky-100 dark:border-sky-800/50">
-              <Heart size={13} className="text-sky-500 dark:text-sky-400 fill-sky-500" />
-              <span className="text-xs font-bold text-sky-500 dark:text-sky-400">{t('ui.from_therapist')}</span>
-            </div>
-          )}
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }} className="mb-4 flex items-start gap-2.5">
+      <AriaAvatar size={32} />
+      <div className="flex max-w-[85%] flex-col gap-2">
+        <div className={`rounded-[22px] rounded-tl-md px-4 py-3 shadow-v ${emocional ? 'border border-v-accent/30 bg-v-accent-soft' : 'border border-v-border bg-v-elevated'}`}>
+          {emocional && <p className="mb-2 flex items-center gap-1.5 border-b border-v-accent/20 pb-2 text-[11px] font-semibold text-v-accent"><Heart size={11} /> {en ? 'With you in this' : 'Contigo en esto'}</p>}
           {renderMarkdown(m.text)}
         </div>
-
-        {/* Tarjeta producto sugerido */}
         {m.producto && (
-          <div className="rounded-2xl overflow-hidden border-2 border-amber-200 shadow-md"
-            style={{ background: 'var(--c-stat-amber)', animation: 'fadeUp .4s ease .15s both' }}>
-            <div className="flex items-center gap-2 px-4 py-2.5"
-              style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
-              <ShoppingBag size={14} className="text-white" />
-              <span className="text-xs font-bold text-white">{t('ui.disponibleTienda')}</span>
+          <div className="overflow-hidden rounded-v-sm border border-v-border bg-v-elevated shadow-v">
+            <div className="flex items-center gap-3 p-3">
+              <span className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-v-sm bg-v-fill text-v-muted">
+                {m.producto.imagen_url ? <img src={m.producto.imagen_url} alt="" className="absolute inset-0 size-full object-cover" style={{ height: '100%' }} /> : <ShoppingBag size={20} />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold text-v-warning">{en ? 'Available in the store' : 'Disponible en la tienda'}</p>
+                <p className="truncate text-sm font-semibold text-v-text">{m.producto.nombre}</p>
+                {(m.producto.razon || m.producto.descripcion) && <p className="line-clamp-2 text-xs text-v-muted">{m.producto.razon || m.producto.descripcion}</p>}
+              </div>
             </div>
-            <div className="flex gap-3 p-4 items-center">
-              <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-amber-100 flex items-center justify-center text-3xl border border-amber-200">
-                {m.producto.imagen_url
-                  ? <img src={m.producto.imagen_url} alt="" className="w-full h-full object-cover" />
-                  : (m.producto.tipo === 'digital' ? '📄' : '📦')
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-amber-900 text-sm leading-tight mb-1">{m.producto.nombre}</p>
-                {(m.producto.razon || m.producto.descripcion) && (
-                  <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed mb-2 line-clamp-2">
-                    💡 {m.producto.razon || m.producto.descripcion}
-                  </p>
-                )}
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold text-amber-600 dark:text-amber-400">S/ {Number(m.producto.precio_soles).toFixed(2)}</span>
-                  <button onClick={onNavigateToStore}
-                    className="px-3.5 py-1.5 text-xs font-bold text-white rounded-xl transition-all hover:scale-105 active:scale-95"
-                    style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)', boxShadow: '0 3px 10px rgba(217,119,6,.35)' }}>
-                    Ver en tienda →
-                  </button>
-                </div>
-              </div>
+            <div className="flex items-center justify-between gap-2 border-t border-v-border px-3 py-2">
+              <span className="text-sm font-bold tabular-nums text-v-text">S/ {Number(m.producto.precio_soles).toFixed(2)}</span>
+              <button onClick={onNavigateToStore} className="v-brand inline-flex h-8 items-center gap-1 rounded-full px-3.5 text-xs font-semibold">{en ? 'View' : 'Ver'} <ArrowRight size={12} /></button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
-// ── Indicador de escritura ────────────────────────────────────────────────────
 function TypingIndicator() {
-  const { t, locale } = useI18n()
+  const { locale } = useI18n()
   return (
-    <div className="flex gap-3 mb-4 items-center">
-      <div className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center shadow-md"
-        style={{ background: 'linear-gradient(135deg,#0369a1,#0284c7)', padding: 4 }}>
-        <RobotAvatar size={28} animated />
-      </div>
-      <div className="rounded-3xl rounded-tl-lg px-5 py-3.5 shadow-sm flex items-center gap-1.5" style={{ background: "var(--c-card)", border: "1px solid var(--c-border)" }}>
-        {[0, .2, .4].map(d => (
-          <div key={d} className="w-2 h-2 rounded-full bg-sky-400 dark:bg-sky-500"
-            style={{ animation: `typingDot 1.2s ease-in-out infinite`, animationDelay: `${d}s` }} />
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mb-4 flex items-center gap-2.5">
+      <AriaAvatar size={32} pulso />
+      <div className="flex items-center gap-1.5 rounded-[22px] rounded-tl-md border border-v-border bg-v-elevated px-4 py-3 shadow-v">
+        {[0, 0.15, 0.3].map(d => (
+          <motion.span key={d} className="size-1.5 rounded-full bg-v-accent" animate={{ y: [0, -5, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.9, repeat: Infinity, delay: d }} />
         ))}
-        <span className="text-xs font-medium ml-2" style={{ color: "var(--c-text-muted)" }}>{t('common.analizando')}</span>
+        <span className="ml-1.5 text-xs text-v-muted">{locale === 'en' ? 'ARIA is thinking…' : 'ARIA está pensando…'}</span>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
-// ── Pantalla de bienvenida ────────────────────────────────────────────────────
+// ── Bienvenida ────────────────────────────────────────────────────────────────
 function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickSend: (q: string) => void }) {
-  const { t } = useI18n()
-
+  const { name: centroNombre } = useCentroBranding()
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const nombre = (childName || '').split(' ')[0] || (en ? 'your child' : 'tu peque')
   const quick = [
-    { Icon: ClipboardList, text: '¿Cómo le fue en la última sesión?', accent: '#0284c7' },
-    { Icon: Home,          text: 'Dame consejos para casa',             accent: '#10b981' },
-    { Icon: Target,        text: '¿Qué objetivos está trabajando?',    accent: '#f59e0b' },
-    { Icon: Heart,         text: 'Necesito apoyo emocional',           accent: '#ec4899' },
+    { Icon: ClipboardList, titulo: en ? 'Last session' : 'Última sesión', text: en ? 'How did the last session go?' : '¿Cómo le fue en la última sesión?', tone: 'bg-v-accent-soft text-v-accent' },
+    { Icon: Home, titulo: en ? 'Tips for home' : 'Consejos para casa', text: en ? 'Give me tips for home' : 'Dame consejos para casa', tone: 'bg-v-success/15 text-v-success' },
+    { Icon: Target, titulo: en ? 'Current goals' : 'Objetivos actuales', text: en ? 'What goals is my child working on?' : '¿Qué objetivos está trabajando?', tone: 'bg-v-warning/15 text-v-warning' },
+    { Icon: Heart, titulo: en ? 'Emotional support' : 'Apoyo emocional', text: en ? 'I need emotional support' : 'Necesito apoyo emocional', tone: 'bg-v-danger/10 text-v-danger' },
   ]
   return (
-    <div className="flex flex-col items-center justify-center px-5 py-8 text-center" style={{ animation: 'fadeUp .4s ease', flex: 1 }}>
-      {/* Avatar premium con halo */}
-      <div className="relative mb-4">
-        <div className="absolute inset-0 rounded-[20px] blur-xl opacity-50" style={{ background: 'radial-gradient(circle,#38bdf8,transparent 70%)' }}/>
-        <div className="relative w-16 h-16 rounded-[20px] flex items-center justify-center shadow-lg"
-          style={{ background: 'linear-gradient(135deg,#0ea5e9,#0284c7 55%,#0369a1)', boxShadow: '0 10px 28px rgba(2,132,199,.35)' }}>
-          <RobotAvatar size={40} animated />
-        </div>
-        <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-[#161b22]" style={{ background: '#10b981' }}/>
-      </div>
-
-      <h3 className="text-xl font-bold mb-1" style={{ color: "var(--c-text-primary)" }}>
-        Hola, soy <span className="text-sky-600">ARIA</span>
-      </h3>
-      <p className="text-sm mb-1" style={{ color: "var(--c-text-muted)" }}>{t("familias.ariaSubtitulo")}</p>
-      <p className="text-xs mb-6 leading-relaxed max-w-[280px]" style={{ color: "var(--c-text-muted)" }}>
-        He revisado el historial de <strong className="text-slate-600 dark:text-slate-300">{childName || 'tu hijo/a'}</strong>.
-        {t('auto.chatInterface.puedoExplicarteSesionesTareasPara')}
-      </p>
-
-      {/* Quick actions — cleaner */}
-      <div className="flex flex-col gap-2 w-full max-w-[320px]">
-        <p className="text-[10px] font-bold mb-1" style={{ color: "var(--c-text-muted)" }}>{t("aria.dondeEmpezamos")}</p>
-        {(quick as any[]).map(({ Icon, text, accent }: any) => (
-          <button key={text} onClick={() => onQuickSend(text)}
-            className="group flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all active:scale-[.98] hover:-translate-y-0.5 hover:shadow-md"
-            style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)' }}>
-            <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${accent}1a`, color: accent }}>
-              <Icon size={16} />
+    <div className="flex flex-1 flex-col items-center justify-center px-5 py-8 text-center">
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 200, damping: 20 }} className="relative">
+        <span aria-hidden className="absolute inset-x-2 bottom-1 h-4 rounded-full bg-v-accent/20 blur-md" />
+        <motion.span animate={{ y: [0, -6, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }} className="relative block h-32 w-28">
+          <img src="/aria/pose-1.webp?v=2" alt="" draggable={false} className="absolute inset-0 size-full select-none object-contain" style={{ height: '100%' }} />
+        </motion.span>
+      </motion.div>
+      <motion.h3 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="v-headline mt-2 text-[1.6rem] leading-tight text-v-text">
+        {en ? 'Hi, I’m ' : 'Hola, soy '}<span className="v-brand-text">ARIA</span>
+      </motion.h3>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.14 }} className="mt-1.5 max-w-md text-sm leading-relaxed text-v-muted">
+        {en ? <>The assistant of {centroNombre}. I know <strong className="text-v-text">{nombre}</strong>’s history and can explain sessions, home activities and more.</>
+            : <>La asistente de {centroNombre}. Conozco el historial de <strong className="text-v-text">{nombre}</strong> y puedo explicarte sesiones, actividades para casa y mucho más.</>}
+      </motion.p>
+      <div className="mt-6 grid w-full max-w-xl grid-cols-1 gap-2.5 sm:grid-cols-2">
+        {quick.map(({ Icon, titulo, text, tone }, i) => (
+          <motion.button key={text} onClick={() => onQuickSend(text)}
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 + i * 0.05, type: 'spring', stiffness: 260, damping: 24 }}
+            whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
+            className="group flex items-center gap-3 rounded-v border border-v-border bg-v-elevated px-4 py-3 text-left shadow-v transition-colors hover:border-v-accent/40">
+            <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${tone}`}><Icon size={16} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-v-text">{titulo}</span>
+              <span className="block truncate text-xs text-v-muted">{text}</span>
             </span>
-            <span className="text-sm font-semibold" style={{ color: 'var(--c-text-primary)' }}>{text}</span>
-          </button>
+            <ArrowRight size={15} className="shrink-0 text-v-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-v-accent" />
+          </motion.button>
         ))}
       </div>
     </div>
@@ -449,6 +374,7 @@ function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickS
 
 // ── Componente principal ──────────────────────────────────────────────────────
 function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any) {
+  const { name: centroNombre } = useCentroBranding()
   const { t, locale } = useI18n()
   const [messages, setMessages] = useState<any[]>([])
   const [input, setInput] = useState('')
@@ -483,34 +409,53 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, typing])
 
+  // Apoyo emocional pedido desde el chequeo de bienestar del Inicio: ARIA abre la conversación
+  useEffect(() => {
+    if (!childId) return
+    let mensaje: string | null = null
+    try { mensaje = sessionStorage.getItem('vanty_aria_apoyo'); sessionStorage.removeItem('vanty_aria_apoyo') } catch { /* sin storage */ }
+    if (mensaje) setTimeout(() => sendText(mensaje!), 400)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [childId])
+
   // ── Guardar respuesta de bienestar ─────────────────────────────────────────
   const handleWellbeingAnswer = useCallback(async (opt: string) => {
-    if (parentId) {
-      await supabase.from('parent_forms').insert([{
-        parent_id: parentId,
-        child_id: childId || null,
-        form_type: 'wellbeing',
-        form_title: opt,
-        status: 'completed',
-        responses: { answer: opt },
-        created_at: new Date().toISOString(),
-      }])
+    // Se guarda como chequeo de bienestar (no como formulario: antes aparecía en "Formularios completados")
+    if (parentId && childId) {
+      const l = opt.toLowerCase()
+      const mood = /difícil|hard/.test(l) ? 'dificil' : /regular|so-so/.test(l) ? 'regular' : 'bien'
+      fetch('/api/parent-wellbeing', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parent_id: parentId, child_id: childId, mood }),
+      }).catch(() => {})
     }
     setMessages(p => [...p,
       { role: 'user', text: opt },
-      { role: 'ai', text: '¡Gracias por compartir cómo te sientes! 💜 Tu bienestar también importa mucho para el progreso de tu hijo/a.' }
+      { role: 'ai', text: locale === 'en' ? 'Thanks for sharing how you feel. Your wellbeing matters a lot for your child’s progress too.' : '¡Gracias por compartir cómo te sientes! Tu bienestar también importa mucho para el progreso de tu hijo/a.' }
     ])
-  }, [parentId, childId])
+  }, [parentId, childId, locale])
+
+  // Tokens de ARIA de la familia (mensajes por día, según el plan del centro)
+  const [tokensAria, setTokensAria] = useState<{ usados: number; max: number | null; extra: number; reinicia: string | null } | null>(null)
+  const [comprarAbierto, setComprarAbierto] = useState(false)
+  const onComprarTokens = () => setComprarAbierto(true)
+  const cargarTokensAria = useCallback(() => {
+    fetch('/api/padre/tokens', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(j => { if (j?.aria) setTokensAria(j.aria) }).catch(() => {})
+  }, [])
+  useEffect(() => { cargarTokensAria() }, [cargarTokensAria])
+  const ariaRestantes = tokensAria?.max != null ? Math.max(0, tokensAria.max - tokensAria.usados) : null
+  const ariaExtra = tokensAria?.extra ?? 0
+  const ariaAgotado = ariaRestantes === 0 && ariaExtra === 0
 
   const sendText = async (txt: string) => {
-    if (!txt.trim() || typing) return
+    if (!txt.trim() || typing || ariaAgotado) return
 
     setShowWelcome(false)
     setInput('')
     stopSpeaking()
 
     if (!childId) {
-      const errMsg = '⚠️ Cargando perfil del paciente, intenta de nuevo en un momento.'
+      const errMsg = locale === 'en' ? 'Loading the patient profile, try again in a moment.' : 'Cargando el perfil del paciente, intenta de nuevo en un momento.'
       setMessages(p => [...p, { role: 'user', text: txt }, { role: 'ai', text: errMsg }])
       speak(errMsg)
       return
@@ -522,9 +467,9 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
 
     let emotionalPrefix = ''
     if (isEmotional) {
-      emotionalPrefix = getEmotionalPrefix(txt)
+      emotionalPrefix = getEmotionalPrefix(txt, centroNombre, locale === 'en')
       await new Promise(r => setTimeout(r, 700))
-      const tempMsg = emotionalPrefix + 'Déjame revisar el historial clínico para darte información más precisa...'
+      const tempMsg = emotionalPrefix + (locale === 'en' ? 'Let me review the clinical history to give you more precise information…' : 'Déjame revisar el historial clínico para darte información más precisa…')
       setMessages(p => [...p, { role: 'ai', text: tempMsg, type: 'emotional' }])
       await new Promise(r => setTimeout(r, 900))
     }
@@ -542,7 +487,8 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
         }),
       })
       const data = await res.json()
-      const aiResponse = data.text || 'Lo siento, no pude procesar tu pregunta.'
+      cargarTokensAria()
+      const aiResponse = data.text || (locale === 'en' ? 'Sorry, I could not process your question.' : 'Lo siento, no pude procesar tu pregunta.')
       const productoSugerido = data.producto_sugerido_info || null
       const finalText = isEmotional ? emotionalPrefix + aiResponse : aiResponse
 
@@ -573,7 +519,7 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
         }, 2200)
       }
     } catch {
-      const errMsg = '❌ Problema de conexión. Intenta nuevamente.'
+      const errMsg = locale === 'en' ? 'Connection problem. Please try again.' : 'Problema de conexión. Intenta nuevamente.'
       setMessages(p => [...p, { role: 'ai', text: errMsg }])
       speak(errMsg)
     } finally {
@@ -600,242 +546,156 @@ function ChatInterface({ childId, childName, onNavigateToStore, parentId }: any)
     }
   }
 
+  const en = locale === 'en'
+  const atajos = [
+    { Icon: ClipboardList, label: en ? 'Last session' : 'Última sesión', text: en ? 'How did the last session go?' : '¿Cómo le fue en la última sesión?' },
+    { Icon: Home, label: en ? 'Tips for home' : 'Tips para casa', text: en ? 'Give me tips for activities at home' : 'Dame consejos para actividades en casa' },
+    { Icon: Target, label: en ? 'Goals' : 'Objetivos', text: en ? 'What goals is my child working on?' : '¿Qué objetivos está trabajando?' },
+    { Icon: Heart, label: en ? 'Support' : 'Apoyo', text: en ? 'I need emotional support' : 'Necesito apoyo emocional' },
+  ]
+
   return (
-    <>
-      <style>{`
-        @keyframes robotBob {
-          0%,100% { transform: translateY(0) }
-          50% { transform: translateY(-5px) }
-        }
-        @keyframes eyeGlow {
-          0%,100% { opacity:1 }
-          50% { opacity:.5 }
-        }
-        @keyframes chestPulse {
-          0%,100% { opacity:1; transform: scale(1) }
-          50% { opacity:.6; transform: scale(.85) }
-        }
-        @keyframes typingDot {
-          0%,60%,100% { transform: translateY(0) }
-          30% { transform: translateY(-6px) }
-        }
-        @keyframes fadeUp {
-          from { opacity:0; transform: translateY(12px) }
-          to   { opacity:1; transform: translateY(0) }
-        }
-        @keyframes pulse {
-          0%,100% { opacity:.3 }
-          50% { opacity:.6 }
-        }
-        @keyframes micPulse {
-          0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.5) }
-          50% { box-shadow: 0 0 0 10px rgba(239,68,68,0) }
-        }
-        @keyframes speakerPulse {
-          0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,.4) }
-          50% { box-shadow: 0 0 0 8px rgba(99,102,241,0) }
-        }
-        /* Responsive chat */
-        .chat-welcome-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 8px;
-        }
-        @media(min-width:640px){
-          .chat-welcome-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-        @media(max-width:360px){
-          .chat-welcome-grid {
-            grid-template-columns: 1fr;
-          }
-          .chat-input-area { padding: 10px 12px !important }
-        }
-      `}</style>
-
-      <div className="flex flex-col" style={{ background: "var(--card)", height: "100%", minHeight: 0, flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-        {/* ── Header — clean, professional ── */}
-        <div className="shrink-0 px-4 py-3 flex items-center gap-3 border-b" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg,#0284c7,#0369a1)', padding: 5 }}>
-            <RobotAvatar size={24} />
+    <div className="v-scope flex min-h-0 flex-1 flex-col overflow-hidden bg-v-elevated" style={{ height: '100%' }}>
+      {/* ── Encabezado ── */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-v-border px-4 py-3">
+        <AriaAvatar size={40} pulso={speaking} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[15px] font-semibold tracking-tight text-v-text">ARIA</p>
+            <span className="inline-flex items-center gap-1 rounded-full bg-v-success/15 px-2 py-0.5 text-[10px] font-semibold text-v-success">
+              <span className="size-1.5 animate-pulse rounded-full bg-v-success" /> {en ? 'Online' : 'En línea'}
+            </span>
+            {speaking && <span className="inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-semibold text-v-accent"><Volume2 size={10} /> {en ? 'Speaking' : 'Hablando'}</span>}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="font-bold text-sm" style={{ color: "var(--c-text-primary)" }}>ARIA</p>
-              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 px-1.5 py-0.5 rounded-full">
-                <span className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-                {t('auto.chatInterface.enLinea2')}
-              </span>
-              {speaking && (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-sky-500 bg-sky-50 dark:bg-sky-900/20 px-1.5 py-0.5 rounded-full">
-                  <Volume2 size={9} /> Hablando...
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] truncate" style={{ color: "var(--c-text-muted)" }}>
-              {childName ? `Especializada en ${childName}` : 'Asistente clínico IA'}
-            </p>
-          </div>
-          <button onClick={toggleVoice} title={voiceEnabled ? 'Silenciar' : 'Activar voz'}
-            className="p-2 rounded-xl transition-all" style={{ background: "var(--muted-bg)", color: voiceEnabled ? '#0284c7' : 'var(--c-text-muted)' }}>
-            {voiceEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
-          </button>
-          <button onClick={handleReset} title={t("aria.nuevaConversacion")}
-            className="p-2 rounded-xl transition-all" style={{ background: "var(--muted-bg)", color: "var(--c-text-muted)" }}>
-            <RefreshCw size={15} />
-          </button>
+          <p className="truncate text-xs text-v-muted">{childName ? (en ? `Focused on ${childName}` : `Especializada en ${childName}`) : (en ? 'Clinical AI assistant' : 'Asistente clínico IA')}</p>
         </div>
+        {ariaRestantes != null && <TokensChip restantes={ariaRestantes} max={tokensAria!.max!} extra={ariaExtra} etiqueta={en ? 'today' : 'hoy'} onComprar={onComprarTokens} />}
+        <button onClick={toggleVoice} title={voiceEnabled ? (en ? 'Mute voice' : 'Silenciar voz') : (en ? 'Turn voice on' : 'Activar voz')}
+          className={`grid size-9 place-items-center rounded-full transition-colors ${voiceEnabled ? 'bg-v-accent-soft text-v-accent' : 'bg-v-fill text-v-muted'}`}>
+          {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+        </button>
+        <button onClick={handleReset} title={t('aria.nuevaConversacion')}
+          className="grid size-9 place-items-center rounded-full bg-v-fill text-v-muted transition-colors hover:text-v-text">
+          <RefreshCw size={15} />
+        </button>
+      </div>
 
-        {/* ── Banner de micrófono activo ── */}
+      {/* ── Micrófono activo ── */}
+      <AnimatePresence>
         {listening && (
-          <div className="shrink-0 mx-4 mt-3 rounded-2xl px-4 py-3 flex items-center gap-3"
-            style={{ background: 'linear-gradient(135deg,#fef2f2,#fee2e2)', border: '2px solid #fca5a5', animation: 'fadeUp .2s ease' }}>
-            <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0"
-              style={{ animation: 'micPulse 1.2s ease-in-out infinite' }}>
-              <Mic size={14} className="text-white" />
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="shrink-0 overflow-hidden">
+            <div className="mx-4 mt-3 flex items-center gap-3 rounded-v-sm bg-v-danger/10 px-4 py-2.5">
+              <motion.span animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 1.1, repeat: Infinity }} className="grid size-8 shrink-0 place-items-center rounded-full bg-v-danger text-white"><Mic size={14} /></motion.span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-v-danger">{en ? 'Listening…' : 'Escuchando…'}</p>
+                <p className="text-xs text-v-muted">{t('aria.hablaAhora')}</p>
+              </div>
+              <button onClick={stopListening} className="grid size-8 place-items-center rounded-full bg-v-elevated text-v-danger"><StopCircle size={16} /></button>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-red-700 dark:text-red-300">{t("familias.escuchandoDots")}</p>
-              <p className="text-xs text-red-500 font-medium">{t('aria.hablaAhora')}</p>
-            </div>
-            <button onClick={stopListening}
-              className="p-1.5 rounded-xl bg-red-100 hover:bg-red-200 transition-all">
-              <StopCircle size={16} className="text-red-600 dark:text-red-400" />
-            </button>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* ── Área de mensajes ── */}
-        <div className="" style={{ scrollbarWidth: "thin", scrollbarColor: "var(--card-border) transparent", flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", background: "var(--background)" }}>
-
-          {showWelcome && messages.length === 0 ? (
+      {/* ── Mensajes ── */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-v-bg px-4 pt-4" style={{ scrollbarWidth: 'thin' }}>
+        {showWelcome && messages.length === 0 ? (
+          <>
             <WelcomeScreen childName={childName} onQuickSend={send} />
-          ) : (
-            <>
-              {messages.map((m, i) => (
-                <div key={i} style={{ animation: 'fadeUp .3s ease' }}>
-                  <MessageBubble m={m} onNavigateToStore={onNavigateToStore} onWellbeingAnswer={handleWellbeingAnswer} />
-                </div>
-              ))}
-              {typing && <TypingIndicator />}
-              <div ref={endRef} />
-            </>
-          )}
-        </div>
-
-        {/* ── Preguntas rápidas (visible cuando hay mensajes) ── */}
-        {!showWelcome && messages.length > 0 && !typing && (
-          <div className="shrink-0 px-3 pb-1 border-t" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-            <div className="flex gap-1.5 overflow-x-auto py-2" style={{ scrollbarWidth: 'none' }}>
-              {['📋 Última sesión', '🏠 Tips para casa', '🎯 Objetivos', '💙 Apoyo'].map((q, i) => {
-                const texts = ['¿Cómo le fue en la última sesión?', 'Dame consejos para actividades en casa', '¿Qué objetivos está trabajando?', 'Necesito apoyo emocional']
-                return (
-                  <button key={i} onClick={() => send(texts[i])}
-                    className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap" style={{ background: "var(--muted-bg)", border: "1px solid var(--card-border)", color: "var(--text-muted)" }}>
-                    {q}
-                  </button>
-                )
-              })}
-            </div>
+            {ariaRestantes != null && ariaRestantes + ariaExtra <= 1 && (
+              <div className="mx-auto w-full max-w-2xl px-4 pb-4">
+                <AvisoTokensAria restantes={ariaRestantes + ariaExtra} max={tokensAria!.max!} reinicia={tokensAria?.reinicia ?? null} en={en} onComprar={onComprarTokens} />
+              </div>
+            )}
+            <ComprarTokensPadre abierto={comprarAbierto} tipoInicial="aria" onClose={() => { setComprarAbierto(false); cargarTokensAria() }} />
+          </>
+        ) : (
+          <div className="w-full">
+            {messages.map((m, i) => <MessageBubble key={i} m={m} onNavigateToStore={onNavigateToStore} onWellbeingAnswer={handleWellbeingAnswer} />)}
+            {typing && <TypingIndicator />}
+            {/* ARIA avisa cuando se acaban (o casi) los mensajes del día */}
+            {!typing && ariaRestantes != null && ariaRestantes + ariaExtra <= 1 && (
+              <AvisoTokensAria restantes={ariaRestantes + ariaExtra} max={tokensAria!.max!} reinicia={tokensAria?.reinicia ?? null} en={en} onComprar={onComprarTokens} />
+            )}
+            <div ref={endRef} />
+            <ComprarTokensPadre abierto={comprarAbierto} tipoInicial="aria" onClose={() => { setComprarAbierto(false); cargarTokensAria() }} />
           </div>
         )}
+      </div>
 
-        {/* ── Input con voz ── */}
-        <div className="shrink-0 px-3 py-3 border-t" style={{ background: "var(--card)", borderColor: "var(--card-border)" }}>
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 relative">
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-                placeholder={listening ? '🎤 Escuchando...' : childName ? `Pregúntame sobre ${childName}...` : 'Escribe tu pregunta...'}
-                disabled={typing || listening}
-                className="w-full text-sm font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none transition-all"
-                style={{
-                  background: listening ? '#fef2f2' : '#f8fafc',
-                  border: `1.5px solid ${listening ? '#fca5a5' : '#e2e8f0'}`,
-                  borderRadius: 14,
-                  padding: '11px 16px',
-                  fontFamily: 'inherit',
-                }}
-                onFocus={e => {
-                  if (!listening) {
-                    e.target.style.background = 'var(--c-card)'
-                    e.target.style.borderColor = '#0284c7'
-                    e.target.style.boxShadow = '0 0 0 3px rgba(99,102,241,.08)'
-                  }
-                }}
-                onBlur={e => {
-                  if (!listening) {
-                    e.target.style.background = '#f8fafc'
-                    e.target.style.borderColor = '#e2e8f0'
-                    e.target.style.boxShadow = 'none'
-                  }
-                }}
-              />
-            </div>
+      {/* ── Atajos (con conversación) ── */}
+      {!showWelcome && messages.length > 0 && !typing && (
+        <div className="shrink-0 border-t border-v-border bg-v-elevated px-3">
+          <div className="flex gap-1.5 overflow-x-auto py-2" style={{ scrollbarWidth: 'none' }}>
+            {atajos.map(({ Icon, label, text }) => (
+              <button key={label} onClick={() => send(text)}
+                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-v-fill px-3 py-1.5 text-xs font-semibold text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent">
+                <Icon size={12} /> {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-            {/* Botón micrófono */}
+      {/* ── Escribir ── */}
+      <div className="shrink-0 border-t border-v-border bg-v-elevated px-3 pb-2 pt-3">
+        <div className="w-full">
+          <div className={`flex items-center gap-1.5 rounded-full border p-1.5 pl-4 transition-shadow ${listening ? 'border-v-danger/50 bg-v-danger/5' : 'border-v-border bg-v-bg focus-within:border-v-accent/50 focus-within:ring-4 focus-within:ring-v-accent-soft'}`}>
+            <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
+              placeholder={ariaAgotado ? (en ? 'No ARIA messages left today' : 'Sin mensajes de ARIA por hoy') : listening ? (en ? 'Listening…' : 'Escuchando…') : childName ? (en ? `Ask me about ${childName}…` : `Pregúntame sobre ${childName}…`) : (en ? 'Type your question…' : 'Escribe tu pregunta…')}
+              disabled={typing || listening || ariaAgotado}
+              className="min-w-0 flex-1 bg-transparent py-1.5 text-sm text-v-text outline-none placeholder:text-v-subtle disabled:opacity-60" />
             {micSupported && (
-              <button
-                onClick={handleMicClick}
-                disabled={typing}
-                title={listening ? 'Detener grabación' : 'Hablar con ARIA'}
-                className="shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all disabled:opacity-40 hover:scale-105 active:scale-95"
-                style={{
-                  background: listening
-                    ? 'linear-gradient(135deg,#ef4444,#dc2626)'
-                    : 'linear-gradient(135deg,#f1f5f9,#e2e8f0)',
-                  boxShadow: listening
-                    ? '0 4px 18px rgba(239,68,68,.45)'
-                    : '0 2px 8px rgba(0,0,0,.08)',
-                  animation: listening ? 'micPulse 1.2s ease-in-out infinite' : 'none',
-                }}>
-                {listening
-                  ? <MicOff size={18} className="text-white" />
-                  : <Mic size={18} className="text-slate-500 dark:text-slate-400 dark:text-slate-500" />
-                }
-              </button>
+              <motion.button whileTap={{ scale: 0.92 }} onClick={handleMicClick} disabled={typing || ariaAgotado}
+                title={listening ? (en ? 'Stop recording' : 'Detener grabación') : (en ? 'Talk to ARIA' : 'Hablar con ARIA')}
+                className={`grid size-10 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-40 ${listening ? 'bg-v-danger text-white' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+                {listening ? <MicOff size={17} /> : <Mic size={17} />}
+              </motion.button>
             )}
-
-            {/* Botón detener voz / enviar */}
             {speaking ? (
-              <button
-                onClick={stopSpeaking}
-                title={t('aria.detenerVoz')}
-                className="shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-                style={{
-                  background: 'linear-gradient(135deg,#0284c7,#0284c7)',
-                  boxShadow: '0 4px 18px rgba(99,102,241,.45)',
-                  animation: 'speakerPulse 1.5s ease-in-out infinite',
-                }}>
-                <StopCircle size={18} className="text-white" />
-              </button>
+              <motion.button whileTap={{ scale: 0.92 }} onClick={stopSpeaking} title={t('aria.detenerVoz')}
+                className="v-brand grid size-10 shrink-0 place-items-center rounded-full"><StopCircle size={17} /></motion.button>
             ) : (
-              <button
-                onClick={() => send()}
-                disabled={typing || !input.trim() || listening}
-                className="shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all disabled:opacity-40 hover:scale-105 active:scale-95"
-                style={{ background: 'linear-gradient(135deg,#0284c7,#0284c7)', boxShadow: '0 4px 18px rgba(99,102,241,.45)' }}>
-                <Send size={18} className="text-white" style={{ transform: 'translateX(1px)' }} />
-              </button>
+              <motion.button whileTap={{ scale: 0.92 }} onClick={() => send()} disabled={typing || !input.trim() || listening || ariaAgotado}
+                className="v-brand grid size-10 shrink-0 place-items-center rounded-full transition-opacity disabled:opacity-35" style={{ boxShadow: 'none' }}>
+                <Send size={16} className="translate-x-px" />
+              </motion.button>
             )}
           </div>
-
-          {listening && (
-            <p className="text-center text-[10px] text-red-400 mt-1.5 font-medium">{t('auto.chatInterface.grabandoHablaCercaDelMicrofono')}</p>
-          )}
-          <p className="text-center text-[10px] text-slate-300 mt-1 font-medium">
-            ARIA puede cometer errores · Consulta con tu terapeuta
+          <p className="mt-1.5 text-center text-[10px] text-v-subtle">
+            {ariaAgotado
+              ? (() => { const h = tokensAria?.reinicia ? new Date(tokensAria.reinicia).toLocaleTimeString(en ? 'en-US' : 'es-PE', { hour: '2-digit', minute: '2-digit' }) : null
+                  return h ? (en ? `You used your ${tokensAria?.max} messages for today · Available again at ${h}` : `Usaste tus ${tokensAria?.max} mensajes de hoy · Vuelven a las ${h}`) : (en ? 'You used your messages for today' : 'Usaste tus mensajes de hoy') })()
+              : listening ? (en ? 'Recording — speak close to the microphone' : 'Grabando — habla cerca del micrófono') : (en ? 'ARIA can make mistakes · Check with your therapist' : 'ARIA puede cometer errores · Consulta con tu terapeuta')}
           </p>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
 export default ChatInterface
+
+// Mensaje de ARIA sobre los tokens del día (se muestra como una burbuja suya)
+function AvisoTokensAria({ restantes, max, reinicia, en, onComprar }: { restantes: number; max: number; reinicia: string | null; en: boolean; onComprar?: () => void }) {
+  const hora = reinicia ? new Date(reinicia).toLocaleTimeString(en ? 'en-US' : 'es-PE', { hour: '2-digit', minute: '2-digit' }).replace(/\.$/, '') : null
+  const agotado = restantes === 0
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-2.5">
+      <AriaAvatar size={32} />
+      <div className={`max-w-[85%] rounded-v rounded-tl-md border p-3.5 text-sm leading-relaxed text-v-text ${agotado ? 'border-v-warning/40 bg-v-warning/10' : 'border-v-border bg-v-bg'}`}>
+        <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-v-warning"><Coins size={13} /> {en ? 'Your ARIA tokens' : 'Tus tokens de ARIA'}</p>
+        {agotado
+          ? <p>{en
+              ? `You've used your ${max} messages for today, so I can't answer more questions right now.${hora ? ` Your tokens come back at ${hora}.` : ''} If it's urgent, please contact the center directly.`
+              : `Usaste tus ${max} mensajes de hoy, así que por ahora no puedo responder más preguntas.${hora ? ` Tus tokens vuelven a las ${hora}.` : ''} Si es urgente, comunícate directamente con el centro.`}</p>
+          : <p>{en ? 'You have 1 message left today. Make it count!' : 'Te queda 1 mensaje hoy. ¡Aprovéchalo!'}</p>}
+        {agotado && onComprar && (
+          <button onClick={onComprar} className="v-brand mt-3 inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold">
+            <Coins size={13} /> {en ? 'Get more tokens' : 'Conseguir más tokens'}
+          </button>
+        )}
+      </div>
+    </motion.div>
+  )
+}

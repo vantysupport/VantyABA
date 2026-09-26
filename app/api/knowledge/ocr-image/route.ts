@@ -1,7 +1,7 @@
 // app/api/knowledge/ocr-image/route.ts
 //
 // Recibe N imágenes (páginas renderizadas de un PDF escaneado) y devuelve
-// el texto extraído por Gemini Vision. Permite hasta 8 imágenes por request
+// el texto extraído por la visión de Groq. Permite hasta 8 imágenes por request
 // para mantenerse bajo el límite de 4.5 MB de Vercel.
 //
 // Modo de uso desde el browser:
@@ -9,21 +9,21 @@
 //   y opcionalmente: titulo, tipo, descripcion (si se quiere indexar directo)
 
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenAI } from '@google/genai'
+import { groqVision, PROMPT_OCR_DOCUMENTO } from '@/lib/groq-vision'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
+import { esCentroFundador } from '@/lib/knowledge-base'
 import { indexDocument } from '@/lib/knowledge-base'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 export const maxDuration = 120
 
-function getAI() {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY no configurada — no se puede OCR')
-  return new GoogleGenAI({ apiKey })
-}
-
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const fd = await req.formData()
 
@@ -53,78 +53,22 @@ export async function POST(req: NextRequest) {
     }
     imagenes.sort((a, b) => a.pagina - b.pagina)
 
-    // OCR con Gemini Vision — multimodal con varias imágenes en un solo prompt
-    const ai = getAI()
-    const parts: any[] = []
-    for (const img of imagenes) {
-      parts.push({
-        inlineData: {
-          mimeType: img.mime || 'image/jpeg',
-          data: Buffer.from(img.buffer).toString('base64'),
-        },
-      })
-    }
-    parts.push({
-      text: `Estas son ${imagenes.length} páginas de un documento clínico/educativo escaneado.
-
-Tu tarea: extraer TODO el texto de cada página, en orden.
-
-REGLAS ESTRICTAS:
-- Antes del texto de cada página, escribe el separador exacto: "=== PÁGINA ${imagenes[0].pagina} ===" (ajustando el número)
-- Numera las páginas con los números: ${imagenes.map(i => i.pagina).join(', ')}
-- Transcribe TODO el texto visible: encabezados, tablas, criterios, observaciones, sellos, fechas, notas al pie
-- Mantén el orden de lectura natural (columnas, listas)
-- Si hay tablas, transcríbelas con TAB entre columnas o con guiones
-- Si una página NO tiene texto visible (solo imagen/diagrama), escribe debajo del separador: "[Página sin texto]"
-- NO resumas ni parafrasees — TRANSCRIPCIÓN LITERAL
-- NO comentarios tuyos al inicio ni al final, solo el texto extraído`,
-    })
-
-    // Retry con backoff exponencial cuando Gemini devuelve 429 (rate limit por minuto)
-    // OJO: si es el límite DIARIO (1500/día en flash-lite gratis), reintentar no sirve.
+    // OCR con la visión de Groq (lotes de 3 imágenes por request)
     let texto = ''
-    let lastError: any = null
-    for (let intento = 1; intento <= 3; intento++) {
-      try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash-lite',
-          contents: [{ role: 'user', parts }],
-        })
-        texto = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
-        lastError = null
-        break
-      } catch (e: any) {
-        lastError = e
-        const msg = String(e?.message || e?.error?.message || '')
-        const code = e?.status || e?.code || e?.error?.code
-
-        // 429 = quota exceeded
-        if (code === 429 || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota')) {
-          // Si menciona "PerDay" o "perDay" es la quota diaria → no reintentar
-          const esLimiteDiario = msg.toLowerCase().includes('perday') || msg.toLowerCase().includes('per_day') || msg.toLowerCase().includes('day')
-          if (esLimiteDiario && intento === 1) {
-            return NextResponse.json({
-              error: 'GEMINI_QUOTA_DAILY_EXCEEDED',
-              detalle: 'Se agotó la quota gratuita diaria de Gemini para OCR (típicamente 1500 requests/día en flash-lite). Opciones: (1) Esperar al reseteo (24h); (2) Activar billing en https://aistudio.google.com/apikey — Flash Lite cuesta ~$0.04 por 1M tokens, prácticamente gratis para uso real.',
-              raw: msg.slice(0, 300),
-            }, { status: 429 })
-          }
-          // Backoff: 28s, 60s, 120s
-          const waitMs = (intento === 1 ? 28 : intento === 2 ? 60 : 120) * 1000
-          console.warn(`[ocr-image] 429 Gemini intento ${intento}/3 — esperando ${waitMs}ms`)
-          await new Promise(r => setTimeout(r, waitMs))
-          continue
-        }
-        // Otros errores: no reintentar
-        throw e
-      }
-    }
-
-    if (lastError) {
+    try {
+      texto = await groqVision(
+        imagenes.map(img => ({ data: img.buffer, mime: img.mime })),
+        (inicio, cantidad) => `${PROMPT_OCR_DOCUMENTO}
+Son las páginas ${imagenes.slice(inicio, inicio + cantidad).map(i => i.pagina).join(', ')} de un documento clínico/educativo escaneado.
+Antes del texto de cada página escribe el separador exacto "=== PÁGINA N ===" con su número.`,
+      )
+    } catch (e: any) {
+      const msg = String(e?.message || e)
+      const cuota = /cuota|429/i.test(msg)
       return NextResponse.json({
-        error: 'No se pudo extraer texto tras 3 intentos',
-        detalle: String(lastError?.message || lastError).slice(0, 300),
-      }, { status: 502 })
+        error: cuota ? 'AI_QUOTA_EXCEEDED' : 'No se pudo extraer texto',
+        detalle: cuota ? 'Se agotó la cuota de IA de hoy para leer documentos. Se reinicia en 24 h.' : msg.slice(0, 300),
+      }, { status: cuota ? 429 : 502 })
     }
 
     // Si quieren que también lo indexemos directo en el cerebro
@@ -137,16 +81,17 @@ REGLAS ESTRICTAS:
         .insert({
           titulo,
           tipo,
-          descripcion: `${descripcion || ''}\n\n[OCR via Gemini · ${imagenes.length} págs ${imagenes[0].pagina}-${imagenes[imagenes.length-1].pagina}]`.trim(),
+          descripcion: `${descripcion || ''}\n\n[OCR · ${imagenes.length} págs ${imagenes[0].pagina}-${imagenes[imagenes.length-1].pagina}]`.trim(),
           procesado: false,
           total_chunks: 0,
+          centro_id: caller.centroId,
         })
         .select('id')
         .single()
       if (dErr) throw dErr
 
       const result = await indexDocument(doc.id, texto, {
-        fuente: 'OCR-Gemini',
+        fuente: 'OCR',
         paginas: imagenes.map(i => i.pagina),
       })
       return NextResponse.json({

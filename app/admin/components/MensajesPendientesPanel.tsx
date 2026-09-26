@@ -11,6 +11,7 @@ import {
   TrendingUp, Target, Home, Star, Zap
 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
+import { confirmar } from '@/components/ui/confirmar'
 
 interface PendingMessage {
   id: string
@@ -106,7 +107,7 @@ export default function MensajesPendientesPanel() {
   }
 
   const rejectMessage = async (id: string) => {
-    if (!confirm(t('auto.mensajesPendientesPanel.descartarEsteMensajeNoLlegara'))) return
+    if (!await confirmar(t('auto.mensajesPendientesPanel.descartarEsteMensajeNoLlegara'))) return
     setActionLoading(id + '_reject')
     try {
       const res = await fetch('/api/admin/parent-messages', {

@@ -13,6 +13,7 @@ import {
   Plus, Link2, UserPlus, FolderOpen
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { subirArchivoPrivado } from '@/lib/subir-archivo'
 import { useToast } from '@/components/Toast'
 import ProgramasABAView from '@/app/admin/components/ProgramasABAView'
 import EvaluacionesUnificadas from '@/app/admin/components/EvaluacionesUnificadas'
@@ -808,9 +809,7 @@ function FichasTabEspecialista({ childId, childName }: { childId: string; childN
       const fileName = `Ficha_${childName.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.docx`
       const path = `${childId}/${Date.now()}_${fileName}`
       const file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
-      const { error: upErr } = await supabase.storage.from('patient-documents').upload(path, file, { upsert: false })
-      if (upErr) throw upErr
-      const { data: { publicUrl } } = supabase.storage.from('patient-documents').getPublicUrl(path)
+      const { url: publicUrl } = await subirArchivoPrivado('patient-documents', childId, file)
       await supabase.from('patient_documents').insert({
         child_id:          childId,
         uploaded_by:       user!.id,
@@ -886,7 +885,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
     try {
       const { data } = await supabase
         .from('children')
-        .select('*, profiles!children_parent_id_fkey(full_name, email, phone)')
+        .select('*, profiles!fk_children_parent(full_name, email, phone)')
         .eq('is_active', true).order('name')
       setNinos(data || [])
     } catch (e: any) { toast.error('Error: ' + e.message) }

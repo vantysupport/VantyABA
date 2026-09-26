@@ -301,7 +301,7 @@
     "cerrarSesion": "Sign out",
     "email": "Email address",
     "password": "Password",
-    "bienvenido": "Welcome to SANTI",
+    "bienvenido": "Welcome to Vanty",
     "ingresarCuenta": "Sign in to your account",
     "continuarGoogle": "Continue with Google",
     "primeraVez": "First time?",
@@ -309,8 +309,8 @@
     "olvidoPassword": "Forgot your password?",
     "accesoCifrado": "Encrypted and protected access",
     "continuaSegmiento": "Continue tracking your child",
-    "centroTerapeutico": "Therapy Center · Pueblo Libre",
-    "copyright": "© 2025 Neuropsychology and Therapies SANTI · Pueblo Libre, Lima, Peru",
+    "centroTerapeutico": "Clinical management for therapy centers",
+    "copyright": "© 2025 Vanty · All rights reserved",
     "nombreCompleto2": "Full name",
     "ejNombre": "E.g.: Maria Garcia",
     "correoElectronico": "Email address",
@@ -601,11 +601,11 @@
     "cargandoNotif": "Loading notifications..."
   },
   "whatsapp": {
-    "citaConfirmada": "✅ Appointment confirmed at SANTI\n📅 {fecha} at {hora}\n👤 Patient: {paciente}\n📍 {tipo}\n\nNeuropsychology and Therapies SANTI 💜",
-    "citaCancelada": "❌ Appointment cancelled at SANTI\n📅 {fecha} at {hora}\n👤 Patient: {paciente}\n\nContact reception to reschedule.\nNeuropsychology and Therapies SANTI 💜",
-    "formularioNuevo": "📋 New form at SANTI\nType: {tipo}\nPatient: {paciente}\n\nReview it in your portal.\nNeuropsychology and Therapies SANTI 💜",
-    "informeNuevo": "📊 New report available\nPatient: {paciente}\n\nYou can now view it in SANTI.\nNeuropsychology and Therapies SANTI 💜",
-    "alertaClinica": "⚠️ Clinical alert at SANTI\nPatient: {paciente}\n{descripcion}\n\nCheck the Predictive Analysis.\nNeuropsychology and Therapies SANTI 💜",
+    "citaConfirmada": "✅ Appointment confirmed on Vanty\n📅 {fecha} at {hora}\n👤 Patient: {paciente}\n📍 {tipo}\n\n{centro} 💜",
+    "citaCancelada": "❌ Appointment cancelled on Vanty\n📅 {fecha} at {hora}\n👤 Patient: {paciente}\n\nContact reception to reschedule.\n{centro} 💜",
+    "formularioNuevo": "📋 New form on Vanty\nType: {tipo}\nPatient: {paciente}\n\nReview it in your portal.\n{centro} 💜",
+    "informeNuevo": "📊 New report available\nPatient: {paciente}\n\nYou can now view it on Vanty.\n{centro} 💜",
+    "alertaClinica": "⚠️ Clinical alert on Vanty\nPatient: {paciente}\n{descripcion}\n\nCheck the Predictive Analysis.\n{centro} 💜",
     "notifOk": "Notifications working correctly.",
     "activoConTelefono": "Active",
     "arrastraCSV": "Drag your CSV here",
@@ -780,7 +780,7 @@
     "kpiSemana": "This week",
     "kpiVirtuales": "Virtual",
     "citasLista": "Appointments",
-    "virtualEmoji": "Virtual 📹",
+    "virtualEmoji": "Virtual",
     "puedesElegirVarios": "(you can choose several)",
     "guardando": "Saving...",
     "agendarVirtual": "Schedule Virtual",
@@ -1232,9 +1232,9 @@
   "legal": {
     "privacidadTitulo": "Privacy Policy",
     "terminosTitulo": "Terms of Service",
-    "ultimaActualizacion": "Last updated: March 2025 · Pueblo Libre, Lima, Peru",
+    "ultimaActualizacion": "Last updated: March 2025",
     "quienesSomos": "1. Who we are",
-    "quienesSomosDesc": "Neuropsychology and Therapies SANTI is a therapy center specialized in child ABA, ASD and ADHD intervention located in Pueblo Libre, Lima, Peru. We operate the SANTI digital platform for clinical management and communication with families.",
+    "quienesSomosDesc": "Vanty is a digital platform for clinical management and communication with families, used by therapy centers specialized in child ABA, ASD and ADHD intervention.",
     "queInfoTitulo": "2. What information we collect",
     "queInfoDesc": "We only collect the information necessary to provide our services:",
     "datosLabelCuenta": "Account data:",
@@ -1249,7 +1249,7 @@
     "usoGestionar": "Manage the patient's clinical history and therapeutic follow-up.",
     "usoGenerar": "Generate progress reports for families and professionals.",
     "usoEnviar": "Send appointment notifications and reminders.",
-    "usoMejorar": "Improve our clinical services and the SANTI platform.",
+    "usoMejorar": "Improve our clinical services and the Vanty platform.",
     "conQuienTitulo": "4. Who we share the information with",
     "conQuienDesc": "We do not sell or share your data with third parties for commercial purposes. We only share information with:",
     "seguridadTitulo": "5. Data security",
@@ -1260,7 +1260,7 @@
     "derechoElim": "Deletion of your account and associated data.",
     "retencionTitulo": "8. Data retention",
     "contactoDesc": "For any questions about this policy:",
-    "piscoIcaPeru": "Pueblo Libre, Lima, Peru",
+    "piscoIcaPeru": "",
     "verTerminos": "View Terms of Service →",
     "aceptacionTitulo": "1. Acceptance of the terms",
     "descripcionTitulo": "2. Service description",
@@ -1268,7 +1268,7 @@
     "naturalezaTitulo": "4. Clinical nature of the service",
     "cuentasTitulo": "6. User accounts",
     "disponibilidadTitulo": "7. Service availability",
-    "copyright": "© 2025 Neuropsychology and Therapies SANTI · All rights reserved",
+    "copyright": "© 2025 Vanty · All rights reserved",
     "verPrivacidad": "View Privacy Policy →",
     "rlsActivo": "RLS active",
     "accesoLbl": "Access",
@@ -1422,7 +1422,7 @@
     "marcarPendiente": "Mark as pending",
     "marcarCompletada": "Mark as completed",
     "semanaCompletada": "Week completed!",
-    "ariaSubtitulo": "Clinical assistant of Neuropsychology and Therapies SANTI",
+    "ariaSubtitulo": "Clinical assistant of {centro}",
     "escuchandoDots": "Listening...",
     "recursosAdicionales": "Additional resources",
     "formulariosMateriales": "Forms and materials",
@@ -1662,7 +1662,7 @@
     "approval_notice_parent": "Edit the message and save. It will go to the Approval Inbox for review before being sent to the parent.",
     "approval_flow_notice": "Approval flow active: Every AI-generated analysis is first reviewed by the lead before reaching parents.",
     "no_messages_reach_parents": "No message reaches parents without your authorization. AI-generated messages — from forms, sessions and evaluations — stay here first for you to review and approve.",
-    "message_reviewed": "This message was reviewed and approved by your therapist before being sent to you. If you have questions, you can contact the Neuropsychology and Therapies SANTI team directly.",
+    "message_reviewed": "This message was reviewed and approved by your therapist before being sent to you. If you have questions, you can contact your center's team directly.",
     "specialist_note": "You can mention this material to the family as support for the home task.",
     "select_option": "Select...",
     "ready": "Ready",
@@ -1868,7 +1868,7 @@
     "historialDesc": "Every generated document is recorded and verifiable via QR",
     "validos": "valid",
     "invalidados": "invalidated",
-    "buscarCodigoPac": "🔍 Search by code or patient…",
+    "buscarCodigoPac": "Search by code or patient…",
     "todosTipos": "All types",
     "todosEstados": "All statuses",
     "soloValidos": "Valid only",
@@ -1899,7 +1899,7 @@
     "phDudas": "What are your concerns?",
     "inversion": "Investment",
     "revisamosCuidado": "We carefully review what you told us about ",
-    "terapiasOfrecemos": "These are the therapies we offer at SANTI. Check the one(s) you would like to know more about. The specialist will contact you with a personalized proposal.",
+    "terapiasOfrecemos": "These are the therapies we offer at the center. Check the one(s) you would like to know more about. The specialist will contact you with a personalized proposal.",
     "tomaSegundos": "This takes a few seconds. Do not close this page.",
     "phHorarios": "Preferred schedules, questions, comments…",
     "terapiasPediste": "Therapies you asked about",
@@ -2338,7 +2338,6 @@
     "inteligenciaHubView": {
       "sesionesConsecutivas": "consecutive sessions",
       "sinAlertasActivasSistemaSeguro": "✅ No active alerts. System safe.",
-      "neuropsicologiaYTerapiasSanti": "Neuropsicología y Terapias SANTI",
       "seleccionarPaciente": "— Select patient —",
       "respuestaSinFormatoElModelo": "⚠ Unformatted response (the model did not return valid JSON):",
       "6AgentesIaPrediccionesPatrones": "6 AI agents · Predictions · Patterns · Goals · Reports",
@@ -2355,8 +2354,7 @@
       "comoVerMisCitas": "How do I see my appointments?",
       "comoUsarElAsistenteIa": "How to use the AI Assistant?",
       "dondeEncuentroRecursos": "Where do I find resources?",
-      "neuropsicologiaYTerapiasSanti": "Neuropsicología y Terapias SANTI",
-      "neuropsicologiaYTerapiasSantiPorta": "Neuropsicología y Terapias SANTI · Family Portal",
+      "centroPortalFamilias": "{centro} · Family Portal",
       "mas": "More",
       "nombreCompleto": " Full Name ",
       "fechaDeNacimiento": " Date of Birth ",
@@ -2415,14 +2413,12 @@
       "olvidasteTuContrasena": "Forgot your password?",
       "continuarConGoogle": "Continue with Google",
       "continuarConMicrosoft": "Continue with Microsoft",
-      "neuropsicologiaYTerapiasSanti2": "Neuropsicología y Terapias SANTI",
       "panelClinico": "Clinical Panel",
       "notificaciones": "Notifications",
       "citasDeHoy": "Today's appointments",
       "bienvenidoa": "Welcome, {v1}! 🎉",
       "tienesDudasEscribenos": "Have questions? Write to us:{v1}",
       "paraEjercerCualquierDerecho": "To exercise any right:{v1}",
-      "neuropsicologiaYTerapiasSanti3": "Neuropsicología y Terapias SANTI · {v1}",
       "mensajeSinLeer": "{v1} unread message{v2}"
     },
     "calendarView": {
@@ -2524,7 +2520,7 @@
     },
     "chatInterface": {
       "grabandoHablaCercaDelMicrofono": "🔴 Recording — speak near the microphone",
-      "tuAsistenteClinicoDeNeuropsicologi": "Your clinical assistant from Neuropsicología y Terapias SANTI",
+      "tuAsistenteClinicoDeCentro": "Your clinical assistant from {centro}",
       "enLinea": "Online",
       "puedoExplicarteSesionesTareasPara": "I can explain sessions, homework and much more to you.",
       "enLinea2": "Online"
@@ -2648,7 +2644,7 @@
       "citas": "{v1} appointments"
     },
     "chatPadres": {
-      "neuropsicologiaYTerapiasSantiSiemp": "Neuropsicología y Terapias SANTI • Always available"
+      "centroSiempreDisponible": "{centro} • Always available"
     },
     "evaluacionInicialView": {
       "eligeAlMenosUnaTerapia": "Choose at least one therapy",
@@ -3119,6 +3115,418 @@
         "label": "For the family",
         "desc": "Home guides"
       }
+    }
+  },
+  "vanty": {
+    "nav": {
+      "signIn": "Sign in"
+    },
+    "pricing": {
+      "eyebrow": "Plans",
+      "title": "Your whole center, in one place.",
+      "subtitle": "Scheduling, patients, ABA programs and Aria, your AI clinical assistant. Start free and pick the plan that grows with you.",
+      "selectPlan": "Choose a plan",
+      "perMonth": "per month",
+      "professionals": "{n} professionals",
+      "patients": "{n} patients",
+      "parents": "{n} parent accounts",
+      "noParents": "No parent access (add-on available)",
+      "aiReports": "{n} AI reports per month",
+      "ariaDaily": "{n} Aria messages per day",
+      "predictive": "{n} predictive analyses per month",
+      "teamChat": "Team chat",
+      "catalog": "Team catalog",
+      "financialReports": "Financial reports",
+      "startTrial": "Start free trial",
+      "continueWith": "Continue with {plan}",
+      "unavailable": "Plans are not available right now.",
+      "professionalsOne": "1 professional"
+    },
+    "createCenter": {
+      "title": "Create your center",
+      "subtitle": "In a minute your space will be ready to invite your team.",
+      "fields": {
+        "centroName": "Center name",
+        "fullName": "Your name",
+        "email": "Email",
+        "password": "Password (at least 8 characters)",
+        "direccion": "Address",
+        "telefono": "Phone",
+        "centroEmail": "Center email",
+        "ruc": "Tax ID (optional)",
+        "logo": "Center logo"
+      },
+      "submit": "Create my center",
+      "submitHover": "Let's go",
+      "creating": "Creating…",
+      "trialNote": "Free trial. No card required.",
+      "haveAccount": "Already have an account?",
+      "checkEmailTitle": "Check your email",
+      "checkEmailBody": "We sent a link to {email} to confirm your account. Then you can sign in to your center.",
+      "errors": {
+        "required": "Enter the center's name, address and phone, and your name.",
+        "email": "Enter a valid email.",
+        "password": "Password must be at least 8 characters.",
+        "plan": "The selected plan is not available.",
+        "emailTaken": "That email already has an account. Sign in instead.",
+        "generic": "We couldn't create the center. Please try again.",
+        "ruc": "Tax ID may only contain letters and numbers (6 to 20).",
+        "logo": "The logo must be a PNG, JPG or WebP up to 2 MB."
+      },
+      "rucHint": "Shown on receipts.",
+      "logoHint": "PNG, JPG or WebP · max 2 MB. Shown on reports and receipts.",
+      "logoChange": "Change logo",
+      "step1Title": "Center details",
+      "step2Title": "Your admin account",
+      "stepOf": "Step {n} of 2",
+      "continue": "Continue",
+      "back": "Back",
+      "brandTitle": "Your center, ready in minutes.",
+      "brandBody": "Set up your space and start working with your team today.",
+      "features": {
+        "trial": "Free trial, no card required",
+        "invites": "Invite your team and families with a link",
+        "branding": "Reports and receipts with your logo and tax ID"
+      }
+    },
+    "control": {
+      "console": "Console",
+      "signOut": "Sign out",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "errorGeneric": "The action couldn't be completed ({code}).",
+      "tabs": {
+        "overview": "Overview",
+        "centros": "Centers",
+        "plans": "Plans",
+        "security": "Security",
+        "platform": "Platform",
+        "errors": "Errors"
+      },
+      "gate": {
+        "forbidden": {
+          "title": "Restricted access",
+          "body": "This console is for the Vanty platform team only. The attempt has been logged."
+        },
+        "mfa_required": {
+          "title": "Two-step verification",
+          "body": "The console controls every center and billing, so it requires a second factor (authenticator app).",
+          "cta": "Set up or verify 2FA"
+        }
+      },
+      "status": {
+        "trial": "Trial",
+        "pending_payment": "Payment pending",
+        "active": "Active",
+        "suspended": "Suspended"
+      },
+      "levels": {
+        "bajo": "Low",
+        "medio": "Medium",
+        "alto": "High",
+        "critico": "Critical"
+      },
+      "events": {
+        "trial_started": "Trial started",
+        "trial_extended": "Trial extended",
+        "plan_requested": "Plan requested",
+        "payment_confirmed": "Payment confirmed",
+        "plan_changed": "Plan changed",
+        "suspended": "Center suspended",
+        "reactivated": "Center reactivated",
+        "addon_purchased": "Top-up / add-on"
+      },
+      "overview": {
+        "title": "Overview",
+        "subtitle": "The platform at a glance.",
+        "mrr": "Monthly recurring revenue",
+        "trialsEnding": "Trials ending within 7 days",
+        "patients": "Patients",
+        "users": "Users",
+        "openAlerts": "Open security alerts"
+      },
+      "centros": {
+        "title": "Centers",
+        "subtitle": "{n} registered centers",
+        "search": "Search by name or email",
+        "empty": "No matching centers.",
+        "trialEnds": "Trial until",
+        "paidUntil": "Paid until",
+        "patients": "Patients",
+        "staff": "Professionals",
+        "parents": "Parents",
+        "aiReports": "AI reports",
+        "predictive": "Predictive",
+        "parentSlots": "Parent slots",
+        "confirmPayment": "Confirm payment",
+        "confirmPaymentHint": "Record a received payment (Yape, bank transfer…) and activate or renew the plan.",
+        "plan": "Plan",
+        "months": "Months",
+        "amount": "Amount (S/)",
+        "reference": "Reference",
+        "referenceHint": "Operation or receipt number.",
+        "activate": "Activate plan",
+        "topupTitle": "Token and slot top-up",
+        "topupKind": "Type",
+        "quantity": "Quantity",
+        "quantityHint": "Use a negative number to correct.",
+        "note": "Note",
+        "grant": "Apply top-up",
+        "lifecycle": "Lifecycle",
+        "extendDays": "Extend trial (days)",
+        "extend": "Extend",
+        "suspend": "Suspend center",
+        "reactivate": "Reactivate center",
+        "suspendConfirm": "Suspend {name}? Its staff and families won't be able to sign in until you reactivate it.",
+        "history": "History",
+        "noHistory": "No activity yet."
+      },
+      "plans": {
+        "title": "Plans & pricing",
+        "subtitle": "Changes apply instantly to the pricing page and to every center's limits.",
+        "new": "New plan",
+        "newHint": "Created inactive: complete it and activate it when ready.",
+        "create": "Create",
+        "code": "Code",
+        "nameEs": "Name (ES)",
+        "nameEn": "Name (EN)",
+        "active": "Active",
+        "fields": {
+          "price_pen": "Monthly price (S/)",
+          "max_professionals": "Professionals",
+          "max_patients": "Patients",
+          "max_parents": "Parent accounts",
+          "max_ai_reports": "AI reports / month",
+          "max_predictive_tokens": "Predictive analyses / month",
+          "max_storage_mb": "Files (MB)",
+          "max_db_mb": "Data (MB)",
+          "max_aria_msgs_staff_day": "Aria staff / day",
+          "max_aria_msgs_parent_day": "Aria parents / day",
+          "max_parent_plans_month": "Practice plans / parent / month",
+          "extra_ai_pack_size": "Extra AI pack size",
+          "extra_ai_pack_price_pen": "Extra pack price (S/)",
+          "extra_parent_price_pen": "Extra parent price (S/)",
+          "sort_order": "Order",
+          "has_team_chat": "Team chat",
+          "has_catalog": "Team catalog",
+          "has_financial_reports": "Financial reports"
+        }
+      },
+      "security": {
+        "eventsTitle": "Security events",
+        "eventsSubtitle": "Real-time detection: brute force, lockouts and denied access.",
+        "onlyOpen": "Open only",
+        "all": "All",
+        "anyLevel": "Any level",
+        "resolve": "Resolve",
+        "noEvents": "No events. All quiet.",
+        "auditTitle": "Audit log",
+        "auditSubtitle": "Every action is hash-chained: if anyone alters a record, verification detects it.",
+        "verify": "Verify integrity",
+        "verifying": "Verifying…",
+        "intact": "Chain intact · {n} records verified",
+        "broken": "Record tampered from #{seq}. Start the forensic review.",
+        "when": "When",
+        "who": "Who",
+        "what": "What",
+        "noAudit": "No records yet."
+      },
+      "platform": {
+        "title": "Platform",
+        "subtitle": "Global Vanty settings.",
+        "maintenance": "Maintenance",
+        "maintenanceOn": "Enable maintenance mode",
+        "maintenanceMsg": "Message for users",
+        "accessTitle": "Access & security",
+        "trialDays": "Trial days",
+        "maxFailures": "Max failed attempts",
+        "lockoutMinutes": "Lockout minutes",
+        "lockoutHint": "After that many failed attempts (per email or per IP) access is temporarily blocked and an alert is raised.",
+        "modules": "Global modules",
+        "modulesHint": "Turning a module off hides it for every center, regardless of plan."
+      },
+      "modules": {
+        "agenda": "Schedule",
+        "ninos": "Patients",
+        "inteligencia": "Predictive analysis",
+        "cerebro": "AI Brain",
+        "pagos": "Payments",
+        "reportes_financieros": "Financial reports",
+        "recursos_adicionales": "Resources",
+        "chat_especialistas": "Team chat"
+      },
+      "errors": {
+        "title": "Errors",
+        "subtitle": "{n} logged errors",
+        "clear": "Clear all",
+        "clearConfirm": "Delete all errors?",
+        "empty": "No errors logged."
+      }
+    },
+    "subscription": {
+      "seePlans": "See plans",
+      "contact": "Contact support",
+      "signOut": "Sign out",
+      "trial_expired": {
+        "title": "Your trial has ended",
+        "body": "Choose a plan to keep using Vanty. Your data is safe."
+      },
+      "pending_payment": {
+        "title": "Payment under review",
+        "body": "We're verifying your payment. We'll let you know as soon as your center is active."
+      },
+      "suspended": {
+        "title": "Center suspended",
+        "body": "Access to this center is paused. Contact support to reactivate it."
+      },
+      "no_centro": {
+        "title": "You don't belong to a center yet",
+        "body": "Ask your center for an invitation link, or create your own center."
+      },
+      "brandTitle": "We're here to help.",
+      "brandBody": "Sort out your account status and get back to work with your team."
+    },
+    "resetPassword": {
+      "requestTitle": "Reset your password",
+      "requestBody": "We'll email you a link to create a new password.",
+      "email": "Email",
+      "send": "Send link",
+      "sentTitle": "Check your email",
+      "sentBody": "If an account exists for that email, you'll get a link in a few minutes.",
+      "setTitle": "New password",
+      "setBody": "Choose a password with at least 8 characters.",
+      "password": "New password",
+      "confirm": "Repeat password",
+      "save": "Save password",
+      "done": "Password updated. Signing you in…",
+      "tooShort": "Must be at least 8 characters.",
+      "mismatch": "Passwords don't match.",
+      "failed": "Couldn't update it. Request a new link.",
+      "brandTitle": "Get back in.",
+      "brandBody": "We'll help you back into your account in a few steps.",
+      "features": {
+        "link": "Secure one-time link",
+        "expires": "Expires shortly",
+        "never": "We'll never ask for your password by email"
+      },
+      "backToLogin": "Back to sign in",
+      "expired": "That link was already used or has expired. Request a new one here."
+    },
+    "login": {
+      "brandTitle": "Your therapy center, all in one place.",
+      "brandBody": "Scheduling, patients, ABA programs and AI reports for your whole team and families.",
+      "features": {
+        "calendar": "Effortless scheduling and sessions",
+        "aria": "Aria, your AI clinical assistant",
+        "secure": "Clinical data isolated per center"
+      },
+      "tabs": {
+        "signin": "I have an account",
+        "new": "I'm new"
+      },
+      "signinTitle": "Welcome back",
+      "signinSubtitle": "Sign in to continue with your center.",
+      "newTitle": "Welcome to Vanty",
+      "newSubtitle": "Choose how you want to start.",
+      "email": "Email",
+      "password": "Password",
+      "forgot": "Forgot it?",
+      "togglePassword": "Show or hide password",
+      "submit": "Sign in",
+      "or": "or continue with",
+      "createTitle": "Register my center",
+      "createBody": "Create your center’s space with your logo and details. Free trial, no card.",
+      "createCta": "Create my center",
+      "invitedTitle": "My center invited me",
+      "invitedBody": "If you're a specialist, receptionist or family member, your center will send you an invitation link. Open it to create your account.",
+      "seePlans": "See plans & pricing",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "errors": {
+        "invalid": "Incorrect email or password.",
+        "unconfirmed": "Confirm your email before signing in.",
+        "locked": "Too many failed attempts. Try again in {minutes} minutes.",
+        "rate_limited": "Too many attempts. Wait a few minutes.",
+        "error": "We couldn't sign you in. Please try again.",
+        "network": "No connection to the server. Check your internet.",
+        "oauth": "Couldn't connect to that provider.",
+        "sessionTaken": "This account is already open on another device. Only one active session is allowed."
+      }
+    },
+    "mfa": {
+      "brandTitle": "Your account, doubly protected.",
+      "brandBody": "Two-step verification keeps others out even if they know your password.",
+      "features": {
+        "password": "Your password alone is no longer enough",
+        "phone": "A fresh code on your phone every 30 seconds",
+        "only": "Only you can approve access"
+      },
+      "introTitle": "Two-step verification",
+      "requiredBadge": "Required for the platform console",
+      "optionalBadge": "Optional · recommended",
+      "introRequired": "The console controls every center, billing and security in Vanty ABA, so your account needs a second factor before continuing.",
+      "introOptional": "Protect your account and your center's clinical data with a second factor. Turn it on now or later from your profile.",
+      "steps": {
+        "install": {
+          "title": "Install an authenticator app",
+          "body": "Google Authenticator, Microsoft Authenticator, Authy or 1Password."
+        },
+        "scan": {
+          "title": "Scan the QR code",
+          "body": "The app will link your Vanty ABA account."
+        },
+        "code": {
+          "title": "Enter the 6-digit code",
+          "body": "It shows in the app and changes every 30 seconds."
+        }
+      },
+      "start": "Set it up now",
+      "skip": "Not now",
+      "scanTitle": "Scan the code",
+      "scanBody": "Open your authenticator app and scan this code. If you can't, copy the manual key.",
+      "qrAlt": "QR code for two-step verification",
+      "enterCode": "Enter the 6-digit code shown in the app",
+      "challengeTitle": "Confirm it's you",
+      "challengeBody": "Enter the 6-digit code from your authenticator app.",
+      "useOtherAccount": "Use another account",
+      "doneTitle": "Verification active",
+      "doneBody": "All set. Taking you to your dashboard…",
+      "errors": {
+        "enroll": "We couldn't start the setup. Please try again.",
+        "code": "Wrong or expired code. Use the code currently shown in your app."
+      }
+    },
+    "twoFactor": {
+      "title": "Two-step verification",
+      "on": "On",
+      "off": "Off",
+      "onBody": "You'll be asked for a code from your authenticator app, besides your password.",
+      "offBody": "Optional and recommended: protects your account even if someone knows your password.",
+      "enable": "Turn on",
+      "disable": "Turn off",
+      "disableConfirm": "Turn off two-step verification? Your account will be protected by your password only.",
+      "verifyFirst": "To turn it off, confirm your code first.",
+      "verifyLink": "Verify now"
+    },
+    "sidebarPlan": {
+      "plan": "Plan",
+      "patients": "Patients",
+      "team": "Team",
+      "unlimited": "∞",
+      "trialLeft": "{n} trial days left",
+      "manage": "See plans",
+      "status": {
+        "active": "Active",
+        "trial": "Trial",
+        "pending_payment": "Payment pending",
+        "suspended": "Suspended"
+      },
+      "noPlan": "No plan"
+    },
+    "home": {
+      "noSessionsWeek": "No sessions logged this week",
+      "createProgram": "Create program"
     }
   }
 }

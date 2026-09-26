@@ -1,81 +1,26 @@
-// lib/knowledge-base.ts — v4
-// Embeddings: Hugging Face (gratis, 768 dims) → Gemini (fallback) → texto plano
-// PDFs: Gemini Vision (lee texto + imágenes + escaneados)
+// lib/knowledge-base.ts — v5
+// Embeddings: modelo local multilingüe (lib/embeddings.ts) → sin API, sin costo por uso
+// PDFs: pdf-parse (texto digital, gratis) → si es escaneado, OCR con la visión de Groq
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { GoogleGenAI } from '@google/genai'
+import { embedText, EMBED_MODEL } from '@/lib/embeddings'
+import { groqVision, PROMPT_OCR_DOCUMENTO } from '@/lib/groq-vision'
 
 const CHUNK_SIZE    = 800
 const CHUNK_OVERLAP = 100
-const MAX_PDF_BYTES = 4 * 1024 * 1024
+// Tope de páginas que se mandan a OCR por documento escaneado (cada página consume cuota de IA).
+const MAX_OCR_PAGES = 40
 
-// Hugging Face: modelo gratuito, 768 dims (igual que Gemini text-embedding-004)
-// Registro gratis en https://huggingface.co → Settings → Access Tokens
-const HF_EMBEDDING_MODEL = 'sentence-transformers/all-mpnet-base-v2'
-const HF_API_URL = `https://api-inference.huggingface.co/models/${HF_EMBEDDING_MODEL}`
+export { EMBED_MODEL }
 
-function getAI() {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) throw new Error('GEMINI_API_KEY no configurada')
-  return new GoogleGenAI({ apiKey })
-}
-
-// ── Embedding con Hugging Face (gratis) ───────────────────────────────────────
-async function generateEmbeddingHF(text: string): Promise<number[]> {
-  const hfKey = process.env.HF_API_KEY
-  if (!hfKey) return []
-
-  const res = await fetch(HF_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${hfKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ inputs: text.slice(0, 8000), options: { wait_for_model: true } }),
-  })
-
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`HF error ${res.status}: ${err.slice(0, 200)}`)
-  }
-
-  const data = await res.json()
-  // Respuesta puede ser [num, num, ...] o [[num, num, ...]]
-  const vec = Array.isArray(data[0]) ? data[0] : data
-  return Array.isArray(vec) && vec.length > 0 ? vec : []
-}
-
-// ── Embedding con Gemini (fallback) ───────────────────────────────────────────
-async function generateEmbeddingGemini(text: string): Promise<number[]> {
-  const ai = getAI()
-  const response = await ai.models.embedContent({
-    model: 'text-embedding-004',
-    contents: text.slice(0, 8000),
-  })
-  const vals =
-    (response as any).embeddings?.[0]?.values ??
-    (response as any).embedding?.values ??
-    []
-  return Array.isArray(vals) ? vals : []
-}
-
-// ── generateEmbedding: HF → Gemini → vacío (usa búsqueda FTS) ────────────────
+// ── generateEmbedding: modelo local; [] si falla (la búsqueda cae a texto) ────
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const vec = await generateEmbeddingHF(text)
-    if (vec.length > 0) return vec
+    return await embedText(text)
   } catch (e: any) {
-    console.warn('[embedding] HF falló, probando Gemini:', e?.message)
+    console.warn('[embedding] Modelo local falló:', e?.message)
+    return []
   }
-
-  try {
-    const vec = await generateEmbeddingGemini(text)
-    if (vec.length > 0) return vec
-  } catch (e: any) {
-    console.warn('[embedding] Gemini falló:', e?.message)
-  }
-
-  return []  // Modo texto plano como último fallback
 }
 
 // ── Extraer texto de PDF con pdf-parse (sin IA, gratis, sin límites) ────────────
@@ -119,125 +64,49 @@ export function esTextoLegible(text: string): boolean {
   return ratio > 0.7 && palabras > 20
 }
 
-// ── extractTextFromPdf: pdf-parse primero → Gemini fallback → guarda anti-basura
-// pdf-parse: gratis, sin API, sin límites, instantáneo
-// Gemini Vision: solo para PDFs escaneados o cuando pdf-parse falla
+// ── extractTextFromPdf: pdf-parse primero → OCR (Groq visión) para escaneados → guarda anti-basura
 export async function extractTextFromPdf(buffer: ArrayBuffer): Promise<string> {
-  // 1. Intentar con pdf-parse (gratis, sin IA)
+  // 1. Texto digital con pdf-parse (gratis, sin IA)
   const textoPdfParse = await extractTextWithPdfParse(buffer)
   if (textoPdfParse.length > 200 && esTextoLegible(textoPdfParse)) {
     console.log('[pdf] ✅ Texto extraído con pdf-parse (sin IA)')
     return textoPdfParse
   }
 
-  // 2. Fallback: Gemini Vision (para PDFs escaneados)
-  console.log('[pdf] pdf-parse insuficiente, usando Gemini Vision...')
-  const textoGemini = await extractTextFromPdfWithGemini(buffer)
+  // 2. PDF escaneado: renderizar páginas a imagen y leerlas con la visión de Groq
+  console.log('[pdf] pdf-parse insuficiente, usando OCR (Groq visión)...')
+  let textoOcr = ''
+  try {
+    textoOcr = await extractTextFromPdfWithOcr(buffer)
+  } catch (e: any) {
+    console.warn('[pdf] OCR falló:', e?.message)
+  }
 
-  // 3. Guarda final: NUNCA indexar símbolos basura. Si nada es legible, devolver
-  //    vacío para que el documento se marque como "no procesado" (mejor que
-  //    llenar el cerebro de símbolos que la IA no puede usar).
-  if (esTextoLegible(textoGemini)) return textoGemini
+  // 3. Nunca indexar símbolos basura: si nada es legible, vacío (el documento queda "no procesado").
+  if (esTextoLegible(textoOcr)) return textoOcr
   if (esTextoLegible(textoPdfParse)) return textoPdfParse
-  console.warn('[pdf] ⚠️ No se obtuvo texto legible (PDF escaneado sin OCR/Gemini). No se indexará basura.')
+  console.warn('[pdf] ⚠️ No se obtuvo texto legible. No se indexará basura.')
   return ''
 }
 
-// ── Extraer texto de PDF con Gemini Vision ────────────────────────────────────
-// Gemini 1.5 Flash acepta PDFs de hasta ~20MB vía inlineData.
-// Para libros muy grandes, extraemos en fragmentos de 4MB.
-export async function extractTextFromPdfWithGemini(buffer: ArrayBuffer): Promise<string> {
+// ── Renderiza las páginas del PDF (pdf-parse + canvas) y las transcribe con Groq visión ──
+export async function extractTextFromPdfWithOcr(buffer: ArrayBuffer, maxPages = MAX_OCR_PAGES): Promise<string> {
+  const mod = await import('pdf-parse') as any
+  const PDFParse = mod.PDFParse ?? mod.default?.PDFParse ?? mod.default
+  const parser = new PDFParse({ data: new Uint8Array(buffer) })
   try {
-    const ai    = getAI()
-    const bytes = new Uint8Array(buffer)
-    const totalBytes = bytes.byteLength
-
-    console.log(`[pdf] Tamaño del PDF: ${Math.round(totalBytes / 1024)}KB`)
-
-    // Para PDFs pequeños/medianos: enviar completo
-    if (totalBytes <= MAX_PDF_BYTES) {
-      return await extractPdfChunk(ai, buffer)
-    }
-
-    // Para PDFs grandes: partir en lotes de 4MB y concatenar
-    // Nota: esto no es perfecto porque cortar bytes puede romper páginas,
-    // pero Gemini es robusto y extrae lo que puede de cada fragmento.
-    console.log(`[pdf] PDF grande (${Math.round(totalBytes / 1024 / 1024)}MB) — procesando en lotes`)
-    const textos: string[] = []
-    let offset = 0
-    let lote = 1
-
-    while (offset < totalBytes) {
-      const end   = Math.min(offset + MAX_PDF_BYTES, totalBytes)
-      const slice = buffer.slice(offset, end)
-      console.log(`[pdf] Lote ${lote}: bytes ${offset}–${end}`)
-
-      try {
-        const texto = await extractPdfChunk(ai, slice)
-        if (texto.trim().length > 20) textos.push(texto)
-      } catch (e) {
-        console.warn(`[pdf] Lote ${lote} falló, usando fallback de texto plano`)
-        const fallback = extractPdfTextFallback(slice)
-        if (fallback.length > 20) textos.push(fallback)
-      }
-
-      offset = end
-      lote++
-      // Pausa breve entre lotes para no saturar la API
-      if (offset < totalBytes) await new Promise(r => setTimeout(r, 1000))
-    }
-
-    const resultado = textos.join('\n\n')
-    console.log(`[pdf] Texto total extraído: ${resultado.length} caracteres en ${lote - 1} lotes`)
-    return resultado
-
-  } catch (e: any) {
-    console.error('[pdf-gemini] Error fatal:', e?.message)
-    return extractPdfTextFallback(buffer)
+    const shots = await parser.getScreenshot({ first: maxPages, desiredWidth: 1400, imageDataUrl: false, imageBuffer: true })
+    const pages: { data: Uint8Array; pageNumber: number }[] = shots?.pages || []
+    if (pages.length === 0) return ''
+    console.log(`[pdf-ocr] ${pages.length}/${shots.total} páginas → Groq visión`)
+    return await groqVision(
+      pages.map(pg => ({ data: pg.data, mime: 'image/png' })),
+      (inicio, cantidad) => `${PROMPT_OCR_DOCUMENTO}
+Son las páginas ${pages[inicio].pageNumber} a ${pages[inicio + cantidad - 1].pageNumber} de un documento clínico/educativo. Antes del texto de cada página escribe "=== PÁGINA N ===".`,
+    )
+  } finally {
+    try { await parser.destroy?.() } catch { /* noop */ }
   }
-}
-
-// ── Extraer un fragmento de PDF vía Gemini ───────────────────────────────────
-async function extractPdfChunk(ai: GoogleGenAI, buffer: ArrayBuffer): Promise<string> {
-  const base64 = Buffer.from(buffer).toString('base64')
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.5-flash',
-    contents: [{
-      role: 'user',
-      parts: [
-        {
-          inlineData: {
-            mimeType: 'application/pdf',
-            data: base64,
-          },
-        },
-        {
-          text: `Extrae TODO el texto de este documento PDF.
-Incluye: texto de todas las páginas, texto dentro de imágenes, tablas, encabezados, pies de página, notas al pie.
-NO resumas ni parafrasees — transcribe el contenido COMPLETO tal como aparece.
-Si hay texto en imágenes o diagramas, léelo también.
-Responde SOLO con el texto extraído, sin comentarios previos ni posteriores.`,
-        },
-      ],
-    }],
-  })
-
-  const texto = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
-  if (texto.trim().length > 50) return texto
-
-  // Fallback con prompt en inglés
-  const r2 = await ai.models.generateContent({
-    model: 'gemini-3.5-flash',
-    contents: [{
-      role: 'user',
-      parts: [
-        { inlineData: { mimeType: 'application/pdf', data: base64 } },
-        { text: 'Transcribe all text content from this document. Include all pages. Output only the raw text.' },
-      ],
-    }],
-  })
-  return r2.candidates?.[0]?.content?.parts?.[0]?.text || ''
 }
 
 // ── Fallback manual: extrae texto de PDFs con texto embebido ─────────────────
@@ -315,12 +184,20 @@ export function chunkText(text: string, chunkSize = CHUNK_SIZE, overlap = CHUNK_
 }
 
 // ── Indexar documento: texto → chunks → embeddings → Supabase ────────────────
+// Multi-tenant: los chunks heredan el centro_id del documento (knowledge_documents.centro_id).
 export async function indexDocument(
   documentId: string,
   fullText: string,
   metadata: Record<string, any> = {}
 ): Promise<{ success: boolean; chunks: number; error?: string }> {
   try {
+    const { data: docRow } = await supabaseAdmin
+      .from('knowledge_documents').select('centro_id').eq('id', documentId).maybeSingle()
+    const centroId = (docRow as { centro_id?: string | null } | null)?.centro_id ?? null
+    if (!centroId) {
+      return { success: false, chunks: 0, error: 'Documento sin centro asignado' }
+    }
+
     if (!fullText || fullText.trim().length < 50) {
       return { success: false, chunks: 0, error: 'Texto insuficiente para indexar (menos de 50 caracteres)' }
     }
@@ -358,6 +235,7 @@ export async function indexDocument(
             // Guardar chunk SIEMPRE, con o sin embedding
             await supabaseAdmin.from('knowledge_chunks').insert({
               document_id: documentId,
+              centro_id:   centroId,
               chunk_index: chunkIdx,
               contenido:   chunk,
               embedding:   embeddingValue,
@@ -367,6 +245,7 @@ export async function indexDocument(
                 total_chunks:  chunks.length,
                 char_count:    chunk.length,
                 sin_embedding: embeddingValue === null,
+                embed_model:   embeddingValue ? EMBED_MODEL : null,
               },
             })
             indexed++
@@ -405,12 +284,35 @@ export async function indexDocument(
   }
 }
 
+// ── Centros cuyo conocimiento puede leer un centro ────────────────────────────
+// El propio + la base COMPARTIDA: el Cerebro de los centros con plan Fundador (curado por la
+// plataforma), que alimenta a ARIA y a los agentes de todas las clínicas. Caché de 5 min.
+let cacheCompartidos: { ids: string[]; t: number } | null = null
+export async function centrosConocimiento(centroId: string | null): Promise<string[]> {
+  if (!centroId) return []
+  if (!cacheCompartidos || Date.now() - cacheCompartidos.t > 300_000) {
+    const { data } = await supabaseAdmin.from('centros').select('id, plans!inner(code)').eq('plans.code', 'fundador')
+    cacheCompartidos = { ids: ((data || []) as { id: string }[]).map(c => c.id), t: Date.now() }
+  }
+  return [...new Set([centroId, ...cacheCompartidos.ids])]
+}
+
+// Solo los centros del plan Fundador alimentan (escriben) el Cerebro IA compartido
+export async function esCentroFundador(centroId: string | null): Promise<boolean> {
+  if (!centroId) return false
+  await centrosConocimiento(centroId) // refresca la caché de centros Fundador
+  return !!cacheCompartidos?.ids.includes(centroId)
+}
+
 // ── Buscar conocimiento relevante por similitud semántica ─────────────────────
+// Multi-tenant: devuelve conocimiento del centro indicado + la base compartida. Sin centroId → nada.
 export async function searchKnowledge(
   query: string,
-  options: { maxResults?: number; threshold?: number } = {}
+  options: { maxResults?: number; threshold?: number; centroId: string | null }
 ): Promise<KnowledgeResult[]> {
-  const { maxResults = 3, threshold = 0.55 } = options // reducido de 6 para ahorrar tokens Groq
+  const { maxResults = 3, threshold = 0.55, centroId } = options // reducido de 6 para ahorrar tokens Groq
+  if (!centroId) return []
+  ensureEmbeddingsUpToDate()
 
   try {
     // Intentar búsqueda semántica (requiere cuota de embeddings)
@@ -418,11 +320,14 @@ export async function searchKnowledge(
 
     if (queryEmbedding.length > 0) {
       try {
-        const { data, error } = await supabaseAdmin.rpc('buscar_conocimiento', {
+        const permitidos = await centrosConocimiento(centroId)
+        const { data: rpcData, error } = await supabaseAdmin.rpc('buscar_conocimiento_multi', {
           query_embedding:      `[${queryEmbedding.join(',')}]`,
-          match_count:          maxResults,
+          match_count:          maxResults * 5,
           similarity_threshold: threshold,
+          p_centros:            permitidos,
         })
+        const data = rpcData ? await filtrarPorCentro(rpcData as any[], permitidos, maxResults) : null
         if (!error && data && data.length > 0) {
           return data.map((r: any) => ({
             contenido: r.contenido,
@@ -435,7 +340,6 @@ export async function searchKnowledge(
     }
 
     // Fallback: búsqueda por texto completo (PostgreSQL ILIKE)
-    // Funciona aunque no haya cuota de embeddings en Gemini
     console.log('[search] Usando búsqueda por texto completo (sin embeddings)')
     const keywords = query.toLowerCase()
       .split(' ')
@@ -445,9 +349,11 @@ export async function searchKnowledge(
 
     if (keywords.length === 0) return []
 
+    const permitidosTxt = await centrosConocimiento(centroId)
     const { data: rows, error: ftsError } = await supabaseAdmin
       .from('knowledge_chunks')
       .select('contenido, metadata, document_id')
+      .in('centro_id', permitidosTxt)
       .ilike('contenido', `%${keywords[0]}%`)
       .limit(maxResults * 4)
 
@@ -467,6 +373,7 @@ export async function searchKnowledge(
     const { data: docs } = await supabaseAdmin
       .from('knowledge_documents')
       .select('id, titulo')
+      .in('centro_id', permitidosTxt)
       .in('id', docIds)
 
     const docMap: Record<string, string> = {}
@@ -489,8 +396,8 @@ export async function searchKnowledge(
 // La búsqueda semántica/keyword no recupera bien códigos exactos ("f24" es muy
 // corto). Esta función detecta códigos en el texto y trae el chunk EXACTO por
 // metadata.codigo, para que la IA cite el ítem correcto tal cual (sin inventar).
-export async function buscarItemsPorCodigo(texto: string): Promise<string> {
-  if (!texto) return ''
+export async function buscarItemsPorCodigo(texto: string, centroId: string | null): Promise<string> {
+  if (!texto || !centroId) return ''
   const codigos = Array.from(new Set(
     (texto.toUpperCase().match(/\b[A-Z]\s?-?\s?\d{1,2}\b/g) || [])
       .map(c => c.replace(/[\s-]/g, ''))
@@ -502,6 +409,7 @@ export async function buscarItemsPorCodigo(texto: string): Promise<string> {
     const { data } = await supabaseAdmin
       .from('knowledge_chunks')
       .select('contenido, metadata')
+      .in('centro_id', await centrosConocimiento(centroId))
       .in('metadata->>codigo', codigos)
       .limit(16)
 
@@ -514,11 +422,13 @@ export async function buscarItemsPorCodigo(texto: string): Promise<string> {
 }
 
 // ── Obtener instrucciones del centro ─────────────────────────────────────────
-export async function getCentroInstrucciones(): Promise<string> {
+export async function getCentroInstrucciones(centroId: string | null): Promise<string> {
+  if (!centroId) return ''
   try {
     const { data } = await supabaseAdmin
       .from('centro_instrucciones')
       .select('titulo, contenido, prioridad')
+      .eq('centro_id', centroId)
       .eq('activo', true)
       .order('prioridad', { ascending: false })
       .limit(10)
@@ -534,10 +444,10 @@ export async function getCentroInstrucciones(): Promise<string> {
 }
 
 // ── Construir contexto completo para la IA ────────────────────────────────────
-export async function buildKnowledgeContext(query: string, childContext?: string): Promise<string> {
+export async function buildKnowledgeContext(query: string, centroId: string | null, childContext?: string): Promise<string> {
   const [resultados, instrucciones] = await Promise.all([
-    searchKnowledge(query),
-    getCentroInstrucciones(),
+    searchKnowledge(query, { centroId }),
+    getCentroInstrucciones(centroId),
   ])
 
   let context = instrucciones
@@ -554,10 +464,59 @@ export async function buildKnowledgeContext(query: string, childContext?: string
   return context
 }
 
+// ── Filtro de tenant para resultados del RPC vectorial ───────────────────────
+// Defensa extra: solo filas de los centros permitidos (propio + base compartida).
+async function filtrarPorCentro(rows: any[], permitidos: string[], max: number): Promise<any[]> {
+  const ok = new Set(permitidos)
+  return rows.filter(r => r.centro_id && ok.has(r.centro_id)).slice(0, max)
+}
+
 // ── Tipos exportados ──────────────────────────────────────────────────────────
 export interface KnowledgeResult {
   contenido: string
   fuente:    string
   similitud: number
   metadata:  any
+}
+
+
+// ── Re-indexado de embeddings ─────────────────────────────────────────────────
+// Rellena los fragmentos sin vector o generados con otro modelo. Se dispara solo (una vez por proceso)
+// desde la búsqueda, y en segundo plano: no bloquea la respuesta al usuario.
+let reindexando: Promise<number> | null = null
+let reindexCompleto = false
+
+export async function reembedPendingChunks(maxChunks = 5000): Promise<number> {
+  let total = 0
+  while (total < maxChunks) {
+    const { data: rows, error } = await supabaseAdmin
+      .from('knowledge_chunks')
+      .select('id, contenido, metadata')
+      .or(`metadata->>embed_model.is.null,metadata->>embed_model.neq."${EMBED_MODEL}"`)
+      .limit(32)
+    if (error) { console.warn('[reindex]', error.message); break }
+    if (!rows || rows.length === 0) break
+
+    const { embedTexts } = await import('@/lib/embeddings')
+    const vecs = await embedTexts(rows.map((r: any) => r.contenido || ''))
+    await Promise.all(rows.map((r: any, i: number) => supabaseAdmin
+      .from('knowledge_chunks')
+      .update({
+        embedding: vecs[i]?.length ? `[${vecs[i].join(',')}]` : null,
+        metadata: { ...(r.metadata || {}), embed_model: EMBED_MODEL, sin_embedding: !vecs[i]?.length },
+      })
+      .eq('id', r.id)))
+    total += rows.length
+    if (total % 320 === 0) console.log(`[reindex] ${total} fragmentos re-indexados…`)
+  }
+  if (total > 0) console.log(`[reindex] ✅ ${total} fragmentos con vector (${EMBED_MODEL})`)
+  return total
+}
+
+export function ensureEmbeddingsUpToDate(): void {
+  if (reindexCompleto || reindexando) return
+  reindexando = reembedPendingChunks()
+    .then(n => { reindexCompleto = true; return n })
+    .catch(e => { console.warn('[reindex] falló:', e?.message); return 0 })
+    .finally(() => { reindexando = null })
 }

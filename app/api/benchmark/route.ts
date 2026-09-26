@@ -3,9 +3,11 @@
 // Genera score de competitividad por área y recomendaciones estratégicas
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { getLangInstruction, getLocaleFromRequest } from '@/lib/lang'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 
 // Estándares de la industria ABA (basados en literatura y Central Reach benchmarks)
 const BENCHMARKS_INDUSTRIA = {
@@ -29,41 +31,50 @@ function scorear(valor: number, benchmark: typeof BENCHMARKS_INDUSTRIA[keyof typ
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const dias = parseInt(searchParams.get('dias') || '30')
 
   const fechaInicio = new Date()
   fechaInicio.setDate(fechaInicio.getDate() - dias)
   const fechaInicioStr = fechaInicio.toISOString().split('T')[0]
+  const centro = await getCentroBranding({ centroId: caller.centroId })
 
   try {
     // 1. Sesiones del período
     const { data: sesiones } = await supabaseAdmin
       .from('registro_aba')
       .select('child_id, fecha_sesion, datos')
+      .eq('centro_id', caller.centroId)
       .gte('fecha_sesion', fechaInicioStr)
 
     // 2. Pacientes activos
     const { data: pacientes } = await supabaseAdmin
       .from('children')
       .select('id, name')
+      .eq('centro_id', caller.centroId)
 
     // 3. Citas programadas vs realizadas
     const { data: citas } = await supabaseAdmin
       .from('agenda_sesiones')
       .select('estado, child_id')
+      .eq('centro_id', caller.centroId)
       .gte('fecha', fechaInicioStr)
 
     // 4. Mensajes de padres (engagement)
     const { data: mensajesPadres } = await supabaseAdmin
       .from('chat_padres')
       .select('parent_user_id, created_at')
+      .eq('centro_id', caller.centroId)
       .gte('created_at', fechaInicio.toISOString())
 
     // 5. Programas y objetivos
     const { data: programas } = await supabaseAdmin
       .from('programas_aba')
       .select('id, estado, child_id')
+      .eq('centro_id', caller.centroId)
 
     // ── Calcular métricas reales ─────────────────────────────────────────────
     const totalPacientes = pacientes?.length || 1
@@ -149,7 +160,7 @@ export async function GET(req: NextRequest) {
       const locale = req.headers.get('x-locale') || 'es'
       analisisEstrategico = await callGroqSimple(
         'Eres un consultor estratégico especializado en centros terapéuticos ABA y competitividad frente a plataformas como Central Reach.' + getLangInstruction(locale),
-        `Centro Neuropsicología y Terapias SANTI — Análisis de Competitividad
+        `Centro ${centro.name} — Análisis de Competitividad
 Score Global: ${scoreGlobal}/100 vs Central Reach: ${centralReachScore}/100
 ${ventaja > 0 ? `✅ VENTAJA de ${ventaja} puntos sobre Central Reach` : `⚠️ BRECHA de ${Math.abs(ventaja)} puntos vs Central Reach`}
 

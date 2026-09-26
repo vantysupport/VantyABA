@@ -1,13 +1,13 @@
 {
   "id": "/?app=santi",
-  "name": "Neuropsicología y Terapias SANTI",
-  "short_name": "SANTI",
-  "description": "Plataforma integral de gestión terapéutica para Neuropsicología y Terapias SANTI.",
+  "name": "Vanty",
+  "short_name": "Vanty",
+  "description": "Plataforma integral de gestión clínica para centros de terapia.",
   "start_url": "/login?utm_source=pwa",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
-  "background_color": "#ffffff",
-  "theme_color": "#5B3FC8",
+  "background_color": "#F3F8FE",
+  "theme_color": "#0069DB",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "es",
@@ -48,7 +48,7 @@
       "sizes": "1200x630",
       "type": "image/jpeg",
       "form_factor": "wide",
-      "label": "Panel de gestión SANTI"
+      "label": "Panel de gestión Vanty"
     }
   ]
 }

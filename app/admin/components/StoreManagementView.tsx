@@ -1,18 +1,19 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  ShoppingBag, Plus, Edit2, Trash2, Package, X, Save, Loader2,
-  Upload, ImageIcon, CheckCircle, Clock, ToggleLeft, ToggleRight,
-  AlertTriangle, Phone, ChevronDown, ChevronUp,
-  XCircle, Search, BadgeCheck, TrendingUp, ShoppingCart, Boxes,
+  ShoppingBag, Plus, Pencil, Trash2, Package, X, Save, Loader2, Upload, ImageIcon, CheckCircle, Clock,
+  AlertTriangle, Phone, ChevronDown, XCircle, Search, BadgeCheck, TrendingUp, ShoppingCart, Boxes,
+  Puzzle, ClipboardList, Gamepad2, BookOpen, Gift, FileDown, Star, Eye, EyeOff, MessageCircle, StickyNote,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
-import { useTheme } from '@/components/ThemeContext'
 import { useCurrency } from '@/components/CurrencyContext'
+import { confirmar } from '@/components/ui/confirmar'
 
 interface Product {
   id: string; nombre: string; descripcion: string; precio_soles: number
@@ -29,74 +30,74 @@ interface Order {
   created_at: string; store_order_items: OrderItem[]
 }
 
-const ESTADO_CFG: Record<string, any> = {
-  pendiente:  { label: 'Pendiente',  icon: Clock,       bg: 'bg-amber-50',   border: 'border-amber-200',  text: 'text-amber-700',   dot: 'bg-amber-400',   ring: 'ring-amber-300',  gradient: 'from-amber-400 to-orange-500'  },
-  confirmado: { label: 'Confirmado', icon: CheckCircle, bg: 'bg-sky-50',     border: 'border-sky-200',    text: 'text-sky-700',     dot: 'bg-sky-400',     ring: 'ring-sky-300',    gradient: 'from-sky-400 to-sky-500'      },
-  listo:      { label: 'Listo',      icon: Package,     bg: 'bg-sky-50',  border: 'border-sky-200', text: 'text-sky-700',  dot: 'bg-sky-400',  ring: 'ring-sky-300', gradient: 'from-sky-400 to-sky-500' },
-  entregado:  { label: 'Entregado',  icon: BadgeCheck,  bg: 'bg-emerald-50', border: 'border-emerald-200',text: 'text-emerald-700', dot: 'bg-emerald-400', ring: 'ring-emerald-300',gradient: 'from-emerald-400 to-teal-500'  },
-  cancelado:  { label: 'Cancelado',  icon: XCircle,     bg: 'bg-red-50',     border: 'border-red-200',    text: 'text-red-700',     dot: 'bg-red-400',     ring: 'ring-red-300',    gradient: 'from-red-400 to-rose-500'      },
+// Un color e icono por estado del pedido (tokens Vanty)
+const ESTADO_CFG: Record<string, { icon: any; pill: string; dot: string; tile: string }> = {
+  pendiente:  { icon: Clock,       pill: 'bg-v-warning/15 text-v-warning', dot: 'bg-v-warning', tile: 'bg-v-warning/15 text-v-warning' },
+  confirmado: { icon: CheckCircle, pill: 'bg-v-accent-soft text-v-accent', dot: 'bg-v-accent',  tile: 'bg-v-accent-soft text-v-accent' },
+  listo:      { icon: Package,     pill: 'bg-v-accent-soft text-v-accent', dot: 'bg-v-accent',  tile: 'bg-v-accent-soft text-v-accent' },
+  entregado:  { icon: BadgeCheck,  pill: 'bg-v-success/15 text-v-success', dot: 'bg-v-success', tile: 'bg-v-success/15 text-v-success' },
+  cancelado:  { icon: XCircle,     pill: 'bg-v-danger/10 text-v-danger',   dot: 'bg-v-danger',  tile: 'bg-v-danger/10 text-v-danger' },
 }
 const CATEGORIAS = ['material', 'guia', 'juego', 'libro', 'otro']
 const ESTADOS_FLUJO = ['pendiente', 'confirmado', 'listo', 'entregado', 'cancelado']
-const CAT_EMOJI: Record<string,string> = { material:'🧩', guia:'📋', juego:'🎮', libro:'📚', otro:'🎁' }
-const CAT_LABEL_EN: Record<string,string> = { material:'Material', guia:'Guide', juego:'Game', libro:'Book', otro:'Other' }
+const CAT_ICON: Record<string, any> = { material: Puzzle, guia: ClipboardList, juego: Gamepad2, libro: BookOpen, otro: Gift }
+const CAT_LABEL: Record<string, string> = { material: 'Material', guia: 'Guía', juego: 'Juego', libro: 'Libro', otro: 'Otro' }
+const CAT_LABEL_EN: Record<string, string> = { material: 'Material', guia: 'Guide', juego: 'Game', libro: 'Book', otro: 'Other' }
 // Etiqueta de categoría a mostrar (el valor guardado sigue siendo el canónico ES)
-const catLabel = (cat: string, locale: string) => (locale === 'en' ? (CAT_LABEL_EN[cat] || cat) : cat)
-const EMPTY_FORM = {
-  nombre: '', descripcion: '', precio_soles: '', stock: '',
-  categoria: 'material', tipo: 'fisico' as 'fisico'|'digital', activo: true, destacado: false,
+const catLabel = (cat: string, locale: string) => (locale === 'en' ? CAT_LABEL_EN : CAT_LABEL)[cat] || cat
+const EMPTY_FORM = { nombre: '', descripcion: '', precio_soles: '', stock: '', categoria: 'material', tipo: 'fisico' as 'fisico' | 'digital', activo: true, destacado: false }
+const inputCls = 'w-full rounded-v-sm border border-v-border bg-v-bg px-3.5 text-sm sm:!text-sm [font-family:inherit] text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent focus:ring-4 focus:ring-v-accent-soft disabled:opacity-50'
+
+function Toggle({ on }: { on: boolean }) {
+  return (
+    <span role="switch" aria-checked={on} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${on ? 'bg-v-accent' : 'bg-v-border'}`}>
+      <span className={`inline-block size-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+    </span>
+  )
 }
 
-function ProductModal({ product, onClose, onSaved }: { product: Product|null; onClose:()=>void; onSaved:()=>void }) {
+function ProductModal({ product, onClose, onSaved }: { product: Product | null; onClose: () => void; onSaved: () => void }) {
   const { t, locale } = useI18n()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const { symbol } = useCurrency()
-  const toast = useToast(); const { isDark } = useTheme()
+  const toast = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<any>(product ? {
-    nombre: product.nombre, descripcion: product.descripcion || '',
-    precio_soles: String(product.precio_soles), stock: String(product.stock),
+    nombre: product.nombre, descripcion: product.descripcion || '', precio_soles: String(product.precio_soles), stock: String(product.stock),
     categoria: product.categoria, tipo: product.tipo, activo: product.activo, destacado: product.destacado,
   } : EMPTY_FORM)
-  const [imageFile, setImageFile] = useState<File|null>(null)
-  const [imagePreview, setImagePreview] = useState<string|null>(product?.imagen_url||null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(product?.imagen_url || null)
   const [saving, setSaving] = useState(false)
   const [dragOver, setDragOver] = useState(false)
 
   const handleImage = (file: File) => {
     if (!file.type.startsWith('image/')) { toast.error(t('auto.storeManagementView.soloImagenes')); return }
-    if (file.size > 5*1024*1024) { toast.error(t('auto.storeManagementView.maximo5mb')); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error(t('auto.storeManagementView.maximo5mb')); return }
     setImageFile(file); setImagePreview(URL.createObjectURL(file))
   }
-  const uploadImage = async (): Promise<string|null> => {
-    if (!imageFile) return product?.imagen_url||null
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile) return product?.imagen_url || null
     try {
       const fd = new FormData()
-      fd.append('file', imageFile)
-      fd.append('folder', 'products')
-      fd.append('bucket', 'store-images')
+      fd.append('file', imageFile); fd.append('folder', 'products'); fd.append('bucket', 'store-images')
       const res = await fetch('/api/admin/upload-imagen', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok || !data.url) { toast.error(data.error || L('Error uploading image','Error subiendo imagen')); return null }
+      if (!res.ok || !data.url) { toast.error(data.error || L('Error uploading image', 'Error subiendo imagen')); return null }
       return data.url as string
-    } catch (e: any) {
-      toast.error(L('Error uploading image: ','Error subiendo imagen: ') + e.message)
-      return null
-    }
+    } catch (e: any) { toast.error(L('Error uploading image: ', 'Error subiendo imagen: ') + e.message); return null }
   }
   const handleSave = async () => {
     if (!form.nombre.trim()) { toast.error(t('auto.storeManagementView.elNombreEsObligatorio')); return }
     if (!form.precio_soles || Number(form.precio_soles) < 0) { toast.error(t('auto.storeManagementView.precioInvalido')); return }
+    if (form.tipo === 'fisico' && (form.stock === '' || Number(form.stock) < 0)) { toast.error(L('Enter the available stock', 'Ingresá el stock disponible')); return }
     setSaving(true)
     try {
       const imagen_url = await uploadImage()
       const payload = {
-        nombre: form.nombre.trim(), descripcion: form.descripcion.trim(),
-        precio_soles: Number(form.precio_soles),
-        stock: form.tipo === 'digital' ? 9999 : Number(form.stock),
-        categoria: form.categoria, tipo: form.tipo,
-        activo: form.activo, destacado: form.destacado, imagen_url,
-        updated_at: new Date().toISOString(),
+        nombre: form.nombre.trim(), descripcion: form.descripcion.trim(), precio_soles: Number(form.precio_soles),
+        stock: form.tipo === 'digital' ? 9999 : Number(form.stock), categoria: form.categoria, tipo: form.tipo,
+        activo: form.activo, destacado: form.destacado, imagen_url, updated_at: new Date().toISOString(),
       }
       if (product) {
         const { error } = await supabase.from('store_products').update(payload).eq('id', product.id)
@@ -110,243 +111,205 @@ function ProductModal({ product, onClose, onSaved }: { product: Product|null; on
     finally { setSaving(false) }
   }
 
-  const inp = `w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all border-2 ${isDark ? 'bg-[#0d1117] border-[#30363d] text-slate-200 focus:border-sky-500' : 'bg-white border-slate-200 text-slate-800 focus:border-sky-400 shadow-sm'}`
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
-      <div className={`rounded-3xl w-full max-w-2xl max-h-[94vh] overflow-y-auto shadow-2xl ${isDark ? 'bg-[#161b22] border border-[#30363d]' : 'bg-white'}`} onClick={e => e.stopPropagation()}>
-        <div className={`sticky top-0 z-10 px-7 py-5 border-b flex items-center justify-between ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-100'}`}>
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-lg shadow-sky-200">
-              <ShoppingBag size={18} className="text-white" />
-            </div>
-            <div>
-              <h2 className={`text-lg font-bold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{product ? L('Edit product','Editar producto') : L('New product','Nuevo producto')}</h2>
-              <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{product ? `ID: ${product.id.slice(0,8)}…` : L('Fill in the item details','Completa los datos del artículo')}</p>
-            </div>
+    <motion.div className="v-scope fixed inset-0 z-50 flex items-end justify-center bg-[#081426]/50 backdrop-blur-sm sm:items-center sm:p-4"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.div onClick={e => e.stopPropagation()}
+        initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 30 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+        className="flex max-h-[94dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-v-lg bg-v-elevated shadow-v-lg sm:rounded-v-lg">
+        <div className="flex items-center gap-3 border-b border-v-border px-5 py-4">
+          <span className="v-brand grid size-10 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><ShoppingBag size={18} /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold tracking-tight text-v-text">{product ? L('Edit product', 'Editar producto') : L('New product', 'Nuevo producto')}</p>
+            <p className="text-xs text-v-subtle">{L('Families see it in the store of their portal', 'Las familias lo ven en la tienda de su portal')}</p>
           </div>
-          <button onClick={onClose} className={`p-2.5 rounded-xl transition-colors ${isDark ? 'hover:bg-[#21262d] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}><X size={18}/></button>
+          <button onClick={onClose} className="grid size-9 shrink-0 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-text"><X size={17} /></button>
         </div>
 
-        <div className="p-7 space-y-6">
-          <div>
-            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("ui.product_image")}</label>
-            <div
-              className={`relative border-2 border-dashed rounded-2xl transition-all cursor-pointer overflow-hidden group ${dragOver ? 'border-sky-400 bg-sky-50/50 scale-[0.99]' : isDark ? 'border-[#30363d] hover:border-sky-500' : 'border-slate-200 hover:border-sky-300 hover:bg-slate-50/50'}`}
-              style={{ minHeight: 180 }}
-              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleImage(f) }}
-              onClick={() => fileRef.current?.click()}
-            >
-              {imagePreview ? (
-                <div className="relative">
-                  <img src={imagePreview} alt="Preview" className="w-full h-52 object-cover" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                    <div className="bg-white rounded-2xl px-5 py-3 text-sm font-bold text-slate-800 flex items-center gap-2 shadow-xl"><Upload size={15}/> {t("tienda.cambiarImagen")}</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-14 gap-3">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>
-                    <ImageIcon size={28} className={isDark ? 'text-slate-500' : 'text-slate-300'} />
-                  </div>
-                  <div className="text-center">
-                    <p className={`text-sm font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{t("tienda.arrastraClic")}</p>
-                    <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>{t("tienda.jpgPng")}</p>
-                  </div>
-                </div>
-              )}
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImage(f) }} />
-            </div>
-          </div>
-
-          <div>
-            <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.nombre2")}</label>
-            <input value={form.nombre} onChange={e => setForm((f:any) => ({ ...f, nombre: e.target.value }))}
-              placeholder={t("tienda.phNombreProd")} className={inp} />
-          </div>
-
-          <div>
-            <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("common.descripcion")}</label>
-            <textarea value={form.descripcion} onChange={e => setForm((f:any) => ({ ...f, descripcion: e.target.value }))}
-              rows={3} placeholder={t("ui.describe_product")} className={inp + ' resize-none'} />
-          </div>
-
-          <div>
-            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.tipoProd")}</label>
-            <div className="grid grid-cols-2 gap-3">
-              {([['fisico','📦',L('Physical','Físico'),L('Picked up at the center','Se retira en el centro')],['digital','📄','Digital',L('PDF or downloadable file','PDF o archivo descargable')]] as const).map(([val,emoji,lbl,desc]) => (
-                <button key={val} type="button" onClick={() => setForm((f:any) => ({ ...f, tipo: val }))}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all ${form.tipo === val
-                    ? 'border-sky-500 bg-sky-50 shadow-md shadow-sky-100'
-                    : isDark ? 'border-[#30363d] hover:border-[#4a5568]' : 'border-slate-200 hover:border-slate-300 bg-white'}`}>
-                  <span className="text-2xl block mb-2">{emoji}</span>
-                  <p className={`font-bold text-sm ${form.tipo===val ? 'text-sky-700' : isDark ? 'text-slate-300' : 'text-slate-800'}`}>{lbl}</p>
-                  <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+          <div className="grid gap-4 sm:grid-cols-[200px_1fr]">
+            {/* Imagen */}
             <div>
-              <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.precioSoles")}</label>
+              <label className="mb-1.5 block text-xs font-semibold text-v-muted">{t('ui.product_image')}</label>
+              <div role="button" tabIndex={0}
+                onDragOver={e => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)}
+                onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleImage(f) }}
+                onClick={() => fileRef.current?.click()}
+                className={`group relative grid aspect-square cursor-pointer place-items-center overflow-hidden rounded-v-sm border-2 border-dashed transition-colors ${dragOver ? 'border-v-accent bg-v-accent-soft' : 'border-v-border bg-v-bg hover:border-v-accent/50'}`}>
+                {imagePreview ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={imagePreview} alt="" className="absolute inset-0 size-full object-cover" />
+                    <span className="absolute inset-x-2 bottom-2 inline-flex items-center justify-center gap-1.5 rounded-full bg-black/60 py-1.5 text-xs font-semibold text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"><Upload size={13} /> {t('tienda.cambiarImagen')}</span>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 px-3 text-center">
+                    <span className="grid size-12 place-items-center rounded-full bg-v-accent-soft text-v-accent"><ImageIcon size={22} /></span>
+                    <p className="text-xs font-semibold text-v-text">{t('tienda.arrastraClic')}</p>
+                    <p className="text-[11px] text-v-subtle">{t('tienda.jpgPng')}</p>
+                  </div>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImage(f) }} />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-v-muted">{t('tienda.nombre2')}</label>
+                <input value={form.nombre} onChange={e => setForm((f: any) => ({ ...f, nombre: e.target.value }))} placeholder={t('tienda.phNombreProd')} className={`${inputCls} h-11`} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-v-muted">{t('common.descripcion')}</label>
+                <textarea value={form.descripcion} onChange={e => setForm((f: any) => ({ ...f, descripcion: e.target.value }))} rows={4} placeholder={t('ui.describe_product')} className={`${inputCls} resize-none py-2.5 leading-relaxed`} />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-v-muted">{t('tienda.tipoProd')}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {([['fisico', Package, L('Physical', 'Físico'), L('Picked up at the center', 'Se retira en el centro')], ['digital', FileDown, 'Digital', L('PDF or downloadable file', 'PDF o archivo descargable')]] as const).map(([val, Ic, lbl, desc]) => {
+                const on = form.tipo === val
+                return (
+                  <button key={val} type="button" onClick={() => setForm((f: any) => ({ ...f, tipo: val }))}
+                    className={`flex items-center gap-3 rounded-v-sm border p-3 text-left transition-all ${on ? 'border-v-accent bg-v-accent-soft ring-1 ring-v-accent' : 'border-v-border bg-v-bg hover:border-v-accent/40'}`}>
+                    <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${on ? 'bg-v-accent text-white' : 'bg-v-fill text-v-muted'}`}><Ic size={17} /></span>
+                    <span className="min-w-0">
+                      <span className={`block text-sm font-semibold ${on ? 'text-v-accent' : 'text-v-text'}`}>{lbl}</span>
+                      <span className="block text-xs text-v-subtle">{desc}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-v-muted">{t('tienda.precioSoles')}</label>
               <div className="relative">
-                <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{symbol}</span>
-                <input type="number" min="0" step="0.50" value={form.precio_soles}
-                  onChange={e => setForm((f:any) => ({ ...f, precio_soles: e.target.value }))}
-                  placeholder="0.00" className={inp + ' pl-10'} />
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-v-subtle">{symbol}</span>
+                <input type="number" inputMode="decimal" min="0" step="0.50" value={form.precio_soles} onChange={e => setForm((f: any) => ({ ...f, precio_soles: e.target.value }))} placeholder="0.00" className={`${inputCls} h-11 pl-10 font-semibold tabular-nums`} />
               </div>
             </div>
             <div>
-              <label className={`block text-xs font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{form.tipo==='digital' ? 'Stock (∞)' : 'Stock *'}</label>
-              <input type="number" min="0" value={form.tipo==='digital' ? '' : form.stock}
-                onChange={e => setForm((f:any) => ({ ...f, stock: e.target.value }))}
-                disabled={form.tipo==='digital'} placeholder={form.tipo==='digital' ? L('∞ Unlimited','∞ Ilimitado') : '0'}
-                className={inp + (form.tipo==='digital' ? ' opacity-50 cursor-not-allowed' : '')} />
+              <label className="mb-1.5 block text-xs font-semibold text-v-muted">{form.tipo === 'digital' ? L('Stock', 'Stock') : 'Stock *'}</label>
+              <input type="number" min="0" value={form.tipo === 'digital' ? '' : form.stock} onChange={e => setForm((f: any) => ({ ...f, stock: e.target.value }))}
+                disabled={form.tipo === 'digital'} placeholder={form.tipo === 'digital' ? L('Unlimited', 'Ilimitado') : '0'} className={`${inputCls} h-11 tabular-nums`} />
             </div>
           </div>
 
           <div>
-            <label className={`block text-xs font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("common.categoria")}</label>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIAS.map(cat => (
-                <button key={cat} type="button" onClick={() => setForm((f:any) => ({ ...f, categoria: cat }))}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 text-sm font-bold capitalize transition-all ${form.categoria===cat
-                    ? 'border-sky-500 bg-sky-50 text-sky-700'
-                    : isDark ? 'border-[#30363d] text-slate-400 hover:border-[#4a5568]' : 'border-slate-200 text-slate-500 hover:border-slate-300 bg-white'}`}>
-                  {CAT_EMOJI[cat]} {catLabel(cat, locale)}
-                </button>
-              ))}
+            <label className="mb-1.5 block text-xs font-semibold text-v-muted">{t('common.categoria')}</label>
+            <div className="flex flex-wrap gap-1.5">
+              {CATEGORIAS.map(cat => {
+                const Ic = CAT_ICON[cat]; const on = form.categoria === cat
+                return (
+                  <button key={cat} type="button" onClick={() => setForm((f: any) => ({ ...f, categoria: cat }))}
+                    className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors ${on ? 'border-v-accent bg-v-accent-soft text-v-accent' : 'border-v-border bg-v-bg text-v-muted hover:text-v-text'}`}>
+                    <Ic size={14} /> {catLabel(cat, locale)}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="divide-y divide-v-border rounded-v-sm border border-v-border">
             {[
-              { key:'activo', label:L('Visible in store','Visible en tienda'), desc:L('Parents can see it','Los padres pueden verlo'), icon:'👁️', ac:'emerald' },
-              { key:'destacado', label:L('Featured','Destacado'), desc:L('Appears first with ⭐','Aparece primero con ⭐'), icon:'⭐', ac:'amber' },
-            ].map(({ key, label, desc, icon, ac }) => {
-              const on = form[key]
-              return (
-                <button key={key} type="button" onClick={() => setForm((f:any) => ({ ...f, [key]: !f[key] }))}
-                  className={`flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all ${on
-                    ? ac==='emerald' ? 'border-emerald-400 bg-emerald-50' : 'border-amber-400 bg-amber-50'
-                    : isDark ? 'border-[#30363d]' : 'border-slate-200 bg-white'}`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${on ? ac==='emerald' ? 'bg-emerald-100' : 'bg-amber-100' : isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>{icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-bold ${on ? ac==='emerald' ? 'text-emerald-700' : 'text-amber-700' : isDark ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
-                    <p className={`text-xs ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>{desc}</p>
-                  </div>
-                  {on ? <ToggleRight size={22} className={ac==='emerald' ? 'text-emerald-500' : 'text-amber-500'}/> : <ToggleLeft size={22} className={isDark ? 'text-slate-600' : 'text-slate-300'}/>}
-                </button>
-              )
-            })}
+              { key: 'activo', Icon: Eye, label: L('Visible in store', 'Visible en la tienda'), desc: L('Families can see and order it', 'Las familias pueden verlo y pedirlo') },
+              { key: 'destacado', Icon: Star, label: L('Featured', 'Destacado'), desc: L('Shown first in the store', 'Aparece primero en la tienda') },
+            ].map(({ key, Icon, label, desc }) => (
+              <button key={key} type="button" onClick={() => setForm((f: any) => ({ ...f, [key]: !f[key] }))} className="flex w-full items-center gap-3 px-3.5 py-3 text-left">
+                <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${form[key] ? 'bg-v-accent-soft text-v-accent' : 'bg-v-fill text-v-subtle'}`}><Icon size={16} /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-v-text">{label}</span>
+                  <span className="block text-xs text-v-subtle">{desc}</span>
+                </span>
+                <Toggle on={!!form[key]} />
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className={`sticky bottom-0 px-7 py-5 border-t flex gap-3 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white/95 backdrop-blur-sm border-slate-100'}`}>
-          <button onClick={onClose} className={`flex-1 py-3.5 rounded-xl font-bold text-sm transition-all ${isDark ? 'bg-[#21262d] text-slate-300 hover:bg-[#30363d]' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>{t("common.cancelar")}</button>
-          <button onClick={handleSave} disabled={saving}
-            className="flex-1 py-3.5 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-sky-200">
-            {saving ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>}
-            {saving ? L('Saving…','Guardando…') : product ? L('Save changes','Guardar cambios') : L('Create product','Crear producto')}
+        <div className="flex flex-col-reverse gap-2 border-t border-v-border px-5 py-4 sm:flex-row sm:justify-end">
+          <button onClick={onClose} className="h-11 rounded-full px-5 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill">{t('common.cancelar')}</button>
+          <button onClick={handleSave} disabled={saving} className="v-brand inline-flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-semibold disabled:opacity-50">
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? L('Saving…', 'Guardando…') : product ? L('Save changes', 'Guardar cambios') : L('Create product', 'Crear producto')}
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
-function ProductCard({ p, onEdit, onToggle, onDelete }: { p:Product; onEdit:()=>void; onToggle:()=>void|Promise<void>; onDelete:()=>void|Promise<void>; key?:any }) {
+function ProductCard({ p, index, onEdit, onToggle, onDelete }: { p: Product; index: number; onEdit: () => void; onToggle: () => void | Promise<void>; onDelete: () => void | Promise<void>; key?: any }) {
   const { t, locale } = useI18n()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
-  const { symbol } = useCurrency()
-  const { isDark } = useTheme()
-  const lowStock = p.tipo==='fisico' && p.stock<=3
+  const { fmt } = useCurrency()
+  const [conf, setConf] = useState(false)
+  const Ic = CAT_ICON[p.categoria] || Package
+  const sinStock = p.tipo === 'fisico' && p.stock === 0
+  const stockBajo = p.tipo === 'fisico' && p.stock > 0 && p.stock <= 3
 
   return (
-    <div className={`group relative rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${isDark
-      ? 'bg-[#161b22] border border-[#21262d] hover:border-[#30363d]'
-      : p.activo ? 'bg-white border border-slate-200/80 hover:border-sky-200 shadow-sm' : 'bg-slate-50 border border-slate-200 opacity-60'}`}>
-
-      <div className="relative h-52 overflow-hidden">
+    <motion.article layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(index, 9) * 0.03 }}
+      className={`group flex flex-col overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v transition-shadow hover:shadow-v-lg ${p.activo ? '' : 'opacity-70'}`}>
+      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-v-accent-soft to-v-fill">
         {p.imagen_url ? (
-          <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"/>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.imagen_url} alt={p.nombre} loading="lazy" className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
         ) : (
-          <div className={`flex items-center justify-center h-full ${isDark ? 'bg-gradient-to-br from-[#0d1117] to-[#161b22]' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
-            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center text-4xl ${isDark ? 'bg-[#21262d]' : 'bg-white shadow-sm'}`}>
-              {CAT_EMOJI[p.categoria]||'📦'}
+          <span className="absolute left-1/2 top-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[30%] bg-v-elevated text-v-accent shadow-v"><Ic size={28} /></span>
+        )}
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-full bg-v-elevated/95 px-2.5 py-1 text-[11px] font-semibold text-v-text shadow-v">
+            {p.tipo === 'digital' ? <FileDown size={11} /> : <Package size={11} />} {p.tipo === 'digital' ? 'Digital' : L('Physical', 'Físico')}
+          </span>
+          {p.destacado && <span className="inline-flex items-center gap-1 rounded-full bg-v-warning px-2.5 py-1 text-[11px] font-semibold text-white shadow-v"><Star size={11} fill="currentColor" /> {L('Featured', 'Destacado')}</span>}
+        </div>
+        {!p.activo && <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm"><EyeOff size={11} /> {t('tienda.oculto')}</span>}
+      </div>
+
+      <div className="flex flex-1 flex-col p-4">
+        <p className="mb-1 inline-flex items-center gap-1 text-[11px] font-medium text-v-subtle"><Ic size={12} /> {catLabel(p.categoria, locale)}</p>
+        <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug tracking-tight text-v-text">{p.nombre}</h3>
+        <p className="mt-1 line-clamp-2 text-sm text-v-muted">{p.descripcion || L('No description', 'Sin descripción')}</p>
+        <div className="mt-3 flex items-end justify-between gap-2">
+          <p className="v-headline text-xl tabular-nums text-v-text">{fmt(Number(p.precio_soles))}</p>
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${p.tipo === 'digital' ? 'bg-v-accent-soft text-v-accent' : sinStock ? 'bg-v-danger/10 text-v-danger' : stockBajo ? 'bg-v-warning/15 text-v-warning' : 'bg-v-success/15 text-v-success'}`}>
+            {p.tipo === 'digital' ? L('Unlimited', 'Ilimitado') : sinStock ? L('Out of stock', 'Sin stock') : `${p.stock} ${L('in stock', 'en stock')}`}
+          </span>
+        </div>
+        <div className="mt-auto flex items-center gap-1 border-t border-v-border pt-3" style={{ marginTop: '0.875rem' }}>
+          <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 rounded-full py-1 text-left text-xs font-semibold text-v-muted">
+            <Toggle on={p.activo} /> <span className="truncate">{p.activo ? L('Visible', 'Visible') : L('Hidden', 'Oculto')}</span>
+          </button>
+          <button onClick={onEdit} title={t('common.editar')} className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-text"><Pencil size={14} /></button>
+          <button onClick={() => setConf(c => !c)} title={t('common.eliminar')} className={`grid size-8 place-items-center rounded-full transition-colors ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}><Trash2 size={14} /></button>
+        </div>
+      </div>
+      <AnimatePresence>
+        {conf && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="flex flex-wrap items-center gap-2 border-t border-v-border bg-v-danger/10 px-4 py-2.5">
+              <p className="min-w-0 flex-1 text-xs text-v-danger">{L('Delete this product?', '¿Eliminar este producto?')}</p>
+              <button onClick={() => setConf(false)} className="h-8 rounded-full px-3 text-xs font-semibold text-v-muted hover:bg-v-fill">{t('common.cancelar')}</button>
+              <button onClick={() => { setConf(false); onDelete() }} className="h-8 rounded-full bg-v-danger px-3.5 text-xs font-semibold text-white">{t('common.eliminar')}</button>
             </div>
-          </div>
+          </motion.div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
-        <div className="absolute top-3 left-3 flex gap-1.5">
-          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm shadow-sm ${p.tipo==='digital' ? 'bg-sky-600/95 text-white' : 'bg-slate-900/85 text-white'}`}>
-            {p.tipo==='digital' ? '📄 Digital' : t('auto.storeManagementView.fisico')}
-          </span>
-          {p.destacado && <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-400/95 text-white shadow-sm">⭐ Top</span>}
-        </div>
-        {lowStock && (
-          <div className="absolute top-3 right-3">
-            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm ${p.stock===0 ? 'bg-red-600 text-white' : 'bg-orange-500 text-white'}`}>
-              {p.stock===0 ? L('❌ Out of stock','❌ Sin stock') : `⚠️ ${L(`Only ${p.stock}`,`Solo ${p.stock}`)}`}
-            </span>
-          </div>
-        )}
-        {!p.activo && (
-          <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center backdrop-blur-[1px]">
-            <span className="text-xs font-bold text-white bg-slate-800/90 px-4 py-2 rounded-full">{t("tienda.oculto")}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-2 mb-1.5">
-          <h3 className={`font-bold text-sm leading-snug flex-1 line-clamp-2 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{p.nombre}</h3>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg capitalize shrink-0 ${isDark ? 'bg-[#21262d] text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-            {CAT_EMOJI[p.categoria]} {catLabel(p.categoria, locale)}
-          </span>
-        </div>
-        <p className={`text-xs leading-relaxed line-clamp-2 mb-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{p.descripcion||L('No description','Sin descripción')}</p>
-
-        <div className={`flex items-center justify-between mb-4 pb-4 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-          <span className={`text-2xl font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>{symbol} {Number(p.precio_soles).toFixed(2)}</span>
-          <p className={`text-xs font-bold ${
-            p.tipo==='digital' ? (isDark ? 'text-sky-400' : 'text-sky-600') :
-            p.stock===0 ? 'text-red-500' : p.stock<=3 ? 'text-orange-500' :
-            isDark ? 'text-emerald-400' : 'text-emerald-600'
-          }`}>
-            {p.tipo==='digital' ? L('∞ Unlimited','∞ Ilimitado') : p.stock===0 ? L('Out of stock','Sin stock') : `${p.stock} ${L(`available`,`disponibles`)}`}
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <button onClick={onToggle}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${p.activo
-              ? isDark ? 'bg-emerald-900/20 text-emerald-400 border-emerald-800 hover:bg-emerald-900/30' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-              : isDark ? 'bg-[#21262d] text-slate-500 border-[#30363d] hover:bg-[#30363d]' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}>
-            {p.activo ? <><ToggleRight size={13}/> {t("common.activo")}</> : <><ToggleLeft size={13}/> {t("common.inactivo")}</>}
-          </button>
-          <button onClick={onEdit}
-            className={`px-3.5 py-2.5 rounded-xl border transition-all ${isDark ? 'bg-sky-900/20 text-sky-400 border-sky-800/50 hover:bg-sky-900/30' : 'bg-sky-50 text-sky-600 border-sky-200 hover:bg-sky-100'}`}>
-            <Edit2 size={13}/>
-          </button>
-          <button onClick={onDelete}
-            className={`px-3.5 py-2.5 rounded-xl border transition-all ${isDark ? 'bg-red-900/20 text-red-400 border-red-800/50 hover:bg-red-900/30' : 'bg-red-50 text-red-500 border-red-200 hover:bg-red-100'}`}>
-            <Trash2 size={13}/>
-          </button>
-        </div>
-      </div>
-    </div>
+      </AnimatePresence>
+    </motion.article>
   )
 }
 
 export default function StoreManagementView() {
-  const toast = useToast(); const { isDark } = useTheme(); const { locale, t } = useI18n()
-  const { symbol } = useCurrency()
+  const { name: centroNombre } = useCentroBranding()
+  const toast = useToast(); const { locale, t } = useI18n()
+  const { fmt } = useCurrency()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
-  const [tab, setTab] = useState<'productos'|'pedidos'>('productos')
+  const [tab, setTab] = useState<'productos' | 'pedidos'>('productos')
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -354,17 +317,17 @@ export default function StoreManagementView() {
   const [filterTipo, setFilterTipo] = useState('todos')
   const [filterEstado, setFilterEstado] = useState('todos')
   const [showModal, setShowModal] = useState(false)
-  const [editProduct, setEditProduct] = useState<Product|null>(null)
-  const [expandedOrder, setExpandedOrder] = useState<string|null>(null)
-  const [updatingOrder, setUpdatingOrder] = useState<string|null>(null)
+  const [editProduct, setEditProduct] = useState<Product | null>(null)
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [updatingOrder, setUpdatingOrder] = useState<string | null>(null)
 
   const loadProducts = useCallback(async () => {
     const { data } = await supabase.from('store_products').select('*').order('created_at', { ascending: false })
-    setProducts(data||[])
+    setProducts(data || [])
   }, [])
   const loadOrders = useCallback(async () => {
     const { data } = await supabase.from('store_orders').select('*, store_order_items(*)').order('created_at', { ascending: false })
-    setOrders(data||[])
+    setOrders(data || [])
   }, [])
 
   useEffect(() => {
@@ -373,277 +336,275 @@ export default function StoreManagementView() {
   }, [loadProducts, loadOrders])
 
   const toggleActivo = async (p: Product) => {
-    await supabase.from('store_products').update({ activo: !p.activo }).eq('id', p.id)
-    setProducts(prev => prev.map(x => x.id===p.id ? { ...x, activo: !x.activo } : x))
-    toast.success(p.activo ? L('Product hidden','Producto ocultado') : L('Product activated','Producto activado'))
+    setProducts(prev => prev.map(x => x.id === p.id ? { ...x, activo: !x.activo } : x))
+    const { error } = await supabase.from('store_products').update({ activo: !p.activo }).eq('id', p.id)
+    if (error) { setProducts(prev => prev.map(x => x.id === p.id ? { ...x, activo: p.activo } : x)); toast.error('Error: ' + error.message); return }
+    toast.success(p.activo ? L('Product hidden', 'Producto ocultado') : L('Product visible', 'Producto visible'))
   }
   const deleteProduct = async (p: Product) => {
-    if (!confirm(t('auto.storeManagementView.eliminar', { v1: String(p.nombre) }))) return
     const { error } = await supabase.from('store_products').delete().eq('id', p.id)
-    if (error) { toast.error('Error: '+error.message); return }
-    setProducts(prev => prev.filter(x => x.id!==p.id)); toast.success(t('auto.storeManagementView.productoEliminado'))
+    if (error) { toast.error('Error: ' + error.message); return }
+    setProducts(prev => prev.filter(x => x.id !== p.id)); toast.success(t('auto.storeManagementView.productoEliminado'))
   }
   const updateOrderEstado = async (orderId: string, estado: string) => {
     setUpdatingOrder(orderId)
-    await supabase.from('store_orders').update({ estado, updated_at: new Date().toISOString() }).eq('id', orderId)
-    setOrders(prev => prev.map(o => o.id===orderId ? { ...o, estado } : o))
-    toast.success(`${L(`Order`,`Pedido`)}: ${t(`pedido.` + estado)}`); setUpdatingOrder(null)
+    const { error } = await supabase.from('store_orders').update({ estado, updated_at: new Date().toISOString() }).eq('id', orderId)
+    setUpdatingOrder(null)
+    if (error) { toast.error('Error: ' + error.message); return }
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, estado } : o))
+    toast.success(`${L('Order', 'Pedido')}: ${t('pedido.' + estado)}`)
   }
-  const updateAdminNota = async (orderId: string, nota: string) => {
-    await supabase.from('store_orders').update({ admin_notas: nota }).eq('id', orderId)
-    toast.success(L('Note saved','Nota guardada'))
+  const deleteOrder = async (order: Order) => {
+    if (!await confirmar(L(`Delete ${order.parent_name || 'this'}'s order for ${fmt(Number(order.total_soles))}? This cannot be undone.`,
+      `¿Eliminar el pedido de ${order.parent_name || 'esta familia'} por ${fmt(Number(order.total_soles))}? Esta acción no se puede deshacer.`))) return
+    setUpdatingOrder(order.id)
+    const { error: errItems } = await supabase.from('store_order_items').delete().eq('order_id', order.id)
+    const { error } = errItems ? { error: errItems } : await supabase.from('store_orders').delete().eq('id', order.id)
+    setUpdatingOrder(null)
+    if (error) { toast.error('Error: ' + error.message); return }
+    setOrders(prev => prev.filter(o => o.id !== order.id))
+    if (expandedOrder === order.id) setExpandedOrder(null)
+    toast.success(L('Order deleted', 'Pedido eliminado'))
+  }
+  const updateAdminNota = async (order: Order, nota: string) => {
+    if ((order.admin_notas || '') === nota) return // sin cambios: no guardar
+    const { error } = await supabase.from('store_orders').update({ admin_notas: nota }).eq('id', order.id)
+    if (error) { toast.error('Error: ' + error.message); return }
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, admin_notas: nota } : o))
+    toast.success(L('Note saved', 'Nota guardada'))
   }
 
   const stats = {
     total: products.length, activos: products.filter(p => p.activo).length,
-    stockBajo: products.filter(p => p.tipo==='fisico' && p.stock<=3 && p.activo).length,
-    pendientes: orders.filter(o => o.estado==='pendiente').length,
-    revenue: orders.filter(o => o.estado!=='cancelado').reduce((s,o) => s+o.total_soles, 0),
+    stockBajo: products.filter(p => p.tipo === 'fisico' && p.stock <= 3 && p.activo).length,
+    pendientes: orders.filter(o => o.estado === 'pendiente').length,
+    // Entregados y cancelados ya están cerrados: no cuentan como pedidos por atender
+    pedidosAbiertos: orders.filter(o => !['entregado', 'cancelado'].includes(o.estado)).length,
+    ventas: orders.filter(o => o.estado !== 'cancelado').reduce((s, o) => s + Number(o.total_soles), 0),
   }
-  const filteredProducts = products.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase()) && (filterTipo==='todos'||p.tipo===filterTipo))
-  const filteredOrders = orders.filter(o => filterEstado==='todos'||o.estado===filterEstado)
+  const norm = (x: string) => (x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const filteredProducts = products.filter(p => norm(p.nombre).includes(norm(search)) && (filterTipo === 'todos' || p.tipo === filterTipo))
+  const filteredOrders = orders.filter(o => filterEstado === 'todos' || o.estado === filterEstado)
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4">
-      <div className="w-16 h-16 rounded-2xl bg-sky-600/10 flex items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-sky-600"/>
-      </div>
-      <p className={`text-sm font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.cargandoTienda")}</p>
+    <div className="flex flex-col items-center justify-center gap-3 py-32">
+      <Loader2 size={26} className="animate-spin text-v-accent" />
+      <p className="text-sm text-v-subtle">{t('tienda.cargandoTienda')}</p>
     </div>
   )
 
   return (
-    <div className="w-full space-y-5">
-
-      {/* HEADER */}
-      <div className={`w-full rounded-2xl overflow-hidden relative ${isDark ? 'bg-gradient-to-br from-[#1a1f2e] via-[#161b22] to-[#0d1117] border border-[#21262d]' : 'bg-gradient-to-br from-sky-600 via-sky-700 to-sky-700'}`}>
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 pointer-events-none"/>
-        <div className="absolute bottom-0 left-24 w-40 h-40 bg-white/5 rounded-full translate-y-16 pointer-events-none"/>
-        <div className="relative px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <div className="w-[52px] h-[52px] rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 shadow-lg">
-              <ShoppingBag size={24} className="text-white"/>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">{t("tienda.gestionTienda")}</h2>
-              <p className="text-sm text-sky-200/80 mt-0.5 font-medium">{t("tienda.productosStockPedidos")}</p>
-            </div>
-          </div>
-          <button onClick={() => { setEditProduct(null); setShowModal(true) }}
-            className="flex items-center gap-2 bg-white text-sky-700 font-bold px-5 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 text-sm active:scale-95">
-            <Plus size={15}/> {L('New product','Nuevo producto')}
-          </button>
+    <div className="v-scope space-y-4 md:space-y-5">
+      {/* Encabezado */}
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="v-brand grid size-11 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><ShoppingBag size={20} /></span>
+        <div className="min-w-0 flex-[1_1_220px]">
+          <h2 className="v-headline text-xl text-v-text">{t('tienda.gestionTienda')}</h2>
+          <p className="text-xs text-v-subtle">{t('tienda.productosStockPedidos')}</p>
         </div>
+        <button onClick={() => { setEditProduct(null); setShowModal(true) }} className="v-brand inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-semibold sm:w-auto">
+          <Plus size={16} /> {L('New product', 'Nuevo producto')}
+        </button>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {/* Indicadores */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))]">
         {[
-          { label:L('Products','Productos'),  value: stats.total,    sub:`${stats.activos} ${L(`active`,`activos`)}`,  icon: Boxes,         grad:'from-sky-500 to-sky-600',     txt: isDark?'text-sky-400':'text-sky-600' },
-          { label:L('Active','Activos'),    value: stats.activos,  sub:L('Visible to parents','Visibles para padres'),      icon: BadgeCheck,    grad:'from-emerald-500 to-emerald-600',txt: isDark?'text-emerald-400':'text-emerald-600' },
-          { label:L('Low stock','Stock bajo'), value: stats.stockBajo,sub:L('≤ 3 units','≤ 3 unidades'),              icon: AlertTriangle, grad: stats.stockBajo>0?'from-orange-500 to-orange-600':'from-slate-400 to-slate-500', txt: stats.stockBajo>0?(isDark?'text-orange-400':'text-orange-600'):(isDark?'text-slate-500':'text-slate-400') },
-          { label:L('Pending','Pendientes'), value: stats.pendientes,sub:L('To attend','Por atender'),              icon: ShoppingCart,  grad: stats.pendientes>0?'from-amber-500 to-amber-600':'from-slate-400 to-slate-500',  txt: stats.pendientes>0?(isDark?'text-amber-400':'text-amber-600'):(isDark?'text-slate-500':'text-slate-400') },
-          { label:L('Revenue','Ingresos'),   value:`${symbol} ${stats.revenue.toFixed(2)}`, sub:L('Completed orders','Pedidos completados'), icon:TrendingUp,grad:'from-sky-500 to-sky-600', txt:isDark?'text-sky-400':'text-sky-600' },
-        ].map(({ label, value, icon: Icon, grad, txt, sub }) => (
-          <div key={label} className={`rounded-2xl p-4 border transition-all hover:shadow-lg hover:-translate-y-0.5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80 shadow-sm'}`}>
-            <div className={`w-10 h-10 rounded-xl mb-3 flex items-center justify-center bg-gradient-to-br ${grad} shadow-md`}>
-              <Icon size={17} className="text-white"/>
+          { label: L('Products', 'Productos'), value: stats.total, sub: `${stats.activos} ${L('visible', 'visibles')}`, Icon: Boxes, tone: 'bg-v-accent-soft text-v-accent' },
+          { label: L('Low stock', 'Stock bajo'), value: stats.stockBajo, sub: L('3 units or less', '3 unidades o menos'), Icon: AlertTriangle, tone: stats.stockBajo ? 'bg-v-warning/15 text-v-warning' : 'bg-v-fill text-v-subtle' },
+          { label: L('Pending orders', 'Pedidos pendientes'), value: stats.pendientes, sub: L('To attend', 'Por atender'), Icon: ShoppingCart, tone: stats.pendientes ? 'bg-v-danger/10 text-v-danger' : 'bg-v-fill text-v-subtle' },
+          { label: L('Sales', 'Ventas'), value: fmt(stats.ventas), sub: L('Excluding cancelled', 'Sin contar cancelados'), Icon: TrendingUp, tone: 'bg-v-success/15 text-v-success' },
+        ].map((k, i) => (
+          <motion.div key={k.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+            className="rounded-v border border-v-border bg-v-elevated p-4 shadow-v">
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <p className="text-xs font-medium text-v-muted">{k.label}</p>
+              <span className={`grid size-8 shrink-0 place-items-center rounded-[30%] ${k.tone}`}><k.Icon size={15} /></span>
             </div>
-            <p className={`text-2xl font-bold ${txt}`}>{value}</p>
-            <p className={`text-xs font-bold mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{label}</p>
-            <p className={`text-[10px] mt-0.5 font-medium ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>{sub}</p>
-          </div>
+            <p className="v-headline truncate text-2xl tabular-nums text-v-text">{k.value}</p>
+            <p className="truncate text-[11px] text-v-subtle">{k.sub}</p>
+          </motion.div>
         ))}
       </div>
 
-      {/* TABS */}
-      <div className={`flex gap-1 p-1 rounded-2xl w-fit ${isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>
+      {/* Pestañas */}
+      <div className="flex w-full gap-1 rounded-full bg-v-fill p-1 sm:w-fit">
         {[
-          { id:'productos', label:L('Products','Productos'), count:products.length, icon:Boxes },
-          { id:'pedidos',   label:L('Orders','Pedidos'),   count:orders.length,  icon:ShoppingCart, badge:stats.pendientes },
-        ].map(({ id, label, count, icon: Icon, badge }: any) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tab===id
-              ? 'bg-sky-600 text-white shadow-md'
-              : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
-            <Icon size={15}/>
-            {label}
-            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${tab===id ? 'bg-white/20' : isDark ? 'bg-[#30363d] text-slate-400' : 'bg-white text-slate-500 shadow-sm'}`}>{count}</span>
-            {badge>0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white dark:border-[#21262d]"/>}
-          </button>
-        ))}
+          { id: 'productos', label: L('Products', 'Productos'), count: products.length, Icon: Boxes },
+          { id: 'pedidos', label: L('Orders', 'Pedidos'), count: stats.pedidosAbiertos, Icon: ShoppingCart, badge: stats.pendientes },
+        ].map(({ id, label, count, Icon, badge }) => {
+          const on = tab === id
+          return (
+            <button key={id} onClick={() => setTab(id as 'productos' | 'pedidos')}
+              className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-5 py-2 text-sm font-semibold transition-colors sm:flex-none ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+              {on && <motion.span layoutId="tienda-tab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
+              <Icon size={15} className="relative" /><span className="relative">{label}</span>
+              <span className="relative tabular-nums opacity-60">{count}</span>
+              {!!badge && <span className="relative grid min-w-5 place-items-center rounded-full bg-v-danger px-1.5 text-[10px] font-bold text-white">{badge}</span>}
+            </button>
+          )
+        })}
       </div>
 
-      {/* TAB PRODUCTOS */}
-      {tab==='productos' && (
+      {/* PRODUCTOS */}
+      {tab === 'productos' && (
         <div className="space-y-4">
-          <div className={`flex gap-3 flex-wrap items-center p-4 rounded-2xl border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80 shadow-sm'}`}>
-            <div className="relative flex-1 min-w-52">
-              <Search size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}/>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("ui.search_product")}
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium outline-none transition-all border-2 ${isDark ? 'bg-[#0d1117] border-[#30363d] text-slate-300 placeholder-slate-600 focus:border-sky-500' : 'bg-slate-50 border-transparent text-slate-700 focus:border-sky-400 focus:bg-white'}`}/>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-0 flex-[1_1_240px]">
+              <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('ui.search_product')}
+                className="h-10 w-full rounded-full border border-v-border bg-v-elevated pl-10 pr-4 text-sm sm:!text-sm [font-family:inherit] text-v-text outline-none placeholder:text-v-subtle focus:border-v-accent" />
             </div>
-            <div className={`flex items-center gap-1 p-1 rounded-xl ${isDark ? 'bg-[#0d1117]' : 'bg-slate-100'}`}>
-              {[['todos',L('All','Todos')],['fisico','📦 '+L('Physical','Físicos')],['digital','📄 '+L('Digital','Digitales')]].map(([f,lbl]) => (
+            <div className="flex gap-1.5">
+              {([['todos', L('All', 'Todos'), Boxes], ['fisico', L('Physical', 'Físicos'), Package], ['digital', 'Digitales', FileDown]] as const).map(([f, lbl, Ic]) => (
                 <button key={f} onClick={() => setFilterTipo(f)}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${filterTipo===f ? 'bg-sky-600 text-white shadow-sm' : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}>
-                  {lbl}
+                  className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors ${filterTipo === f ? 'border-v-accent/40 bg-v-accent-soft text-v-accent' : 'border-v-border bg-v-elevated text-v-muted hover:text-v-text'}`}>
+                  <Ic size={13} /> {f === 'digital' ? L('Digital', 'Digitales') : lbl}
                 </button>
               ))}
             </div>
-            <p className={`text-xs font-medium ml-auto ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{filteredProducts.length} {L('result(s)','resultado(s)')}</p>
           </div>
 
-          {filteredProducts.length===0 ? (
-            <div className={`rounded-3xl border py-24 flex flex-col items-center gap-5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-gradient-to-br from-slate-50 to-sky-50/30 border-slate-200/80'}`}>
-              <div className={`w-24 h-24 rounded-3xl flex items-center justify-center text-5xl ${isDark ? 'bg-[#21262d]' : 'bg-white shadow-sm'}`}>🛍️</div>
-              <div className="text-center">
-                <p className={`font-bold text-xl ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{t("tienda.sinProductos")}</p>
-                <p className={`text-sm mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.creaPrimerArticulo")}</p>
-              </div>
-              <button onClick={() => { setEditProduct(null); setShowModal(true) }}
-                className="flex items-center gap-2 bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700 text-white font-bold px-7 py-3.5 rounded-xl text-sm shadow-lg shadow-sky-200 transition-all hover:-translate-y-0.5 active:scale-95">
-                <Plus size={16}/> {L('Create first product','Crear primer producto')}
-              </button>
+          {filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center rounded-v border border-dashed border-v-border bg-v-elevated px-6 py-16 text-center">
+              <span className="mb-3 grid size-14 place-items-center rounded-full bg-v-accent-soft text-v-accent"><ShoppingBag size={24} /></span>
+              <p className="text-sm font-semibold text-v-text">{products.length ? L('No products match', 'Ningún producto coincide') : t('tienda.sinProductos')}</p>
+              <p className="mt-1 text-xs text-v-subtle">{products.length ? L('Try another search.', 'Probá con otra búsqueda.') : t('tienda.creaPrimerArticulo')}</p>
+              {!products.length && (
+                <button onClick={() => { setEditProduct(null); setShowModal(true) }} className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-v-accent-soft px-4 text-xs font-semibold text-v-accent hover:bg-v-accent hover:text-white">
+                  <Plus size={14} /> {L('Create first product', 'Crear primer producto')}
+                </button>
+              )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-              {filteredProducts.map(p => (
-                <ProductCard key={p.id} p={p}
-                  onEdit={() => { setEditProduct(p); setShowModal(true) }}
-                  onToggle={() => toggleActivo(p)}
-                  onDelete={() => deleteProduct(p)}
-                />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+              {filteredProducts.map((p, i) => (
+                <ProductCard key={p.id} p={p} index={i} onEdit={() => { setEditProduct(p); setShowModal(true) }} onToggle={() => toggleActivo(p)} onDelete={() => deleteProduct(p)} />
               ))}
             </div>
           )}
         </div>
       )}
 
-      {/* TAB PEDIDOS */}
-      {tab==='pedidos' && (
+      {/* PEDIDOS */}
+      {tab === 'pedidos' && (
         <div className="space-y-4">
-          <div className={`flex gap-2 flex-wrap p-4 rounded-2xl border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80 shadow-sm'}`}>
-            {['todos',...ESTADOS_FLUJO].map(e => {
-              const cfg=ESTADO_CFG[e]; const count=e==='todos'?orders.length:orders.filter(o=>o.estado===e).length; const active=filterEstado===e
+          <div className="flex flex-wrap gap-1.5">
+            {['todos', ...ESTADOS_FLUJO].map(e => {
+              const cfg = ESTADO_CFG[e]; const count = e === 'todos' ? orders.length : orders.filter(o => o.estado === e).length; const on = filterEstado === e
               return (
                 <button key={e} onClick={() => setFilterEstado(e)}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${active
-                    ? cfg ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm` : 'bg-sky-600 text-white border-sky-600'
-                    : isDark ? 'bg-[#0d1117] text-slate-400 border-[#30363d] hover:border-[#4a5568]' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
-                  {cfg && <span className={`w-2 h-2 rounded-full ${cfg.dot}`}/>}
-                  {e==='todos' ? t('pedido.todos') : t('pedido.' + e)}
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${active ? 'bg-black/10' : isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>{count}</span>
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors ${on ? 'border-v-accent/40 bg-v-accent-soft text-v-accent' : 'border-v-border bg-v-elevated text-v-muted hover:text-v-text'}`}>
+                  {cfg && <span className={`size-2 rounded-full ${cfg.dot}`} />}
+                  {e === 'todos' ? t('pedido.todos') : t('pedido.' + e)} <span className="tabular-nums opacity-60">{count}</span>
                 </button>
               )
             })}
           </div>
 
-          {filteredOrders.length===0 ? (
-            <div className={`rounded-3xl border py-24 flex flex-col items-center gap-5 ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-gradient-to-br from-slate-50 to-sky-50/30 border-slate-200/80'}`}>
-              <div className={`w-24 h-24 rounded-3xl flex items-center justify-center text-5xl ${isDark ? 'bg-[#21262d]' : 'bg-white shadow-sm'}`}>📭</div>
-              <div className="text-center">
-                <p className={`font-bold text-xl ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{t("tienda.sinPedidos2")}</p>
-                <p className={`text-sm mt-1.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.sinPedidos")}</p>
-              </div>
+          {filteredOrders.length === 0 ? (
+            <div className="flex flex-col items-center rounded-v border border-dashed border-v-border bg-v-elevated px-6 py-16 text-center">
+              <span className="mb-3 grid size-14 place-items-center rounded-full bg-v-fill text-v-subtle"><ShoppingCart size={24} /></span>
+              <p className="text-sm font-semibold text-v-text">{t('tienda.sinPedidos2')}</p>
+              <p className="mt-1 text-xs text-v-subtle">{t('tienda.sinPedidos')}</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredOrders.map(order => {
-                const cfg=ESTADO_CFG[order.estado]||ESTADO_CFG.pendiente; const StatusIcon=cfg.icon; const open=expandedOrder===order.id
+              {filteredOrders.map((order, oi) => {
+                const cfg = ESTADO_CFG[order.estado] || ESTADO_CFG.pendiente; const StatusIcon = cfg.icon; const open = expandedOrder === order.id
+                const items = order.store_order_items || []
                 return (
-                  <div key={order.id} className={`rounded-2xl border overflow-hidden transition-all ${open
-                    ? isDark ? 'border-sky-800 bg-[#161b22] shadow-xl shadow-sky-900/20' : 'border-sky-200 bg-white shadow-xl shadow-sky-100'
-                    : isDark ? 'bg-[#161b22] border-[#21262d] hover:border-[#30363d]' : 'bg-white border-slate-200/80 hover:border-slate-300 shadow-sm'}`}>
-
-                    <div className="p-5 flex items-center gap-4 flex-wrap cursor-pointer" onClick={() => setExpandedOrder(open?null:order.id)}>
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br ${cfg.gradient} shadow-md`}>
-                        <StatusIcon size={18} className="text-white"/>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          <p className={`font-bold text-sm ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{order.parent_name||L('Parent','Padre/Madre')}</p>
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${cfg.bg} ${cfg.text} ${cfg.border}`}>{t('pedido.' + order.estado)}</span>
+                  <motion.div key={order.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(oi, 8) * 0.03 }}
+                    className={`overflow-hidden rounded-v border bg-v-elevated shadow-v transition-colors ${open ? 'border-v-accent/30' : 'border-v-border'}`}>
+                    <button onClick={() => setExpandedOrder(open ? null : order.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-v-bg sm:px-5">
+                      <span className={`grid size-10 shrink-0 place-items-center rounded-[30%] ${cfg.tile}`}><StatusIcon size={18} /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="truncate text-sm font-semibold text-v-text">{order.parent_name || L('Parent', 'Padre/Madre')}</p>
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${cfg.pill}`}>{t('pedido.' + order.estado)}</span>
                         </div>
-                        <div className={`flex items-center gap-3 text-[11px] flex-wrap font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                          {order.parent_phone && <span className="flex items-center gap-1"><Phone size={10}/>{order.parent_phone}</span>}
-                          <span>{new Date(order.created_at).toLocaleDateString(toBCP47(locale),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
-                          <span>{order.store_order_items?.length||0} {L('item(s)','artículo(s)')}</span>
-                        </div>
+                        <p className="truncate text-xs text-v-subtle">
+                          {new Date(order.created_at).toLocaleDateString(toBCP47(locale), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {items.length} {items.length === 1 ? L('item', 'artículo') : L('items', 'artículos')}
+                        </p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className={`text-xl font-bold ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>{symbol} {Number(order.total_soles).toFixed(2)}</p>
-                        <p className={`text-[10px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('auto.storeManagementView.totalDelPedido')}</p>
-                      </div>
-                      <div className={`p-2 rounded-xl transition-all ${isDark ? 'hover:bg-[#21262d]' : 'hover:bg-slate-100'}`}>
-                        {open ? <ChevronUp size={16} className="text-slate-400"/> : <ChevronDown size={16} className="text-slate-400"/>}
-                      </div>
-                    </div>
+                      <p className="shrink-0 text-base font-bold tabular-nums text-v-text">{fmt(Number(order.total_soles))}</p>
+                      <span className={`grid size-8 shrink-0 place-items-center rounded-full transition-all ${open ? 'rotate-180 bg-v-accent-soft text-v-accent' : 'text-v-subtle'}`}><ChevronDown size={16} /></span>
+                    </button>
 
-                    {open && (
-                      <div className={`border-t p-5 space-y-5 ${isDark ? 'border-[#21262d] bg-[#0d1117]/40' : 'border-slate-100 bg-slate-50/60'}`}>
-                        <div>
-                          <p className={`text-[10px] font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.articulosPedido")}</p>
-                          <div className="space-y-2">
-                            {(order.store_order_items||[]).map(item => (
-                              <div key={item.id} className={`flex items-center gap-3 rounded-xl p-3 border ${isDark ? 'bg-[#161b22] border-[#21262d]' : 'bg-white border-slate-200/80'}`}>
-                                <div className={`w-12 h-12 rounded-xl overflow-hidden shrink-0 ${isDark ? 'bg-[#21262d]' : 'bg-slate-100'}`}>
-                                  {item.product_imagen ? <img src={item.product_imagen} alt="" className="w-full h-full object-cover"/> : <Package size={18} className={`m-auto mt-3 ${isDark ? 'text-slate-600' : 'text-slate-300'}`}/>}
+                    <AnimatePresence initial={false}>
+                      {open && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                          <div className="space-y-4 border-t border-v-border bg-v-bg p-4 sm:p-5">
+                            <div className="divide-y divide-v-border overflow-hidden rounded-v-sm border border-v-border bg-v-elevated">
+                              {items.map(item => (
+                                <div key={item.id} className="flex items-center gap-3 p-3">
+                                  <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-v-sm bg-v-fill text-v-subtle">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    {item.product_imagen ? <img src={item.product_imagen} alt="" className="size-full object-cover" /> : <Package size={18} />}
+                                  </span>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-semibold text-v-text">{item.product_nombre}</p>
+                                    <p className="text-xs text-v-subtle">{item.cantidad} × {fmt(Number(item.precio_unitario))}</p>
+                                  </div>
+                                  <p className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(Number(item.subtotal) || Number(item.precio_unitario) * item.cantidad)}</p>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`font-bold text-sm truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{item.product_nombre}</p>
-                                  <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>x{item.cantidad} · {symbol} {Number(item.precio_unitario).toFixed(2)} c/u</p>
-                                </div>
-                                <p className={`font-bold shrink-0 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{symbol} {Number(item.subtotal).toFixed(2)}</p>
+                              ))}
+                              <div className="flex items-center justify-between bg-v-bg px-3 py-2.5">
+                                <span className="text-xs font-semibold text-v-muted">Total</span>
+                                <span className="text-sm font-bold tabular-nums text-v-text">{fmt(Number(order.total_soles))}</span>
                               </div>
-                            ))}
+                            </div>
+
+                            {order.notas && (
+                              <div className="flex items-start gap-2.5 rounded-v-sm bg-v-warning/10 px-3.5 py-3">
+                                <MessageCircle size={15} className="mt-0.5 shrink-0 text-v-warning" />
+                                <div className="min-w-0"><p className="text-[11px] font-semibold text-v-warning">{t('tienda.notaPadre')}</p><p className="text-sm text-v-text [overflow-wrap:anywhere]">{order.notas}</p></div>
+                              </div>
+                            )}
+
+                            <div>
+                              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-v-muted"><StickyNote size={13} /> {t('tienda.notaInterna')}</p>
+                              <textarea defaultValue={order.admin_notas || ''} rows={2} placeholder={t('tienda.phNotaInterna')} onBlur={e => updateAdminNota(order, e.target.value)}
+                                className={`${inputCls} resize-none bg-v-elevated py-2.5`} />
+                            </div>
+
+                            <div>
+                              <p className="mb-1.5 text-xs font-semibold text-v-muted">{t('tienda.actualizarEstado')}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {ESTADOS_FLUJO.map(e => {
+                                  const c = ESTADO_CFG[e]; const act = order.estado === e
+                                  return (
+                                    <button key={e} onClick={() => updateOrderEstado(order.id, e)} disabled={act || updatingOrder === order.id}
+                                      className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors ${act ? `border-transparent ${c.pill}` : 'border-v-border bg-v-elevated text-v-muted hover:text-v-text'}`}>
+                                      {updatingOrder === order.id && !act ? <Loader2 size={12} className="animate-spin" /> : <span className={`size-2 rounded-full ${c.dot}`} />}
+                                      {t('pedido.' + e)} {act && <CheckCircle size={12} />}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+
+                            {order.parent_phone && (
+                              <a href={`https://wa.me/51${order.parent_phone.replace(/\D/g, '')}?text=${encodeURIComponent(L(
+                                `Hello! Your order is ${t('pedido.' + order.estado).toLowerCase()}. Total: ${fmt(Number(order.total_soles))} — ${centroNombre}`,
+                                `¡Hola! Su pedido está ${t('pedido.' + order.estado).toLowerCase()}. Total: ${fmt(Number(order.total_soles))} — ${centroNombre}`))}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#25D366] text-sm font-semibold text-white transition-opacity hover:opacity-90">
+                                <Phone size={15} /> {L('Contact via WhatsApp', 'Contactar por WhatsApp')} · {order.parent_phone}
+                              </a>
+                            )}
+
+                            <div className="flex justify-end border-t border-v-border pt-3">
+                              <button onClick={() => deleteOrder(order)} disabled={updatingOrder === order.id}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-danger/30 px-4 text-xs font-semibold text-v-danger transition-colors hover:bg-v-danger/10 disabled:opacity-50">
+                                {updatingOrder === order.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} {L('Delete order', 'Eliminar pedido')}
+                              </button>
+                            </div>
                           </div>
-                        </div>
-
-                        {order.notas && (
-                          <div className={`rounded-xl p-4 border ${isDark ? 'bg-amber-900/10 border-amber-800/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
-                            <p className="text-[10px] font-bold mb-1 opacity-60">{t("tienda.notaPadre")}</p>
-                            <p className="text-sm">{order.notas}</p>
-                          </div>
-                        )}
-
-                        <div>
-                          <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.notaInterna")}</p>
-                          <textarea defaultValue={order.admin_notas||''} rows={2}
-                            placeholder={t("tienda.phNotaInterna")}
-                            onBlur={e => updateAdminNota(order.id, e.target.value)}
-                            className={`w-full px-4 py-3 rounded-xl text-sm font-medium outline-none transition-all resize-none border-2 ${isDark ? 'bg-[#161b22] border-[#30363d] text-slate-300 placeholder-slate-600 focus:border-sky-500' : 'bg-white border-slate-200 text-slate-700 focus:border-sky-400'}`}/>
-                        </div>
-
-                        <div>
-                          <p className={`text-[10px] font-bold mb-3 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("tienda.actualizarEstado")}</p>
-                          <div className="flex flex-wrap gap-2">
-                            {ESTADOS_FLUJO.map(e => {
-                              const c=ESTADO_CFG[e]; const isActive=order.estado===e
-                              return (
-                                <button key={e} onClick={() => updateOrderEstado(order.id,e)}
-                                  disabled={isActive||updatingOrder===order.id}
-                                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all ${isActive
-                                    ? `${c.bg} ${c.text} ${c.border} ring-2 ${c.ring} ring-offset-1`
-                                    : isDark ? 'bg-[#161b22] text-slate-400 border-[#30363d] hover:border-[#4a5568]' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
-                                  {updatingOrder===order.id ? <Loader2 size={12} className="animate-spin"/> : <span className={`w-2 h-2 rounded-full ${c.dot}`}/>}
-                                  {t('pedido.' + e)} {isActive && '✓'}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-
-                        {order.parent_phone && (
-                          <a href={`https://wa.me/51${order.parent_phone.replace(/\D/g,'')}?text=${encodeURIComponent(`Hola! Su pedido está ${ESTADO_CFG[order.estado]?.label?.toLowerCase()}. Total: ${symbol} ${Number(order.total_soles).toFixed(2)} — Neuropsicología y Terapias SANTI`)}`}
-                            target="_blank" rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-green-200 hover:-translate-y-0.5 active:scale-95">
-                            <Phone size={15}/> {L('Contact via WhatsApp','Contactar por WhatsApp')}
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 )
               })}
             </div>
@@ -651,13 +612,15 @@ export default function StoreManagementView() {
         </div>
       )}
 
-      {showModal && (
-        <ProductModal
-          product={editProduct}
-          onClose={() => { setShowModal(false); setEditProduct(null) }}
-          onSaved={async () => { setShowModal(false); setEditProduct(null); await loadProducts() }}
-        />
-      )}
+      <AnimatePresence>
+        {showModal && (
+          <ProductModal
+            product={editProduct}
+            onClose={() => { setShowModal(false); setEditProduct(null) }}
+            onSaved={async () => { setShowModal(false); setEditProduct(null); await loadProducts() }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

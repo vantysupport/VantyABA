@@ -1,688 +1,188 @@
 // app/privacidad/page.tsx
-// Política de Privacidad completa de la plataforma Vanty · Centro SANTI.
-// Bilingüe (ES/EN) — el idioma se toma de la cookie `vanty_locale` que setea el middleware.
-// Diseñada para verse profesional en modo claro y modo oscuro.
+// Política de Privacidad de la plataforma Vanty (nivel plataforma, multi-centro).
+// Bilingüe (ES/EN): el idioma se toma de la cookie `vanty_locale` que fija el middleware.
 
 import { cookies } from 'next/headers'
+import LegalPage, { Lista, Destacado, type SeccionLegal } from '@/components/legal/LegalPage'
+import {
+  Building2, Database, Target, Scale, Share2, ShieldCheck, Sparkles, Baby, UserCheck, LogIn, Archive,
+  RefreshCw, Mail, KeyRound, Lock, ServerCog, BadgeCheck, Ban,
+} from 'lucide-react'
+import { PLATFORM_NAME } from '@/lib/branding'
 
-export const metadata = {
-  title: 'Política de Privacidad · Vanty',
-  description: 'Cómo Vanty protege los datos clínicos de las familias del Centro SANTI.',
+export async function generateMetadata() {
+  const en = (await cookies()).get('vanty_locale')?.value === 'en'
+  return en
+    ? { title: `Privacy Policy · ${P}`, description: `How ${P} protects the personal and clinical data of the families served by the centers that use the platform.` }
+    : { title: `Política de Privacidad · ${P}`, description: `Cómo ${P} protege los datos personales y clínicos de las familias atendidas en los centros que usan la plataforma.` }
 }
 
-type Section = { id: string; title: string; body: React.ReactNode }
+// Nombre comercial completo de la plataforma en los documentos legales
+const P = `${PLATFORM_NAME} ABA`
 
-const SECTIONS_ES: Section[] = [
-  {
-    id: 'identidad',
-    title: '1. Quiénes somos',
-    body: (
-      <>
-        <p>
-          <strong>Neuropsicología y Terapias SANTI</strong> es un centro especializado en intervención
-          infantil ABA, TEA y TDAH ubicado en Av. Brasil 2730, Pueblo Libre 15084, Lima — Perú.
-        </p>
-        <p>
-          Operamos la plataforma digital <strong>Vanty</strong> para la gestión clínica y la comunicación
-          con familias. Esta política describe cómo recopilamos, usamos y protegemos los datos personales
-          y clínicos confiados a nuestro cargo.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'datos',
-    title: '2. Qué información recopilamos',
-    body: (
-      <>
-        <p>Recopilamos únicamente la información necesaria para brindar nuestros servicios:</p>
-        <ul>
-          <li><strong>Datos de cuenta:</strong> nombre completo, correo electrónico, número de teléfono, foto de perfil opcional.</li>
-          <li><strong>Datos del paciente:</strong> nombre, fecha de nacimiento, diagnóstico clínico, historial de sesiones, programas ABA y progreso terapéutico.</li>
-          <li><strong>Datos de uso:</strong> registros de sesiones ABA, formularios clínicos, evaluaciones, reportes generados y respuestas al chequeo mensual de bienestar.</li>
-          <li><strong>Datos de Google / Microsoft (opcionales):</strong> nombre, correo y foto de perfil si elegís iniciar sesión con esos proveedores. No accedemos a Gmail, Drive ni Outlook salvo Calendar — y solo con tu autorización explícita.</li>
-          <li><strong>Datos técnicos:</strong> direcciones IP y registros de acceso, conservados de forma limitada por motivos de seguridad.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'uso',
-    title: '3. Cómo usamos la información',
-    body: (
-      <>
-        <ul>
-          <li>Gestionar el historial clínico y el seguimiento terapéutico del paciente.</li>
-          <li>Generar reportes de progreso para familias y profesionales.</li>
-          <li>Enviar notificaciones de citas, recordatorios y comunicados del centro.</li>
-          <li>Permitir la comunicación segura entre la familia y el equipo clínico.</li>
-          <li>Mejorar la calidad de los servicios clínicos y de la plataforma Vanty.</li>
-        </ul>
-        <p><em>Nunca utilizamos los datos clínicos con fines publicitarios ni los vendemos a terceros.</em></p>
-      </>
-    ),
-  },
-  {
-    id: 'compartir',
-    title: '4. Con quién compartimos la información',
-    body: (
-      <>
-        <p>La información puede ser compartida únicamente con:</p>
-        <ul>
-          <li>El equipo clínico de Neuropsicología y Terapias SANTI directamente involucrado en la atención del paciente.</li>
-          <li>Proveedores de infraestructura tecnológica (Supabase para base de datos, Vercel para alojamiento) bajo estrictas políticas de confidencialidad.</li>
-          <li>Proveedores de inteligencia artificial (Anthropic, Groq) procesando consultas puntuales del Asistente ARIA. Los datos enviados se descartan tras generar la respuesta y no se usan para entrenar modelos.</li>
-          <li>Autoridades sanitarias o judiciales, exclusivamente cuando la ley lo exija expresamente.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'seguridad',
-    title: '5. Seguridad de los datos',
-    body: (
-      <>
-        <p>Aplicamos múltiples capas de protección:</p>
-        <ul>
-          <li><strong>Cifrado AES-256</strong> de los datos en reposo (estándar bancario).</li>
-          <li><strong>TLS 1.3</strong> en toda comunicación entre tu dispositivo y nuestros servidores.</li>
-          <li><strong>Row Level Security (RLS)</strong> aplicada en cada tabla de la base de datos — cada cuenta solo puede acceder a los datos que le corresponden.</li>
-          <li>Acceso del personal segmentado por <strong>roles</strong> (jefe, admin, especialista, terapeuta, secretaría, padre).</li>
-          <li>Backups automáticos cifrados con redundancia geográfica.</li>
-          <li>Auditoría de accesos a información sensible.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'ia',
-    title: '6. Uso de Inteligencia Artificial (ARIA)',
-    body: (
-      <>
-        <p>
-          ARIA es nuestra asistente clínica basada en modelos de lenguaje. Su funcionamiento respeta los siguientes principios:
-        </p>
-        <ul>
-          <li>Las consultas se procesan de forma contextual y se envía solo la información mínima necesaria.</li>
-          <li>Los datos clínicos <strong>no se utilizan para entrenar modelos públicos</strong>.</li>
-          <li>Cuando es técnicamente posible, los datos se anonimizan antes del procesamiento.</li>
-          <li>Los reportes de análisis se generan a partir de tus datos pero los borradores temporales se descartan.</li>
-          <li>El procesamiento por IA nunca reemplaza el criterio clínico del terapeuta.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'derechos',
-    title: '7. Tus derechos (Ley 29733 · Perú)',
-    body: (
-      <>
-        <p>Conforme a la Ley peruana de Protección de Datos Personales, tenés derecho a:</p>
-        <ul>
-          <li><strong>Acceso:</strong> solicitar una copia de los datos personales que conservamos.</li>
-          <li><strong>Rectificación:</strong> corregir datos inexactos o desactualizados.</li>
-          <li><strong>Eliminación:</strong> solicitar la baja de tu cuenta y de los datos asociados (sujeto a normativas de retención clínica).</li>
-          <li><strong>Portabilidad:</strong> exportar tu información en un formato abierto y estructurado.</li>
-          <li><strong>Oposición:</strong> limitar usos específicos de tus datos.</li>
-          <li><strong>Información:</strong> conocer qué datos tenemos, con qué finalidad y por cuánto tiempo.</li>
-        </ul>
-        <p>
-          Para ejercer cualquiera de estos derechos, escribinos a{' '}
-          <a href="mailto:aprendizaje.santi@gmail.com" className="vanty-link">aprendizaje.santi@gmail.com</a>.
-          Respondemos en un plazo máximo de 10 días hábiles.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'google',
-    title: '8. Inicio de sesión con Google / Microsoft',
-    body: (
-      <>
-        <p>
-          Si iniciás sesión con Google o Microsoft, utilizamos únicamente tu nombre, correo electrónico y foto de perfil
-          para crear y gestionar tu cuenta. No accedemos a Gmail, Drive, OneDrive ni a ningún otro servicio sin tu
-          consentimiento explícito.
-        </p>
-        <p>
-          Si autorizás la sincronización con Google Calendar o Outlook Calendar, accedemos solo a la creación y
-          actualización de eventos relacionados con tus citas en SANTI. Podés revocar este permiso en cualquier momento
-          desde "Mi Perfil → Calendarios vinculados".
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'retencion',
-    title: '9. Retención de datos',
-    body: (
-      <>
-        <p>
-          Los datos clínicos se conservan durante el período activo de atención y hasta <strong>5 años después</strong>{' '}
-          del último servicio, conforme a las normativas peruanas de registros clínicos. Podés solicitar la eliminación
-          anticipada en cualquier momento; en ese caso, conservaremos únicamente los registros mínimos requeridos
-          por ley.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'menores',
-    title: '10. Protección especial de menores',
-    body: (
-      <>
-        <p>
-          Vanty está diseñada para gestionar datos de menores con el consentimiento expreso del padre, madre o tutor
-          legal. Los datos del menor son tratados con el más alto nivel de confidencialidad:
-        </p>
-        <ul>
-          <li>Solo el padre/tutor titular y los profesionales asignados al caso tienen acceso.</li>
-          <li>No se utilizan los datos del menor para crear perfiles publicitarios ni de marketing.</li>
-          <li>El padre/tutor puede revocar el acceso, descargar el expediente o solicitar la eliminación en cualquier momento.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'cambios',
-    title: '11. Cambios en esta política',
-    body: (
-      <>
-        <p>
-          Podemos actualizar esta política para reflejar mejoras en nuestros servicios o cambios normativos.
-          Notificaremos cualquier cambio relevante por correo electrónico y mediante un aviso destacado dentro de la
-          plataforma. La fecha de última actualización siempre aparece al inicio de este documento.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'contacto',
-    title: '12. Contacto',
-    body: (
-      <>
-        <p>Para cualquier consulta sobre esta política o sobre tus datos personales:</p>
-        <p style={{ marginTop: 8 }}>
-          <strong>Neuropsicología y Terapias SANTI</strong><br/>
-          Av. Brasil 2730, Pueblo Libre 15084 — Lima, Perú<br/>
-          📧 <a href="mailto:aprendizaje.santi@gmail.com" className="vanty-link">aprendizaje.santi@gmail.com</a><br/>
-          📱 <a href="tel:+51991070734" className="vanty-link">+51 991 070 734</a>
-        </p>
-      </>
-    ),
-  },
-]
-
-const SECTIONS_EN: Section[] = [
-  {
-    id: 'identidad',
-    title: '1. Who we are',
-    body: (
-      <>
-        <p>
-          <strong>Neuropsicología y Terapias SANTI</strong> is a center specialized in ABA, ASD and ADHD
-          childhood intervention located at Av. Brasil 2730, Pueblo Libre 15084, Lima — Peru.
-        </p>
-        <p>
-          We operate the digital platform <strong>Vanty</strong> for clinical management and communication
-          with families. This policy describes how we collect, use and protect the personal and clinical
-          data entrusted to us.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'datos',
-    title: '2. What information we collect',
-    body: (
-      <>
-        <p>We collect only the information necessary to provide our services:</p>
-        <ul>
-          <li><strong>Account data:</strong> full name, email address, phone number, optional profile photo.</li>
-          <li><strong>Patient data:</strong> name, date of birth, clinical diagnosis, session history, ABA programs and therapeutic progress.</li>
-          <li><strong>Usage data:</strong> ABA session records, clinical forms, evaluations, generated reports and responses to the monthly wellbeing check-in.</li>
-          <li><strong>Google / Microsoft data (optional):</strong> name, email and profile photo if you choose to sign in with those providers. We do not access Gmail, Drive or Outlook except Calendar — and only with your explicit authorization.</li>
-          <li><strong>Technical data:</strong> IP addresses and access logs, retained on a limited basis for security reasons.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'uso',
-    title: '3. How we use the information',
-    body: (
-      <>
-        <ul>
-          <li>Manage the patient's clinical history and therapeutic follow-up.</li>
-          <li>Generate progress reports for families and professionals.</li>
-          <li>Send appointment notifications, reminders and center announcements.</li>
-          <li>Enable secure communication between the family and the clinical team.</li>
-          <li>Improve the quality of clinical services and the Vanty platform.</li>
-        </ul>
-        <p><em>We never use clinical data for advertising purposes, nor do we sell it to third parties.</em></p>
-      </>
-    ),
-  },
-  {
-    id: 'compartir',
-    title: '4. Who we share the information with',
-    body: (
-      <>
-        <p>Information may be shared only with:</p>
-        <ul>
-          <li>The clinical team of Neuropsicología y Terapias SANTI directly involved in the patient's care.</li>
-          <li>Technology infrastructure providers (Supabase for the database, Vercel for hosting) under strict confidentiality policies.</li>
-          <li>Artificial intelligence providers (Anthropic, Groq) processing specific queries from the ARIA Assistant. The data sent is discarded after generating the response and is not used to train models.</li>
-          <li>Health or judicial authorities, exclusively when the law expressly requires it.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'seguridad',
-    title: '5. Data security',
-    body: (
-      <>
-        <p>We apply multiple layers of protection:</p>
-        <ul>
-          <li><strong>AES-256 encryption</strong> of data at rest (banking standard).</li>
-          <li><strong>TLS 1.3</strong> on all communication between your device and our servers.</li>
-          <li><strong>Row Level Security (RLS)</strong> applied to every table in the database — each account can only access the data that belongs to it.</li>
-          <li>Staff access segmented by <strong>roles</strong> (director, admin, specialist, therapist, secretary, parent).</li>
-          <li>Automatic encrypted backups with geographic redundancy.</li>
-          <li>Auditing of access to sensitive information.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'ia',
-    title: '6. Use of Artificial Intelligence (ARIA)',
-    body: (
-      <>
-        <p>
-          ARIA is our clinical assistant based on language models. Its operation respects the following principles:
-        </p>
-        <ul>
-          <li>Queries are processed contextually and only the minimum necessary information is sent.</li>
-          <li>Clinical data <strong>is not used to train public models</strong>.</li>
-          <li>When technically possible, data is anonymized before processing.</li>
-          <li>Analysis reports are generated from your data, but temporary drafts are discarded.</li>
-          <li>AI processing never replaces the therapist's clinical judgment.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'derechos',
-    title: '7. Your rights (Law 29733 · Peru)',
-    body: (
-      <>
-        <p>Under the Peruvian Personal Data Protection Law, you have the right to:</p>
-        <ul>
-          <li><strong>Access:</strong> request a copy of the personal data we hold.</li>
-          <li><strong>Rectification:</strong> correct inaccurate or outdated data.</li>
-          <li><strong>Deletion:</strong> request the removal of your account and associated data (subject to clinical retention regulations).</li>
-          <li><strong>Portability:</strong> export your information in an open, structured format.</li>
-          <li><strong>Objection:</strong> limit specific uses of your data.</li>
-          <li><strong>Information:</strong> know what data we hold, for what purpose and for how long.</li>
-        </ul>
-        <p>
-          To exercise any of these rights, write to us at{' '}
-          <a href="mailto:aprendizaje.santi@gmail.com" className="vanty-link">aprendizaje.santi@gmail.com</a>.
-          We respond within a maximum of 10 business days.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'google',
-    title: '8. Sign in with Google / Microsoft',
-    body: (
-      <>
-        <p>
-          If you sign in with Google or Microsoft, we use only your name, email address and profile photo
-          to create and manage your account. We do not access Gmail, Drive, OneDrive or any other service
-          without your explicit consent.
-        </p>
-        <p>
-          If you authorize synchronization with Google Calendar or Outlook Calendar, we access only the creation
-          and update of events related to your SANTI appointments. You can revoke this permission at any time
-          from "My Profile → Linked calendars".
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'retencion',
-    title: '9. Data retention',
-    body: (
-      <>
-        <p>
-          Clinical data is retained during the active care period and for up to <strong>5 years after</strong>{' '}
-          the last service, in accordance with Peruvian clinical records regulations. You may request early
-          deletion at any time; in that case, we will keep only the minimum records required by law.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'menores',
-    title: '10. Special protection of minors',
-    body: (
-      <>
-        <p>
-          Vanty is designed to manage minors' data with the express consent of the parent or legal guardian.
-          The minor's data is treated with the highest level of confidentiality:
-        </p>
-        <ul>
-          <li>Only the holding parent/guardian and the professionals assigned to the case have access.</li>
-          <li>The minor's data is not used to create advertising or marketing profiles.</li>
-          <li>The parent/guardian may revoke access, download the record or request deletion at any time.</li>
-        </ul>
-      </>
-    ),
-  },
-  {
-    id: 'cambios',
-    title: '11. Changes to this policy',
-    body: (
-      <>
-        <p>
-          We may update this policy to reflect improvements in our services or regulatory changes.
-          We will notify any relevant change by email and through a prominent notice within the platform.
-          The date of the last update always appears at the top of this document.
-        </p>
-      </>
-    ),
-  },
-  {
-    id: 'contacto',
-    title: '12. Contact',
-    body: (
-      <>
-        <p>For any question about this policy or about your personal data:</p>
-        <p style={{ marginTop: 8 }}>
-          <strong>Neuropsicología y Terapias SANTI</strong><br/>
-          Av. Brasil 2730, Pueblo Libre 15084 — Lima, Peru<br/>
-          📧 <a href="mailto:aprendizaje.santi@gmail.com" className="vanty-link">aprendizaje.santi@gmail.com</a><br/>
-          📱 <a href="tel:+51991070734" className="vanty-link">+51 991 070 734</a>
-        </p>
-      </>
-    ),
-  },
-]
-
-const UI = {
-  es: {
-    brand: 'Vanty · Neuropsicología y Terapias SANTI',
-    title: 'Política de Privacidad',
-    subtitle: 'Última actualización: abril 2025 · Pueblo Libre, Lima — Perú',
-    tocAria: 'Índice de contenidos',
-    toc: 'Índice',
-    rights: 'Todos los derechos reservados',
-    terms: 'Ver Términos de Servicio →',
-  },
-  en: {
-    brand: 'Vanty · Neuropsicología y Terapias SANTI',
-    title: 'Privacy Policy',
-    subtitle: 'Last updated: April 2025 · Pueblo Libre, Lima — Peru',
-    tocAria: 'Table of contents',
-    toc: 'Contents',
-    rights: 'All rights reserved',
-    terms: 'View Terms of Service →',
-  },
+function secciones(en: boolean): SeccionLegal[] {
+  const L = (e: string, s: string) => (en ? e : s)
+  return [
+    {
+      id: 'identidad', Icon: Building2, title: L('Who we are and scope', 'Quiénes somos y alcance'),
+      body: <>
+        <p>{L(`${P} is a clinical-management platform for child development and therapy centers (ABA, ASD, ADHD and related areas). It enables each center to manage its patients' clinical records and to communicate securely with families.`,
+          `${P} es una plataforma de gestión clínica para centros de desarrollo infantil y terapia (ABA, TEA, TDAH y áreas afines). Permite a cada centro gestionar la información clínica de sus pacientes y comunicarse de forma segura con las familias.`)}</p>
+        <p>{L(`Each center that uses ${P} acts as the data controller for the information of its patients and families. ${P} acts as the data processor: it processes that information on the center's behalf, following its instructions and solely to provide the service.`,
+          `Cada centro que utiliza ${P} actúa como responsable del tratamiento de los datos de sus pacientes y familias. ${P} actúa como encargado del tratamiento: procesa dicha información por cuenta del centro, siguiendo sus instrucciones y únicamente para prestar el servicio.`)}</p>
+      </>,
+    },
+    {
+      id: 'datos', Icon: Database, title: L('Information we process', 'Información que tratamos'),
+      body: <>
+        <p>{L('We process only the information necessary to provide the service:', 'Tratamos únicamente la información necesaria para prestar el servicio:')}</p>
+        <Lista items={[
+          [L('Account data:', 'Datos de cuenta:'), L('full name, email address, phone number and, optionally, a profile photo.', 'nombre completo, correo electrónico, teléfono y, de forma opcional, fotografía de perfil.')],
+          [L('Patient data:', 'Datos del paciente:'), L('name, date of birth, diagnosis, assessments, therapy programs, session records and progress. This is sensitive health data and receives reinforced protection.', 'nombre, fecha de nacimiento, diagnóstico, evaluaciones, programas terapéuticos, registros de sesión y progreso. Se trata de datos sensibles de salud y reciben protección reforzada.')],
+          [L('Content you share:', 'Contenido que compartes:'), L('forms, messages, audio, images and documents exchanged with the center.', 'formularios, mensajes, audios, imágenes y documentos intercambiados con el centro.')],
+          [L('Technical data:', 'Datos técnicos:'), L('connection and access logs, kept for a limited time for security purposes.', 'registros de conexión y acceso, conservados por un tiempo limitado con fines de seguridad.')],
+        ]} />
+      </>,
+    },
+    {
+      id: 'finalidades', Icon: Target, title: L('Purposes of processing', 'Finalidades del tratamiento'),
+      body: <>
+        <Lista items={[
+          [L('Clinical care:', 'Atención clínica:'), L('managing the clinical record and therapeutic follow-up of the patient.', 'gestionar la historia clínica y el seguimiento terapéutico del paciente.')],
+          [L('Reports:', 'Reportes:'), L('preparing progress reports for families and professionals.', 'elaborar informes de progreso para familias y profesionales.')],
+          [L('Communication:', 'Comunicación:'), L('sending appointment notices, reminders and messages from the center.', 'enviar avisos de citas, recordatorios y comunicaciones del centro.')],
+          [L('Security and continuity:', 'Seguridad y continuidad:'), L('protecting accounts, preventing misuse and keeping the service running.', 'proteger las cuentas, prevenir usos indebidos y mantener el servicio operativo.')],
+        ]} />
+        <Destacado>{L('Your data is never used for advertising, profiling for commercial purposes, or sold to third parties.', 'Tus datos nunca se utilizan con fines publicitarios, para elaborar perfiles comerciales ni se venden a terceros.')}</Destacado>
+      </>,
+    },
+    {
+      id: 'base-legal', Icon: Scale, title: L('Legal basis', 'Base legal'),
+      body: <p>{L('Processing is based on the consent of the data subject or, in the case of minors, of their parent or legal guardian; on the performance of the health service requested from the center; and on compliance with the legal obligations applicable to clinical records.',
+        'El tratamiento se basa en el consentimiento del titular o, tratándose de menores de edad, de su padre, madre o tutor legal; en la ejecución del servicio de salud solicitado al centro; y en el cumplimiento de las obligaciones legales aplicables a los registros clínicos.')}</p>,
+    },
+    {
+      id: 'destinatarios', Icon: Share2, title: L('Recipients and service providers', 'Destinatarios y proveedores'),
+      body: <>
+        <p>{L('Information is only accessible to:', 'La información solo es accesible por:')}</p>
+        <Lista items={[
+          [L('The center\'s clinical team', 'El equipo clínico del centro'), L('directly involved in the patient\'s care, according to their role.', 'directamente involucrado en la atención del paciente, según su rol.')],
+          [L('Technology providers', 'Proveedores tecnológicos'), L('that support the service (database, hosting and file storage) under confidentiality and security obligations.', 'que soportan el servicio (base de datos, alojamiento y almacenamiento de archivos), sujetos a obligaciones de confidencialidad y seguridad.')],
+          [L('The artificial intelligence provider', 'El proveedor de inteligencia artificial'), L('that processes ARIA queries, receiving only the minimum context required for each response.', 'que procesa las consultas de ARIA, recibiendo solo el contexto mínimo necesario para cada respuesta.')],
+          [L('Competent authorities,', 'Autoridades competentes,'), L('exclusively when required by law or court order.', 'exclusivamente cuando lo exija la ley o un mandato judicial.')],
+        ]} />
+        <p className="mt-3">{L('Some of these providers may host data outside Peru. In such cases, cross-border data flows are carried out with appropriate safeguards, in accordance with applicable regulations.', 'Algunos de estos proveedores pueden alojar datos fuera del Perú. En esos casos, el flujo transfronterizo se realiza con garantías adecuadas, conforme a la normativa aplicable.')}</p>
+      </>,
+    },
+    {
+      id: 'seguridad', Icon: ShieldCheck, title: L('Information security', 'Seguridad de la información'),
+      body: <>
+        <p>{L('We apply technical and organizational measures proportional to the sensitivity of the data:', 'Aplicamos medidas técnicas y organizativas proporcionales a la sensibilidad de los datos:')}</p>
+        <Lista items={[
+          [L('Encryption at rest', 'Cifrado en reposo'), L('with AES-256.', 'con AES-256.')],
+          [L('Encryption in transit', 'Cifrado en tránsito'), L('through TLS connections on every communication.', 'mediante conexiones TLS en todas las comunicaciones.')],
+          [L('Isolation by center:', 'Aislamiento por centro:'), L('row-level security policies (Row Level Security) ensure each center only accesses its own records.', 'políticas de seguridad a nivel de fila (Row Level Security) garantizan que cada centro acceda únicamente a sus propios registros.')],
+          [L('Role-based access', 'Acceso por roles'), L('(director, administrator, specialist, therapist, secretary, family), following the principle of least privilege.', '(dirección, administración, especialista, terapeuta, secretaría, familia), bajo el principio de mínimo privilegio.')],
+          [L('Optional two-step verification', 'Verificación en dos pasos opcional'), L('for every account.', 'para todas las cuentas.')],
+        ]} />
+      </>,
+    },
+    {
+      id: 'ia', Icon: Sparkles, title: L('Responsible use of artificial intelligence', 'Uso responsable de la inteligencia artificial'),
+      body: <>
+        <p>{L('ARIA is the platform\'s assistant, based on language models. Its use follows these principles:', 'ARIA es el asistente de la plataforma, basado en modelos de lenguaje. Su uso se rige por los siguientes principios:')}</p>
+        <Lista items={[
+          [L('Data minimization:', 'Minimización:'), L('only the context strictly necessary for each query is sent.', 'se envía únicamente el contexto estrictamente necesario para cada consulta.')],
+          [L('No training:', 'Sin entrenamiento:'), L('clinical information is not used to train artificial intelligence models.', 'la información clínica no se utiliza para entrenar modelos de inteligencia artificial.')],
+          [L('Human oversight:', 'Supervisión humana:'), L('ARIA is a support tool; it does not issue diagnoses or replace the professional judgment of the therapy team.', 'ARIA es una herramienta de apoyo; no emite diagnósticos ni sustituye el criterio profesional del equipo terapéutico.')],
+        ]} />
+      </>,
+    },
+    {
+      id: 'menores', Icon: Baby, title: L('Protection of minors', 'Protección de menores de edad'),
+      body: <>
+        <p>{L('Minors\' data is processed with the consent of their parent or legal guardian and with the highest level of confidentiality:', 'Los datos de menores de edad se tratan con el consentimiento de su padre, madre o tutor legal y con el más alto nivel de confidencialidad:')}</p>
+        <Lista items={[
+          [L('Restricted access:', 'Acceso restringido:'), L('only the responsible parent or guardian and the professionals assigned to the case.', 'solo el padre, madre o tutor responsable y los profesionales asignados al caso.')],
+          [L('No commercial use:', 'Sin uso comercial:'), L('the minor\'s data is never used for advertising or marketing profiles.', 'los datos del menor nunca se utilizan para publicidad ni perfiles de marketing.')],
+          [L('Control for the guardian:', 'Control del tutor:'), L('they may exercise the minor\'s rights at any time.', 'puede ejercer en cualquier momento los derechos del menor.')],
+        ]} />
+      </>,
+    },
+    {
+      id: 'derechos', Icon: UserCheck, title: L('Your rights', 'Tus derechos'),
+      body: <>
+        <p>{L('Under Peru\'s Personal Data Protection Law (Law No. 29733) and its regulations, you may exercise free of charge the rights of:', 'Conforme a la Ley de Protección de Datos Personales (Ley N.º 29733) y su reglamento, puedes ejercer de forma gratuita los derechos de:')}</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+          {[
+            [L('Access', 'Acceso'), L('Know which data we process, for what purpose and for how long.', 'Conocer qué datos tratamos, con qué finalidad y por cuánto tiempo.')],
+            [L('Rectification', 'Rectificación'), L('Correct data that is inaccurate, outdated or incomplete.', 'Corregir datos inexactos, desactualizados o incompletos.')],
+            [L('Erasure', 'Cancelación'), L('Request deletion, subject to legal clinical-record retention obligations.', 'Solicitar su supresión, sujeta a las obligaciones legales de conservación clínica.')],
+            [L('Objection', 'Oposición'), L('Object to processing for specific purposes.', 'Oponerte al tratamiento para finalidades concretas.')],
+            [L('Information', 'Información'), L('Be informed about the conditions of processing.', 'Ser informado sobre las condiciones del tratamiento.')],
+            [L('Portability', 'Portabilidad'), L('Receive a copy of your information in a structured format.', 'Recibir una copia de tu información en un formato estructurado.')],
+          ].map(([t, d]) => (
+            <div key={t} className="rounded-v-sm border border-v-border bg-v-bg p-3.5">
+              <p className="text-sm font-semibold text-v-text">{t}</p>
+              <p className="mt-0.5 text-[13px] leading-snug">{d}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4">{L('Requests are submitted to the center that provides your care, which is the data controller; the platform assists it in responding within the legal deadlines. If you consider your request was not properly addressed, you may file a claim with the National Authority for Personal Data Protection (Ministry of Justice and Human Rights of Peru).',
+          'Las solicitudes se presentan ante el centro que te atiende, como responsable del tratamiento; la plataforma le presta el apoyo necesario para responder dentro de los plazos legales. Si consideras que tu solicitud no fue debidamente atendida, puedes presentar un reclamo ante la Autoridad Nacional de Protección de Datos Personales del Ministerio de Justicia y Derechos Humanos.')}</p>
+      </>,
+    },
+    {
+      id: 'terceros', Icon: LogIn, title: L('Google and Microsoft services', 'Servicios de Google y Microsoft'),
+      body: <>
+        <p>{L('If you sign in with Google or Microsoft, we only receive your name, email address and profile photo to create and manage your account. We do not access your email, files or other services.',
+          'Si inicias sesión con Google o Microsoft, solo recibimos tu nombre, correo electrónico y fotografía de perfil para crear y gestionar tu cuenta. No accedemos a tu correo, archivos ni a otros servicios.')}</p>
+        <p>{L('If you link Google Calendar or Outlook Calendar, access is limited to creating and updating the events of your appointments. You may revoke it at any time from My profile → Linked calendars.',
+          'Si vinculas Google Calendar u Outlook Calendar, el acceso se limita a crear y actualizar los eventos de tus citas. Puedes revocarlo en cualquier momento desde Mi perfil → Calendarios vinculados.')}</p>
+      </>,
+    },
+    {
+      id: 'conservacion', Icon: Archive, title: L('Data retention', 'Conservación de los datos'),
+      body: <p>{L('Clinical information is kept while care is active and, afterwards, for the minimum period required by applicable health regulations on clinical records. Once that period ends, it is securely deleted or anonymized. Account data is deleted when the account is closed, except where the law requires otherwise.',
+        'La información clínica se conserva mientras la atención esté activa y, posteriormente, durante el plazo mínimo que exige la normativa sanitaria aplicable a las historias clínicas. Vencido dicho plazo, se elimina o anonimiza de forma segura. Los datos de cuenta se eliminan al cerrarse la cuenta, salvo que la ley disponga lo contrario.')}</p>,
+    },
+    {
+      id: 'cambios', Icon: RefreshCw, title: L('Changes to this policy', 'Cambios en esta política'),
+      body: <p>{L('We may update this policy to reflect improvements to the service or regulatory changes. Relevant changes will be communicated through a notice within the platform, and the date of the last update will always appear at the top of this document.',
+        'Podemos actualizar esta política para reflejar mejoras en el servicio o cambios normativos. Los cambios relevantes se comunicarán mediante un aviso dentro de la plataforma, y la fecha de la última actualización figurará siempre al inicio de este documento.')}</p>,
+    },
+    {
+      id: 'contacto', Icon: Mail, title: L('Contact', 'Contacto'),
+      body: <p>{L(`For questions about the processing of your data, contact the center that provides your care through the channels available in the platform. For matters related to the ${P} platform, you may write to us through the support section.`,
+        `Para consultas sobre el tratamiento de tus datos, comunícate con el centro que te atiende a través de los canales disponibles en la plataforma. Para asuntos relacionados con la plataforma ${P}, puedes escribirnos desde la sección de soporte.`)}</p>,
+    },
+  ]
 }
 
 export default async function PrivacidadPage() {
-  const cookieStore = await cookies()
-  const locale = cookieStore.get('vanty_locale')?.value === 'en' ? 'en' : 'es'
-  const SECTIONS = locale === 'en' ? SECTIONS_EN : SECTIONS_ES
-  const ui = UI[locale]
-
+  const en = (await cookies()).get('vanty_locale')?.value === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
   return (
-    <div className="vanty-privacidad">
-      {/* Estilos scoped — dark/light adaptativo + tipografía profesional */}
-      <style>{`
-        .vanty-privacidad {
-          --vp-bg:        var(--background);
-          --vp-card:      var(--card);
-          --vp-surface:   var(--muted-bg);
-          --vp-border:    var(--card-border);
-          --vp-title:     var(--text-primary);
-          --vp-body:      var(--text-secondary);
-          --vp-muted:     var(--text-muted);
-          --vp-accent:    #7c3aed;
-          --vp-accent-2:  #db2777;
-
-          min-height: 100vh;
-          background: var(--vp-bg);
-          color: var(--vp-body);
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        .vanty-privacidad .vp-container {
-          max-width: 780px;
-          margin: 0 auto;
-          padding: 32px 20px 64px;
-        }
-
-        .vanty-privacidad .vp-hero {
-          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #db2777 100%);
-          border-radius: 24px;
-          padding: 32px 28px;
-          color: #fff;
-          margin-bottom: 24px;
-          box-shadow: 0 10px 30px rgba(124,58,237,0.20);
-          position: relative;
-          overflow: hidden;
-        }
-        .vanty-privacidad .vp-hero::before {
-          content: '';
-          position: absolute;
-          top: -50px; right: -50px;
-          width: 200px; height: 200px;
-          background: rgba(255,255,255,0.10);
-          border-radius: 50%;
-        }
-        .vanty-privacidad .vp-hero::after {
-          content: '';
-          position: absolute;
-          bottom: -40px; left: 40px;
-          width: 130px; height: 130px;
-          background: rgba(255,255,255,0.07);
-          border-radius: 50%;
-        }
-        .vanty-privacidad .vp-brand {
-          display: flex; align-items: center; gap: 10px;
-          font-weight: 800; font-size: 14px;
-          opacity: 0.95;
-          margin-bottom: 14px;
-          position: relative; z-index: 1;
-        }
-        .vanty-privacidad .vp-brand-icon {
-          width: 32px; height: 32px;
-          background: rgba(255,255,255,0.20);
-          backdrop-filter: blur(6px);
-          border-radius: 9px;
-          display: inline-flex;
-          align-items: center; justify-content: center;
-          font-size: 16px;
-        }
-        .vanty-privacidad .vp-title {
-          font-size: 30px; font-weight: 900;
-          line-height: 1.1; letter-spacing: -0.5px;
-          margin: 0 0 6px;
-          position: relative; z-index: 1;
-        }
-        .vanty-privacidad .vp-subtitle {
-          font-size: 13px;
-          opacity: 0.85;
-          margin: 0;
-          position: relative; z-index: 1;
-        }
-        .vanty-privacidad .vp-badges {
-          display: flex; flex-wrap: wrap; gap: 6px;
-          margin-top: 16px;
-          position: relative; z-index: 1;
-        }
-        .vanty-privacidad .vp-badge {
-          display: inline-flex; align-items: center; gap: 5px;
-          font-size: 10px; font-weight: 700;
-          padding: 4px 10px;
-          background: rgba(255,255,255,0.18);
-          backdrop-filter: blur(4px);
-          border-radius: 999px;
-          letter-spacing: 0.3px;
-        }
-
-        .vanty-privacidad .vp-toc {
-          background: var(--vp-card);
-          border: 1px solid var(--vp-border);
-          border-radius: 16px;
-          padding: 18px 22px;
-          margin-bottom: 28px;
-        }
-        .vanty-privacidad .vp-toc-title {
-          font-size: 11px; font-weight: 800;
-          color: var(--vp-muted);
-          text-transform: uppercase; letter-spacing: 1px;
-          margin: 0 0 10px;
-        }
-        .vanty-privacidad .vp-toc-list {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: 4px 18px;
-          list-style: none;
-          padding: 0; margin: 0;
-        }
-        .vanty-privacidad .vp-toc-list a {
-          display: block;
-          color: var(--vp-body);
-          text-decoration: none;
-          font-size: 13px;
-          padding: 6px 0;
-          font-weight: 500;
-          transition: color .15s;
-        }
-        .vanty-privacidad .vp-toc-list a:hover {
-          color: var(--vp-accent);
-        }
-
-        .vanty-privacidad section.vp-section {
-          background: var(--vp-card);
-          border: 1px solid var(--vp-border);
-          border-radius: 16px;
-          padding: 22px 24px;
-          margin-bottom: 14px;
-        }
-        .vanty-privacidad section.vp-section h2 {
-          font-size: 17px; font-weight: 800;
-          color: var(--vp-title);
-          margin: 0 0 10px;
-          letter-spacing: -0.2px;
-        }
-        .vanty-privacidad section.vp-section p {
-          font-size: 14px; line-height: 1.65;
-          color: var(--vp-body);
-          margin: 0 0 10px;
-        }
-        .vanty-privacidad section.vp-section p:last-child { margin-bottom: 0; }
-        .vanty-privacidad section.vp-section ul {
-          padding-left: 18px;
-          margin: 6px 0 10px;
-          color: var(--vp-body);
-        }
-        .vanty-privacidad section.vp-section li {
-          font-size: 14px; line-height: 1.6;
-          padding: 3px 0;
-        }
-        .vanty-privacidad section.vp-section strong {
-          color: var(--vp-title);
-        }
-        .vanty-privacidad section.vp-section em {
-          color: var(--vp-muted);
-          font-style: italic;
-        }
-        .vanty-privacidad .vanty-link {
-          color: var(--vp-accent);
-          text-decoration: none;
-          font-weight: 600;
-          border-bottom: 1px dashed var(--vp-accent);
-        }
-        .vanty-privacidad .vanty-link:hover {
-          border-bottom-style: solid;
-        }
-
-        .vanty-privacidad .vp-footer {
-          margin-top: 32px;
-          padding-top: 22px;
-          border-top: 1px solid var(--vp-border);
-          display: flex; justify-content: space-between; align-items: center;
-          flex-wrap: wrap; gap: 12px;
-        }
-        .vanty-privacidad .vp-footer p {
-          font-size: 12px; color: var(--vp-muted);
-          margin: 0;
-        }
-        .vanty-privacidad .vp-footer a {
-          font-size: 12px;
-          color: var(--vp-accent);
-          font-weight: 700;
-          text-decoration: none;
-        }
-        .vanty-privacidad .vp-footer a:hover { text-decoration: underline; }
-
-        @media (max-width: 600px) {
-          .vanty-privacidad .vp-title { font-size: 24px; }
-          .vanty-privacidad .vp-hero { padding: 26px 22px; border-radius: 20px; }
-          .vanty-privacidad section.vp-section { padding: 18px 20px; }
-        }
-      `}</style>
-
-      <div className="vp-container">
-        {/* Hero */}
-        <div className="vp-hero">
-          <div className="vp-brand">
-            <span className="vp-brand-icon">🧩</span>
-            <span>{ui.brand}</span>
-          </div>
-          <h1 className="vp-title">{ui.title}</h1>
-          <p className="vp-subtitle">{ui.subtitle}</p>
-          <div className="vp-badges">
-            <span className="vp-badge">🔑 AES-256</span>
-            <span className="vp-badge">⚙️ TLS 1.3</span>
-            <span className="vp-badge">🗄️ Row Level Security</span>
-            <span className="vp-badge">✓ Ley 29733 (PE)</span>
-          </div>
-        </div>
-
-        {/* Tabla de contenidos */}
-        <nav className="vp-toc" aria-label={ui.tocAria}>
-          <p className="vp-toc-title">{ui.toc}</p>
-          <ul className="vp-toc-list">
-            {SECTIONS.map(s => (
-              <li key={s.id}>
-                <a href={`#${s.id}`}>{s.title}</a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Secciones */}
-        {SECTIONS.map(s => (
-          <section key={s.id} id={s.id} className="vp-section">
-            <h2>{s.title}</h2>
-            {s.body}
-          </section>
-        ))}
-
-        {/* Footer */}
-        <div className="vp-footer">
-          <p>© {new Date().getFullYear()} Neuropsicología y Terapias SANTI · {ui.rights}</p>
-          <a href="/terminos">{ui.terms}</a>
-        </div>
-      </div>
-    </div>
+    <LegalPage
+      en={en}
+      EyebrowIcon={ShieldCheck}
+      titleA={L('Privacy ', 'Política de ')}
+      titleB={L('Policy', 'Privacidad')}
+      intro={L(`At ${P} we understand that we handle especially sensitive information: the health data of children and their families. This policy explains, clearly and transparently, what information we process, why we do it and how we protect it.`,
+        `En ${P} entendemos que gestionamos información especialmente sensible: los datos de salud de niñas, niños y sus familias. Esta política explica, de forma clara y transparente, qué información tratamos, para qué lo hacemos y cómo la protegemos.`)}
+      sellos={[[KeyRound, L('AES-256 encryption', 'Cifrado AES-256')], [Lock, 'TLS'], [ServerCog, 'Row Level Security'], [BadgeCheck, L('Law No. 29733 (Peru)', 'Ley N.º 29733')]]}
+      updated={L('Last updated: September 2026', 'Última actualización: septiembre de 2026')}
+      resumen={{
+        titulo: L('At a glance', 'En resumen'),
+        items: [
+          [Lock, L('Protected data', 'Datos protegidos'), L('Encrypted at rest and in transit, isolated by center.', 'Cifrados en reposo y en tránsito, aislados por centro.')],
+          [Ban, L('We never sell your data', 'Nunca vendemos tus datos'), L('No advertising or commercial profiling.', 'Sin publicidad ni perfiles comerciales.')],
+          [Sparkles, L('AI with limits', 'IA con límites'), L('Not used to train models; it does not diagnose.', 'No se usa para entrenar modelos ni diagnostica.')],
+          [UserCheck, L('You stay in control', 'Tú tienes el control'), L('Access, rectify or delete your information.', 'Accede, corrige o elimina tu información.')],
+        ],
+      }}
+      secciones={secciones(en)}
+      otro={{ href: '/terminos', label: L('Terms of Service', 'Términos de servicio') }}
+    />
   )
 }

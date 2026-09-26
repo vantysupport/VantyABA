@@ -1,14 +1,15 @@
 'use client'
+// app/especialista/components/EspecialistaHome.tsx
+// Inicio del especialista: saludo, indicadores, actividad de la semana, evaluaciones, pacientes y citas de hoy.
 
 import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
 import { useState, useEffect, useCallback } from 'react'
 import {
-  FileText, Clock, CheckCircle2, XCircle, Calendar,
-  Baby, ChevronRight, ArrowUpRight,
-  Plus, Brain, Sparkles, Users, Heart, BookOpen,
-  AlertCircle, AlertTriangle, Bell, Target, BarChart3, Trophy
+  FileText, Clock, CheckCircle2, XCircle, Calendar, ChevronRight, ArrowRight, Plus, Brain, Users, Heart,
+  AlertTriangle, Target, BarChart3, Trophy, CalendarCheck, Activity, ClipboardList,
 } from 'lucide-react'
+import { motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
 
 interface Props {
@@ -18,407 +19,312 @@ interface Props {
 }
 
 const TIPS_CLINICOS = [
-  { Icon: Target,     texto: 'Registra las conductas objetivo con antecedente, conducta y consecuencia (ABC) para mejorar la calidad de tu análisis ABA.', textoEn: 'Record target behaviors with antecedent, behavior and consequence (ABC) to improve the quality of your ABA analysis.' },
-  { Icon: BarChart3,  texto: 'Cuando un objetivo supera el 80% de dominio por 3 sesiones consecutivas, es momento de proponer un nuevo objetivo al jefe.', textoEn: 'When a goal exceeds 80% mastery for 3 consecutive sessions, it is time to propose a new goal to the director.' },
-  { Icon: Heart,      texto: 'Recuerda preguntar brevemente al padre/madre cómo se ha sentido esta semana. El bienestar del cuidador afecta directamente el progreso del niño.', textoEn: 'Remember to briefly ask the parent how they have felt this week. The caregiver’s well-being directly affects the child’s progress.' },
-  { Icon: FileText,   texto: 'Las notas de sesión con observaciones específicas son más útiles que las generales. Detalla cada avance con datos concretos.', textoEn: 'Session notes with specific observations are more useful than general ones. Detail each advance with concrete data.' },
-  { Icon: Trophy,     texto: 'Celebra los micro-logros con el niño y la familia. Un objetivo nuevo alcanzado, por pequeño que sea, merece reconocimiento.', textoEn: 'Celebrate micro-wins with the child and family. A new goal reached, however small, deserves recognition.' },
+  { Icon: Target, es: 'Registra las conductas objetivo con antecedente, conducta y consecuencia (ABC) para mejorar la calidad de tu análisis ABA.', en: 'Record target behaviors with antecedent, behavior and consequence (ABC) to improve the quality of your ABA analysis.' },
+  { Icon: BarChart3, es: 'Cuando un objetivo supera el 80% de dominio por 3 sesiones consecutivas, es momento de proponer un nuevo objetivo.', en: 'When a goal exceeds 80% mastery for 3 consecutive sessions, it is time to propose a new goal.' },
+  { Icon: Heart, es: 'Pregunta brevemente al padre o madre cómo se ha sentido esta semana. El bienestar del cuidador influye directamente en el progreso del niño.', en: 'Briefly ask the parent how they have felt this week. The caregiver’s well-being directly influences the child’s progress.' },
+  { Icon: FileText, es: 'Las notas de sesión con observaciones específicas son más útiles que las generales. Detalla cada avance con datos concretos.', en: 'Session notes with specific observations are more useful than general ones. Detail each advance with concrete data.' },
+  { Icon: Trophy, es: 'Celebra los micro-logros con el niño y la familia. Un objetivo alcanzado, por pequeño que sea, merece reconocimiento.', en: 'Celebrate micro-wins with the child and family. A goal reached, however small, deserves recognition.' },
 ]
 
-// ── Mismos componentes visuales que DashboardHome del admin ───────────────────
+const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
+const TONOS = ['bg-v-accent-soft text-v-accent', 'bg-v-success/15 text-v-success', 'bg-v-warning/15 text-v-warning', 'bg-[#8b5cf6]/12 text-[#8b5cf6]']
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-function BarChart({ values, labels, color }: { values: number[]; labels: string[]; color: string }) {
-  const max = Math.max(...values, 1)
+function Titulo({ Icon, texto, accion }: { Icon: any; texto: string; accion?: { label: string; onClick: () => void } }) {
   return (
-    <div className="flex items-end gap-1 h-10">
-      {values.map((v, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1">
-          <div className="w-full rounded-sm transition-all"
-            style={{ height: `${Math.max(2, (v / max) * 36)}px`, background: i === values.length - 1 ? color : `${color}55` }} />
-          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{labels[i]}</span>
-        </div>
-      ))}
+    <div className="mb-4 flex items-center justify-between gap-2">
+      <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-v-text"><span className="grid size-8 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Icon size={15} /></span><span className="truncate">{texto}</span></p>
+      {accion && <button onClick={accion.onClick} className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold text-v-accent hover:underline">{accion.label} <ArrowRight size={12} /></button>}
     </div>
   )
 }
 
-function Donut({ value, total, color, size = 56 }: any) {
-  const pct = total > 0 ? value / total : 0
-  const r = size / 2 - 5
-  const circ = 2 * Math.PI * r
+function Vacio({ Icon, texto, accion }: { Icon: any; texto: string; accion?: { label: string; onClick: () => void } }) {
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--muted-bg)" strokeWidth="5" />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="5"
-        strokeDasharray={`${pct * circ} ${circ}`} strokeLinecap="round"
-        transform={`rotate(-90 ${size/2} ${size/2})`} style={{ transition: 'stroke-dasharray 0.8s ease' }} />
-      <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="middle"
-        fill="var(--text-primary)" fontSize={size * 0.18} fontWeight="bold">
-        {Math.round(pct * 100)}%
-      </text>
-    </svg>
-  )
-}
-
-function KPI({ label, value, sub, icon: Icon, bar, urgent, onClick }: any) {
-  return (
-    <div onClick={onClick}
-      className={`rounded-xl p-5 relative overflow-hidden transition-all ${onClick ? 'cursor-pointer hover:shadow-md' : ''}`}
-      style={{ background: 'var(--card)', border: urgent ? `1px solid ${bar}60` : '1px solid var(--card-border)' }}>
-      <div className="flex items-start justify-between mb-2">
-        <p className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>{label}</p>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${bar}12` }}>
-          <Icon size={14} style={{ color: bar }} />
-        </div>
-      </div>
-      <p className="text-4xl font-bold leading-none mb-1" style={{ color: urgent ? bar : 'var(--text-primary)' }}>{value ?? '—'}</p>
-      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{sub}</p>
+    <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+      <span className="grid size-12 place-items-center rounded-full bg-v-fill text-v-subtle"><Icon size={20} /></span>
+      <p className="mt-3 text-sm text-v-muted">{texto}</p>
+      {accion && <button onClick={accion.onClick} className="mt-3 inline-flex h-8 items-center gap-1 rounded-full bg-v-accent-soft px-3.5 text-xs font-semibold text-v-accent hover:bg-v-accent hover:text-white">{accion.label} <ArrowRight size={12} /></button>}
     </div>
   )
 }
 
-function EvalRow({ titulo, paciente, fecha, status, onClick }: any) {
-  const { locale } = useI18n()
-  const cfg: Record<string, any> = {
-    pending_approval: { label: locale === 'en' ? 'Under review' : 'En revisión', color: '#f59e0b', Icon: Clock },
-    approved:         { label: locale === 'en' ? 'Approved' : 'Aprobada',    color: '#10b981', Icon: CheckCircle2 },
-    rejected:         { label: locale === 'en' ? 'Rejected' : 'Rechazada',   color: '#ef4444', Icon: XCircle },
-  }
-  const c = cfg[status] || cfg.pending_approval
-  return (
-    <button onClick={onClick} className="w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:opacity-80"
-      style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
-      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[9px] font-bold" style={{ color: c.color }}>{c.label}</span>
-          {paciente && <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{paciente}</span>}
-        </div>
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{titulo}</p>
-        {fecha && <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{fecha}</p>}
-      </div>
-      <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} className="flex-shrink-0" />
-    </button>
-  )
-}
-
-function CitaRow({ cita, onClick }: any) {
-  const { t, locale } = useI18n()
-  const fecha = new Date((cita.appointment_date) + 'T00:00:00')
-  const hoy = new Date().toISOString().split('T')[0]
-  const esHoy = cita.appointment_date === hoy
-  const mes = fecha.toLocaleString(toBCP47(locale), { month: 'short' }).toUpperCase()
-  const dia = fecha.getDate()
-  const nombre = cita.children?.name || (locale === 'en' ? 'Patient' : 'Paciente')
-  const hora = cita.appointment_time
-  return (
-    <div onClick={onClick} className="flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer hover:opacity-80"
-      style={{ background: esHoy ? 'rgba(2,132,199,0.06)' : 'transparent', border: esHoy ? '1px solid rgba(2,132,199,0.15)' : '1px solid transparent' }}>
-      <div className="w-10 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0"
-        style={{ background: esHoy ? '#0284c7' : 'var(--muted-bg)', color: esHoy ? '#fff' : 'var(--text-secondary)' }}>
-        <span className="text-[8px] font-bold leading-none">{mes}</span>
-        <span className="text-sm font-bold leading-none">{dia}</span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{nombre}</p>
-        <p className="text-[11px] flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-          {hora && <><Clock size={9} /> {hora.slice(0, 5)}</>}
-          {esHoy && <span className="font-bold flex-shrink-0" style={{ color: '#0284c7' }}> · {t("common.hoy")}</span>}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-// ── COMPONENTE PRINCIPAL ───────────────────────────────────────────────────────
 export default function EspecialistaHome({ userId, profile, setActiveView }: Props) {
-  const { locale, t } = useI18n()
-  const L = (en: string, es: string) => (locale === 'en' ? en : es)
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
+  const bcp = toBCP47(locale)
 
-  const [stats, setStats] = useState({ pendientes: 0, aprobadas: 0, rechazadas: 0, citasHoy: 0, totalPacientes: 0, sesionesEstaSemana: 0 })
-  const [recientes, setRecientes]         = useState<any[]>([])
-  const [proximasCitas, setProximasCitas] = useState<any[]>([])
-  const [ultimaSesion, setUltimaSesion]   = useState<string | null>(null)
-  const [pacientesRecientes, setPacientesRecientes] = useState<any[]>([])
-  const [sesSemanales, setSesSemanales]   = useState<number[]>([0,0,0,0,0,0,0])
-  const [diasLabels, setDiasLabels]       = useState<string[]>(['L','M','M','J','V','S','D'])
-  const [loading, setLoading]             = useState(true)
-  const [tipIndex]                        = useState(() => Math.floor(Math.random() * TIPS_CLINICOS.length))
-  const [horaActual, setHoraActual]       = useState<Date | null>(null)
-  const [saludo, setSaludo]               = useState('')
-  const [diaStr, setDiaStr]               = useState('')
+  const [stats, setStats] = useState({ pendientes: 0, aprobadas: 0, rechazadas: 0, citasHoy: 0, totalPacientes: 0, citas7: 0, sinSesion: 0 })
+  const [recientes, setRecientes] = useState<any[]>([])
+  const [citasHoy, setCitasHoy] = useState<any[]>([])
+  const [ultimaSesion, setUltimaSesion] = useState<string | null>(null)
+  const [pacientes, setPacientes] = useState<any[]>([])
+  const [semana, setSemana] = useState<{ label: string; n: number; hoy: boolean }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [tipIdx, setTipIdx] = useState(() => Math.floor(Math.random() * TIPS_CLINICOS.length))
+  const tip = TIPS_CLINICOS[tipIdx]
+  const [ahora, setAhora] = useState<Date | null>(null)
 
   useEffect(() => {
-    const update = () => {
-      const now = new Date()
-      setHoraActual(now)
-      setSaludo(now.getHours() < 12 ? L('Good morning', 'Buenos días') : now.getHours() < 19 ? L('Good afternoon', 'Buenas tardes') : L('Good evening', 'Buenas noches'))
-      setDiaStr(now.toLocaleDateString(toBCP47(locale), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
-    }
-    update()
-    const iv = setInterval(update, 1000)
+    setAhora(new Date())
+    const iv = setInterval(() => setAhora(new Date()), 1000)
     return () => clearInterval(iv)
-  }, [locale])
+  }, [])
 
   const cargar = useCallback(async () => {
     try {
-      const hoy       = new Date().toISOString().split('T')[0]
-      const hace7dias = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
-      const labels: string[] = []
-      const datesArr: string[] = []
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(Date.now() - i * 86400000)
-        labels.push(d.toLocaleDateString(toBCP47(locale), { weekday: 'short' }).charAt(0).toUpperCase())
-        datesArr.push(d.toISOString().split('T')[0])
-      }
-      setDiasLabels(labels)
+      const hoy = new Date()
+      const hoyIso = iso(hoy)
+      const dias = Array.from({ length: 7 }, (_, i) => new Date(hoy.getTime() - (6 - i) * 86400000))
+      const desde7 = iso(dias[0])
+      const desde30 = iso(new Date(hoy.getTime() - 30 * 86400000))
 
-      const [subRes, citRes, nRes, sesRes, sesDetalle, ultSesRes] = await Promise.all([
+      const [subRes, citHoyRes, nRes, semRes, ultRes, act30Res, recRes, pacRes] = await Promise.all([
         supabase.from('specialist_submissions').select('status').eq('specialist_id', userId),
-        supabase.from('appointments').select('appointment_date, appointment_time, children(name)').eq('appointment_date', hoy).neq('status', 'cancelled').order('appointment_time'),
+        supabase.from('appointments').select('appointment_date, appointment_time, status, children(name)').eq('appointment_date', hoyIso).neq('status', 'cancelled').order('appointment_time'),
         supabase.from('children').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('appointments').select('id').neq('status', 'cancelled').gte('appointment_date', hace7dias),
-        supabase.from('appointments').select('appointment_date').neq('status', 'cancelled').gte('appointment_date', datesArr[0]),
-        supabase.from('appointments').select('appointment_date').neq('status', 'cancelled').lt('appointment_date', hoy).order('appointment_date', { ascending: false }).limit(1),
+        supabase.from('appointments').select('appointment_date').neq('status', 'cancelled').gte('appointment_date', desde7).lte('appointment_date', hoyIso),
+        supabase.from('appointments').select('appointment_date').neq('status', 'cancelled').lte('appointment_date', hoyIso).order('appointment_date', { ascending: false }).limit(1),
+        supabase.from('appointments').select('child_id').neq('status', 'cancelled').gte('appointment_date', desde30).lte('appointment_date', hoyIso),
+        supabase.from('specialist_submissions').select('id, titulo, status, created_at, children(name)').eq('specialist_id', userId).order('created_at', { ascending: false }).limit(5),
+        supabase.from('children').select('id, name, birth_date').eq('is_active', true).order('created_at', { ascending: false }).limit(8),
       ])
 
       const subs = subRes.data || []
-      const ultDate = ultSesRes.data?.[0]?.appointment_date
-      setUltimaSesion(ultDate ? new Date(ultDate + 'T00:00:00').toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) : null)
+      const porDia: Record<string, number> = {}
+      ;(semRes.data || []).forEach((s: any) => { porDia[s.appointment_date] = (porDia[s.appointment_date] || 0) + 1 })
+      setSemana(dias.map(d => ({ label: d.toLocaleDateString(bcp, { weekday: 'short' }).replace('.', ''), n: porDia[iso(d)] || 0, hoy: iso(d) === hoyIso })))
 
-      const sesMap: Record<string, number> = {}
-      datesArr.forEach(d => { sesMap[d] = 0 })
-      ;(sesDetalle.data || []).forEach((s: any) => { if (sesMap[s.appointment_date] !== undefined) sesMap[s.appointment_date]++ })
-      setSesSemanales(Object.values(sesMap))
+      const total = nRes.count || 0
+      const conSesion = new Set((act30Res.data || []).map((a: any) => a.child_id).filter(Boolean)).size
+      const ult = ultRes.data?.[0]?.appointment_date
+      setUltimaSesion(ult ? new Date(ult + 'T00:00:00').toLocaleDateString(bcp, { day: 'numeric', month: 'short' }) : null)
 
       setStats({
-        pendientes: subs.filter(s => s.status === 'pending_approval').length,
-        aprobadas: subs.filter(s => s.status === 'approved').length,
-        rechazadas: subs.filter(s => s.status === 'rejected').length,
-        citasHoy: (citRes.data || []).length,
-        totalPacientes: nRes.count || 0,
-        sesionesEstaSemana: (sesRes.data || []).length,
+        pendientes: subs.filter((s: any) => s.status === 'pending_approval').length,
+        aprobadas: subs.filter((s: any) => s.status === 'approved').length,
+        rechazadas: subs.filter((s: any) => s.status === 'rejected').length,
+        citasHoy: (citHoyRes.data || []).length,
+        totalPacientes: total,
+        citas7: (semRes.data || []).length,
+        sinSesion: Math.max(0, total - conSesion),
       })
-      setProximasCitas(citRes.data || [])
-
-      const { data: rec } = await supabase.from('specialist_submissions').select('*, children(name)').eq('specialist_id', userId).order('created_at', { ascending: false }).limit(6)
-      setRecientes(rec || [])
-
-      const { data: pacs } = await supabase.from('children').select('id, name, birth_date').eq('is_active', true).order('created_at', { ascending: false }).limit(5)
-      setPacientesRecientes(pacs || [])
+      setCitasHoy(citHoyRes.data || [])
+      setRecientes(recRes.data || [])
+      setPacientes(pacRes.data || [])
     } finally { setLoading(false) }
-  }, [userId])
+  }, [userId, bcp])
 
   useEffect(() => { cargar() }, [cargar])
 
-  const tip      = TIPS_CLINICOS[tipIndex]
-  const total    = stats.aprobadas + stats.pendientes + stats.rechazadas
-  const totalSes = sesSemanales.reduce((a, b) => a + b, 0)
-  const sinSesionCount = stats.pendientes  // reutilizamos pendientes como proxy visual
+  const nombre = (profile?.full_name || '').split(' ')[0] || L('Specialist', 'Especialista')
+  const hora = ahora?.getHours() ?? 12
+  const saludo = hora < 12 ? L('Good morning', 'Buenos días') : hora < 19 ? L('Good afternoon', 'Buenas tardes') : L('Good evening', 'Buenas noches')
+  const fecha = ahora ? ahora.toLocaleDateString(bcp, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : ''
+  const totalEvals = stats.aprobadas + stats.pendientes + stats.rechazadas
+  const conSesion = stats.totalPacientes - stats.sinSesion
+  const retencion = stats.totalPacientes ? Math.round((conSesion / stats.totalPacientes) * 100) : 0
+  const maxDia = Math.max(1, ...semana.map(d => d.n))
+  const v = (x: any) => (loading ? '—' : x)
+
+  const kpis = [
+    { label: L('Patients', 'Pacientes'), value: v(stats.totalPacientes), sub: L('Active', 'Activos'), Icon: Users, tone: TONOS[0], go: 'pacientes' },
+    { label: L('Appointments', 'Citas'), value: v(stats.citas7), sub: L('Last 7 days', 'Últimos 7 días'), Icon: CalendarCheck, tone: TONOS[1], go: 'agenda' },
+    { label: L('Assessments', 'Evaluaciones'), value: v(totalEvals), sub: stats.pendientes ? L(`${stats.pendientes} under review`, `${stats.pendientes} en revisión`) : L('Total recorded', 'Total registradas'), Icon: ClipboardList, tone: TONOS[2], go: 'formularios' },
+    { label: L('Last session', 'Última sesión'), value: v(ultimaSesion ?? '—'), sub: L('Most recent date', 'Fecha más reciente'), Icon: Activity, tone: TONOS[3], go: 'agenda' },
+  ]
+  const ESTADO: Record<string, { label: string; tone: string; Icon: any }> = {
+    pending_approval: { label: L('Under review', 'En revisión'), tone: 'bg-v-warning/15 text-v-warning', Icon: Clock },
+    approved: { label: L('Approved', 'Aprobada'), tone: 'bg-v-success/15 text-v-success', Icon: CheckCircle2 },
+    rejected: { label: L('Rejected', 'Rechazada'), tone: 'bg-v-danger/10 text-v-danger', Icon: XCircle },
+  }
 
   return (
-    <div className="space-y-5">
-
-      {/* ── HERO — igual que admin ── */}
-      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-        <div className="h-0.5" style={{ background: 'linear-gradient(90deg, #0284c7, #0ea5e9, #10b981)' }} />
-        <div className="p-5 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-xs capitalize mb-0.5" style={{ color: 'var(--text-muted)' }}>{diaStr}</p>
-            <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              {saludo}, {profile?.role === 'especialista' ? L('Specialist', 'Especialista') : profile?.full_name?.split(' ')[0] || L('Welcome', 'Bienvenida')} 👋
-            </h2>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              <span className="text-xs px-2.5 py-0.5 rounded-full font-medium"
-                style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
-                {t('auto.especialistaHome.sesionesHoy', { v1: String(stats.citasHoy) })}
-              </span>
-              {stats.pendientes > 0 && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold"
-                  style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
-                  <AlertCircle size={10} className="inline mr-1" />{stats.pendientes} {L('without session (30d)', 'sin sesión (30d)')}
-                </span>
-              )}
+    <div className="v-scope space-y-3 sm:space-y-4 md:space-y-5">
+      {/* Saludo */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 160, damping: 22 }} className={`relative overflow-hidden ${cardClass}`}>
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(40rem 14rem at 0% 0%, var(--v-glow-1), transparent 70%)' }} />
+        <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
+        <div className="relative flex flex-col gap-5 p-4 sm:p-6 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-sm text-v-muted first-letter:uppercase">{fecha}</p>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-v-elevated px-2.5 py-1 text-xs font-semibold tabular-nums text-v-accent shadow-v lg:hidden"><Clock size={12} /> {ahora ? ahora.toLocaleTimeString(bcp, { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
+            </div>
+            <h2 className="v-headline mt-1 text-[1.75rem] leading-tight text-v-text sm:text-[2rem]">{saludo}, <span className="v-brand-text">{nombre}</span></h2>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-v-accent-soft px-3 py-1 text-xs font-semibold text-v-accent"><Calendar size={12} /> {stats.citasHoy} {stats.citasHoy === 1 ? L('session today', 'sesión hoy') : L('sessions today', 'sesiones hoy')}</span>
+              {stats.pendientes > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-v-warning/15 px-3 py-1 text-xs font-semibold text-v-warning"><Clock size={12} /> {stats.pendientes} {L('under review', 'en revisión')}</span>}
+              {!loading && stats.sinSesion > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-v-danger/10 px-3 py-1 text-xs font-semibold text-v-danger"><AlertTriangle size={12} /> {stats.sinSesion} {L('without a session (30d)', 'sin sesión (30 d)')}</span>}
+            </div>
+            <div className="mt-5 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2 sm:flex sm:flex-wrap">
+              <button onClick={() => setActiveView('formularios')} className="v-brand inline-flex flex-col items-center justify-center gap-1 rounded-v-sm px-2 py-2.5 text-xs font-semibold sm:h-10 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-4 sm:py-0 sm:text-sm"><Plus size={16} /> <span className="sm:hidden">{L('Assess', 'Evaluar')}</span><span className="hidden sm:inline">{L('New assessment', 'Nueva evaluación')}</span></button>
+              <button onClick={() => setActiveView('agenda')} className="border border-v-border bg-v-elevated text-v-text hover:bg-v-fill inline-flex flex-col items-center justify-center gap-1 rounded-v-sm px-2 py-2.5 text-xs font-semibold sm:h-10 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-4 sm:py-0 sm:text-sm"><Calendar size={16} className="text-v-accent" /> {L('My schedule', 'Mi agenda')}</button>
+              <button onClick={() => setActiveView('pacientes')} className="border border-v-border bg-v-elevated text-v-text hover:bg-v-fill inline-flex flex-col items-center justify-center gap-1 rounded-v-sm px-2 py-2.5 text-xs font-semibold sm:h-10 sm:flex-row sm:gap-1.5 sm:rounded-full sm:px-4 sm:py-0 sm:text-sm"><Users size={16} className="text-v-accent" /> {L('Patients', 'Pacientes')}</button>
             </div>
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-5xl font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
-              {horaActual ? horaActual.toLocaleTimeString(toBCP47(locale), { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{horaActual?.getSeconds()}s</p>
+          <div className="hidden shrink-0 text-right lg:block">
+            <p className="v-headline v-brand-text text-5xl tabular-nums leading-none sm:text-6xl">{ahora ? ahora.toLocaleTimeString(bcp, { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
+            <p className="mt-2 text-xs text-v-subtle">{L('Local time', 'Hora local')}</p>
           </div>
         </div>
+      </motion.div>
+
+      {/* Indicadores */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-[repeat(4,minmax(0,1fr))]">
+        {kpis.map((k, i) => (
+          <motion.button key={k.label} onClick={() => setActiveView(k.go)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }}
+            className={`${cardClass} group p-3.5 text-left transition-all hover:-translate-y-0.5 hover:border-v-accent/40 sm:p-5`}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-medium text-v-muted">{k.label}</p>
+              <span className={`grid size-8 shrink-0 place-items-center rounded-[30%] sm:size-9 ${k.tone}`}><k.Icon size={15} /></span>
+            </div>
+            <p className="v-headline mt-2 truncate text-[1.75rem] tabular-nums text-v-text sm:text-3xl">{k.value}</p>
+            <p className="mt-0.5 truncate text-xs text-v-subtle">{k.sub}</p>
+          </motion.button>
+        ))}
       </div>
 
-      {/* ── KPIs — mismos estilos que admin ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KPI label={L('Patients','Pacientes')}     value={loading ? '—' : stats.totalPacientes}     sub={L('Total active','Total activos')}      icon={Users}          bar="#0284c7" onClick={() => setActiveView('pacientes')} />
-        <KPI label={L('Appointments','Citas')}         value={loading ? '—' : stats.sesionesEstaSemana} sub={L('Last 7 days','Últimos 7 días')}     icon={Calendar}       bar="#10b981" onClick={() => setActiveView('agenda')} />
-        <KPI label={L('Evaluations','Evaluaciones')}  value={loading ? '—' : total}                   sub={L('Total recorded','Total registradas')}  icon={FileText}       bar="#f59e0b" urgent={stats.pendientes > 0} onClick={() => setActiveView('formularios')} />
-        <KPI label={t('auto.especialistaHome.ultimaSesion')} value={loading ? '—' : (ultimaSesion ?? '—')}   sub={L('Most recent date','Fecha más reciente')} icon={Calendar}       bar="#0ea5e9" onClick={() => setActiveView('agenda')} />
-      </div>
-
-      {/* ── MÉTRICAS MEDIAS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
-
-        {/* Sesiones 7 días + Retención */}
-        <div className="rounded-xl p-5 flex flex-col justify-between" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("dashboard.sesionesUlt7")}</p>
-            <span className="text-lg font-bold" style={{ color: '#0284c7' }}>{totalSes}</span>
+      {/* Semana + evaluaciones */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className={`${cardClass} flex flex-col p-4 sm:p-5`}>
+          <Titulo Icon={BarChart3} texto={L('Sessions · last 7 days', 'Sesiones · últimos 7 días')} />
+          <div className="flex h-24 items-end gap-1.5 sm:h-32 sm:gap-2">
+            {semana.map((d, i) => (
+              <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+                <span className={`text-[11px] font-semibold tabular-nums ${d.n ? 'text-v-text' : 'text-v-subtle'}`}>{d.n || ''}</span>
+                <motion.div initial={{ height: 0 }} animate={{ height: `${Math.max(6, (d.n / maxDia) * 100)}%` }} transition={{ delay: 0.15 + i * 0.04, type: 'spring', stiffness: 120, damping: 18 }}
+                  className={`w-full max-w-10 rounded-t-v-sm ${d.hoy ? 'v-brand' : d.n ? 'bg-v-accent/35' : 'bg-v-fill'}`} style={d.hoy ? { boxShadow: 'none' } : undefined} />
+                <span className={`text-[11px] capitalize ${d.hoy ? 'font-semibold text-v-accent' : 'text-v-subtle'}`}>{d.label}</span>
+              </div>
+            ))}
           </div>
-          <BarChart values={sesSemanales} labels={diasLabels} color="#0284c7" />
-          <div className="mt-4 pt-4 border-t flex items-center gap-4" style={{ borderColor: 'var(--card-border)' }}>
-            <Donut value={stats.totalPacientes - stats.pendientes} total={stats.totalPacientes} color="#10b981" size={56} />
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold mb-1" style={{ color: 'var(--text-muted)' }}>{t("dashboard.retencionActiva")}</p>
-              <p className="text-base font-bold leading-none" style={{ color: 'var(--text-primary)' }}>
-                {stats.totalPacientes - stats.pendientes}
-                <span className="text-sm font-medium ml-1" style={{ color: 'var(--text-muted)' }}>/ {stats.totalPacientes}</span>
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('auto.especialistaHome.pacientesConSesionReciente')}</p>
+          <div className="mt-5 flex items-center gap-4 rounded-v-sm bg-v-fill/60 p-4">
+            <div className="relative size-16 shrink-0">
+              <svg viewBox="0 0 36 36" className="size-full -rotate-90">
+                <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3.5" className="stroke-v-border" />
+                <motion.circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3.5" strokeLinecap="round" className="stroke-v-success"
+                  strokeDasharray="97.4" initial={{ strokeDashoffset: 97.4 }} animate={{ strokeDashoffset: 97.4 * (1 - retencion / 100) }} transition={{ duration: 0.9 }} />
+              </svg>
+              <span className="absolute inset-0 grid place-items-center text-xs font-bold tabular-nums text-v-text">{v(`${retencion}%`)}</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-v-text">{L('Active retention', 'Retención activa')}</p>
+              <p className="text-lg font-bold tabular-nums text-v-text">{v(conSesion)} <span className="text-sm font-medium text-v-subtle">/ {v(stats.totalPacientes)}</span></p>
+              <p className="text-xs text-v-muted">{L('patients with a session in the last 30 days', 'pacientes con sesión en los últimos 30 días')}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Evaluaciones recientes */}
-        <div className="rounded-xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("ui.recent_evaluations")}</p>
-            <button onClick={() => setActiveView('formularios')} className="text-[10px] font-semibold" style={{ color: '#0284c7' }}>{t("common.verTodos")} →</button>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className={`${cardClass} flex flex-col p-4 sm:p-5`}>
+          <Titulo Icon={ClipboardList} texto={L('My recent assessments', 'Mis evaluaciones recientes')} accion={{ label: L('View all', 'Ver todas'), onClick: () => setActiveView('formularios') }} />
+          <div className="mb-4 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2">
+            {[[stats.aprobadas, L('Approved', 'Aprobadas'), 'text-v-success'], [stats.pendientes, L('Under review', 'En revisión'), 'text-v-warning'], [stats.rechazadas, L('Rejected', 'Rechazadas'), 'text-v-danger']].map(([n, t, c]) => (
+              <div key={t as string} className="rounded-v-sm bg-v-fill/60 px-3 py-2.5 text-center">
+                <p className={`text-xl font-bold tabular-nums ${c}`}>{v(n)}</p>
+                <p className="truncate text-[11px] text-v-muted">{t}</p>
+              </div>
+            ))}
           </div>
           {loading ? (
-            <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--muted-bg)' }} />)}</div>
+            <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-14 animate-pulse rounded-v-sm bg-v-fill" />)}</div>
           ) : recientes.length === 0 ? (
-            <div className="flex flex-col items-center py-4">
-              <FileText size={20} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t("ui.no_recent_evals")}</p>
-              <button onClick={() => setActiveView('formularios')} className="text-xs font-bold mt-2" style={{ color: '#0284c7' }}>
-                {L('Create evaluation', 'Crear evaluación')} →
-              </button>
-            </div>
+            <Vacio Icon={FileText} texto={L('No assessments yet', 'Aún no hay evaluaciones')} accion={{ label: L('Create assessment', 'Crear evaluación'), onClick: () => setActiveView('formularios') }} />
           ) : (
             <div className="space-y-2">
-              {recientes.slice(0, 4).map((r) => (
-                <EvalRow
-                  key={r.id}
-                  titulo={r.titulo}
-                  paciente={r.children?.name}
-                  fecha={new Date(r.created_at).toLocaleDateString(toBCP47(locale), { day: 'numeric', month: 'short' })}
-                  status={r.status}
-                  onClick={() => setActiveView('formularios')}
-                />
-              ))}
+              {recientes.slice(0, 4).map((r: any) => {
+                const e = ESTADO[r.status] || ESTADO.pending_approval
+                return (
+                  <button key={r.id} onClick={() => setActiveView('formularios')} className="group flex w-full items-center gap-3 rounded-v-sm border border-v-border bg-v-bg p-3 text-left transition-colors hover:border-v-accent/40">
+                    <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${e.tone}`}><e.Icon size={16} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-v-text">{r.titulo}</span>
+                      <span className="block truncate text-xs text-v-subtle">{[r.children?.name, new Date(r.created_at).toLocaleDateString(bcp, { day: 'numeric', month: 'short' })].filter(Boolean).join(' · ')}</span>
+                    </span>
+                    <span className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold sm:inline ${e.tone}`}>{e.label}</span>
+                  </button>
+                )
+              })}
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
 
-      {/* ── PANEL INFERIOR ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* Mis pacientes */}
-        <div className="rounded-xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-          <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-            <div className="flex items-center gap-2">
-              <Users size={13} style={{ color: 'var(--text-muted)' }} />
-              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("especialista.misPacientes")}</p>
+      {/* Pacientes + hoy */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className={`${cardClass} flex flex-col p-4 sm:p-5`}>
+          <Titulo Icon={Users} texto={L('My patients', 'Mis pacientes')} accion={{ label: stats.totalPacientes > 8 ? L(`View all (${stats.totalPacientes})`, `Ver todos (${stats.totalPacientes})`) : L('View all', 'Ver todos'), onClick: () => setActiveView('pacientes') }} />
+          {loading ? (
+            <div className="grid gap-2 sm:grid-cols-2">{[1, 2, 3, 4].map(i => <div key={i} className="h-16 animate-pulse rounded-v-sm bg-v-fill" />)}</div>
+          ) : pacientes.length === 0 ? (
+            <Vacio Icon={Users} texto={L('No active patients', 'Sin pacientes activos')} />
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {pacientes.map((p: any, i) => {
+                const edad = p.birth_date ? Math.floor((Date.now() - new Date(p.birth_date).getTime()) / (365.25 * 86400000)) : null
+                const ini = p.name?.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase() || '?'
+                return (
+                  <motion.button key={p.id} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.22 + i * 0.03 }} onClick={() => setActiveView('pacientes')}
+                    className="group flex items-center gap-3 rounded-v-sm border border-v-border bg-v-bg p-3 text-left transition-colors hover:border-v-accent/40">
+                    <span className={`grid size-10 shrink-0 place-items-center rounded-full text-xs font-bold ${TONOS[i % TONOS.length]}`}>{ini}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-v-text">{p.name}</span>
+                      {edad !== null && <span className="block text-xs text-v-subtle">{edad} {edad === 1 ? L('year', 'año') : L('years', 'años')}</span>}
+                    </span>
+                    <ChevronRight size={15} className="shrink-0 text-v-subtle transition-transform group-hover:translate-x-0.5" />
+                  </motion.button>
+                )
+              })}
             </div>
-            <button onClick={() => setActiveView('pacientes')} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: '#0284c7' }}>
-              {L('View all', 'Ver todos')} <ArrowUpRight size={10} />
-            </button>
-          </div>
-          <div className="p-3 space-y-1.5 overflow-y-auto" style={{ maxHeight: '320px' }}>
-            {loading ? (
-              [1,2,3].map(i => <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--muted-bg)' }} />)
-            ) : pacientesRecientes.length === 0 ? (
-              <div className="flex flex-col items-center py-10">
-                <Users size={24} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t("especialista.sinPacientesActivos")}</p>
-              </div>
-            ) : (
-              <>
-                {pacientesRecientes.map((p: any) => {
-                  const edad = p.birth_date ? Math.floor((Date.now() - new Date(p.birth_date).getTime()) / (365.25 * 24 * 3600 * 1000)) : null
-                  const initials = p.name?.split(' ').map((w: string) => w[0]).slice(0,2).join('').toUpperCase() || '?'
-                  const clrs = ['#0284c7','#0ea5e9','#10b981','#f59e0b']
-                  const clr  = clrs[p.id?.charCodeAt(0) % clrs.length] || '#0284c7'
-                  return (
-                    <button key={p.id} onClick={() => setActiveView('pacientes')}
-                      className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all hover:opacity-80"
-                      style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold" style={{ background: clr }}>
-                        {initials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{p.name}</p>
-                        {edad !== null && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{edad} {locale === 'en' ? (edad !== 1 ? 'years' : 'year') : (edad !== 1 ? 'años' : 'año')}</p>}
-                      </div>
-                      <ChevronRight size={13} style={{ color: 'var(--text-muted)' }} />
-                    </button>
-                  )
-                })}
-                {stats.totalPacientes > 5 && (
-                  <button onClick={() => setActiveView('pacientes')} className="w-full text-center text-xs font-bold py-2" style={{ color: '#0284c7' }}>
-                    {t('auto.especialistaHome.mas', { v1: String(stats.totalPacientes - 5) })}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Citas de hoy + Tip clínico */}
-        <div className="space-y-4">
-          {/* Citas de hoy */}
-          <div className="rounded-xl overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-            <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: '1px solid var(--card-border)' }}>
-              <div className="flex items-center gap-2">
-                <Calendar size={13} style={{ color: 'var(--text-muted)' }} />
-                <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("dashboard.citasDeHoy")}</p>
-              </div>
-              <button onClick={() => setActiveView('agenda')} className="text-[10px] font-semibold flex items-center gap-1" style={{ color: '#0284c7' }}>
-                {L('View schedule', 'Ver agenda')} <ArrowUpRight size={10} />
+          )}
+          {stats.totalPacientes > pacientes.length && (
+            <div className="mt-auto pt-3">
+              <button onClick={() => setActiveView('pacientes')}
+                className="flex h-11 w-full items-center justify-center gap-1.5 rounded-v-sm border border-dashed border-v-border text-sm font-semibold text-v-accent transition-colors hover:border-v-accent/40 hover:bg-v-accent-soft/40">
+                <Users size={15} /> {L(`See all ${stats.totalPacientes} patients`, `Ver los ${stats.totalPacientes} pacientes`)} <ArrowRight size={14} />
               </button>
             </div>
-            <div className="p-3 overflow-y-auto" style={{ maxHeight: '200px' }}>
-              {proximasCitas.length > 0
-                ? proximasCitas.map((c, i) => <CitaRow key={i} cita={c} onClick={() => setActiveView('agenda')} />)
-                : (
-                  <div className="flex flex-col items-center py-8">
-                    <Calendar size={24} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                    <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>{t("agenda.sinCitas")}</p>
-                    <button onClick={() => setActiveView('agenda')} className="mt-2 text-xs font-bold" style={{ color: '#0284c7' }}>
-                      {L('Schedule now', 'Agendar ahora')} →
-                    </button>
-                  </div>
-                )
-              }
-            </div>
-          </div>
+          )}
+        </motion.div>
 
-          {/* Tip clínico */}
-          <div className="rounded-xl p-5" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Brain size={13} style={{ color: '#0284c7' }} />
-              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("ui.clinical_tip")}</p>
-            </div>
-            <p className="text-sm leading-relaxed flex items-start gap-2" style={{ color: 'var(--text-primary)' }}>
-              {(() => { const TIcon = tip.Icon; return <TIcon size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} /> })()}
-              <span>{locale === 'en' ? tip.textoEn : tip.texto}</span>
-            </p>
-          </div>
+        <div className="flex flex-col gap-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className={`${cardClass} flex flex-1 flex-col p-4 sm:p-5`}>
+            <Titulo Icon={Calendar} texto={L("Today's appointments", 'Citas de hoy')} accion={{ label: L('Schedule', 'Agenda'), onClick: () => setActiveView('agenda') }} />
+            {citasHoy.length === 0 ? (
+              <Vacio Icon={Calendar} texto={L('No appointments for today', 'No hay citas para hoy')} accion={{ label: L('Open schedule', 'Abrir agenda'), onClick: () => setActiveView('agenda') }} />
+            ) : (
+              <div className="space-y-2">
+                {citasHoy.map((c: any, i) => (
+                  <button key={i} onClick={() => setActiveView('agenda')} className="flex w-full items-center gap-3 rounded-v-sm border border-v-border bg-v-bg p-3 text-left hover:border-v-accent/40">
+                    <span className="v-brand grid h-11 w-14 shrink-0 place-items-center rounded-v-sm text-sm font-bold tabular-nums" style={{ boxShadow: 'none' }}>{c.appointment_time?.slice(0, 5) || '—'}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-v-text">{c.children?.name || L('Patient', 'Paciente')}</span>
+                      <span className="block text-xs text-v-subtle">{L('Therapy session', 'Sesión de terapia')}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
 
-          {/* Recordatorio */}
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(157deg, rgba(2,132,199,0.05) 0%, var(--card) 46%)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-            <div className="flex items-center gap-2 mb-2">
-              <Heart size={13} style={{ color: '#0ea5e9' }} />
-              <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>{t("especialista.recordatorio")}</p>
+          {/* Tip clínico: tarjeta de marca, se puede pasar al siguiente */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="v-brand relative overflow-hidden rounded-v p-5 text-white">
+            <div aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-40 rounded-full bg-white/10" />
+            <div aria-hidden className="pointer-events-none absolute -bottom-14 right-16 size-28 rounded-full bg-white/[0.07]" />
+            <div className="relative flex items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-xs font-semibold text-white/85"><Brain size={14} /> {L('Clinical tip', 'Tip clínico')} <span className="tabular-nums text-white/60">{tipIdx + 1}/{TIPS_CLINICOS.length}</span></p>
+              <div className="flex gap-1">
+                <button onClick={() => setTipIdx(i => (i - 1 + TIPS_CLINICOS.length) % TIPS_CLINICOS.length)} aria-label={L('Previous tip', 'Tip anterior')} className="grid size-7 place-items-center rounded-full bg-white/15 transition-colors hover:bg-white/25"><ChevronRight size={14} className="rotate-180" /></button>
+                <button onClick={() => setTipIdx(i => (i + 1) % TIPS_CLINICOS.length)} aria-label={L('Next tip', 'Siguiente tip')} className="grid size-7 place-items-center rounded-full bg-white/15 transition-colors hover:bg-white/25"><ChevronRight size={14} /></button>
+              </div>
             </div>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
-              {L('Your work makes a real difference in the life of every family. Thank you for your dedication!', 'Tu trabajo hace una diferencia real en la vida de cada familia. ¡Gracias por tu dedicación!')} 💜
-            </p>
-          </div>
+            <motion.div key={tipIdx} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="relative mt-4 flex gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-white/20 backdrop-blur"><tip.Icon size={18} /></span>
+              <p className="text-[15px] font-medium leading-relaxed">{en ? tip.en : tip.es}</p>
+            </motion.div>
+            <p className="relative mt-4 flex items-center gap-1.5 text-xs text-white/75"><Heart size={12} /> {L('Your work makes a real difference for every family.', 'Tu trabajo hace una diferencia real en cada familia.')}</p>
+          </motion.div>
         </div>
       </div>
     </div>

@@ -6,6 +6,8 @@ export const maxDuration = 60 // Vercel: hasta 60s para planes Pro (evitar timeo
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
 
@@ -67,12 +69,20 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { childId, childName } = body
     const userLocale = body.locale || req.headers.get('x-locale') || 'es'
     const isEn = String(userLocale).toLowerCase().startsWith('en')
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
+
+    // Tokens de análisis: si no quedan, no se genera (se ofrece comprar más)
+    const bloqueo = await sinTokens(caller.centroId, isEn)
+    if (bloqueo) return bloqueo
 
     // Cargar TODOS los programas del paciente sin filtrar por estado
     // (el filtro de estado varía por implementación — filtramos en código)
@@ -296,7 +306,7 @@ export async function POST(req: NextRequest) {
         .slice(0, 8)
         .join('; ')
       const kbQuery = `protocolo ABLLS-R ABA criterios de logro y objetivos relacionados con: ${progNames || 'progreso, criterio de dominio, sets'}`
-      const kb = await buildAIContext(undefined, undefined, undefined, kbQuery)
+      const kb = await buildAIContext(undefined, undefined, undefined, kbQuery, caller.centroId)
       cerebroCtx = kb.knowledgeContext
     } catch { /* fallback */ }
 
@@ -376,7 +386,7 @@ Genera un INFORME DE SUPERVISIÓN CLÍNICA ABA con exactamente este formato:
 [3-4 oraciones. Descripción objetiva del estado general del proceso terapéutico fundamentado en los datos. Menciona tendencias observables, nivel de adherencia al programa y calidad del registro de datos. Usa terminología como: tasa de respuesta, discriminación de estímulos, control instruccional, línea base, criterio de dominio.]
 
 **${H.analisis}**
-[Para cada programa con datos: analiza la curva de aprendizaje, variabilidad entre sesiones, si hay estancamiento o aceleración, e indica si el criterio de transferencia está próximo. Para programas sin sesiones: señala la necesidad crítica de iniciar el registro sistemático de datos.]
+[Una viñeta por programa con este formato exacto: "- **Nombre del programa**: 1-2 oraciones". Analiza la curva de aprendizaje, variabilidad, estancamiento o aceleración, e indica si el criterio de transferencia está próximo. Para programas sin sesiones: señala la necesidad de iniciar el registro sistemático de datos.]
 
 **${H.hipotesis}**
 [2-3 oraciones. Plantea hipótesis sobre los factores que pueden estar afectando el progreso: variables motivacionales, calidad del antecedente, eficacia del consecuente, generalización, fatiga de reforzadores, etc.]
@@ -392,7 +402,7 @@ Genera un INFORME DE SUPERVISIÓN CLÍNICA ABA con exactamente este formato:
 **${H.familia}**
 [3-4 oraciones en lenguaje simple y cálido, dirigido a los padres. Sin jerga técnica, sin siglas. Explica cómo va el niño/a en terapia, destaca algo positivo y menciona qué pueden esperar próximamente. Escribe como si hablaras directamente con la familia.]
 
-Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionales. Máximo 500 palabras.`
+Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionales. Máximo 650 palabras y SIEMPRE completa las 6 secciones.`
 
     let resumen_general: string | null = null
     try {
@@ -402,7 +412,7 @@ Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionale
           ? '\n\n━━━ CONTEXTO CLÍNICO DE APOYO (Cerebro IA — solo para fundamentar internamente) ━━━\n' + cerebroCtx +
             '\n\nREGLA: usá este contenido SOLO como referencia interna para fundamentar tu criterio. NUNCA nombres, cites ni transcribas instrumentos de evaluación de terceros ni sus códigos en tu respuesta; describí objetivos y criterios con tus propias palabras clínicas.'
           : '') + getLangInstruction(userLocale),
-        { model: GROQ_MODELS.SMART, temperature: 0.25, maxTokens: 1000 }
+        { model: GROQ_MODELS.SMART, temperature: 0.25, maxTokens: 3500 }
       )
     } catch (err) {
       console.error('Error Groq predicción por SET:', err)
@@ -451,6 +461,7 @@ Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionale
         areas_fortaleza,
         analisis_ia: resumen_general,
         sesiones_analizadas: totalSesionesAnalizadas,
+        centro_id: caller.centroId,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'child_id' })
       if (upsertError) console.error('❌ upsert predicciones_ia error:', upsertError)
@@ -458,7 +469,11 @@ Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionale
       upsertErr = upsertError?.message ?? null
     } catch (e: any) { upsertErr = e.message }
 
+    // Se descuenta un token solo cuando el análisis se generó bien
+    const consumo = await descontarToken(caller.centroId)
+
     return NextResponse.json({
+      tokens: consumo ?? null,
       programas_analizados: analisis_por_programa.length,
       analisis_por_programa,
       resumen_general,
@@ -485,12 +500,17 @@ Redacta en tercera persona institucional. Sin tuteos. Sin clichés motivacionale
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const childId = searchParams.get('child_id')
   try {
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
     let query = supabaseAdmin
       .from('predicciones_ia')
       .select('*, children(name, diagnosis)')
+      .eq('centro_id', caller.centroId)
       .order('updated_at', { ascending: false })
     if (childId) query = query.eq('child_id', childId)
     const { data } = await query.limit(50)

@@ -12,6 +12,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
+import { esCentroFundador } from '@/lib/knowledge-base'
 import { generateEmbedding } from '@/lib/knowledge-base'
 
 export const dynamic = 'force-dynamic'
@@ -100,6 +102,10 @@ function formatearChunk(item: Item, fuente: string, area: string | null): string
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
+  if (!(await esCentroFundador(caller.centroId))) return NextResponse.json({ error: 'plan_fundador' }, { status: 403 })
   try {
     const body = await req.json()
     const {
@@ -140,6 +146,7 @@ export async function POST(req: NextRequest) {
         descripcion: desc,
         procesado: false,
         total_chunks: 0,
+        centro_id: caller.centroId,
       })
       .select()
       .single()
@@ -171,6 +178,7 @@ export async function POST(req: NextRequest) {
           try {
             await supabaseAdmin.from('knowledge_chunks').insert({
               document_id: documentId,
+              centro_id: caller.centroId,
               chunk_index: chunkIdx++,
               contenido,
               embedding: embeddingValue,

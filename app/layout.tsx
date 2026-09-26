@@ -4,11 +4,18 @@ import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
 import { ToastProvider } from '@/components/Toast'
 import { ThemeProvider } from '@/components/ThemeContext'
 import { CurrencyProvider } from '@/components/CurrencyContext'
+import { CentroBrandingProvider } from '@/components/CentroBrandingContext'
 import { I18nProvider } from '@/lib/i18n-context'
 import SessionGuard from '@/components/SessionGuard'
+import SuscripcionGuard from '@/components/SuscripcionGuard'
+import RecordarSesionGuard from '@/components/RecordarSesionGuard'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import MaintenanceGate from '@/components/MaintenanceGate'
+import { ConfirmarHost } from '@/components/ui/confirmar'
+import { PLATFORM_NAME } from '@/lib/branding'
 import "./globals.css";
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL
 
 // Sistema de dos tipografías:
 //  • CUERPO → Plus Jakarta Sans (var --font-sans): legible, profesional.
@@ -29,7 +36,7 @@ const poppins = Poppins({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0284c7",
+  themeColor: "#0069db",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -37,35 +44,36 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: " Terapias SANTI | Terapia ABA y Neurodivergencia",
-  description: "Centro especializado en terapia ABA y desarrollo infantil. Atendemos niños con autismo, TEA, TDAH y neurodivergencia con metodología basada en evidencia e IA. +50 familias.",
-  keywords: "terapeuta ABA, terapia autismo, centro neurodivergencia, TEA, TDAH, desarrollo infantil, terapia conductual niños",
-  authors: [{ name: "SANTI" }],
+  ...(SITE_URL ? { metadataBase: new URL(SITE_URL) } : {}),
+  title: `${PLATFORM_NAME} | Gestión clínica para centros de terapia`,
+  description: "Plataforma de gestión clínica para centros de terapia ABA, neuropsicología y desarrollo infantil: expedientes, agenda, informes con IA y portal para familias.",
+  keywords: "gestión clínica, software terapia ABA, centros de terapia, TEA, TDAH, neurodesarrollo, portal familias",
+  authors: [{ name: PLATFORM_NAME }],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SANTI",
+    title: PLATFORM_NAME,
     startupImage: "/icons/apple-touch-icon.png",
   },
   formatDetection: { telephone: false },
   openGraph: {
-    title: " Terapias SANTI | Terapia ABA y Neurodivergencia",
-    description: "Centro especializado en neurodivergencia. Terapia ABA con IA para niños.",
+    title: `${PLATFORM_NAME} | Gestión clínica para centros de terapia`,
+    description: "Plataforma de gestión clínica para centros de terapia, con IA y portal para familias.",
     type: "website",
     locale: "es_PE",
-    url: "https://centro-santi.vercel.app",
-    siteName: "SANTI",
-    images: [{ url: "/images/og-image.jpg", width: 1200, height: 630, alt: " Terapias SANTI - Terapia ABA" }],
+    ...(SITE_URL ? { url: SITE_URL } : {}),
+    siteName: PLATFORM_NAME,
+    images: [{ url: "/images/og-image.jpg", width: 1200, height: 630, alt: `${PLATFORM_NAME} - Gestión clínica` }],
   },
   twitter: {
     card: "summary_large_image",
-    title: " Terapias SANTI | Terapia ABA y Neurodivergencia",
-    description: "Centro especializado en neurodivergencia. Terapia ABA + IA para niños.",
+    title: `${PLATFORM_NAME} | Gestión clínica para centros de terapia`,
+    description: "Plataforma de gestión clínica para centros de terapia, con IA y portal para familias.",
     images: ["/images/og-image.jpg"],
   },
   robots: { index: true, follow: true },
-  alternates: { canonical: "https://centro-santi.vercel.app" },
+  ...(SITE_URL ? { alternates: { canonical: SITE_URL } } : {}),
   icons: {
     icon: [
       { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
@@ -122,7 +130,7 @@ export default async function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="SANTI" />
+        <meta name="apple-mobile-web-app-title" content={PLATFORM_NAME} />
         <meta name="mobile-web-app-capable" content="yes" />
 
         {/*
@@ -158,7 +166,7 @@ export default async function RootLayout({
           __html: `
             (function() {
               try {
-                var p = window.location.pathname.replace(/^\/(en|es)(?=\/|$)/, '') || '/';
+                var p = window.location.pathname.replace(/^\\/(en|es)(?=\\/|$)/, '') || '/';
                 var isLogin = p === '/' || p === '/login';
                 if (isLogin) {
                   // El login SIEMPRE es claro. Forzamos only light para que el
@@ -180,17 +188,22 @@ export default async function RootLayout({
           `
         }} />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
+        <ConfirmarHost />
         <ErrorBoundary>
           <I18nProvider initialLocale={initialLocale}>
             <ThemeProvider>
               <CurrencyProvider>
-                <ToastProvider>
-                  <SessionGuard />
-                  <MaintenanceGate>
-                    {children}
-                  </MaintenanceGate>
-                </ToastProvider>
+                <CentroBrandingProvider>
+                  <ToastProvider>
+                    <SessionGuard />
+                    <SuscripcionGuard />
+                    <RecordarSesionGuard />
+                    <MaintenanceGate>
+                      {children}
+                    </MaintenanceGate>
+                  </ToastProvider>
+                </CentroBrandingProvider>
               </CurrencyProvider>
             </ThemeProvider>
           </I18nProvider>

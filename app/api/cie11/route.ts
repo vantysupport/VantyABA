@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logServerError } from '@/lib/log-server-error'
+import { getApiCaller, unauthorized, forbidden } from '@/lib/api-auth'
 
 const TOKEN_URL = 'https://icdaccessmanagement.who.int/connect/token'
 
@@ -74,6 +75,9 @@ const SIGLAS: Record<string, string> = {
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!caller.centroId) return forbidden()
   const { searchParams } = new URL(req.url)
   const action = searchParams.get('action') || ''
   const q      = searchParams.get('q')      || ''

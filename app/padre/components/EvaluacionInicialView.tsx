@@ -1,4 +1,5 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 // Flujo de Evaluación Inicial — vista del PADRE.
 // Estados visibles: intake → analizando → recomendación amigable + confirmación
@@ -10,10 +11,14 @@ import { useEffect, useState } from 'react'
 import { useI18n } from '@/lib/i18n-context'
 import { SECCIONES_INTAKE_EN, SECCIONES_PSICO_EN, SECCIONES_NEURO_EN } from './evaluacion-inicial-en'
 import {
-  ClipboardCheck, Sparkles, Loader2, CheckCircle2, Brain, Heart,
-  ChevronRight, ChevronLeft, Send, Clock, X, MessageCircle, Image as ImageIcon,
-  ThumbsUp, AlertCircle, Star,
+  ClipboardCheck, ClipboardList, Sparkles, Loader2, CheckCircle2, Check, Brain, Heart,
+  ChevronRight, ChevronLeft, Send, Clock, MessageCircle, Image as ImageIcon, ThumbsUp, AlertCircle,
+  HelpCircle, RefreshCw, Lock, Plus, Trash2,
+  Baby, Users, School, Stethoscope, House, HeartPulse, Handshake, CloudRain, Puzzle, Backpack, GraduationCap,
+  Search, Milk, Hospital, Siren, PersonStanding, MessagesSquare, Utensils, Bath, Shirt, Dices, Dna,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useToast } from '@/components/Toast'
 
 type Props = { child: any; profile: any }
 
@@ -43,7 +48,7 @@ export type Pregunta =
 export type Seccion = { titulo: string; descripcion?: string; icono: string; preguntas: Pregunta[] }
 
 // ─── Primera ficha: INTAKE — "Ficha inicial para papás" ────────────────
-// Estructura oficial SANTI: secciones que cubren datos del menor, padres,
+// Estructura oficial: secciones que cubren datos del menor, padres,
 // motivo de consulta, historia escolar, diagnósticos, terapias previas,
 // dinámica familiar e información final / marketing.
 const SECCIONES_INTAKE_ES: Seccion[] = [
@@ -119,7 +124,7 @@ const SECCIONES_INTAKE_ES: Seccion[] = [
 ]
 
 // ─── Segunda ficha: ANAMNESIS PSICOLÓGICA / EMOCIONAL ───────────────────
-// Estructura oficial SANTI — 7 secciones (I a VII).
+// Estructura oficial — 7 secciones (I a VII).
 const SECCIONES_PSICO_ES: Seccion[] = [
   // ─── I. Datos Generales y Familiares ───────────────────────────────────
   {
@@ -141,7 +146,7 @@ const SECCIONES_PSICO_ES: Seccion[] = [
   },
   {
     titulo: 'I. Datos familiares', icono: '👨‍👩‍👧',
-    descripcion: 'Personas que viven con el niño/a. Podés agregar tantos familiares como necesites.',
+    descripcion: 'Personas que viven con el niño/a. Puedes agregar tantos familiares como necesites.',
     preguntas: [
       { id: 'datos_familiares', type: 'tabla_dinamica', label: 'Familiares que conviven con el niño/a',
         addLabel: '+ Agregar familiar', minRows: 2,
@@ -161,7 +166,7 @@ const SECCIONES_PSICO_ES: Seccion[] = [
     titulo: 'II. Motivo de consulta', icono: '💬',
     descripcion: 'Las principales preocupaciones y su contexto.',
     preguntas: [
-      { id: 'preocupaciones', type: 'textarea', label: '¿Cuáles son las preocupaciones principales (conducta, lenguaje, autovalimiento, emocional, etc.)? Describí cada una lo más detalladamente posible.', required: true },
+      { id: 'preocupaciones', type: 'textarea', label: '¿Cuáles son las preocupaciones principales (conducta, lenguaje, autovalimiento, emocional, etc.)? Describe cada una lo más detalladamente posible.', required: true },
       { id: 'desde_cuando', type: 'textarea', label: '¿Desde cuándo se observan estas conductas?', required: true },
       { id: 'situaciones_frecuentes', type: 'textarea', label: '¿En qué situaciones aparecen con mayor frecuencia?' },
       { id: 'entornos_afectados', type: 'checkbox', label: 'Entornos donde se manifiestan:', options: ['Casa', 'Colegio', 'Relaciones con pares', 'Familia extendida', 'Espacios públicos', 'Otros'] },
@@ -191,7 +196,7 @@ const SECCIONES_PSICO_ES: Seccion[] = [
       { id: 'medicacion', type: 'textarea', label: '¿Está recibiendo medicación? ¿Cuál y desde cuándo?' },
       { id: 'diagnostico_previo', type: 'textarea', label: 'Diagnósticos previos' },
       { id: 'antecedentes_familiares', type: 'checkbox', label: 'Antecedentes familiares de:', options: ['Salud mental (depresión, ansiedad, etc.)', 'TEA / autismo', 'TDAH', 'Dificultades de aprendizaje', 'Dificultades de habla / lenguaje', 'Epilepsia / convulsiones', 'Discapacidad intelectual', 'Otros', 'Ninguno'] },
-      { id: 'antecedentes_detalle', type: 'textarea', label: 'Si marcaste alguno, indicá quién y de qué se trata' },
+      { id: 'antecedentes_detalle', type: 'textarea', label: 'Si marcaste alguno, indica quién y de qué se trata' },
     ],
   },
 
@@ -253,7 +258,7 @@ const SECCIONES_PSICO_ES: Seccion[] = [
   // ─── VI. Áreas Específicas según Edad ──────────────────────────────────
   {
     titulo: 'VI. Área específica según edad (2–6 años)', icono: '🧸',
-    descripcion: 'Completá esta sección si tu hijo/a tiene entre 2 y 6 años. Si no, saltala.',
+    descripcion: 'Completa esta sección si tu hijo/a tiene entre 2 y 6 años. Si no, sáltala.',
     preguntas: [
       { id: 'edad26_juego_simbolico', type: 'textarea', label: 'Juego simbólico: ¿juega "de a que es..." (cocinar, ser doctor, etc.)? ¿Con qué frecuencia?' },
       { id: 'edad26_imitacion', type: 'textarea', label: 'Imitación: ¿imita acciones, sonidos, gestos de otros?' },
@@ -263,7 +268,7 @@ const SECCIONES_PSICO_ES: Seccion[] = [
   },
   {
     titulo: 'VI. Área específica según edad (7–11 años)', icono: '🎒',
-    descripcion: 'Completá esta sección si tu hijo/a tiene entre 7 y 11 años. Si no, saltala.',
+    descripcion: 'Completa esta sección si tu hijo/a tiene entre 7 y 11 años. Si no, sáltala.',
     preguntas: [
       { id: 'edad711_autoconcepto', type: 'textarea', label: 'Autoconcepto: ¿cómo se ve a sí mismo/a? ¿Qué opinión tiene de sí?' },
       { id: 'edad711_frustracion', type: 'textarea', label: 'Manejo de la frustración: ¿qué hace cuando algo no le sale?' },
@@ -273,7 +278,7 @@ const SECCIONES_PSICO_ES: Seccion[] = [
   },
   {
     titulo: 'VI. Área específica según edad (12–15 años)', icono: '🎓',
-    descripcion: 'Completá esta sección si tu hijo/a tiene entre 12 y 15 años. Si no, saltala.',
+    descripcion: 'Completa esta sección si tu hijo/a tiene entre 12 y 15 años. Si no, sáltala.',
     preguntas: [
       { id: 'edad1215_autoestima', type: 'textarea', label: 'Autoestima / identidad: ¿cómo se valora a sí mismo/a?' },
       { id: 'edad1215_cambios_etapa', type: 'textarea', label: 'Gestión de los cambios propios de la adolescencia (corporales, emocionales, sociales)' },
@@ -295,13 +300,13 @@ const SECCIONES_PSICO_ES: Seccion[] = [
 ]
 
 // ─── Segunda ficha: ANAMNESIS NEUROPSICOLÓGICA ──────────────────────────
-// Estructura oficial SANTI — 11 secciones (I a XI).
+// Estructura oficial — 11 secciones (I a XI).
 // Las tablas dinámicas permiten al padre/madre agregar varias filas (familiares, accidentes, etc.).
 const SECCIONES_NEURO_ES: Seccion[] = [
   // ─── I. Datos Familiares ───────────────────────────────────────────────
   {
     titulo: 'I. Datos familiares', icono: '👨‍👩‍👧',
-    descripcion: 'Familiares que viven con el niño/a. Podés agregar tantos como necesites.',
+    descripcion: 'Familiares que viven con el niño/a. Puedes agregar tantos como necesites.',
     preguntas: [
       { id: 'datos_familiares', type: 'tabla_dinamica', label: 'Familiares que conviven con el niño/a',
         addLabel: '+ Agregar familiar', minRows: 2,
@@ -321,7 +326,7 @@ const SECCIONES_NEURO_ES: Seccion[] = [
     titulo: 'II. Perfil actual', icono: '🔍',
     descripcion: 'Las principales preocupaciones que motivan la consulta.',
     preguntas: [
-      { id: 'perfil_preocupaciones', type: 'textarea', label: 'Motivo de consulta: ¿Cuáles son las principales preocupaciones relacionadas con conducta, lenguaje, autovalimiento, etc.? Describí cada una lo más detalladamente posible.', required: true },
+      { id: 'perfil_preocupaciones', type: 'textarea', label: 'Motivo de consulta: ¿Cuáles son las principales preocupaciones relacionadas con conducta, lenguaje, autovalimiento, etc.? Describe cada una lo más detalladamente posible.', required: true },
       { id: 'perfil_desde_cuando', type: 'textarea', label: 'Inicio: ¿Desde cuándo se observan estas conductas?', required: true },
     ],
   },
@@ -520,84 +525,146 @@ const SECCIONES_NEURO_ES: Seccion[] = [
     descripcion: 'Historial genético / familiar.',
     preguntas: [
       { id: 'ant_familiares', type: 'checkbox', label: '¿En la familia hay o hubo casos de…?', options: ['Enfermedades psiquiátricas', 'Epilepsia o convulsiones', 'Retardo mental / discapacidad intelectual', 'Dificultades de aprendizaje', 'Problemas de habla / lenguaje', 'TEA / autismo', 'TDAH', 'Depresión / ansiedad', 'Otros', 'Ninguno'] },
-      { id: 'ant_familiares_detalle', type: 'textarea', label: 'Si marcaste alguna opción, indicá quién y de qué se trata' },
+      { id: 'ant_familiares_detalle', type: 'textarea', label: 'Si marcaste alguna opción, indica quién y de qué se trata' },
     ],
   },
 ]
 
+// ─── Íconos por sección (las fichas traen un emoji; aquí se muestra un ícono de línea) ──
+const ICONO_SECCION: Record<string, any> = {
+  '🧒': Baby, '👶': Baby, '👨‍👩‍👧': Users, '💬': MessageCircle, '🏫': School, '🩺': Stethoscope,
+  '📋': ClipboardList, '🏠': House, '🏡': House, '✨': Sparkles, '🤰': HeartPulse, '❤️': Heart,
+  '🤝': Handshake, '🌧️': CloudRain, '🧸': Puzzle, '🎒': Backpack, '🎓': GraduationCap, '🔍': Search,
+  '🍼': Milk, '🏥': Hospital, '🚨': Siren, '🏃': PersonStanding, '🗣️': MessagesSquare, '🍽️': Utensils,
+  '🛁': Bath, '🧦': Shirt, '🎲': Dices, '🧬': Dna,
+}
+const iconoDe = (s: Seccion) => ICONO_SECCION[s.icono] || ClipboardCheck
+
+const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
+const qInput = 'w-full rounded-v-sm border border-v-border bg-v-bg px-4 py-3 text-sm text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft'
+// "7 años 3 meses" a partir de la fecha de nacimiento
+function edadTexto(nacimiento: string | null | undefined, en: boolean) {
+  if (!nacimiento) return ''
+  const n = new Date(nacimiento + 'T00:00:00'), h = new Date()
+  let meses = (h.getFullYear() - n.getFullYear()) * 12 + (h.getMonth() - n.getMonth())
+  if (h.getDate() < n.getDate()) meses--
+  if (isNaN(meses) || meses < 0) return ''
+  const a = Math.floor(meses / 12), m = meses % 12
+  return en ? `${a} year${a === 1 ? '' : 's'} ${m} month${m === 1 ? '' : 's'}` : `${a} año${a === 1 ? '' : 's'} ${m} mes${m === 1 ? '' : 'es'}`
+}
+const vacio = (v: any) => v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
+
+// Borrador local por paciente: si el padre cierra la pestaña no pierde lo escrito
+function useBorrador(clave: string, respuestas: Record<string, any>, setRespuestas: (r: any) => void) {
+  const [listo, setListo] = useState(false)
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem(clave)
+      if (guardado) setRespuestas((r: any) => ({ ...JSON.parse(guardado), ...r }))
+    } catch { /* sin storage */ }
+    setListo(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clave])
+  useEffect(() => {
+    if (!listo) return
+    try { localStorage.setItem(clave, JSON.stringify(respuestas)) } catch { /* sin storage */ }
+  }, [clave, respuestas, listo])
+}
+const borrarBorrador = (clave: string) => { try { localStorage.removeItem(clave) } catch { /* */ } }
+
 // ─── Render del razonamiento de la IA (convierte **negritas** y --- a formato) ──
 function RazonRecomendacion({ texto }: { texto: string }) {
-  // Parte por líneas. Los "---" se vuelven separadores; el resto, párrafos
-  // con soporte de **negritas** (markdown sencillo que devuelve el modelo).
-  const lineas = (texto || '').split('\n')
-
-  const renderInline = (linea: string, key: number) => {
-    // Divide en segmentos: los que están entre ** ** se renderizan en negrita.
-    const partes = linea.split(/(\*\*[^*]+\*\*)/g)
-    return (
-      <p key={key} className="text-sm leading-relaxed mb-2 last:mb-0" style={{ color: 'var(--text-secondary)' }}>
-        {partes.map((p, i) => {
-          if (p.startsWith('**') && p.endsWith('**')) {
-            return (
-              <strong key={i} style={{ color: 'var(--text-primary)', fontWeight: 800 }}>
-                {p.slice(2, -2)}
-              </strong>
-            )
-          }
-          return <span key={i}>{p}</span>
-        })}
-      </p>
-    )
-  }
-
   return (
     <div>
-      {lineas.map((ln, i) => {
+      {(texto || '').split('\n').map((ln, i) => {
         const t = ln.trim()
         if (t === '') return null
-        // Línea separadora (---, —, ***, etc.)
-        if (/^[-—*_]{2,}$/.test(t)) {
-          return <hr key={i} className="my-3 border-0 h-px" style={{ background: 'rgba(168,85,247,0.25)' }} />
-        }
-        return renderInline(ln, i)
+        if (/^[-—*_]{2,}$/.test(t)) return <hr key={i} className="my-3 h-px border-0 bg-v-border" />
+        return (
+          <p key={i} className="mb-2 text-sm leading-relaxed text-v-muted last:mb-0">
+            {ln.split(/(\*\*[^*]+\*\*)/g).map((p, k) => p.startsWith('**') && p.endsWith('**')
+              ? <strong key={k} className="font-semibold text-v-text">{p.slice(2, -2)}</strong>
+              : <span key={k}>{p}</span>)}
+          </p>
+        )
       })}
     </div>
   )
 }
 
+// Encabezado común de cada fase
+export function Hero({ Icon, eyebrow, titulo, children, tone = 'bg-v-accent-soft text-v-accent' }: { Icon: any; eyebrow?: string; titulo: React.ReactNode; children?: React.ReactNode; tone?: string }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 160, damping: 22 }}
+      className={`relative overflow-hidden ${cardClass}`}>
+      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(40rem 14rem at 0% 0%, var(--v-glow-1), transparent 70%)' }} />
+      <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
+      <div className="relative flex items-start gap-4 p-5 sm:p-6">
+        <span className={`grid size-12 shrink-0 place-items-center rounded-[30%] ${tone}`}><Icon size={22} /></span>
+        <div className="min-w-0 flex-1">
+          {eyebrow && <p className="text-sm text-v-muted">{eyebrow}</p>}
+          <h2 className="v-headline text-[1.45rem] leading-tight text-v-text sm:text-[1.7rem]">{titulo}</h2>
+          {children && <div className="mt-2 text-sm leading-relaxed text-v-muted">{children}</div>}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function Estado({ Icon, tone, titulo, children, pulso = false }: { Icon: any; tone: string; titulo: string; children?: React.ReactNode; pulso?: boolean }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`${cardClass} mx-auto max-w-xl p-7 text-center sm:p-8`}>
+      <motion.span animate={pulso ? { scale: [1, 1.06, 1] } : undefined} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        className={`mx-auto grid size-16 place-items-center rounded-full ${tone}`}><Icon size={30} /></motion.span>
+      <h2 className="v-headline mt-4 text-xl text-v-text sm:text-2xl">{titulo}</h2>
+      {children}
+    </motion.div>
+  )
+}
+
 // ═════════════════════════════════════════════════════════════════════════
-export default function EvaluacionInicialView({ child, profile }: Props) {
+function FlujoEvaluacion({ child, profile }: Props) {
+  const CONTACTO = useCentroBranding()
   const { t, locale } = useI18n()
+  const toast = useToast()
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
   const [loading, setLoading] = useState(true)
   const [evaluacion, setEvaluacion] = useState<any>(null)
   const [terapias, setTerapias] = useState<any[]>([])
 
-  // Estado del wizard intake
   const [pasoIntake, setPasoIntake] = useState(0)
   const [respIntake, setRespIntake] = useState<Record<string, any>>({})
   const [enviandoIntake, setEnviandoIntake] = useState(false)
   const [analizando, setAnalizando] = useState(false)
 
-  // Estado wizard anamnesis
   const [pasoAnamnesis, setPasoAnamnesis] = useState(0)
   const [respAnamnesis, setRespAnamnesis] = useState<Record<string, any>>({})
   const [enviandoAnamnesis, setEnviandoAnamnesis] = useState(false)
 
-  // Estado selección de terapias
   const [terapiasElegidas, setTerapiasElegidas] = useState<string[]>([])
   const [mensajeEspecialista, setMensajeEspecialista] = useState('')
   const [enviandoSeleccion, setEnviandoSeleccion] = useState(false)
 
-  // Estado confirmación recomendación
   const [confirmando, setConfirmando] = useState(false)
   const [showRechazoModal, setShowRechazoModal] = useState(false)
   const [motivoRechazo, setMotivoRechazo] = useState('')
+  const [enviandoRechazo, setEnviandoRechazo] = useState(false)
 
-  // Estado generación de recomendación de terapias (IA)
   const [generandoRec, setGenerandoRec] = useState(false)
   const [recIntentada, setRecIntentada] = useState(false)
 
   useEffect(() => { if (child?.id) cargar() }, [child?.id])
+  // La ficha inicial arranca con lo que el centro ya sabe del niño (se puede corregir)
+  useEffect(() => {
+    if (!child?.id) return
+    setRespIntake(r => ({
+      ...r,
+      menor_nombre: r.menor_nombre || child.name || '',
+      menor_fecha_nacimiento: r.menor_fecha_nacimiento || child.birth_date || '',
+      menor_edad: r.menor_edad || edadTexto(child.birth_date, locale === 'en'),
+    }))
+  }, [child?.id])
 
   const cargar = async () => {
     setLoading(true)
@@ -606,6 +673,7 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
       const data = await res.json()
       if (data.ok) {
         setEvaluacion(data.evaluacion)
+        try { window.dispatchEvent(new CustomEvent('vanty:eval-inicial')) } catch { /* noop */ }
         if (data.evaluacion?.respuestas_intake) setRespIntake(data.evaluacion.respuestas_intake)
         if (data.evaluacion?.anamnesis_especifica) setRespAnamnesis(data.evaluacion.anamnesis_especifica)
         if (data.evaluacion?.terapias_seleccionadas) setTerapiasElegidas(data.evaluacion.terapias_seleccionadas)
@@ -623,21 +691,13 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
   }
 
   useEffect(() => {
-    if (evaluacion?.estado === 'anamnesis_completa' ||
-        evaluacion?.estado === 'terapia_seleccionada' ||
-        evaluacion?.estado === 'revisado' ||
-        evaluacion?.estado === 'completado') {
-      cargarTerapias()
-    }
+    if (['anamnesis_completa', 'terapia_seleccionada', 'revisado', 'completado'].includes(evaluacion?.estado)) cargarTerapias()
   }, [evaluacion?.estado])
 
-  // 🔮 Asegura que la recomendación de terapias exista al llegar a la selección.
-  // (En la anamnesis se dispara fire-and-forget y en serverless puede no completarse,
-  //  así que acá la generamos de forma confiable si todavía no hay recomendación.)
+  // Asegura que la recomendación de terapias exista al llegar a la selección
+  // (en la anamnesis se dispara en segundo plano y en serverless puede no completarse).
   useEffect(() => {
-    const necesitaRec =
-      evaluacion?.estado === 'anamnesis_completa' &&
-      (!evaluacion?.terapias_recomendadas || evaluacion.terapias_recomendadas.length === 0)
+    const necesitaRec = evaluacion?.estado === 'anamnesis_completa' && (!evaluacion?.terapias_recomendadas || evaluacion.terapias_recomendadas.length === 0)
     if (necesitaRec && !recIntentada && !generandoRec) {
       setRecIntentada(true)
       ;(async () => {
@@ -654,106 +714,99 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
     }
   }, [evaluacion?.estado, evaluacion?.terapias_recomendadas, recIntentada, generandoRec])
 
-  if (!child) {
-    return <div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>{t("evalIni.selecHijo")}</div>
-  }
-  if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-sky-500" size={40} /></div>
-  }
+  const wa = CONTACTO.telefono ? `https://wa.me/${CONTACTO.telefonoDigitos}` : null
+
+  if (!child) return <div className="v-scope p-8 text-center text-sm text-v-muted">{t('evalIni.selecHijo')}</div>
+  if (loading) return <div className="v-scope grid place-items-center py-24"><Loader2 className="animate-spin text-v-accent" size={32} /></div>
 
   const estado = evaluacion?.estado || 'pendiente_intake'
+  const nombreCorto = (child.name || '').split(' ')[0] || child.name
 
-  // ═══ FASE 1: INTAKE INICIAL ════════════════════════════════════════════
+  // ═══ FASE 1: FICHA INICIAL ═══
   if (estado === 'pendiente_intake' || !evaluacion) {
-    return <WizardIntake
-      child={child}
-      profile={profile}
-      seccionIdx={pasoIntake}
-      setSeccionIdx={setPasoIntake}
-      respuestas={respIntake}
-      setRespuestas={setRespIntake}
-      enviando={enviandoIntake}
-      analizando={analizando}
-      onEnviar={async () => {
-        setEnviandoIntake(true)
-        try {
-          const res = await fetch('/api/evaluacion-inicial', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ child_id: child.id, parent_id: profile?.id, respuestas: respIntake }),
-          })
-          const d = await res.json()
-          if (!d.ok) throw new Error(d.error)
-          setAnalizando(true)
-          await fetch('/api/evaluacion-inicial/analizar', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: d.evaluacion.id }),
-          })
-          await cargar()
-        } catch (e: any) { alert('Error: ' + e.message) }
-        finally { setEnviandoIntake(false); setAnalizando(false) }
-      }}
-    />
+    const secciones = en ? SECCIONES_INTAKE_EN : SECCIONES_INTAKE_ES
+    const clave = `vanty_eval_intake_${child.id}`
+    return (
+      <Wizard
+        clave={clave}
+        secciones={secciones} seccionIdx={pasoIntake} setSeccionIdx={setPasoIntake}
+        respuestas={respIntake} setRespuestas={setRespIntake}
+        enviando={enviandoIntake} textoEnviando={analizando ? L('Analyzing…', 'Analizando…') : L('Sending…', 'Enviando…')}
+        hero={
+          <Hero Icon={ClipboardCheck} eyebrow={L('Initial evaluation · Step 1', 'Evaluación inicial · Paso 1')} titulo={t('evalIni.fichaInicialPapas')}>
+            <p>{t('auto.evaluacionInicialView.docNecesarioPre')}<strong className="text-v-text">{child.name}</strong>.</p>
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-v-fill px-3 py-1 text-xs font-medium text-v-muted">
+              <Lock size={12} /> {L('Private and confidential — used only for clinical purposes', 'Privado y confidencial — solo con fines clínicos')}
+            </p>
+          </Hero>
+        }
+        onEnviar={async () => {
+          setEnviandoIntake(true)
+          try {
+            const res = await fetch('/api/evaluacion-inicial', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ child_id: child.id, parent_id: profile?.id, respuestas: respIntake }),
+            })
+            const d = await res.json()
+            if (!d.ok) throw new Error(d.error)
+            borrarBorrador(clave)
+            setAnalizando(true)
+            await fetch('/api/evaluacion-inicial/analizar', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: d.evaluacion.id }),
+            })
+            await cargar()
+          } catch (e: any) { toast.error(L('Could not send: ', 'No se pudo enviar: ') + e.message) }
+          finally { setEnviandoIntake(false); setAnalizando(false) }
+        }}
+      />
+    )
   }
 
-  // ═══ FASE 2: ANALIZANDO ════════════════════════════════════════════════
+  // ═══ FASE 2: ANALIZANDO ═══
   if (estado === 'analizando') {
     return (
-      <div className="max-w-2xl mx-auto py-20 text-center">
-        <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 to-cyan-500 text-white mb-6 animate-pulse">
-          <Brain size={48} />
-        </div>
-        <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
-          {t('auto.evaluacionInicialView.estamosRevisandoTuInformacion')}
-        </h2>
-        <p className="mb-8" style={{ color: 'var(--text-muted)' }}>
-          {t('auto.evaluacionInicialView.estoTomaUnosSegundosSi')}
-        </p>
-        <button onClick={cargar} className="px-5 py-3 rounded-xl bg-sky-600 text-white font-bold flex items-center gap-2 mx-auto">
-          <Loader2 className="animate-spin" size={18} /> Verificar de nuevo
-        </button>
+      <div className="v-scope py-6">
+        <Estado Icon={Brain} tone="bg-v-accent-soft text-v-accent" titulo={t('auto.evaluacionInicialView.estamosRevisandoTuInformacion')} pulso>
+          <p className="mt-2 text-sm text-v-muted">{t('auto.evaluacionInicialView.estoTomaUnosSegundosSi')}</p>
+          <button onClick={cargar} className="v-brand mx-auto mt-6 inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold">
+            <RefreshCw size={16} /> {L('Check again', 'Verificar de nuevo')}
+          </button>
+        </Estado>
       </div>
     )
   }
 
-  // ═══ FASE 3: RECOMENDACIÓN + CONFIRMACIÓN ══════════════════════════════
+  // ═══ FASE 3: RECOMENDACIÓN + CONFIRMACIÓN ═══
   if (estado === 'recomendado') {
     const rec = evaluacion.recomendacion
-    const mensaje = evaluacion.mensaje_amigable_padre || evaluacion.recomendacion_resumen ||
-      t('auto.evaluacionInicialView.hemosRevisado')
+    const mensaje = evaluacion.mensaje_amigable_padre || evaluacion.recomendacion_resumen || t('auto.evaluacionInicialView.hemosRevisado')
     const RecIcon = rec === 'neuropsicologica' ? Brain : Heart
     const recTitulo = rec === 'psicologica' ? t('auto.evaluacionInicialView.recTituloPsico')
-                    : rec === 'neuropsicologica' ? t('auto.evaluacionInicialView.recTituloNeuro')
-                    : t('auto.evaluacionInicialView.recTituloIntegral')
-    const recColor = rec === 'psicologica' ? 'from-rose-500 to-rose-500' : 'from-sky-500 to-cyan-500'
+      : rec === 'neuropsicologica' ? t('auto.evaluacionInicialView.recTituloNeuro')
+      : t('auto.evaluacionInicialView.recTituloIntegral')
+    const pasos = [t('evalIni.fichaDetallada'), t('auto.evaluacionInicialView.teMostramosTerapias', { v1: child.name }), t('evalIni.eligesEquipo')]
 
     return (
-      <div className="max-w-2xl mx-auto pb-12">
-        <div className={`rounded-3xl p-6 mb-6 text-white shadow-xl bg-gradient-to-br ${recColor}`}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
-              <RecIcon size={26} />
-            </div>
-            <div>
-              <p className="text-sm font-medium opacity-80">{t('auto.evaluacionInicialView.nuestraSugerenciaPara', { v1: child.name })}</p>
-              <h1 className="text-2xl font-bold tracking-tight">{recTitulo}</h1>
-            </div>
-          </div>
-          <p className="text-white/95 leading-relaxed whitespace-pre-wrap">{mensaje}</p>
-        </div>
+      <div className="v-scope mx-auto max-w-2xl space-y-4 pb-12">
+        <Hero Icon={RecIcon} eyebrow={t('auto.evaluacionInicialView.nuestraSugerenciaPara', { v1: child.name })} titulo={recTitulo}>
+          <p className="whitespace-pre-wrap text-v-text">{mensaje}</p>
+        </Hero>
 
-        <div className="rounded-2xl p-5 mb-5 border" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
-          <h3 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            <Star size={16} className="text-amber-500" /> {t('auto.evaluacionInicialView.queSigueSiAceptas')}
-          </h3>
-          <ol className="space-y-2.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
-            <li className="flex gap-3"><span className="font-bold text-sky-600">1.</span> {t("evalIni.fichaDetallada")}</li>
-            <li className="flex gap-3"><span className="font-bold text-sky-600">2.</span> {t('auto.evaluacionInicialView.teMostramosTerapias', { v1: child.name })}</li>
-            <li className="flex gap-3"><span className="font-bold text-sky-600">3.</span> {t("evalIni.eligesEquipo")}</li>
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className={`${cardClass} p-5`}>
+          <p className="text-[15px] font-semibold tracking-tight text-v-text">{t('auto.evaluacionInicialView.queSigueSiAceptas')}</p>
+          <ol className="mt-4 space-y-3">
+            {pasos.map((p, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm text-v-muted">
+                <span className="v-brand grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold" style={{ boxShadow: 'none' }}>{i + 1}</span>
+                <span className="pt-0.5">{p}</span>
+              </li>
+            ))}
           </ol>
-        </div>
+        </motion.section>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <motion.button whileTap={{ scale: 0.98 }} disabled={confirmando}
             onClick={async () => {
               setConfirmando(true)
               try {
@@ -764,396 +817,291 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
                 const d = await r.json()
                 if (!d.ok) throw new Error(d.error)
                 await cargar()
-              } catch (e: any) { alert('Error: ' + e.message) }
+              } catch (e: any) { toast.error('Error: ' + e.message) }
               finally { setConfirmando(false) }
             }}
-            disabled={confirmando}
-            className="flex-1 px-6 py-4 rounded-2xl font-bold text-base bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:scale-[1.01] transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {confirmando ? <Loader2 className="animate-spin" size={20} /> : <ThumbsUp size={20} />}
-            {t('auto.evaluacionInicialView.estoyDeAcuerdoContinuar')}
-          </button>
-          <button
-            onClick={() => setShowRechazoModal(true)}
-            className="flex-1 sm:flex-initial px-6 py-4 rounded-2xl font-bold text-sm border-2"
-            style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
-          >
-            Tengo dudas
+            className="v-brand inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold disabled:opacity-60">
+            {confirmando ? <Loader2 className="animate-spin" size={18} /> : <ThumbsUp size={18} />} {t('auto.evaluacionInicialView.estoyDeAcuerdoContinuar')}
+          </motion.button>
+          <button onClick={() => setShowRechazoModal(true)} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-v-fill px-6 text-sm font-semibold text-v-text transition-colors hover:bg-v-accent-soft hover:text-v-accent">
+            <HelpCircle size={17} /> {L('I have questions', 'Tengo dudas')}
           </button>
         </div>
 
-        {showRechazoModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur" onClick={() => setShowRechazoModal(false)}>
-            <div className="max-w-md w-full rounded-2xl shadow-2xl p-6" style={{ background: 'var(--card)' }} onClick={e => e.stopPropagation()}>
-              <h3 className="font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{t("evalIni.cuentanosDudas")}</h3>
-              <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-                {t('auto.evaluacionInicialView.nuestroEquipoTeContactaraPor')}
-              </p>
-              <textarea
-                value={motivoRechazo}
-                onChange={e => setMotivoRechazo(e.target.value)}
-                rows={4}
-                placeholder={t("evalIni.phDudas")}
-                className="w-full px-3 py-2 rounded-lg border outline-none text-sm resize-none mb-4"
-                style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    await fetch('/api/evaluacion-inicial/confirmar', {
-                      method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ evaluacion_id: evaluacion.id, acepta: false, motivo_rechazo: motivoRechazo }),
-                    })
-                    setShowRechazoModal(false)
-                    await cargar()
-                  }}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-amber-500 text-white font-bold"
-                >{t("common.enviar")}</button>
-                <button onClick={() => setShowRechazoModal(false)} className="px-4 py-2.5 rounded-lg border-2 font-bold"
-                  style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>{t("common.cancelar")}</button>
-              </div>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {showRechazoModal && (
+            <motion.div className="fixed inset-0 z-[200] flex items-end justify-center bg-[#081426]/50 p-4 backdrop-blur-sm sm:items-center"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRechazoModal(false)}>
+              <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
+                transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+                className="w-full max-w-md rounded-v-lg border border-v-border bg-v-elevated p-6 shadow-v-lg">
+                <div className="flex items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><HelpCircle size={19} /></span>
+                  <div>
+                    <p className="text-[15px] font-semibold text-v-text">{t('evalIni.cuentanosDudas')}</p>
+                    <p className="mt-1 text-sm text-v-muted">{t('auto.evaluacionInicialView.nuestroEquipoTeContactaraPor')}</p>
+                  </div>
+                </div>
+                <textarea value={motivoRechazo} onChange={e => setMotivoRechazo(e.target.value)} rows={4} placeholder={t('evalIni.phDudas')} className={`${qInput} mt-4 resize-none`} />
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => setShowRechazoModal(false)} className="h-10 rounded-full px-4 text-sm font-semibold text-v-muted hover:bg-v-fill">{t('common.cancelar')}</button>
+                  <button disabled={enviandoRechazo}
+                    onClick={async () => {
+                      setEnviandoRechazo(true)
+                      try {
+                        await fetch('/api/evaluacion-inicial/confirmar', {
+                          method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ evaluacion_id: evaluacion.id, acepta: false, motivo_rechazo: motivoRechazo }),
+                        })
+                        setShowRechazoModal(false)
+                        await cargar()
+                      } finally { setEnviandoRechazo(false) }
+                    }}
+                    className="v-brand inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold disabled:opacity-60">
+                    {enviandoRechazo ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} {t('common.enviar')}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     )
   }
 
-  // ═══ FASE 4: 2ª ANAMNESIS ══════════════════════════════════════════════
+  // ═══ FASE 4: 2ª ANAMNESIS ═══
   if (estado === 'confirmado') {
-    const secciones = evaluacion.recomendacion === 'neuropsicologica' ? (locale === 'en' ? SECCIONES_NEURO_EN : SECCIONES_NEURO_ES) : (locale === 'en' ? SECCIONES_PSICO_EN : SECCIONES_PSICO_ES)
-    return <WizardAnamnesis
-      child={child}
-      tipo={evaluacion.recomendacion}
-      secciones={secciones}
-      seccionIdx={pasoAnamnesis}
-      setSeccionIdx={setPasoAnamnesis}
-      respuestas={respAnamnesis}
-      setRespuestas={setRespAnamnesis}
-      enviando={enviandoAnamnesis}
-      onEnviar={async () => {
-        setEnviandoAnamnesis(true)
-        try {
-          const res = await fetch('/api/evaluacion-inicial/anamnesis', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ evaluacion_id: evaluacion.id, respuestas: respAnamnesis }),
-          })
-          const d = await res.json()
-          if (!d.ok) throw new Error(d.error)
-          await cargar()
-        } catch (e: any) { alert('Error: ' + e.message) }
-        finally { setEnviandoAnamnesis(false) }
-      }}
-    />
+    const neuro = evaluacion.recomendacion === 'neuropsicologica'
+    const secciones = neuro ? (en ? SECCIONES_NEURO_EN : SECCIONES_NEURO_ES) : (en ? SECCIONES_PSICO_EN : SECCIONES_PSICO_ES)
+    const clave = `vanty_eval_anamnesis_${child.id}`
+    return (
+      <Wizard
+        clave={clave}
+        secciones={secciones} seccionIdx={pasoAnamnesis} setSeccionIdx={setPasoAnamnesis}
+        respuestas={respAnamnesis} setRespuestas={setRespAnamnesis}
+        enviando={enviandoAnamnesis} textoEnviando={L('Saving…', 'Guardando…')}
+        hero={
+          <Hero Icon={neuro ? Brain : Heart} eyebrow={L('Initial evaluation · Step 2', 'Evaluación inicial · Paso 2')}
+            titulo={neuro ? t('auto.evaluacionInicialView.fichaNeuro') : t('auto.evaluacionInicialView.fichaPsico')}>
+            <p>{t('auto.evaluacionInicialView.algunasPreguntasPre')}<strong className="text-v-text">{child.name}</strong>.</p>
+          </Hero>
+        }
+        onEnviar={async () => {
+          setEnviandoAnamnesis(true)
+          try {
+            const res = await fetch('/api/evaluacion-inicial/anamnesis', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ evaluacion_id: evaluacion.id, respuestas: respAnamnesis }),
+            })
+            const d = await res.json()
+            if (!d.ok) throw new Error(d.error)
+            borrarBorrador(clave)
+            await cargar()
+          } catch (e: any) { toast.error(L('Could not save: ', 'No se pudo guardar: ') + e.message) }
+          finally { setEnviandoAnamnesis(false) }
+        }}
+      />
+    )
   }
 
-  // ═══ FASE 5: SELECCIÓN DE TERAPIAS ═════════════════════════════════════
+  // ═══ FASE 5: SELECCIÓN DE TERAPIAS ═══
   if (estado === 'anamnesis_completa') {
     const recomendadasIds: string[] = evaluacion.terapias_recomendadas || []
     const recSet = new Set(recomendadasIds)
-    // Recomendadas en el orden que dio la IA
-    const recomendadas = recomendadasIds
-      .map(id => terapias.find(t => t.id === id))
-      .filter(Boolean) as any[]
-    // El resto del catálogo (no recomendadas)
-    const resto = terapias.filter(t => !recSet.has(t.id))
+    const recomendadas = recomendadasIds.map(id => terapias.find(x => x.id === id)).filter(Boolean) as any[]
+    const resto = terapias.filter(x => !recSet.has(x.id))
 
-    const nombreCorto = (child.name || '').split(' ')[0] || child.name
-
-    // Tarjeta de terapia reutilizable (recomendada o catálogo general)
-    const tCat = t
-    const renderTarjeta = (t: any) => {
-      const checked = terapiasElegidas.includes(t.id)
-      const esRecomendada = recSet.has(t.id)
-      const colorTema = TERAPIA_COLORES[t.color_tema || 'indigo'] || TERAPIA_COLORES.indigo
+    const tarjeta = (ter: any, i: number) => {
+      const checked = terapiasElegidas.includes(ter.id)
+      const esRec = recSet.has(ter.id)
+      const color = TERAPIA_COLORES[ter.color_tema || 'indigo'] || TERAPIA_COLORES.indigo
       return (
-        <button
-          key={t.id}
-          onClick={() => setTerapiasElegidas(arr => arr.includes(t.id) ? arr.filter(x => x !== t.id) : [...arr, t.id])}
-          className="relative text-left rounded-2xl border-2 overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-xl"
-          style={{
-            background: 'var(--card)',
-            borderColor: checked ? colorTema.accent : esRecomendada ? colorTema.accent : 'var(--card-border)',
-            boxShadow: checked ? `0 0 0 3px ${colorTema.accent}33` : undefined,
-          }}
-        >
-          {/* Banda superior con el color */}
-          <div className={`h-1.5 bg-gradient-to-r ${colorTema.gradient}`} />
-
-          {esRecomendada && (
-            <div className="absolute top-3.5 right-3 z-10 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white shadow-lg flex items-center gap-1"
-              style={{ background: `linear-gradient(135deg, ${colorTema.accent}, ${colorTema.accentDark})` }}>
-              <Sparkles size={11} /> {tCat('auto.evaluacionInicialView.recomendada')}
-            </div>
-          )}
-          {checked && (
-            <div className="absolute top-3.5 left-3 z-10 w-7 h-7 rounded-full flex items-center justify-center text-white shadow-lg"
-              style={{ background: colorTema.accent }}>
-              <CheckCircle2 size={16} />
-            </div>
-          )}
-
-          {t.imagen_url ? (
-            <img src={t.imagen_url} alt={t.nombre} className="w-full h-40 object-cover" />
-          ) : (
-            <div className={`w-full h-40 flex items-center justify-center bg-gradient-to-br ${colorTema.gradient} opacity-30`}>
-              <ImageIcon size={42} className="text-white/60" />
-            </div>
-          )}
-
-          <div className="p-5 space-y-3">
-            {t.categoria && (
-              <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-md"
-                style={{ background: `${colorTema.accent}1a`, color: colorTema.accent }}>
-                {t.categoria}
+        <motion.button key={ter.id} type="button"
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i, type: 'spring', stiffness: 220, damping: 24 }}
+          whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
+          onClick={() => setTerapiasElegidas(arr => arr.includes(ter.id) ? arr.filter(x => x !== ter.id) : [...arr, ter.id])}
+          className={`relative flex flex-col overflow-hidden rounded-v border bg-v-elevated text-left shadow-v transition-colors ${checked ? 'border-v-accent ring-4 ring-v-accent-soft' : 'border-v-border hover:border-v-accent/40'}`}>
+          <div className="relative h-36 w-full shrink-0 overflow-hidden bg-v-fill">
+            {ter.imagen_url
+              ? <img src={ter.imagen_url} alt={ter.nombre} className="absolute inset-0 size-full object-cover" style={{ height: '100%' }} />
+              : <span className="absolute inset-0 grid place-items-center" style={{ color: color.accent }}><ImageIcon size={34} className="opacity-40" /></span>}
+            <span className="absolute inset-x-0 top-0 h-1" style={{ background: color.accent }} />
+            {esRec && (
+              <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-v-elevated/95 px-2.5 py-1 text-[11px] font-semibold text-v-accent shadow-v">
+                <Sparkles size={11} /> {t('auto.evaluacionInicialView.recomendada')}
               </span>
             )}
-            <h4 className="font-bold text-lg leading-tight tracking-tight" style={{ color: 'var(--text-primary)' }}>{t.nombre}</h4>
-            {t.descripcion && <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{t.descripcion}</p>}
-            {t.por_que && (
-              <div className="rounded-xl p-3.5 text-sm leading-relaxed"
-                style={{ background: `${colorTema.accent}0d`, color: 'var(--text-secondary)' }}>
-                <p className="text-[13px] font-semibold mb-1 flex items-center gap-1.5" style={{ color: colorTema.accent }}>
-                  <Sparkles size={13} /> {tCat('auto.evaluacionInicialView.porQueLlevarla')}
-                </p>
-                <p>{t.por_que}</p>
+            <span className={`absolute left-3 top-3 grid size-7 place-items-center rounded-full border-2 transition-colors ${checked ? 'border-transparent bg-v-accent text-white' : 'border-white/80 bg-black/15'}`}>
+              {checked && <Check size={15} strokeWidth={3} />}
+            </span>
+          </div>
+          <div className="flex flex-1 flex-col gap-2.5 p-5">
+            {ter.categoria && <span className="self-start rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ background: `${color.accent}1a`, color: color.accent }}>{ter.categoria}</span>}
+            <p className="text-base font-semibold leading-tight tracking-tight text-v-text">{ter.nombre}</p>
+            {ter.descripcion && <p className="text-sm leading-relaxed text-v-muted">{ter.descripcion}</p>}
+            {ter.por_que && (
+              <div className="rounded-v-sm bg-v-accent-soft/60 p-3 text-sm leading-relaxed text-v-muted">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-v-accent"><Sparkles size={12} /> {t('auto.evaluacionInicialView.porQueLlevarla')}</p>
+                {ter.por_que}
               </div>
             )}
-            <div className="flex items-end justify-between pt-3 border-t" style={{ borderColor: 'var(--card-border)' }}>
-              {t.duracion && (
-                <div>
-                  <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>{t("ui.duracion")}</p>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>{t.duracion}</p>
-                </div>
-              )}
-              {t.precio != null && (
-                <div className="text-right">
-                  <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>{t("evalIni.inversion")}</p>
-                  <p className="text-xl font-bold tabular-nums" style={{ color: colorTema.accent }}>
-                    S/. {Number(t.precio).toFixed(0)}
-                  </p>
-                </div>
-              )}
-            </div>
+            {(ter.duracion || ter.precio != null) && (
+              <div className="mt-auto flex items-end justify-between border-t border-v-border pt-3">
+                {ter.duracion ? <div><p className="text-[11px] text-v-subtle">{t('ui.duracion')}</p><p className="text-sm font-semibold text-v-text">{ter.duracion}</p></div> : <span />}
+                {ter.precio != null && <div className="text-right"><p className="text-[11px] text-v-subtle">{t('evalIni.inversion')}</p><p className="text-lg font-bold tabular-nums text-v-accent">S/ {Number(ter.precio).toFixed(0)}</p></div>}
+              </div>
+            )}
           </div>
-        </button>
+        </motion.button>
       )
     }
 
     return (
-      <div className="max-w-4xl mx-auto pb-12">
-        <div className="rounded-3xl p-6 mb-6 text-white shadow-xl" style={{ background: 'linear-gradient(135deg,#0284c7,#ec4899)' }}>
-          <h1 className="text-2xl font-bold mb-2">{t('auto.evaluacionInicialView.casiTerminamos')}</h1>
-          <p className="text-white/95">
-            {recomendadas.length > 0
-              ? <>{t("evalIni.revisamosCuidado")}<strong>{nombreCorto}</strong>. Más abajo verás <strong>nuestra recomendación personalizada</strong> y, debajo, <strong>todo nuestro catálogo</strong> por si quieres explorar otras opciones. Marca la(s) que te interese conocer más.</>
-              : <>{t("evalIni.terapiasOfrecemos")}</>
-            }
-          </p>
-        </div>
+      <div className="v-scope mx-auto max-w-4xl space-y-5 pb-28">
+        <Hero Icon={Sparkles} eyebrow={L('Initial evaluation · Step 3', 'Evaluación inicial · Paso 3')} titulo={t('auto.evaluacionInicialView.casiTerminamos')}>
+          <p>{recomendadas.length > 0
+            ? L(`We reviewed ${nombreCorto}'s information carefully. Below is our personalized recommendation and the full catalog. Select the ones you want to know more about.`,
+                `Revisamos con cuidado la información de ${nombreCorto}. Abajo verás nuestra recomendación personalizada y todo nuestro catálogo. Marca las que te interese conocer.`)
+            : t('evalIni.terapiasOfrecemos')}</p>
+        </Hero>
 
         {terapias.length === 0 || generandoRec ? (
-          <div className="text-center py-16 rounded-2xl border" style={{ color: 'var(--text-muted)', background: 'var(--card)', borderColor: 'var(--card-border)' }}>
-            <Loader2 className="animate-spin mx-auto mb-3 text-sky-500" size={32} />
-            <p className="font-bold" style={{ color: 'var(--text-primary)' }}>
-              {generandoRec ? t('auto.evaluacionInicialView.preparandoRecomendacion', { v1: nombreCorto }) : t('auto.evaluacionInicialView.cargandoTerapias')}
-            </p>
-            {generandoRec && <p className="text-sm mt-1">{t("evalIni.tomaSegundos")}</p>}
+          <div className={`${cardClass} py-14 text-center`}>
+            <Loader2 className="mx-auto animate-spin text-v-accent" size={28} />
+            <p className="mt-3 text-sm font-semibold text-v-text">{generandoRec ? t('auto.evaluacionInicialView.preparandoRecomendacion', { v1: nombreCorto }) : t('auto.evaluacionInicialView.cargandoTerapias')}</p>
+            {generandoRec && <p className="mt-1 text-xs text-v-muted">{t('evalIni.tomaSegundos')}</p>}
           </div>
         ) : (
           <>
-            {/* ─── SECCIÓN A: RECOMENDACIÓN PERSONALIZADA ─────────────────── */}
             {recomendadas.length > 0 && (
-              <section className="mb-8">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-fuchsia-500 flex items-center justify-center text-white shadow-md">
-                    <Sparkles size={18} />
-                  </div>
+              <section className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Sparkles size={15} /></span>
                   <div>
-                    <h2 className="text-xl font-bold leading-tight tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                      {t('auto.evaluacionInicialView.loQueTeRecomendamosPara', { v1: String(nombreCorto) })}
-                    </h2>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {t('auto.evaluacionInicialView.basadoEnLaInformacionQue')}
-                    </p>
+                    <p className="text-[15px] font-semibold tracking-tight text-v-text">{t('auto.evaluacionInicialView.loQueTeRecomendamosPara', { v1: String(nombreCorto) })}</p>
+                    <p className="text-xs text-v-muted">{t('auto.evaluacionInicialView.basadoEnLaInformacionQue')}</p>
                   </div>
                 </div>
-
-                {/* Razonamiento general de la IA (formateado) */}
-                {evaluacion.terapias_recomendadas_razon && (
-                  <div className="rounded-2xl p-5 my-4 border" style={{ background: 'rgba(168,85,247,0.06)', borderColor: 'rgba(168,85,247,0.2)' }}>
-                    <RazonRecomendacion texto={evaluacion.terapias_recomendadas_razon} />
-                  </div>
-                )}
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {recomendadas.map(renderTarjeta)}
-                </div>
+                {evaluacion.terapias_recomendadas_razon && <div className={`${cardClass} p-5`}><RazonRecomendacion texto={evaluacion.terapias_recomendadas_razon} /></div>}
+                <div className="grid gap-4 sm:grid-cols-2">{recomendadas.map(tarjeta)}</div>
               </section>
             )}
-
-            {/* ─── SECCIÓN B: CATÁLOGO COMPLETO ───────────────────────────── */}
             {resto.length > 0 && (
-              <section className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)' }}>
-                    <ClipboardCheck size={18} />
-                  </div>
+              <section className="space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-[30%] bg-v-fill text-v-muted"><ClipboardList size={15} /></span>
                   <div>
-                    <h2 className="text-xl font-bold leading-tight tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                      {recomendadas.length > 0 ? t('auto.evaluacionInicialView.todoCatalogo') : t('auto.evaluacionInicialView.nuestrasTerapias')}
-                    </h2>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      {recomendadas.length > 0 ? t('auto.evaluacionInicialView.otrasOpciones') : t('auto.evaluacionInicialView.marcaLasQueInterese')}
-                    </p>
+                    <p className="text-[15px] font-semibold tracking-tight text-v-text">{recomendadas.length > 0 ? t('auto.evaluacionInicialView.todoCatalogo') : t('auto.evaluacionInicialView.nuestrasTerapias')}</p>
+                    <p className="text-xs text-v-muted">{recomendadas.length > 0 ? t('auto.evaluacionInicialView.otrasOpciones') : t('auto.evaluacionInicialView.marcaLasQueInterese')}</p>
                   </div>
                 </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {resto.map(renderTarjeta)}
-                </div>
+                <div className="grid gap-4 sm:grid-cols-2">{resto.map(tarjeta)}</div>
               </section>
             )}
           </>
         )}
 
-        <div className="rounded-2xl p-5 mb-4 border" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
-          <label className="block text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-            {t('auto.evaluacionInicialView.mensajeAlEspecialistaOpcional')}
-          </label>
-          <textarea
-            value={mensajeEspecialista}
-            onChange={e => setMensajeEspecialista(e.target.value)}
-            rows={3}
-            placeholder={t("evalIni.phHorarios")}
-            className="w-full px-4 py-3 rounded-xl border outline-none focus:border-sky-500 resize-none"
-            style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
-          />
-        </div>
+        <section className={`${cardClass} p-5`}>
+          <label className="block text-sm font-semibold text-v-text">{t('auto.evaluacionInicialView.mensajeAlEspecialistaOpcional')}</label>
+          <textarea value={mensajeEspecialista} onChange={e => setMensajeEspecialista(e.target.value)} rows={3} placeholder={t('evalIni.phHorarios')} className={`${qInput} mt-2 resize-none`} />
+        </section>
 
-        <button
-          onClick={async () => {
-            if (terapiasElegidas.length === 0) { alert(t('auto.evaluacionInicialView.eligeAlMenosUnaTerapia')); return }
-            setEnviandoSeleccion(true)
-            try {
-              const r = await fetch('/api/evaluacion-inicial/seleccionar', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  evaluacion_id: evaluacion.id,
-                  terapia_ids: terapiasElegidas,
-                  mensaje_al_especialista: mensajeEspecialista,
-                }),
-              })
-              const d = await r.json()
-              if (!d.ok) throw new Error(d.error)
-              await cargar()
-            } catch (e: any) { alert('Error: ' + e.message) }
-            finally { setEnviandoSeleccion(false) }
-          }}
-          disabled={terapiasElegidas.length === 0 || enviandoSeleccion}
-          className="w-full px-6 py-4 rounded-2xl font-bold bg-gradient-to-r from-sky-600 to-cyan-600 text-white shadow-xl disabled:opacity-40 flex items-center justify-center gap-2"
-        >
-          {enviandoSeleccion ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
-          {t('auto.evaluacionInicialView.enviarAlEspecialistaTerapia', { v1: String(terapiasElegidas.length), v2: String(terapiasElegidas.length === 1 ? '' : 's') })}
-        </button>
+        {/* Barra fija con la selección */}
+        <div className="sticky bottom-20 z-10 lg:bottom-4">
+          <div className={`${cardClass} flex items-center gap-3 px-4 py-3 backdrop-blur-xl`}>
+            <p className="min-w-0 flex-1 text-sm text-v-muted">
+              <strong className="tabular-nums text-v-text">{terapiasElegidas.length}</strong> {L(terapiasElegidas.length === 1 ? 'therapy selected' : 'therapies selected', terapiasElegidas.length === 1 ? 'terapia elegida' : 'terapias elegidas')}
+            </p>
+            <motion.button whileTap={{ scale: 0.97 }} disabled={terapiasElegidas.length === 0 || enviandoSeleccion}
+              onClick={async () => {
+                setEnviandoSeleccion(true)
+                try {
+                  const r = await fetch('/api/evaluacion-inicial/seleccionar', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ evaluacion_id: evaluacion.id, terapia_ids: terapiasElegidas, mensaje_al_especialista: mensajeEspecialista }),
+                  })
+                  const d = await r.json()
+                  if (!d.ok) throw new Error(d.error)
+                  await cargar()
+                } catch (e: any) { toast.error('Error: ' + e.message) }
+                finally { setEnviandoSeleccion(false) }
+              }}
+              className="v-brand inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-5 text-sm font-semibold disabled:opacity-40">
+              {enviandoSeleccion ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} {L('Send to the specialist', 'Enviar al especialista')}
+            </motion.button>
+          </div>
+        </div>
       </div>
     )
   }
 
-  // ═══ FASE 6: ESPERANDO RESPUESTA DEL ESPECIALISTA ══════════════════════
+  // ═══ FASE 6: ESPERANDO AL ESPECIALISTA ═══
   if (estado === 'terapia_seleccionada') {
-    const elegidas = terapias.filter(t => (evaluacion.terapias_seleccionadas || []).includes(t.id))
+    const elegidas = terapias.filter(x => (evaluacion.terapias_seleccionadas || []).includes(x.id))
     return (
-      <div className="max-w-xl mx-auto py-10 px-4">
-        <div className="rounded-3xl p-8 text-center shadow-xl border" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white mb-5 animate-pulse">
-            <Clock size={40} />
-          </div>
-          <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
-            {t('auto.evaluacionInicialView.tuSolicitudEstaEnRevision')}
-          </h2>
-          <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-            {t('auto.evaluacionInicialView.enRevisionPre')}<strong>{t('auto.evaluacionInicialView.enRevisionStrong')}</strong>{t('auto.evaluacionInicialView.enRevisionMid')}{child.name}{t('auto.evaluacionInicialView.enRevisionPost')}
+      <div className="v-scope py-6">
+        <Estado Icon={Clock} tone="bg-v-warning/15 text-v-warning" titulo={t('auto.evaluacionInicialView.tuSolicitudEstaEnRevision')} pulso>
+          <p className="mt-2 text-sm leading-relaxed text-v-muted">
+            {t('auto.evaluacionInicialView.enRevisionPre')}<strong className="text-v-text">{t('auto.evaluacionInicialView.enRevisionStrong')}</strong>{t('auto.evaluacionInicialView.enRevisionMid')}{child.name}{t('auto.evaluacionInicialView.enRevisionPost')}
           </p>
           {elegidas.length > 0 && (
-            <div className="rounded-2xl p-4 mb-6 text-left" style={{ background: 'var(--muted-bg)' }}>
-              <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t("evalIni.terapiasPediste")}</p>
-              <ul className="space-y-1">
-                {elegidas.map(ter => (
-                  <li key={ter.id} className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-primary)' }}>
-                    <CheckCircle2 size={14} className="text-green-500" /> {ter.nombre}
-                  </li>
-                ))}
+            <div className="mt-5 rounded-v-sm bg-v-fill p-4 text-left">
+              <p className="text-xs font-semibold text-v-muted">{t('evalIni.terapiasPediste')}</p>
+              <ul className="mt-2 space-y-1.5">
+                {elegidas.map(ter => <li key={ter.id} className="flex items-center gap-2 text-sm text-v-text"><CheckCircle2 size={14} className="shrink-0 text-v-success" /> {ter.nombre}</li>)}
               </ul>
             </div>
           )}
-          <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-bold border-2"
-            style={{ borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-            <MessageCircle size={18} /> {t('auto.evaluacionInicialView.contactarMientrasTanto')}
-          </a>
-        </div>
+          {wa && (
+            <a href={wa} target="_blank" rel="noopener noreferrer" className="mx-auto mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-v-fill px-5 text-sm font-semibold text-v-text transition-colors hover:bg-v-accent-soft hover:text-v-accent">
+              <MessageCircle size={16} /> {t('auto.evaluacionInicialView.contactarMientrasTanto')}
+            </a>
+          )}
+        </Estado>
       </div>
     )
   }
 
-  // ═══ FASE 7: RESPUESTA DEL ESPECIALISTA ════════════════════════════════
+  // ═══ FASE 7: RESPUESTA DEL ESPECIALISTA ═══
   if (estado === 'revisado' || estado === 'completado') {
-    const elegidas = terapias.filter(t => (evaluacion.terapias_seleccionadas || []).includes(t.id))
+    const elegidas = terapias.filter(x => (evaluacion.terapias_seleccionadas || []).includes(x.id))
     return (
-      <div className="max-w-2xl mx-auto py-10 px-4">
-        <div className="rounded-3xl p-7 shadow-xl border" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white">
-              <CheckCircle2 size={28} />
-            </div>
-            <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{t("evalIni.respuestaEspecialista")}</p>
-              <h2 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>{t('auto.evaluacionInicialView.mensajePara', { v1: child.name })}</h2>
-            </div>
-          </div>
-
-          {evaluacion.respuesta_especialista ? (
-            <div className="rounded-2xl p-5 mb-5 whitespace-pre-wrap leading-relaxed"
-              style={{ background: 'rgba(16,185,129,0.08)', color: 'var(--text-primary)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              {evaluacion.respuesta_especialista}
-            </div>
-          ) : (
-            <p className="text-sm mb-5" style={{ color: 'var(--text-muted)' }}>{t("evalIni.especialistaEnviaraPronto")}</p>
-          )}
-
+      <div className="v-scope mx-auto max-w-2xl space-y-4 pb-12">
+        <Hero Icon={CheckCircle2} tone="bg-v-success/15 text-v-success" eyebrow={t('evalIni.respuestaEspecialista')} titulo={t('auto.evaluacionInicialView.mensajePara', { v1: child.name })} />
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className={`${cardClass} space-y-4 p-5`}>
+          {evaluacion.respuesta_especialista
+            ? <p className="whitespace-pre-wrap text-sm leading-relaxed text-v-text">{evaluacion.respuesta_especialista}</p>
+            : <p className="text-sm text-v-muted">{t('evalIni.especialistaEnviaraPronto')}</p>}
           {elegidas.length > 0 && (
-            <div className="rounded-xl p-4 mb-4" style={{ background: 'var(--muted-bg)' }}>
-              <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--text-muted)' }}>{t("evalIni.terapiasSolicitadas")}</p>
-              <ul className="space-y-1 text-sm" style={{ color: 'var(--text-primary)' }}>
-                {elegidas.map(ter => <li key={ter.id}>· {ter.nombre}</li>)}
+            <div className="rounded-v-sm bg-v-fill p-4">
+              <p className="text-xs font-semibold text-v-muted">{t('evalIni.terapiasSolicitadas')}</p>
+              <ul className="mt-2 space-y-1.5">
+                {elegidas.map(ter => <li key={ter.id} className="flex items-center gap-2 text-sm text-v-text"><CheckCircle2 size={14} className="shrink-0 text-v-success" /> {ter.nombre}</li>)}
               </ul>
             </div>
           )}
-
-          <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
-            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-green-600 text-white font-bold">
-            <MessageCircle size={18} /> Coordinar primera cita
-          </a>
-        </div>
+          {wa && (
+            <a href={wa} target="_blank" rel="noopener noreferrer" className="v-brand inline-flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold">
+              <MessageCircle size={16} /> {L('Book the first appointment', 'Coordinar la primera cita')}
+            </a>
+          )}
+        </motion.section>
       </div>
     )
   }
 
-  // ═══ FASE: RECHAZADO ═══════════════════════════════════════════════════
+  // ═══ FASE: DUDAS ENVIADAS ═══
   if (estado === 'rechazado') {
     return (
-      <div className="max-w-xl mx-auto py-10 px-4">
-        <div className="rounded-3xl p-7 text-center shadow-xl border-2 border-amber-300 bg-amber-50">
-          <AlertCircle size={48} className="text-amber-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-3 text-amber-900">{t("evalIni.recibimosDudas")}</h2>
-          <p className="text-amber-800 mb-5">
-            {t('auto.evaluacionInicialView.nuestroEquipoSeVaA')}
-          </p>
-          <a href="https://wa.me/51991070734" target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-600 text-white font-bold">
-            <MessageCircle size={18} /> Contactar ahora
-          </a>
-        </div>
+      <div className="v-scope py-6">
+        <Estado Icon={HelpCircle} tone="bg-v-accent-soft text-v-accent" titulo={t('evalIni.recibimosDudas')}>
+          <p className="mt-2 text-sm leading-relaxed text-v-muted">{t('auto.evaluacionInicialView.nuestroEquipoSeVaA')}</p>
+          {wa && (
+            <a href={wa} target="_blank" rel="noopener noreferrer" className="v-brand mx-auto mt-5 inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold">
+              <MessageCircle size={16} /> {L('Contact now', 'Contactar ahora')}
+            </a>
+          )}
+        </Estado>
       </div>
     )
   }
@@ -1162,277 +1110,392 @@ export default function EvaluacionInicialView({ child, profile }: Props) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════
-// Componentes wizard reutilizables
+// Asistente por secciones (ficha inicial y anamnesis)
 // ═════════════════════════════════════════════════════════════════════════
+export function Wizard({ clave, secciones, seccionIdx, setSeccionIdx, respuestas, setRespuestas, enviando, textoEnviando, hero, onEnviar }: {
+  clave: string; secciones: Seccion[]; seccionIdx: number; setSeccionIdx: (n: number) => void
+  respuestas: Record<string, any>; setRespuestas: (r: any) => void
+  enviando: boolean; textoEnviando: string; hero: React.ReactNode; onEnviar: () => void
+}) {
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
+  const [faltantes, setFaltantes] = useState<string[]>([])
+  useBorrador(clave, respuestas, setRespuestas)
 
-function WizardIntake({ child, seccionIdx, setSeccionIdx, respuestas, setRespuestas, enviando, analizando, onEnviar }: any) {
-  const { t, locale } = useI18n()
-  const SECCIONES_INTAKE = locale === 'en' ? SECCIONES_INTAKE_EN : SECCIONES_INTAKE_ES
-  const seccion = SECCIONES_INTAKE[seccionIdx]
-  const progreso = ((seccionIdx + 1) / SECCIONES_INTAKE.length) * 100
-
-  return (
-    <div className="max-w-3xl mx-auto pb-12">
-      <div className="rounded-3xl p-6 mb-6 text-white shadow-xl" style={{ background: 'linear-gradient(135deg,#0284c7,#0ea5e9)' }}>
-        <div className="flex items-center gap-3 mb-2">
-          <ClipboardCheck size={28} />
-          <h1 className="text-2xl font-bold">{t("evalIni.fichaInicialPapas")}</h1>
-        </div>
-        <p className="text-white/90 text-sm mb-2">
-          {t('auto.evaluacionInicialView.docNecesarioPre')}<strong>{child.name}</strong>.
-        </p>
-        <p className="text-white/80 text-xs leading-relaxed">
-          {t('auto.evaluacionInicialView.cuestionarioPre')}<strong>{t('auto.evaluacionInicialView.privadosConfidenciales')}</strong>{t('auto.evaluacionInicialView.cuestionarioPost')}
-        </p>
-      </div>
-
-      <BarraProgreso paso={seccionIdx + 1} total={SECCIONES_INTAKE.length} progreso={progreso} />
-
-      <SeccionRender seccion={seccion} respuestas={respuestas} setRespuestas={setRespuestas} />
-
-      <NavWizard
-        idx={seccionIdx}
-        total={SECCIONES_INTAKE.length}
-        onPrev={() => setSeccionIdx(Math.max(0, seccionIdx - 1))}
-        onNext={() => {
-          for (const p of seccion.preguntas) {
-            if ((p as any).required && !respuestas[p.id]) { alert(`Responde: "${p.label}"`); return }
-          }
-          setSeccionIdx(seccionIdx + 1)
-        }}
-        onSubmit={() => {
-          for (const p of seccion.preguntas) {
-            if ((p as any).required && !respuestas[p.id]) { alert(`Responde: "${p.label}"`); return }
-          }
-          onEnviar()
-        }}
-        enviando={enviando}
-        textoEnviando={analizando ? 'Analizando…' : 'Enviando…'}
-      />
-    </div>
-  )
-}
-
-function WizardAnamnesis({ child, tipo, secciones, seccionIdx, setSeccionIdx, respuestas, setRespuestas, enviando, onEnviar }: any) {
-  const { t } = useI18n()
   const seccion = secciones[seccionIdx]
-  const progreso = ((seccionIdx + 1) / secciones.length) * 100
-  const titulo = tipo === 'neuropsicologica' ? t('auto.evaluacionInicialView.fichaNeuro') : t('auto.evaluacionInicialView.fichaPsico')
+  const total = secciones.length
+  const ultimo = seccionIdx === total - 1
+  const estadoSeccion = (s: Seccion) => {
+    const req = s.preguntas.filter((p: any) => p.required)
+    const hechas = s.preguntas.filter(p => !vacio(respuestas[p.id])).length
+    return { hechas, total: s.preguntas.length, completa: req.every(p => !vacio(respuestas[p.id])) && hechas > 0 }
+  }
+  const progreso = Math.round(secciones.reduce((a, s) => a + (estadoSeccion(s).completa ? 1 : 0), 0) / total * 100)
+
+  const irA = (i: number) => {
+    setFaltantes([])
+    setSeccionIdx(i)
+    document.getElementById('eval-wizard-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  const validar = () => {
+    const f = seccion.preguntas.filter((p: any) => p.required && vacio(respuestas[p.id])).map(p => p.id)
+    setFaltantes(f)
+    if (f.length) document.getElementById(`preg-${f[0]}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return f.length === 0
+  }
+  const cambiar = (upd: any) => { setRespuestas(upd); if (faltantes.length) setFaltantes([]) }
 
   return (
-    <div className="max-w-3xl mx-auto pb-12">
-      <div className="rounded-3xl p-6 mb-6 text-white shadow-xl" style={{ background: tipo === 'neuropsicologica' ? 'linear-gradient(135deg,#0284c7,#0284c7)' : 'linear-gradient(135deg,#ec4899,#f43f5e)' }}>
-        <h1 className="text-2xl font-bold mb-1">{titulo}</h1>
-        <p className="text-white/90 text-sm">
-          {t('auto.evaluacionInicialView.algunasPreguntasPre')}<strong>{child.name}</strong>.
-        </p>
-      </div>
+    <div id="eval-wizard-top" className="v-scope mx-auto max-w-5xl space-y-5 pb-12">
+      {hero}
 
-      <BarraProgreso paso={seccionIdx + 1} total={secciones.length} progreso={progreso} />
-      <SeccionRender seccion={seccion} respuestas={respuestas} setRespuestas={setRespuestas} />
-      <NavWizard
-        idx={seccionIdx}
-        total={secciones.length}
-        onPrev={() => setSeccionIdx(Math.max(0, seccionIdx - 1))}
-        onNext={() => {
-          for (const p of seccion.preguntas) {
-            if ((p as any).required && !respuestas[p.id]) { alert(`Responde: "${p.label}"`); return }
-          }
-          setSeccionIdx(seccionIdx + 1)
-        }}
-        onSubmit={() => {
-          for (const p of seccion.preguntas) {
-            if ((p as any).required && !respuestas[p.id]) { alert(`Responde: "${p.label}"`); return }
-          }
-          onEnviar()
-        }}
-        enviando={enviando}
-        textoEnviando="Guardando…"
-      />
+      <div className="grid gap-5 lg:grid-cols-[250px_1fr]">
+        {/* Índice de secciones */}
+        <aside className="hidden lg:block">
+          <div className={`${cardClass} sticky top-4 p-2`}>
+            <div className="flex items-center justify-between px-3 pb-2 pt-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-v-subtle">{L('Sections', 'Secciones')}</p>
+              <p className="text-[11px] font-semibold tabular-nums text-v-accent">{progreso}%</p>
+            </div>
+            <div className="mx-3 mb-2 h-1.5 overflow-hidden rounded-full bg-v-fill">
+              <motion.div className="v-brand h-full rounded-full" animate={{ width: `${progreso}%` }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} />
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+              {secciones.map((s, i) => {
+                const on = i === seccionIdx
+                const { completa } = estadoSeccion(s)
+                const Icon = iconoDe(s)
+                return (
+                  <button key={i} onClick={() => irA(i)}
+                    className={`relative flex w-full items-center gap-2.5 rounded-v-sm px-3 py-2 text-left text-[13px] transition-colors ${on ? 'text-v-accent' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+                    {on && <motion.span layoutId="eval-seccion" transition={{ type: 'spring', stiffness: 420, damping: 34 }} className="absolute inset-0 rounded-v-sm bg-v-accent-soft" />}
+                    <span className={`relative grid size-6 shrink-0 place-items-center rounded-full ${completa ? 'bg-v-success text-white' : on ? 'bg-v-accent text-white' : 'bg-v-fill text-v-subtle'}`}>
+                      {completa ? <Check size={12} strokeWidth={3} /> : <Icon size={12} />}
+                    </span>
+                    <span className={`relative line-clamp-2 flex-1 ${on ? 'font-semibold' : ''}`}>{s.titulo}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </aside>
+
+        <div className="min-w-0 space-y-4">
+          {/* Progreso (celular) */}
+          <div className="lg:hidden">
+            <div className="mb-1.5 flex justify-between text-xs font-semibold text-v-muted">
+              <span>{L(`Step ${seccionIdx + 1} of ${total}`, `Paso ${seccionIdx + 1} de ${total}`)}</span>
+              <span className="tabular-nums text-v-accent">{progreso}%</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-v-fill">
+              <motion.div className="v-brand h-full rounded-full" animate={{ width: `${Math.max(progreso, ((seccionIdx + 1) / total) * 100 * 0.15)}%` }} />
+            </div>
+          </div>
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.section key={seccionIdx} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
+              className={`${cardClass} overflow-hidden`}>
+              <SeccionRender seccion={seccion} indice={seccionIdx} total={total} respuestas={respuestas} setRespuestas={cambiar} faltantes={faltantes} />
+            </motion.section>
+          </AnimatePresence>
+
+          {faltantes.length > 0 && (
+            <p className="flex items-center gap-2 rounded-v-sm bg-v-danger/10 px-4 py-2.5 text-sm font-medium text-v-danger">
+              <AlertCircle size={15} /> {L('Please answer the required questions marked in red.', 'Responde las preguntas obligatorias marcadas en rojo.')}
+            </p>
+          )}
+
+          <div className={`${cardClass} flex items-center justify-between gap-2 px-4 py-3`}>
+            <button onClick={() => irA(Math.max(0, seccionIdx - 1))} disabled={seccionIdx === 0}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-v-border px-4 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill hover:text-v-text disabled:opacity-40">
+              <ChevronLeft size={16} /> {L('Back', 'Anterior')}
+            </button>
+            <span className="hidden text-xs text-v-subtle sm:block">{L('Your answers are saved on this device', 'Tus respuestas se guardan en este equipo')}</span>
+            {!ultimo ? (
+              <motion.button whileTap={{ scale: 0.97 }} onClick={() => { if (validar()) irA(seccionIdx + 1) }}
+                className="v-brand inline-flex h-10 items-center gap-1.5 rounded-full px-5 text-sm font-semibold">
+                {L('Next', 'Siguiente')} <ChevronRight size={16} />
+              </motion.button>
+            ) : (
+              <motion.button whileTap={{ scale: 0.97 }} disabled={enviando} onClick={() => { if (validar()) onEnviar() }}
+                className="v-brand inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold disabled:opacity-60">
+                {enviando ? <><Loader2 className="animate-spin" size={16} /> {textoEnviando}</> : <><Send size={16} /> {L('Send', 'Enviar')}</>}
+              </motion.button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
-function BarraProgreso({ paso, total, progreso }: { paso: number; total: number; progreso: number }) {
+function OpcionPill({ on, onClick, children, check = false }: { on: boolean; onClick: () => void; children: React.ReactNode; check?: boolean }) {
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-2 text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
-        <span>Paso {paso} de {total}</span>
-        <span>{Math.round(progreso)}%</span>
-      </div>
-      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'var(--muted-bg)' }}>
-        <div className="h-full bg-gradient-to-r from-sky-500 to-cyan-500 transition-all" style={{ width: `${progreso}%` }} />
-      </div>
-    </div>
+    <motion.button type="button" whileTap={{ scale: 0.98 }} onClick={onClick}
+      className={`flex items-center gap-2.5 rounded-v-sm border px-4 py-3 text-left text-sm font-medium transition-all ${on ? 'border-transparent bg-v-accent-soft text-v-accent ring-4 ring-v-accent-soft' : 'border-v-border bg-v-bg text-v-text hover:border-v-accent/40'}`}>
+      <span className={`grid size-5 shrink-0 place-items-center border-2 transition-colors ${check ? 'rounded-md' : 'rounded-full'} ${on ? 'border-v-accent bg-v-accent text-white' : 'border-v-border'}`}>
+        {on && (check ? <Check size={12} strokeWidth={3} /> : <span className="size-2 rounded-full bg-white" />)}
+      </span>
+      <span className="min-w-0 flex-1">{children}</span>
+    </motion.button>
   )
 }
 
-function NavWizard({ idx, total, onPrev, onNext, onSubmit, enviando, textoEnviando }: any) {
-  const { t, locale } = useI18n()
-  const last = idx === total - 1
-  return (
-    <div className="flex items-center justify-between mt-6 pt-6 border-t" style={{ borderColor: 'var(--card-border)' }}>
-      <button onClick={onPrev} disabled={idx === 0}
-        className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm disabled:opacity-30"
-        style={{ color: 'var(--text-secondary)' }}>
-        <ChevronLeft size={18} /> Anterior
-      </button>
-      {!last ? (
-        <button onClick={onNext}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-sky-600 to-cyan-600 text-white shadow-lg">
-          Siguiente <ChevronRight size={18} />
-        </button>
-      ) : (
-        <button onClick={onSubmit} disabled={enviando}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg disabled:opacity-50">
-          {enviando ? <><Loader2 className="animate-spin" size={18} /> {textoEnviando}</> : <><Sparkles size={18} /> {t("common.enviar")}</>}
-        </button>
-      )}
-    </div>
-  )
-}
-
-function SeccionRender({ seccion, respuestas, setRespuestas }: any) {
+function SeccionRender({ seccion, indice, total, respuestas, setRespuestas, faltantes }: any) {
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
   const setCampo = (id: string, v: any) => setRespuestas((r: any) => ({ ...r, [id]: v }))
   const toggleCheck = (id: string, o: string) => setRespuestas((r: any) => {
     const arr = Array.isArray(r[id]) ? r[id] : []
     return { ...r, [id]: arr.includes(o) ? arr.filter((x: string) => x !== o) : [...arr, o] }
   })
+  const Icon = iconoDe(seccion)
 
   return (
-    <div className="rounded-2xl p-6 shadow-lg border" style={{ background: 'var(--card)', borderColor: 'var(--card-border)' }}>
-      <div className="flex items-center gap-3 mb-1">
-        <span className="text-3xl">{seccion.icono}</span>
-        <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{seccion.titulo}</h2>
+    <>
+      <div className="flex items-start gap-3 border-b border-v-border px-5 py-5 sm:px-6">
+        <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Icon size={19} /></span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold tabular-nums text-v-subtle">{L(`Section ${indice + 1} of ${total}`, `Sección ${indice + 1} de ${total}`)}</p>
+          <h3 className="text-lg font-semibold leading-tight tracking-tight text-v-text">{seccion.titulo}</h3>
+          {seccion.descripcion && <p className="mt-1 text-sm text-v-muted">{seccion.descripcion}</p>}
+        </div>
       </div>
-      {seccion.descripcion && <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>{seccion.descripcion}</p>}
+      <div className="divide-y divide-v-border">
+        {seccion.preguntas.map((p: Pregunta) => {
+          const falta = faltantes.includes(p.id)
+          const valor = respuestas[p.id]
+          return (
+            <div key={p.id} id={`preg-${p.id}`} className={`px-5 py-5 transition-colors sm:px-6 ${falta ? 'bg-v-danger/5' : ''}`}>
+              <label className="mb-2.5 flex items-start gap-2 text-sm font-semibold text-v-text">
+                <span className="flex-1">{p.label}{(p as any).required && <span className="ml-1 text-v-danger">*</span>}</span>
+                {!vacio(valor) && <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-v-success" />}
+              </label>
 
-      <div className="space-y-5">
-        {seccion.preguntas.map((p: Pregunta) => (
-          <div key={p.id}>
-            <label className="block text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-              {p.label}{(p as any).required && <span className="text-red-500 ml-1">*</span>}
-            </label>
-
-            {(p.type === 'text' || p.type === 'number' || p.type === 'date') && (
-              <input
-                type={p.type === 'date' ? 'date' : p.type}
-                value={respuestas[p.id] || ''}
-                placeholder={(p as any).placeholder}
-                onChange={e => setCampo(p.id, e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border outline-none focus:border-sky-500"
-                style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}
-              />
-            )}
-            {p.type === 'textarea' && (
-              <textarea value={respuestas[p.id] || ''} placeholder={(p as any).placeholder} onChange={e => setCampo(p.id, e.target.value)} rows={3}
-                className="w-full px-4 py-3 rounded-xl border outline-none focus:border-sky-500 resize-none"
-                style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
-            )}
-            {p.type === 'select' && (
-              <select value={respuestas[p.id] || ''} onChange={e => setCampo(p.id, e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border outline-none focus:border-sky-500"
-                style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-                <option value="">— Selecciona —</option>
-                {(p as any).options.map((o: string) => <option key={o} value={o}>{o}</option>)}
-              </select>
-            )}
-            {p.type === 'radio' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(p as any).options.map((o: string) => (
-                  <button key={o} type="button" onClick={() => setCampo(p.id, o)}
-                    className={`px-4 py-3 rounded-xl text-sm font-semibold border-2 text-left transition-all ${
-                      respuestas[p.id] === o ? 'border-sky-500 bg-sky-50 text-sky-700' : 'hover:border-sky-300'
-                    }`}
-                    style={respuestas[p.id] === o ? {} : { background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-                    {o}
-                  </button>
-                ))}
-              </div>
-            )}
-            {p.type === 'checkbox' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(p as any).options.map((o: string) => {
-                  const checked = Array.isArray(respuestas[p.id]) && respuestas[p.id].includes(o)
-                  return (
-                    <button key={o} type="button" onClick={() => toggleCheck(p.id, o)}
-                      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border-2 text-left transition-all ${
-                        checked ? 'border-sky-500 bg-sky-50 text-sky-700' : 'hover:border-sky-300'
-                      }`}
-                      style={checked ? {} : { background: 'var(--muted-bg)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${checked ? 'bg-sky-600 border-sky-600' : 'border-slate-400'}`}>
-                        {checked && <CheckCircle2 size={12} className="text-white" />}
-                      </div>
-                      {o}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-            {p.type === 'tabla_dinamica' && (() => {
-              const cols = (p as any).columns as ColumnaTabla[]
-              const minRows = (p as any).minRows ?? 1
-              const filas: any[] = Array.isArray(respuestas[p.id]) ? respuestas[p.id] : []
-              const filasMostrar = filas.length >= minRows ? filas : [...filas, ...Array(minRows - filas.length).fill({})]
-              const setFila = (idx: number, colId: string, v: any) => {
-                const next = [...filasMostrar]
-                next[idx] = { ...(next[idx] || {}), [colId]: v }
-                setCampo(p.id, next)
-              }
-              const addFila = () => setCampo(p.id, [...filasMostrar, {}])
-              const removeFila = (idx: number) => {
-                const next = filasMostrar.filter((_, i) => i !== idx)
-                setCampo(p.id, next.length === 0 ? [{}] : next)
-              }
-              return (
-                <div className="space-y-3">
-                  {filasMostrar.map((fila, idx) => (
-                    <div key={idx} className="rounded-xl border-2 p-3 space-y-2 relative"
-                      style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)' }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                          {(p as any).addLabel?.replace(/^\+\s*/, '') || 'Fila'} {idx + 1}
-                        </span>
-                        {filasMostrar.length > minRows && (
-                          <button type="button" onClick={() => removeFila(idx)}
-                            className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-1">
-                            <X size={12} /> Quitar
-                          </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {cols.map(col => (
-                          <div key={col.id}>
-                            <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>{col.label}</label>
-                            {col.options ? (
-                              <select value={fila[col.id] || ''} onChange={e => setFila(idx, col.id, e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-sky-500"
-                                style={{ background: 'var(--card)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }}>
-                                <option value="">—</option>
-                                {col.options.map(o => <option key={o} value={o}>{o}</option>)}
-                              </select>
-                            ) : (
-                              <input type={col.type || 'text'} value={fila[col.id] || ''} placeholder={col.placeholder}
-                                onChange={e => setFila(idx, col.id, e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:border-sky-500"
-                                style={{ background: 'var(--card)', borderColor: 'var(--card-border)', color: 'var(--text-primary)' }} />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <button type="button" onClick={addFila}
-                    className="w-full py-2.5 rounded-xl border-2 border-dashed text-sm font-bold flex items-center justify-center gap-2 hover:border-sky-400 transition-colors"
-                    style={{ borderColor: 'var(--card-border)', color: 'var(--text-secondary)' }}>
-                    <span className="text-lg leading-none">+</span> {(p as any).addLabel || 'Agregar fila'}
-                  </button>
+              {(p.type === 'text' || p.type === 'number' || p.type === 'date') && (
+                <input type={p.type} value={valor || ''} placeholder={(p as any).placeholder} onChange={e => setCampo(p.id, e.target.value)}
+                  className={`${qInput} ${p.type === 'date' ? 'max-w-xs' : ''} ${falta ? 'border-v-danger/60' : ''}`} />
+              )}
+              {p.type === 'textarea' && (
+                <textarea value={valor || ''} placeholder={(p as any).placeholder} onChange={e => setCampo(p.id, e.target.value)} rows={3}
+                  className={`${qInput} resize-y leading-relaxed ${falta ? 'border-v-danger/60' : ''}`} />
+              )}
+              {(p.type === 'radio' || p.type === 'select') && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {(p as any).options.map((o: string) => <OpcionPill key={o} on={valor === o} onClick={() => setCampo(p.id, valor === o && p.type === 'select' ? '' : o)}>{o}</OpcionPill>)}
                 </div>
-              )
-            })()}
-          </div>
+              )}
+              {p.type === 'checkbox' && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {(p as any).options.map((o: string) => (
+                    <OpcionPill key={o} check on={Array.isArray(valor) && valor.includes(o)} onClick={() => toggleCheck(p.id, o)}>{o}</OpcionPill>
+                  ))}
+                </div>
+              )}
+              {p.type === 'tabla_dinamica' && (() => {
+                const cols = (p as any).columns as ColumnaTabla[]
+                const minRows = (p as any).minRows ?? 1
+                const filas: any[] = Array.isArray(valor) ? valor : []
+                const filasMostrar = filas.length >= minRows ? filas : [...filas, ...Array(minRows - filas.length).fill({})]
+                const setFila = (idx: number, colId: string, v: any) => {
+                  const next = [...filasMostrar]
+                  next[idx] = { ...(next[idx] || {}), [colId]: v }
+                  setCampo(p.id, next)
+                }
+                const base = ((p as any).addLabel || '').replace(/^\+\s*/, '').replace(/^(Agregar|Añadir|Add)\s+/i, '')
+                const etiqueta = base ? base.charAt(0).toUpperCase() + base.slice(1) : L('Row', 'Fila')
+                return (
+                  <div className="space-y-3">
+                    {filasMostrar.map((fila, idx) => (
+                      <div key={idx} className="rounded-v-sm border border-v-border bg-v-bg p-3.5">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-semibold text-v-muted">{etiqueta} {idx + 1}</span>
+                          {filasMostrar.length > minRows && (
+                            <button type="button" onClick={() => { const next = filasMostrar.filter((_, i) => i !== idx); setCampo(p.id, next.length ? next : [{}]) }}
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-v-danger hover:bg-v-danger/10">
+                              <Trash2 size={12} /> {L('Remove', 'Quitar')}
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                          {cols.map(col => (
+                            <div key={col.id}>
+                              <label className="mb-1 block text-[11px] font-semibold text-v-muted">{col.label}</label>
+                              {col.options ? (
+                                <select value={fila[col.id] || ''} onChange={e => setFila(idx, col.id, e.target.value)} className={`${qInput} bg-v-elevated py-2.5`}>
+                                  <option value="">—</option>
+                                  {col.options.map(o => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                              ) : (
+                                <input type={col.type || 'text'} value={fila[col.id] || ''} placeholder={col.placeholder} onChange={e => setFila(idx, col.id, e.target.value)} className={`${qInput} bg-v-elevated py-2.5`} />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setCampo(p.id, [...filasMostrar, {}])}
+                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-dashed border-v-border text-sm font-semibold text-v-muted transition-colors hover:border-v-accent/50 hover:text-v-accent">
+                      <Plus size={15} /> {(p as any).addLabel?.replace(/^\+\s*/, '') || L('Add row', 'Agregar fila')}
+                    </button>
+                  </div>
+                )
+              })()}
+              {falta && <p className="mt-2 text-xs font-medium text-v-danger">{L('This question is required.', 'Esta pregunta es obligatoria.')}</p>}
+            </div>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// Evaluación compartida familia ↔ equipo: secciones, visor de respuestas y constancia
+// ═════════════════════════════════════════════════════════════════════════
+
+/** Secciones de cada ficha: la inicial (intake) o la 2ª, según la recomendación. */
+export function seccionesEvaluacion(tipo: 'intake' | 'anamnesis', recomendacion: string | null | undefined, en: boolean): Seccion[] {
+  if (tipo === 'intake') return en ? SECCIONES_INTAKE_EN : SECCIONES_INTAKE_ES
+  return recomendacion === 'neuropsicologica' ? (en ? SECCIONES_NEURO_EN : SECCIONES_NEURO_ES) : (en ? SECCIONES_PSICO_EN : SECCIONES_PSICO_ES)
+}
+
+function valorTexto(p: Pregunta, v: any, en: boolean): React.ReactNode {
+  if (v == null || v === '' || (Array.isArray(v) && v.length === 0)) return null
+  if (p.type === 'date' && typeof v === 'string') {
+    const d = new Date(v + 'T12:00:00')
+    return isNaN(d.getTime()) ? v : d.toLocaleDateString(en ? 'en-US' : 'es-PE', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+  if (p.type === 'tabla_dinamica' && Array.isArray(v)) {
+    const cols = (p as any).columns as ColumnaTabla[]
+    const filas = v.filter(f => f && Object.values(f).some(x => x != null && String(x).trim() !== ''))
+    if (!filas.length) return null
+    return (
+      <div className="space-y-1.5">
+        {filas.map((f, i) => (
+          <p key={i} className="rounded-v-sm bg-v-fill/60 px-3 py-2 text-sm">
+            {cols.map(c => f[c.id] ? <span key={c.id} className="mr-3 inline-block"><span className="text-v-subtle">{c.label}:</span> {String(f[c.id])}</span> : null)}
+          </p>
         ))}
       </div>
+    )
+  }
+  if (Array.isArray(v)) return (
+    <div className="flex flex-wrap gap-1.5">{v.map((x: any) => <span key={String(x)} className="rounded-full bg-v-accent-soft px-2.5 py-0.5 text-xs font-medium text-v-accent">{String(x)}</span>)}</div>
+  )
+  if (typeof v === 'object') return JSON.stringify(v)
+  return <span className="whitespace-pre-wrap">{String(v)}</span>
+}
+
+/** Respuestas de una ficha en solo lectura, agrupadas por sección (con las preguntas originales). */
+export function RespuestasEvaluacion({ secciones, respuestas, abiertaInicial = false }: { secciones: Seccion[]; respuestas: Record<string, any>; abiertaInicial?: boolean }) {
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const [abiertas, setAbiertas] = useState<Set<number>>(() => new Set(abiertaInicial ? [0] : []))
+  const conDatos = secciones.map((sec, i) => ({ sec, i, filas: sec.preguntas.map(p => ({ p, v: valorTexto(p, respuestas?.[p.id], en) })).filter(x => x.v != null) }))
+  const visibles = conDatos.filter(x => x.filas.length > 0)
+  if (!visibles.length) return <p className="text-sm text-v-muted">{en ? 'No answers recorded yet.' : 'Aún no hay respuestas registradas.'}</p>
+  return (
+    <div className="space-y-2">
+      {visibles.map(({ sec, i, filas }) => {
+        const Icono = ICONO_SECCION[sec.icono] || ClipboardList
+        const abierta = abiertas.has(i)
+        return (
+          <div key={i} className="overflow-hidden rounded-v-sm border border-v-border bg-v-bg">
+            <button type="button" onClick={() => setAbiertas(a => { const n = new Set(a); n.has(i) ? n.delete(i) : n.add(i); return n })}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-v-fill/50">
+              <span className="grid size-8 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Icono size={15} /></span>
+              <span className="min-w-0 flex-1 text-sm font-semibold text-v-text">{sec.titulo}</span>
+              <span className="shrink-0 text-[11px] tabular-nums text-v-subtle">{filas.length}/{sec.preguntas.length}</span>
+              <ChevronRight size={16} className={`shrink-0 text-v-subtle transition-transform ${abierta ? 'rotate-90' : ''}`} />
+            </button>
+            <AnimatePresence initial={false}>
+              {abierta && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <dl className="space-y-3 border-t border-v-border px-4 py-3">
+                    {filas.map(({ p, v }) => (
+                      <div key={p.id}>
+                        <dt className="text-xs font-semibold text-v-muted">{p.label}</dt>
+                        <dd className="mt-0.5 text-sm text-v-text">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )
+      })}
     </div>
+  )
+}
+
+/** "Llenado por…": la familia o el equipo, con fecha. */
+export function autoriaFicha(rol: string | null | undefined, fecha: string | null | undefined, en: boolean, vistaFamilia: boolean) {
+  const quien = !rol ? null
+    : rol === 'padre' ? (vistaFamilia ? (en ? 'you' : 'ti') : (en ? 'the family' : 'la familia'))
+    : (en ? "the center's team" : 'el equipo del centro')
+  const cuando = fecha ? new Date(fecha).toLocaleDateString(en ? 'en-US' : 'es-PE', { day: 'numeric', month: 'short', year: 'numeric' }) : null
+  if (!quien && !cuando) return null
+  return en ? `Filled in${quien ? ` by ${quien}` : ''}${cuando ? ` · ${cuando}` : ''}` : `Llenada${quien ? ` por ${quien}` : ''}${cuando ? ` · ${cuando}` : ''}`
+}
+
+/** Constancia para la familia: lo que se llenó (por ella o por el equipo) siempre queda visible. */
+function ConstanciaEvaluacion({ child }: { child: any }) {
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
+  const [ev, setEv] = useState<any>(null)
+  useEffect(() => {
+    if (!child?.id) return
+    const cargar = () => fetch(`/api/evaluacion-inicial?child_id=${child.id}`).then(r => r.json()).then(d => setEv(d?.evaluacion ?? null)).catch(() => {})
+    cargar()
+    window.addEventListener('vanty:eval-inicial', cargar)
+    return () => window.removeEventListener('vanty:eval-inicial', cargar)
+  }, [child?.id])
+
+  if (!ev?.respuestas_intake || ev.estado === 'pendiente_intake') return null
+  const fichas = [
+    { titulo: L('Initial form for parents', 'Ficha inicial para papás'), secciones: seccionesEvaluacion('intake', null, en), resp: ev.respuestas_intake, autor: autoriaFicha(ev.intake_llenado_rol, ev.intake_completado_en, en, true) },
+    ...(ev.anamnesis_especifica ? [{
+      titulo: ev.recomendacion === 'neuropsicologica' ? L('Neuropsychological form', 'Ficha neuropsicológica') : L('Psychological-emotional form', 'Ficha psicológica emocional'),
+      secciones: seccionesEvaluacion('anamnesis', ev.recomendacion, en), resp: ev.anamnesis_especifica,
+      autor: autoriaFicha(ev.anamnesis_llenado_rol, ev.anamnesis_completada_en, en, true),
+    }] : []),
+  ]
+  return (
+    <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={`${cardClass} mx-auto mt-5 max-w-4xl p-4 sm:p-5`}>
+      <div className="mb-4 flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><ClipboardCheck size={18} /></span>
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold text-v-text">{L('Record of the evaluation', 'Constancia de la evaluación')}</p>
+          <p className="text-xs text-v-muted">{L(`Everything recorded about ${child.name}. It stays here for you to review anytime.`, `Todo lo registrado sobre ${child.name}. Queda aquí para que lo revises cuando quieras.`)}</p>
+        </div>
+      </div>
+      <div className="space-y-5">
+        {fichas.map(f => (
+          <div key={f.titulo}>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-v-text">{f.titulo}</p>
+              {f.autor && <span className="rounded-full bg-v-fill px-2.5 py-0.5 text-[11px] text-v-muted">{f.autor}</span>}
+            </div>
+            <RespuestasEvaluacion secciones={f.secciones} respuestas={f.resp} />
+          </div>
+        ))}
+        {ev.editado_en && <p className="text-[11px] text-v-subtle">{L('Last updated by the center’s team on ', 'Actualizada por el equipo del centro el ')}{new Date(ev.editado_en).toLocaleDateString(en ? 'en-US' : 'es-PE', { day: 'numeric', month: 'long' })}</p>}
+      </div>
+    </motion.section>
+  )
+}
+
+export default function EvaluacionInicialView(props: Props) {
+  return (
+    <>
+      <FlujoEvaluacion {...props} />
+      <div className="v-scope pb-10"><ConstanciaEvaluacion child={props.child} /></div>
+    </>
   )
 }

@@ -3,11 +3,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, canAccessChild, unauthorized, notFound } from '@/lib/api-auth'
 
 const BUCKET = 'chat-media'
 const MAX_SIZE = 20 * 1024 * 1024 // 20MB
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
@@ -15,6 +18,7 @@ export async function POST(req: NextRequest) {
 
     if (!file) return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 })
     if (!childId) return NextResponse.json({ error: 'child_id requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
     if (file.size > MAX_SIZE) return NextResponse.json({ error: 'Archivo demasiado grande (máx 20MB)' }, { status: 413 })
 
     const ext = file.name.split('.').pop() || 'bin'

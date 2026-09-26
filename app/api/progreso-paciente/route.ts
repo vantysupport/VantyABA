@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
+import { getApiCaller, canAccessChild, unauthorized, notFound } from '@/lib/api-auth'
 
 function getAdmin() {
   return createClient(
@@ -58,6 +59,10 @@ export async function GET(request: NextRequest) {
   const childId = searchParams.get('child_id')
   const semanas = parseInt(searchParams.get('semanas') || '12')
   if (!childId) return NextResponse.json({ error: 'child_id requerido' }, { status: 400 })
+
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!(await canAccessChild(caller, childId))) return notFound()
 
   const db = getAdmin()
 

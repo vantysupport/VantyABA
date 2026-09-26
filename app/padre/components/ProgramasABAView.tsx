@@ -1,103 +1,82 @@
 'use client'
 // app/padre/components/ProgramasABAView.tsx
-// Vista para que los padres vean y practiquen los programas ABA en casa
+// Programas ABA para las familias: qué trabaja su hijo/a, cómo practicarlo en casa y registro semanal.
+// Los textos que escribe el equipo se muestran traducidos cuando la app está en inglés.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useI18n } from '@/lib/i18n-context'
+import { toBCP47 } from '@/lib/i18n'
 import { supabase } from '@/lib/supabase'
+import { useTraducir } from '@/lib/use-traducir'
 import {
-  ChevronDown, ChevronUp, CheckCircle, Circle,
-  BookOpen, Target, Clock, TrendingUp, Loader2,
-  Star, Award, Calendar, BarChart2, Info,
-  MessageCircle, Zap, Brain, Users, Activity, Languages, Pin, Lightbulb, Gift
+  ChevronDown, CheckCircle2, Check, BookOpen, Target, Loader2, Star, Award, Info,
+  MessageCircle, Zap, Brain, Users, Activity, Languages, Lightbulb, Gift,
+  MessagesSquare, Hand, Package, RotateCcw, Sprout, TrendingUp, X,
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 
+interface Objetivo {
+  id: string; nombre?: string; descripcion?: string; estado: string; numero_set: number
+  materiales?: string; sd_estimulo?: string; unidad_positiva?: string; unidad_negativa?: string
+  reforzadores?: string; correction_errores?: string; generalizacion?: string
+}
 interface Programa {
-  id: string
-  titulo: string
-  descripcion: string
-  area: string
-  fase_actual: string
-  instrucciones_casa: string
-  materiales: string
-  sd_estimulo: string
-  reforzadores: string
-  ayudas: string
-  criterio_dominio_pct: number
-  estado: string
-  objetivos_cp: {
-    id: string
-    nombre?: string
-    descripcion?: string
-    estado: string
-    numero_set: number
-    materiales?: string
-    sd_estimulo?: string
-    unidad_positiva?: string
-    unidad_negativa?: string
-    reforzadores?: string         // En la UI del admin se llama "Ayudas"
-    correction_errores?: string
-    generalizacion?: string
-  }[]
+  id: string; titulo: string; descripcion: string; area: string; fase_actual: string
+  instrucciones_casa: string; materiales: string; sd_estimulo: string; reforzadores: string; ayudas: string
+  criterio_dominio_pct: number; estado: string
+  objetivos_cp: Objetivo[]
   sesiones_datos_aba: { fecha: string; porcentaje_exito: number }[]
 }
-
 interface Props { childId: string; childName: string }
 
-const AREA_CFG: Record<string, { color: string; bg: string; Icon: any }> = {
-  'comunicacion':   { color: '#0284c7', bg: 'rgba(2,132,199,0.1)',    Icon: MessageCircle },
-  'conducta':       { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   Icon: Zap },
-  'habilidades':    { color: '#0891b2', bg: 'rgba(8,145,178,0.1)',    Icon: Brain },
-  'socializacion':  { color: '#10b981', bg: 'rgba(16,185,129,0.1)',   Icon: Users },
-  'autonomia':      { color: '#db2777', bg: 'rgba(219,39,119,0.1)',   Icon: Star },
-  'imitacion':      { color: '#06b6d4', bg: 'rgba(6,182,212,0.1)',    Icon: Activity },
-  'lenguaje':       { color: '#0284c7', bg: 'rgba(2,132,199,0.1)',    Icon: Languages },
-}
-const AREA_DEFAULT = { color: '#6b7280', bg: 'rgba(107,114,128,0.1)', Icon: Pin }
+const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
 
-const FASE_CFG: Record<string, { label: string; color: string }> = {
-  'linea_base':   { label: 'Línea base',    color: '#64748b' },
-  'intervencion': { label: 'Intervención',  color: '#0284c7' },
-  'mantenimiento':{ label: 'Mantenimiento', color: '#10b981' },
-  'dominado':     { label: 'Dominado ✓',    color: '#059669' },
+// Un ícono y un tono por área (por palabra clave: el área la escribe el equipo)
+function areaDe(area: string) {
+  const a = (area || '').toLowerCase()
+  if (/comunic|lenguaje receptivo|petici|mand/.test(a)) return { Icon: MessageCircle, tone: 'bg-v-accent-soft text-v-accent' }
+  if (/lenguaje|verbal|habla/.test(a)) return { Icon: Languages, tone: 'bg-v-accent-soft text-v-accent' }
+  if (/conduct|cooperaci/.test(a)) return { Icon: Zap, tone: 'bg-v-warning/15 text-v-warning' }
+  if (/imitaci|motor/.test(a)) return { Icon: Activity, tone: 'bg-v-success/15 text-v-success' }
+  if (/social|juego/.test(a)) return { Icon: Users, tone: 'bg-v-success/15 text-v-success' }
+  if (/autonom|vida diaria/.test(a)) return { Icon: Star, tone: 'bg-v-warning/15 text-v-warning' }
+  if (/visual|cognit|habilidad|desempe/.test(a)) return { Icon: Brain, tone: 'bg-v-accent-soft text-v-accent' }
+  return { Icon: Target, tone: 'bg-v-fill text-v-muted' }
 }
 
-function WeekTracker({ programaId, childId, objetivos }: { programaId: string; childId: string; objetivos?: { id: string; numero_set: number; descripcion?: string; nombre?: string }[] }) {
-  const { t } = useI18n()
+const FASE: Record<string, { es: string; en: string; tone: string }> = {
+  linea_base:    { es: 'Línea base', en: 'Baseline', tone: 'bg-v-fill text-v-muted' },
+  intervencion:  { es: 'En intervención', en: 'In intervention', tone: 'bg-v-accent-soft text-v-accent' },
+  mantenimiento: { es: 'Mantenimiento', en: 'Maintenance', tone: 'bg-v-success/15 text-v-success' },
+  dominado:      { es: 'Dominado', en: 'Mastered', tone: 'bg-v-success/15 text-v-success' },
+}
+
+// ─── Registro de práctica de la semana ────────────────────────────────────────
+function WeekTracker({ programaId, childId, objetivos, tr }: { programaId: string; childId: string; objetivos?: Objetivo[]; tr: (t?: string) => string }) {
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
   const [practiced, setPracticed] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
-  const [showSetPicker, setShowSetPicker] = useState<string | null>(null) // fecha seleccionada para elegir set
+  const [elegirSet, setElegirSet] = useState<string | null>(null)
 
-  const DAYS = ['L','M','X','J','V','S','D']
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const today = new Date()
-  const dow = today.getDay()
-  const monday = new Date(today)
-  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1))
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday); d.setDate(monday.getDate() + i)
-    return d.toISOString().split('T')[0]
-  })
+  const hoy = iso(today)
+  const lunes = new Date(today); lunes.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1))
+  const semana = Array.from({ length: 7 }, (_, i) => { const d = new Date(lunes); d.setDate(lunes.getDate() + i); return d })
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from('programa_practica_casa')
-        .select('fecha')
-        .eq('programa_id', programaId)
-        .eq('child_id', childId)
-        .in('fecha', weekDates)
-      if (data) setPracticed(new Set(data.map((r: any) => r.fecha)))
-    }
-    load()
+    supabase.from('programa_practica_casa').select('fecha').eq('programa_id', programaId).eq('child_id', childId).in('fecha', semana.map(iso))
+      .then(({ data }) => { if (data) setPracticed(new Set(data.map((r: any) => r.fecha))) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programaId, childId])
 
   const toggle = async (fecha: string, objetivoId?: string) => {
-    if (fecha > today.toISOString().split('T')[0]) return
-    setSaving(true)
-    setShowSetPicker(null)
+    if (fecha > hoy) return
+    setSaving(true); setElegirSet(null)
     if (practiced.has(fecha)) {
-      await supabase.from('programa_practica_casa').delete()
-        .eq('programa_id', programaId).eq('child_id', childId).eq('fecha', fecha)
+      await supabase.from('programa_practica_casa').delete().eq('programa_id', programaId).eq('child_id', childId).eq('fecha', fecha)
       setPracticed(prev => { const s = new Set(prev); s.delete(fecha); return s })
     } else {
       const record: any = { programa_id: programaId, child_id: childId, fecha }
@@ -107,285 +86,199 @@ function WeekTracker({ programaId, childId, objetivos }: { programaId: string; c
     }
     setSaving(false)
   }
-
-  const todayStr = today.toISOString().split('T')[0]
-  const hasObjetos = objetivos && objetivos.length > 0
+  const hayObjetivos = !!objetivos?.length
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text-muted)', textTransform: 'uppercase', letterSpacing: 1, margin: 0 }}>
-        {t('auto.programasABAView.practicaEstaSemana7Dias', { v1: String(practiced.size) })}
-      </p>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {weekDates.map((date, i) => {
-          const done = practiced.has(date)
-          const isToday = date === todayStr
-          const isPast = date <= todayStr
+    <div>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-v-text">{L('Practice this week', 'Práctica de esta semana')}</p>
+        <span className="rounded-full bg-v-success/15 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-v-success">{practiced.size}/7</span>
+      </div>
+      <div className="mt-2.5 grid grid-cols-7 gap-1.5">
+        {semana.map(d => {
+          const f = iso(d), done = practiced.has(f), esHoy = f === hoy, pasado = f <= hoy
           return (
-            <button
-              key={date}
-              onClick={() => {
-                if (!isPast || saving) return
-                if (done) { toggle(date); return }
-                if (hasObjetos) setShowSetPicker(date)
-                else toggle(date)
-              }}
-              disabled={saving}
-              style={{
-                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                padding: '6px 4px', borderRadius: 10, border: 'none',
-                cursor: isPast ? 'pointer' : 'default',
-                background: done ? 'rgba(16,185,129,0.15)' : isToday ? 'rgba(2,132,199,0.1)' : 'var(--c-surface)',
-                transition: 'all .15s', opacity: isPast ? 1 : 0.4
-              }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: isToday ? '#0284c7' : 'var(--c-text-muted)' }}>{DAYS[i]}</span>
-              {done
-                ? <CheckCircle size={18} color="#10b981" />
-                : <Circle size={18} color={isToday ? '#0284c7' : 'var(--c-border)'} />
-              }
-            </button>
+            <motion.button key={f} whileTap={pasado ? { scale: 0.9 } : undefined} disabled={saving || !pasado}
+              onClick={() => { if (done) toggle(f); else if (hayObjetivos) setElegirSet(f); else toggle(f) }}
+              className={`flex flex-col items-center gap-1 rounded-v-sm py-2 transition-colors disabled:cursor-default ${done ? 'bg-v-success/15' : esHoy ? 'bg-v-accent-soft' : 'bg-v-fill'} ${pasado ? '' : 'opacity-40'}`}>
+              <span className={`text-[10px] font-semibold uppercase ${esHoy ? 'text-v-accent' : 'text-v-muted'}`}>{d.toLocaleDateString(toBCP47(locale), { weekday: 'narrow' })}</span>
+              <span className={`grid size-6 place-items-center rounded-full ${done ? 'bg-v-success text-white' : esHoy ? 'border-2 border-v-accent' : 'border-2 border-v-border'}`}>
+                {done && <Check size={13} strokeWidth={3} />}
+              </span>
+            </motion.button>
           )
         })}
       </div>
-
-      {/* Set picker popup */}
-      {showSetPicker && hasObjetos && (
-        <div style={{ background: 'var(--c-card)', border: '1.5px solid var(--c-border)', borderRadius: 14, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text-muted)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 0.8 }}>
-            {t('auto.programasABAView.queSetPracticaste')}
-          </p>
-          {objetivos!.map(obj => (
-            <button key={obj.id} onClick={() => toggle(showSetPicker, obj.id)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'var(--c-surface)', borderRadius: 10, border: '1.5px solid var(--c-border)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-              <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(2,132,199,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 900, color: '#0284c7' }}>{obj.numero_set}</span>
+      <AnimatePresence>
+        {elegirSet && hayObjetivos && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="mt-3 space-y-1.5 rounded-v-sm border border-v-border bg-v-elevated p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-v-text">{L('Which set did you practice?', '¿Qué set practicaron?')}</p>
+                <button onClick={() => setElegirSet(null)} aria-label={L('Close', 'Cerrar')} className="grid size-7 place-items-center rounded-full text-v-muted hover:bg-v-fill"><X size={14} /></button>
               </div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text-primary)' }}>{obj.descripcion || obj.nombre || `Set ${obj.numero_set}`}</span>
-            </button>
-          ))}
-          <button onClick={() => toggle(showSetPicker)}
-            style={{ padding: '8px', borderRadius: 10, border: '1px dashed var(--c-border)', background: 'transparent', color: 'var(--c-text-muted)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-            {t('auto.programasABAView.marcarSinEspecificarSet')}
-          </button>
-          <button onClick={() => setShowSetPicker(null)}
-            style={{ padding: '6px', borderRadius: 10, border: 'none', background: 'transparent', color: 'var(--c-text-muted)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-            {t('auto.programasABAView.cancelar')}
-          </button>
-        </div>
-      )}
+              {objetivos!.map(o => (
+                <button key={o.id} onClick={() => toggle(elegirSet, o.id)}
+                  className="flex w-full items-center gap-2.5 rounded-v-sm bg-v-fill px-3 py-2 text-left text-sm text-v-text transition-colors hover:bg-v-accent-soft">
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-v-accent-soft text-[11px] font-bold text-v-accent">{o.numero_set}</span>
+                  <span className="min-w-0 flex-1 truncate">{tr(o.descripcion || o.nombre) || `Set ${o.numero_set}`}</span>
+                </button>
+              ))}
+              <button onClick={() => toggle(elegirSet)} className="w-full rounded-v-sm border border-dashed border-v-border py-2 text-xs font-semibold text-v-muted hover:text-v-text">
+                {L('Mark without choosing a set', 'Marcar sin elegir set')}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
-function ProgramCard({ prog, childId }: { prog: Programa; childId: string }) {
-  const { t } = useI18n()
+// ─── Tarjeta de programa ──────────────────────────────────────────────────────
+function ProgramCard({ prog, childId, index, tr }: { prog: Programa; childId: string; index: number; tr: (t?: string) => string }) {
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
   const [open, setOpen] = useState(false)
-  const [expandedObj, setExpandedObj] = useState<string | null>(null)
-  const area = AREA_CFG[prog.area?.toLowerCase()] || AREA_DEFAULT
-  const fase = FASE_CFG[prog.fase_actual] || FASE_CFG.intervencion
-  const isDone = prog.fase_actual === 'dominado' || prog.estado === 'dominado'
-
-  // Last 3 sessions avg
-  const lastSessions = (prog.sesiones_datos_aba || []).slice(0, 3)
-  const avgPct = lastSessions.length > 0
-    ? Math.round(lastSessions.reduce((s, r) => s + (r.porcentaje_exito || 0), 0) / lastSessions.length)
-    : null
+  const [setAbierto, setSetAbierto] = useState<string | null>(null)
+  const area = areaDe(prog.area)
+  const done = prog.fase_actual === 'dominado' || prog.estado === 'dominado'
+  const fase = FASE[done ? 'dominado' : prog.fase_actual] || FASE.intervencion
+  const sesiones = (prog.sesiones_datos_aba || []).slice(0, 8).reverse()
+  const ultimas = (prog.sesiones_datos_aba || []).slice(0, 3)
+  const promedio = ultimas.length ? Math.round(ultimas.reduce((s, r) => s + (r.porcentaje_exito || 0), 0) / ultimas.length) : null
+  const criterio = prog.criterio_dominio_pct || 80
+  const activos = (prog.objetivos_cp || []).filter(o => o.estado !== 'dominado')
 
   return (
-    <div style={{
-      background: 'var(--c-card)', borderRadius: 20, overflow: 'hidden',
-      border: `1px solid ${isDone ? 'rgba(16,185,129,0.3)' : 'var(--c-border)'}`,
-      opacity: isDone ? 0.8 : 1
-    }}>
-      {/* Left accent */}
-      <div style={{ height: 3, background: isDone ? '#10b981' : `linear-gradient(90deg, ${area.color}, ${area.color}88)` }} />
-
-      {/* Header */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 14, background: area.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: area.color }}>
-          {(() => { const AIcon = area.Icon; return <AIcon size={22} /> })()}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <p style={{ fontWeight: 800, fontSize: 14, color: 'var(--c-text-primary)', margin: 0, lineHeight: 1.3 }}>{prog.titulo}</p>
-            <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: area.bg, color: area.color }}>{prog.area}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: fase.color }}>{t('fase.' + prog.fase_actual)}</span>
-            {avgPct !== null && (
-              <span style={{ fontSize: 10, color: 'var(--c-text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                <BarChart2 size={10} /> {avgPct}% últimas sesiones
-              </span>
-            )}
-          </div>
-        </div>
-        <div style={{ flexShrink: 0 }}>
-          {open ? <ChevronUp size={16} color="var(--c-text-muted)" /> : <ChevronDown size={16} color="var(--c-text-muted)" />}
-        </div>
+    <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 * index, type: 'spring', stiffness: 220, damping: 24 }}
+      className={`${cardClass} overflow-hidden ${done ? 'border-v-success/40' : ''}`}>
+      <button onClick={() => setOpen(o => !o)} className="group flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-v-fill/50 sm:px-5">
+        <span className={`grid size-11 shrink-0 place-items-center rounded-[30%] ${done ? 'bg-v-success/15 text-v-success' : area.tone}`}>{done ? <Award size={20} /> : <area.Icon size={20} />}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold leading-snug tracking-tight text-v-text">{tr(prog.titulo)}</span>
+          <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {prog.area && <span className="rounded-full bg-v-fill px-2 py-0.5 text-[11px] font-medium text-v-muted">{tr(prog.area)}</span>}
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${fase.tone}`}>{en ? fase.en : fase.es}</span>
+          </span>
+        </span>
+        {/* Avance: barritas de las últimas sesiones + promedio */}
+        {promedio !== null && (
+          <span className="hidden shrink-0 items-end gap-3 sm:flex">
+            <span className="flex h-8 items-end gap-0.5">
+              {sesiones.map((s, i) => (
+                <span key={i} className={`w-1.5 rounded-sm ${(s.porcentaje_exito || 0) >= criterio ? 'bg-v-success' : 'bg-v-accent/60'}`} style={{ height: `${Math.max(12, s.porcentaje_exito || 0)}%` }} />
+              ))}
+            </span>
+            <span className="text-right">
+              <span className={`block text-lg font-bold leading-none tabular-nums ${promedio >= criterio ? 'text-v-success' : 'text-v-text'}`}>{promedio}%</span>
+              <span className="text-[10px] text-v-subtle">{L('last sessions', 'últimas sesiones')}</span>
+            </span>
+          </span>
+        )}
+        <ChevronDown size={17} className={`shrink-0 text-v-subtle transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Expanded content */}
-      {open && (
-        <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--c-border)' }}>
-          {prog.descripcion && (
-            <p style={{ fontSize: 13, color: 'var(--c-text-secondary)', lineHeight: 1.6, margin: '14px 0 12px' }}>{prog.descripcion}</p>
-          )}
-
-          {/* Instrucciones generales del programa (no del set) — solo si existen */}
-          {(prog.instrucciones_casa || prog.reforzadores) && (
-            <div style={{ background: 'var(--c-stat-blue)', border: '1px solid var(--c-border)', borderRadius: 14, padding: '12px 14px', marginTop: 14, marginBottom: 12 }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: '#0284c7', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <BookOpen size={13} /> Indicaciones generales del programa
-              </p>
-              {prog.instrucciones_casa && (
-                <div style={{ marginBottom: prog.reforzadores ? 8 : 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Info size={12} /> {t("familias.instrucciones")}</span>
-                  <p style={{ fontSize: 12, color: 'var(--c-text-primary)', margin: '4px 0 0', lineHeight: 1.6 }}>{prog.instrucciones_casa}</p>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+            <div className="space-y-4 border-t border-v-border px-4 pb-5 pt-4 sm:px-5">
+              {promedio !== null && (
+                <div className="sm:hidden">
+                  <div className="mb-1 flex justify-between text-xs"><span className="text-v-muted">{L('Last sessions', 'Últimas sesiones')}</span><span className="font-semibold tabular-nums text-v-text">{promedio}%</span></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-v-fill"><div className={`h-full rounded-full ${promedio >= criterio ? 'bg-v-success' : 'v-brand'}`} style={{ width: `${promedio}%` }} /></div>
                 </div>
               )}
-              {prog.reforzadores && (
+              {prog.descripcion && <p className="text-sm leading-relaxed text-v-muted">{tr(prog.descripcion)}</p>}
+
+              {(prog.instrucciones_casa || prog.reforzadores) && (
+                <div className="space-y-3 rounded-v-sm bg-v-accent-soft/60 p-4">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-v-accent"><BookOpen size={13} /> {L('General guidance', 'Indicaciones generales')}</p>
+                  {prog.instrucciones_casa && (
+                    <div><p className="flex items-center gap-1.5 text-[11px] font-semibold text-v-muted"><Info size={12} /> {L('Instructions', 'Instrucciones')}</p><p className="mt-1 text-sm leading-relaxed text-v-text">{tr(prog.instrucciones_casa)}</p></div>
+                  )}
+                  {prog.reforzadores && (
+                    <div><p className="flex items-center gap-1.5 text-[11px] font-semibold text-v-muted"><Gift size={12} /> {L('What motivates them', 'Lo que lo motiva')}</p><p className="mt-1 text-sm leading-relaxed text-v-text">{tr(prog.reforzadores)}</p></div>
+                  )}
+                </div>
+              )}
+
+              {activos.length > 0 && (
                 <div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 5 }}><Gift size={12} /> {t("familias.reforzadores")}</span>
-                  <p style={{ fontSize: 12, color: 'var(--c-text-primary)', margin: '4px 0 0', lineHeight: 1.6 }}>{prog.reforzadores}</p>
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-v-text"><Target size={13} className="text-v-accent" /> {L('What they are practicing now', 'Qué está practicando ahora')}</p>
+                  <div className="space-y-1.5">
+                    {activos.map(obj => {
+                      const abierto = setAbierto === obj.id
+                      const sd = obj.sd_estimulo || prog.sd_estimulo
+                      const materiales = obj.materiales || prog.materiales
+                      const ayudas = obj.reforzadores || prog.ayudas // en el admin "Ayudas" se guarda en `reforzadores` del set
+                      const campos = [
+                        { Icon: MessagesSquare, label: L('What to say or do', 'Qué decir o hacer'), v: sd },
+                        { Icon: Hand, label: L('Help / prompts', 'Ayudas'), v: ayudas },
+                        { Icon: Package, label: L('Materials', 'Materiales'), v: materiales },
+                        { Icon: RotateCcw, label: L('If they make a mistake', 'Si se equivoca'), v: obj.correction_errores },
+                        { Icon: Sprout, label: L('Take it to other places', 'Llevarlo a otros lugares'), v: obj.generalizacion },
+                      ].filter(c => c.v)
+                      return (
+                        <div key={obj.id} className={`overflow-hidden rounded-v-sm border transition-colors ${abierto ? 'border-v-accent/40' : 'border-v-border'}`}>
+                          <button onClick={() => setSetAbierto(abierto ? null : obj.id)} className={`flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors ${abierto ? 'bg-v-accent-soft/60' : 'hover:bg-v-fill'}`}>
+                            <span className={`grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-bold ${abierto ? 'v-brand' : 'bg-v-accent-soft text-v-accent'}`} style={abierto ? { boxShadow: 'none' } : undefined}>{obj.numero_set || '•'}</span>
+                            <span className="min-w-0 flex-1 text-sm font-medium leading-snug text-v-text">{tr(obj.descripcion || obj.nombre) || `Set ${obj.numero_set}`}</span>
+                            {obj.estado === 'en_progreso' && <span className="shrink-0 rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-semibold text-v-accent">{L('In progress', 'En curso')}</span>}
+                            <ChevronDown size={15} className={`shrink-0 text-v-subtle transition-transform ${abierto ? 'rotate-180' : ''}`} />
+                          </button>
+                          <AnimatePresence initial={false}>
+                            {abierto && (
+                              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                                <div className="space-y-3 border-t border-v-border bg-v-elevated px-3.5 py-3.5">
+                                  {campos.length ? (
+                                    <>
+                                      <p className="text-[11px] font-semibold uppercase tracking-wide text-v-subtle">{L('How to practice at home', 'Cómo practicarlo en casa')}</p>
+                                      {campos.map(c => (
+                                        <div key={c.label} className="flex items-start gap-2.5">
+                                          <span className="grid size-7 shrink-0 place-items-center rounded-[30%] bg-v-fill text-v-accent"><c.Icon size={14} /></span>
+                                          <div className="min-w-0"><p className="text-[11px] font-semibold text-v-muted">{c.label}</p><p className="text-sm leading-relaxed text-v-text">{tr(c.v)}</p></div>
+                                        </div>
+                                      ))}
+                                    </>
+                                  ) : (
+                                    <p className="flex items-center gap-2 text-xs text-v-muted"><Lightbulb size={14} className="shrink-0 text-v-warning" /> {L('The therapist has not added home instructions for this set yet.', 'El terapeuta aún no agregó indicaciones para casa en este set.')}</p>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {done ? (
+                <div className="flex items-center gap-3 rounded-v-sm bg-v-success/10 p-3.5">
+                  <Award size={20} className="shrink-0 text-v-success" />
+                  <div><p className="text-sm font-semibold text-v-success">{L('Program mastered', 'Programa dominado')}</p><p className="text-xs text-v-muted">{L('They reached the mastery criterion. Great job!', 'Alcanzó el criterio de dominio. ¡Excelente trabajo!')}</p></div>
+                </div>
+              ) : (
+                <div className="rounded-v-sm bg-v-fill/60 p-3.5">
+                  <WeekTracker programaId={prog.id} childId={childId} objetivos={activos} tr={tr} />
                 </div>
               )}
             </div>
-          )}
-
-          {/* Sets / Objetivos actuales */}
-          {prog.objetivos_cp && prog.objetivos_cp.filter(o => o.estado !== 'dominado').length > 0 && (
-            <div style={{ marginBottom: 14 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text-muted)', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <Target size={11} /> Qué está practicando ahora
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {prog.objetivos_cp.filter(o => o.estado !== 'dominado').map(obj => {
-                  const isExpObj = expandedObj === obj.id
-                  const hasDetail = !!(obj.descripcion || obj.nombre)
-                  return (
-                    <div key={obj.id} style={{ borderRadius: 12, overflow: 'hidden', border: `1.5px solid ${isExpObj ? area.color : 'var(--c-border)'}`, transition: 'border-color .2s' }}>
-                      {/* Row — always clickable */}
-                      <button
-                        onClick={() => setExpandedObj(isExpObj ? null : obj.id)}
-                        style={{
-                          width: '100%', background: isExpObj ? area.bg : 'var(--c-surface)',
-                          border: 'none', cursor: 'pointer', padding: '11px 12px',
-                          display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
-                          transition: 'background .2s', fontFamily: 'inherit'
-                        }}>
-                        {/* Number badge */}
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: isExpObj ? area.color : area.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background .2s' }}>
-                          <span style={{ fontSize: 10, fontWeight: 900, color: isExpObj ? '#fff' : area.color }}>{obj.numero_set || '•'}</span>
-                        </div>
-                        {/* Label */}
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text-primary)', flex: 1, lineHeight: 1.4, textAlign: 'left' }}>
-                          {obj.descripcion || obj.nombre || `Set ${obj.numero_set}`}
-                        </span>
-                        {/* Status badge */}
-                        {obj.estado === 'en_progreso' && (
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(2,132,199,0.12)', color: '#0284c7', flexShrink: 0, border: '1px solid rgba(2,132,199,0.2)' }}>{t("familias.enCurso")}</span>
-                        )}
-                        {/* Expand chevron */}
-                        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', marginLeft: 4, color: 'var(--c-text-muted)', transform: isExpObj ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform .2s' }}>
-                          <ChevronDown size={15} />
-                        </div>
-                      </button>
-                      {/* Expanded detail — incluye los campos clínicos del set */}
-                      {isExpObj && (() => {
-                        // Fallback al programa para SD/Materiales/Ayudas si el set no los tiene
-                        const sd         = obj.sd_estimulo      || prog.sd_estimulo
-                        const materiales = obj.materiales       || prog.materiales
-                        // En el admin la "Ayudas" se guarda en el campo `reforzadores` del set
-                        const ayudas     = obj.reforzadores     || prog.ayudas
-                        const correccion = obj.correction_errores
-                        const generaliz  = obj.generalizacion
-                        const hayClinico = sd || materiales || ayudas || correccion || generaliz
-
-                        const Field = ({ icon, label, value }: { icon: string; label: string; value?: string }) => {
-                          if (!value) return null
-                          return (
-                            <div>
-                              <span style={{ fontSize: 10, fontWeight: 700, color: area.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>{icon} {label}</span>
-                              <p style={{ fontSize: 12, color: 'var(--c-text-primary)', margin: '4px 0 0', lineHeight: 1.6 }}>{value}</p>
-                            </div>
-                          )
-                        }
-
-                        return (
-                          <div style={{ padding: '12px 14px 14px', background: 'var(--c-card)', borderTop: `1px solid ${area.color}30`, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {/* Objetivo */}
-                            {hasDetail && (
-                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: area.bg, borderRadius: 10 }}>
-                                <Target size={13} color={area.color} style={{ flexShrink: 0, marginTop: 2 }} />
-                                <div>
-                                  <p style={{ fontSize: 10, fontWeight: 700, color: area.color, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t("familias.objetivo")}</p>
-                                  <p style={{ fontSize: 12, color: 'var(--c-text-primary)', margin: 0, lineHeight: 1.6 }}>{obj.descripcion || obj.nombre}</p>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Campos clínicos del set */}
-                            {hayClinico && (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 12px', background: 'var(--c-surface)', borderRadius: 10, border: '1px solid var(--c-border)' }}>
-                                <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: 1 }}>
-                                  {t('auto.programasABAView.comoPracticarloEnCasa')}
-                                </p>
-                                <Field icon="📍" label={t('auto.programasABAView.queDecirOHacerSd')} value={sd} />
-                                <Field icon="🤝" label="Ayudas / Prompts"        value={ayudas} />
-                                <Field icon="🧸" label="Materiales"              value={materiales} />
-                                <Field icon="✏️" label="Si se equivoca"          value={correccion} />
-                                <Field icon="🌱" label={t('auto.programasABAView.generalizacion')}          value={generaliz} />
-                              </div>
-                            )}
-
-                            {!hayClinico && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(16,185,129,0.08)', borderRadius: 10, border: '1px solid rgba(16,185,129,0.15)' }}>
-                                <Lightbulb size={13} color="#059669" style={{ flexShrink: 0 }} />
-                                <p style={{ fontSize: 11, color: '#065f46', margin: 0, lineHeight: 1.5, fontWeight: 500 }}>
-                                  {t('auto.programasABAView.elTerapeutaAunNoAgrego')}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Weekly tracker */}
-          {!isDone && (
-            <div style={{ background: 'var(--c-surface)', borderRadius: 14, padding: '12px 14px', border: '1px solid var(--c-border)' }}>
-              <WeekTracker
-                programaId={prog.id}
-                childId={childId}
-                objetivos={prog.objetivos_cp?.filter(o => o.estado !== 'dominado')}
-              />
-            </div>
-          )}
-
-          {isDone && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(16,185,129,0.1)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.2)' }}>
-              <Award size={18} color="#10b981" />
-              <div>
-                <p style={{ fontWeight: 700, fontSize: 12, color: '#10b981', margin: 0 }}>{t("familias.programaDominado")}</p>
-                <p style={{ fontSize: 11, color: 'var(--c-text-muted)', margin: 0 }}>{t("familias.alcanzoCriterio")}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.article>
   )
 }
 
+// ─── Página ───────────────────────────────────────────────────────────────────
 export default function ProgramasABAView({ childId, childName }: Props) {
-  const { t } = useI18n()
+  const { locale } = useI18n()
+  const en = locale === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
   const [programas, setProgramas] = useState<Programa[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState<'activos' | 'todos'>('activos')
@@ -399,75 +292,72 @@ export default function ProgramasABAView({ childId, childName }: Props) {
       if (json.data) setProgramas(json.data)
     } finally { setLoading(false) }
   }, [childId])
-
   useEffect(() => { load() }, [load])
 
-  const activos = programas.filter(p => 
-    p.estado !== 'dominado' && 
-    p.estado !== 'archivado' && 
-    p.fase_actual !== 'dominado'
-  )
-  const filtered = filtro === 'activos' ? activos : programas.filter(p => p.estado !== 'archivado')
-  const totalPracticadosSemana = 0 // Could be computed from WeekTracker data
+  const activos = programas.filter(p => p.estado !== 'dominado' && p.estado !== 'archivado' && p.fase_actual !== 'dominado')
+  const filtrados = filtro === 'activos' ? activos : programas.filter(p => p.estado !== 'archivado')
+  const dominados = programas.filter(p => p.estado === 'dominado' || p.fase_actual === 'dominado').length
+
+  // Todos los textos del equipo que se muestran (para traducirlos si la app está en inglés)
+  const textos = useMemo(() => programas.flatMap(p => [
+    p.titulo, p.area, p.descripcion, p.instrucciones_casa, p.reforzadores, p.sd_estimulo, p.materiales, p.ayudas,
+    ...(p.objetivos_cp || []).flatMap(o => [o.descripcion, o.nombre, o.sd_estimulo, o.materiales, o.reforzadores, o.correction_errores, o.generalizacion]),
+  ]), [programas])
+  const traducir = useTraducir(textos)
+  const tr = (t?: string) => traducir(t)
+  const nombre = (childName || '').split(' ')[0] || L('your child', 'tu hijo/a')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 32 }}>
-
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, paddingBottom: 16, borderBottom: '1px solid var(--c-border)' }}>
-        <div>
-          <h2 style={{ fontWeight: 900, fontSize: 20, color: 'var(--c-text-primary)', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 11, background: 'rgba(2,132,199,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <BookOpen size={18} color="#0284c7" />
-            </div>
-            {t('auto.programasABAView.programasAba')}
-          </h2>
-          <p style={{ fontSize: 12, color: 'var(--c-text-muted)', margin: 0, marginLeft: 44 }}>
-            {t('auto.programasABAView.activos', { v1: String(activos.length), v2: String(childName) })}
-          </p>
-        </div>
-      </div>
-
-      {/* Info card */}
-      <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: 16, padding: '12px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        <Info size={16} color="#0284c7" style={{ flexShrink: 0, marginTop: 1 }} />
-        <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: 0, lineHeight: 1.6 }}>
-          Estos son los programas que tu terapeuta trabaja con <strong style={{ color: 'var(--c-text-primary)' }}>{childName}</strong>. Practicarlos en casa refuerza el aprendizaje. Marca los días que lo practicaron para hacer seguimiento.
-        </p>
-      </div>
-
-      {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 6 }}>
-        {(['activos', 'todos'] as const).map(f => (
-          <button key={f} onClick={() => setFiltro(f)}
-            style={{ padding: '7px 16px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'all .15s',
-              background: filtro === f ? '#0284c7' : 'var(--c-surface)',
-              color: filtro === f ? '#fff' : 'var(--c-text-muted)' }}>
-            {f === 'activos' ? `Activos (${activos.length})` : `Todos (${programas.length})`}
-          </button>
-        ))}
-      </div>
-
-      {/* Program list */}
-      {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-          <Loader2 size={24} color="var(--c-text-muted)" style={{ animation: 'spin 1s linear infinite' }} />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ width: 60, height: 60, borderRadius: 20, background: 'var(--c-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <BookOpen size={28} color="var(--c-text-muted)" />
+    <div className="v-scope space-y-4 pb-8 md:space-y-5">
+      {/* Encabezado */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 160, damping: 22 }} className={`relative overflow-hidden ${cardClass}`}>
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(40rem 14rem at 0% 0%, var(--v-glow-1), transparent 70%)' }} />
+        <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
+        <div className="relative flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-v-muted">{L('ABA programs', 'Programas ABA')}</p>
+            <h2 className="v-headline mt-1 text-[1.5rem] leading-tight text-v-text sm:text-[1.8rem]">{L('What ', 'Lo que trabaja ')}<span className="v-brand-text">{nombre}</span>{L(' is working on', '')}</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-v-muted">
+              {L('These are the programs the therapy team works on. Practicing them at home reinforces learning — mark the days you practiced to keep track.',
+                 'Estos son los programas que trabaja el equipo de terapia. Practicarlos en casa refuerza el aprendizaje: marca los días que lo practicaron para hacer seguimiento.')}
+            </p>
           </div>
-          <p style={{ fontWeight: 700, color: 'var(--c-text-primary)', margin: '0 0 6px' }}>{t("familias.sinProgramasActivos")}</p>
-          <p style={{ fontSize: 12, color: 'var(--c-text-muted)', margin: 0 }}>{t("familias.terapeutaNoAsigno")}</p>
+          <div className="grid shrink-0 grid-cols-2 gap-2">
+            <div className="rounded-v-sm bg-v-accent-soft px-4 py-3 text-center"><p className="text-2xl font-bold leading-none tabular-nums text-v-accent">{activos.length}</p><p className="mt-1 text-[11px] font-medium text-v-muted">{L('Active', 'Activos')}</p></div>
+            <div className="rounded-v-sm bg-v-success/10 px-4 py-3 text-center"><p className="text-2xl font-bold leading-none tabular-nums text-v-success">{dominados}</p><p className="mt-1 text-[11px] font-medium text-v-muted">{L('Mastered', 'Dominados')}</p></div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Filtro */}
+      <div className="flex items-center gap-2">
+        <div className="flex rounded-full bg-v-fill p-1">
+          {([['activos', L('Active', 'Activos'), activos.length], ['todos', L('All', 'Todos'), programas.filter(p => p.estado !== 'archivado').length]] as const).map(([id, label, n]) => {
+            const on = filtro === id
+            return (
+              <button key={id} onClick={() => setFiltro(id)} className={`relative rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+                {on && <motion.span layoutId="programas-filtro" transition={{ type: 'spring', stiffness: 420, damping: 32 }} className="absolute inset-0 rounded-full bg-v-elevated shadow-v" />}
+                <span className="relative">{label} <span className="tabular-nums text-v-subtle">{n}</span></span>
+              </button>
+            )
+          })}
+        </div>
+        <span className="ml-auto hidden items-center gap-1.5 text-[11px] text-v-subtle sm:flex"><TrendingUp size={12} /> {L('Bars: last sessions (green = mastery reached)', 'Barras: últimas sesiones (verde = dominio alcanzado)')}</span>
+      </div>
+
+      {loading ? (
+        <div className="grid place-items-center py-16"><Loader2 size={26} className="animate-spin text-v-accent" /></div>
+      ) : filtrados.length === 0 ? (
+        <div className={`${cardClass} px-6 py-12 text-center`}>
+          <span className="mx-auto grid size-12 place-items-center rounded-full bg-v-fill"><BookOpen size={20} className="text-v-subtle" /></span>
+          <p className="mt-3 text-sm font-semibold text-v-text">{L('No active programs', 'Sin programas activos')}</p>
+          <p className="mt-1 text-xs text-v-muted">{L('The therapy team has not assigned programs yet.', 'El equipo de terapia aún no asignó programas.')}</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {filtered.map(p => <ProgramCard key={p.id} prog={p} childId={childId} />)}
+        <div className="space-y-2.5">
+          {filtrados.map((p, i) => <ProgramCard key={p.id} prog={p} childId={childId} index={i} tr={tr} />)}
         </div>
       )}
-
-      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }

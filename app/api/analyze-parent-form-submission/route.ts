@@ -9,8 +9,10 @@ export const maxDuration = 60;
 // ==============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding, type CentroBranding } from '@/lib/centro-branding'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { buildAIContext, parseAIJson } from '@/lib/ai-context-builder'
 
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
@@ -31,15 +33,24 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
   try {
     const body = await request.json()
     const userLocale = body.locale || request.headers.get('x-locale') || 'es'
-    const { formId, formType, formTitle, responses, childId, parentId } = body
+    const { formId, formType, formTitle, responses, childId } = body
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    // Un padre solo actúa por sí mismo; el staff solo con padres de su centro.
+    let parentId: string | null = body.parentId || null
+    if (caller.role === 'padre') parentId = caller.id
+    else if (parentId && !(await rowInCentro('profiles', parentId, caller.centroId))) parentId = null
+    const { data: childRow } = await supabaseAdmin.from('children').select('centro_id').eq('id', childId).maybeSingle()
+    const centroId: string | null = (childRow as { centro_id?: string | null } | null)?.centro_id ?? null
 
 
     // ── 1. Contexto completo: RAG + historial + centro ────────────────────
     const searchQuery = `${formTitle || 'formulario padres'} familia intervención conducta en casa`
-    const ctx = await buildAIContext(childId, undefined, undefined, searchQuery)
+    const ctx = await buildAIContext(childId, undefined, undefined, searchQuery, centroId)
     const childName = ctx.childName
     const childAgeStr = ctx.childAge
     const childAge: number | undefined = childAgeStr && !isNaN(Number(childAgeStr)) ? Number(childAgeStr) : undefined
@@ -108,6 +119,7 @@ Responde SOLO con JSON (sin markdown):
           datos:       responses,
           form_type:   formType,
           ai_analysis: analysis,
+          centro_id:   centroId,
         }
         // anamnesis_completa usa fecha_creacion, registro_aba usa fecha_sesion
         if (formType === 'anamnesis')     clinicalPayload.fecha_creacion = now
@@ -124,6 +136,7 @@ Responde SOLO con JSON (sin markdown):
           form_title:  formTitle,
           responses:   responses,
           ai_analysis: analysis,
+          centro_id:   centroId,
           created_at:  new Date().toISOString(),
         }])
         console.log(`✅ Guardado en form_responses (tipo: ${formType})`)
@@ -143,6 +156,7 @@ Responde SOLO con JSON (sin markdown):
       ai_analysis:    analysis,
       session_data:   { form_type: formType, form_id: formId, responses },
       status:         'pending_approval',
+      centro_id:      centroId,
       created_at:     new Date().toISOString(),
     }])
 
@@ -161,6 +175,7 @@ Responde SOLO con JSON (sin markdown):
         reportData: normalizedData,
         aiAnalysis: null,  // null = usa el análisis embebido en reportData.ai_analysis
         formTitle,
+        centro: await getCentroBranding({ childId }),
       })
 
       const base64Doc = docBuffer.toString('base64')
@@ -177,6 +192,7 @@ Responde SOLO con JSON (sin markdown):
         fecha_generacion: new Date().toISOString(),
         generado_por:     'Padres + IA',
         source_id:        formId,
+        centro_id:        centroId,
       }])
       console.log('✅ Reporte Word generado:', fileName)
 
@@ -259,11 +275,12 @@ Genera un INFORME CLÍNICO PROFESIONAL con:
 async function buildWordDocument(params: {
   reportType: string; childName: string; childAge?: number;
   reportData: any; aiAnalysis?: string | null; formTitle?: string;
+  centro: CentroBranding;
 }): Promise<typeof Buffer.prototype> {
-  const { reportType, childName, childAge, reportData, aiAnalysis, formTitle } = params
+  const { reportType, childName, childAge, reportData, aiAnalysis, formTitle, centro } = params
 
-  const portada  = createCoverPage(reportType, childName, childAge, formTitle)
-  const contenido = createNeuroFormReport(reportData, childName, reportType, aiAnalysis, formTitle)
+  const portada  = createCoverPage(reportType, childName, centro, childAge, formTitle)
+  const contenido = createNeuroFormReport(reportData, childName, reportType, centro, aiAnalysis, formTitle)
 
   const doc = new Document({
     styles: getDocumentStyles(),
@@ -292,7 +309,7 @@ function getDocumentStyles() {
   }
 }
 
-function createCoverPage(reportType: string, childName: string, childAge?: number, formTitle?: string): any[] {
+function createCoverPage(reportType: string, childName: string, centro: CentroBranding, childAge?: number, formTitle?: string): any[] {
   const titles: Record<string, { main: string; sub: string }> = {
     anamnesis:     { main: 'HISTORIA CLÍNICA', sub: 'Evaluación Integral del Desarrollo' },
     aba:           { main: 'REPORTE DE SESIÓN ABA', sub: 'Análisis Aplicado de la Conducta' },
@@ -308,7 +325,7 @@ function createCoverPage(reportType: string, childName: string, childAge?: numbe
     : { main: 'REPORTE PROFESIONAL', sub: 'Evaluación Clínica' })
 
   return [
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 2880, after: 720 }, children: [new TextRun({ text: 'NEUROPSICOLOGÍA Y TERAPIAS SANTI', font: 'Calibri', size: 32, bold: true, color: '2E75B5' })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 2880, after: 720 }, children: [new TextRun({ text: centro.name.toUpperCase(), font: 'Calibri', size: 32, bold: true, color: '2E75B5' })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 1440 }, children: [new TextRun({ text: 'Taller de Desarrollo Infantil', font: 'Calibri', size: 22, color: '595959' })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 1440 }, border: { bottom: { color: '2E75B5', space: 1, value: BorderStyle.SINGLE, size: 12 } }, children: [new TextRun({ text: '' })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 720, after: 360 }, children: [new TextRun({ text: t.main, font: 'Calibri', size: 40, bold: true, color: '1F4D78' })] }),
@@ -320,7 +337,7 @@ function createCoverPage(reportType: string, childName: string, childAge?: numbe
   ]
 }
 
-function createNeuroFormReport(data: any, childName: string, formType: string, aiAnalysis?: string | null, formTitle?: string): any[] {
+function createNeuroFormReport(data: any, childName: string, formType: string, centro: CentroBranding, aiAnalysis?: string | null, formTitle?: string): any[] {
   const elements: any[] = []
   const displayTitle = formTitle || formType.replace(/_/g, ' ')
   const today = new Date().toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -401,7 +418,7 @@ function createNeuroFormReport(data: any, childName: string, formType: string, a
     sep(),
     new Paragraph({ spacing: { before: 400 }, alignment: AlignmentType.CENTER, children: [
       new TextRun({ text: 'Informe generado con asistencia de IA · ', size: 18, italics: true, color: '999999', font: 'Calibri' }),
-      new TextRun({ text: 'Neuropsicología y Terapias SANTI', size: 18, bold: true, italics: true, color: '2E75B5', font: 'Calibri' }),
+      new TextRun({ text: centro.name, size: 18, bold: true, italics: true, color: '2E75B5', font: 'Calibri' }),
       new TextRun({ text: ` · ${today}`, size: 18, italics: true, color: '999999', font: 'Calibri' })
     ]})
   )

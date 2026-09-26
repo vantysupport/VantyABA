@@ -1,4 +1,5 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 // AgendaView — redirige la funcionalidad al centro
 // Las citas son asignadas exclusivamente por el equipo del centro terapéutico.
@@ -26,6 +27,7 @@ function fmt(t: string) {
 }
 
 export default function AgendaView({ selectedChild, onChangeView }: { selectedChild?: any; onChangeView?: (v:string)=>void }) {
+  const CONTACTO = useCentroBranding()
   const { isDark } = useTheme()
   const { t } = useI18n()
   const [citas, setCitas] = useState<any[]>([])
@@ -104,8 +106,8 @@ export default function AgendaView({ selectedChild, onChangeView }: { selectedCh
         <p style={{ fontSize:13,fontWeight:800,color:'#075985',margin:'0 0 6px',display:'flex',alignItems:'center',gap:6 }}><Info size={14} color="#0284c7"/>{t("agenda.citasAsignadasEquipo")}</p>
         <p style={{ fontSize:12,color:'#0284c7',margin:'0 0 12px',lineHeight:1.5 }}>{t("agenda.solicitarContacta")}</p>
         <div style={{ display:'flex',flexWrap:'wrap',gap:10 }}>
-          <a href="tel:+51991070734" style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'var(--c-card)',border:'1.5px solid #bae6fd',borderRadius:12,fontSize:12,fontWeight:700,color:'#0369a1',textDecoration:'none' }}><Phone size={12}/>+51 991 070 734</a>
-          <a href="mailto:contacto@santi.com" style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'var(--c-card)',border:'1.5px solid #bae6fd',borderRadius:12,fontSize:12,fontWeight:700,color:'#0369a1',textDecoration:'none' }}><Mail size={12}/>{t("agenda.escribirEmail")}</a>
+          {CONTACTO.telefono && <a href={`tel:+${CONTACTO.telefonoDigitos}`} style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'var(--c-card)',border:'1.5px solid #bae6fd',borderRadius:12,fontSize:12,fontWeight:700,color:'#0369a1',textDecoration:'none' }}><Phone size={12}/>{CONTACTO.telefono}</a>}
+          {CONTACTO.email && <a href={`mailto:${CONTACTO.email}`} style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',background:'var(--c-card)',border:'1.5px solid #bae6fd',borderRadius:12,fontSize:12,fontWeight:700,color:'#0369a1',textDecoration:'none' }}><Mail size={12}/>{t("agenda.escribirEmail")}</a>}
         </div>
       </div>
 

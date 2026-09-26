@@ -2,12 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getCentroMoneda } from '@/lib/centro-moneda'
+import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { avisarFamilia } from '@/lib/avisos'
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   const { searchParams } = new URL(req.url)
   const childId = searchParams.get('child_id')
   const estado  = searchParams.get('estado')
   const mes     = searchParams.get('mes') // YYYY-MM
+
+  // Billing staff see their centro's invoices; a parent only their own child's.
+  const isBilling = hasRole(caller, ROLES.billing)
+  if (!isBilling) {
+    if (caller.role !== 'padre' || !childId || !(await canAccessChild(caller, childId))) return forbidden()
+  }
 
   try {
     let query = supabaseAdmin
@@ -15,6 +25,7 @@ export async function GET(req: NextRequest) {
       .select('*, children(name)')
       .order('fecha_emision', { ascending: false })
 
+    if (isBilling) query = query.eq('centro_id', caller.centroId!)
     if (childId) query = query.eq('child_id', childId)
     if (estado)  query = query.eq('estado', estado)
     if (mes)     query = query.gte('fecha_emision', mes + '-01').lte('fecha_emision', mes + '-31')
@@ -34,49 +45,58 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    if (!hasRole(caller, ROLES.billing)) return forbidden()
+
     const body = await req.json()
     const { action } = body
 
     if (action === 'crear' || !action) {
       const { child_id, concepto, monto, moneda, fecha_vencimiento, sesiones_incluidas, notas } = body
+      if (!(await canAccessChild(caller, child_id))) return notFound()
 
-      // Auto-generar número de factura
-      const { count } = await supabaseAdmin.from('facturas').select('*', { count: 'exact', head: true })
+      // Auto-generar número de factura (secuencia por centro)
+      const { count } = await supabaseAdmin.from('facturas').select('*', { count: 'exact', head: true }).eq('centro_id', caller.centroId)
       const numero = `SAN-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`
 
       const { data, error } = await supabaseAdmin
         .from('facturas')
-        .insert({ child_id, numero, concepto, monto, moneda: moneda || 'PEN', fecha_vencimiento, sesiones_incluidas, notas, estado: 'pendiente' })
+        .insert({ child_id, numero, concepto, monto, moneda: moneda || 'PEN', fecha_vencimiento, sesiones_incluidas, notas, estado: 'pendiente', centro_id: caller.centroId })
         .select('*, children(name)')
         .single()
 
       if (error) throw error
 
       // Notificar al padre
-      await notificarFactura(child_id, data, 'nueva')
+      await notificarFactura(child_id, data, 'nueva', caller.centroId)
       return NextResponse.json({ data })
     }
 
     if (action === 'registrar_pago') {
       const { id, metodo_pago, fecha_pago } = body
+      if (!(await rowInCentro('facturas', id, caller.centroId))) return notFound()
       const { data, error } = await supabaseAdmin
         .from('facturas')
         .update({ estado: 'pagado', metodo_pago, fecha_pago: fecha_pago || new Date().toISOString().split('T')[0] })
         .eq('id', id)
+        .eq('centro_id', caller.centroId)
         .select('*, children(name, id)')
         .single()
       if (error) throw error
 
-      await notificarFactura((data.children as any)?.id, data, 'pagado')
+      await notificarFactura((data.children as any)?.id, data, 'pagado', caller.centroId)
       return NextResponse.json({ data })
     }
 
     if (action === 'cancelar') {
       const { id } = body
+      if (!(await rowInCentro('facturas', id, caller.centroId))) return notFound()
       const { data, error } = await supabaseAdmin
         .from('facturas')
         .update({ estado: 'cancelado' })
         .eq('id', id)
+        .eq('centro_id', caller.centroId)
         .select()
         .single()
       if (error) throw error
@@ -89,12 +109,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function notificarFactura(childId: string, factura: any, tipo: string) {
+async function notificarFactura(childId: string, factura: any, tipo: string, centroId: string) {
   try {
     const { data: padres } = await supabaseAdmin.from('parent_accounts').select('user_id').eq('child_id', childId)
     if (!padres || padres.length === 0) return
 
-    const cur = await getCentroMoneda()
+    const cur = await getCentroMoneda(centroId)
     const mensajes: Record<string, any> = {
       nueva: {
         titulo: 'Nueva factura emitida',
@@ -106,13 +126,19 @@ async function notificarFactura(childId: string, factura: any, tipo: string) {
       }
     }
 
-    const notif = mensajes[tipo] || mensajes.nueva
-    const notifs = padres.map(p => ({
-      user_id: p.user_id, child_id: childId,
-      tipo: 'factura_' + tipo, titulo: notif.titulo, mensaje: notif.mensaje,
-      prioridad: tipo === 'nueva' ? 2 : 3, canal: 'in_app',
-      metadata: { factura_id: factura.id, numero: factura.numero }
-    }))
-    await supabaseAdmin.from('notificaciones').insert(notifs)
+    const monto = `${cur.symbol} ${factura.monto}`
+    const pagado = tipo === 'pagado'
+    for (const p of padres) {
+      await avisarFamilia({
+        parentId: p.user_id, centroId, type: 'factura_' + tipo, childId,
+        title: pagado ? { es: 'Pago registrado', en: 'Payment recorded' } : { es: 'Nueva factura', en: 'New invoice' },
+        message: pagado
+          ? { es: `Registramos el pago de la factura ${factura.numero} por ${monto}. ¡Gracias!`, en: `We recorded the payment of invoice ${factura.numero} for ${monto}. Thank you!` }
+          : { es: `Factura ${factura.numero} por ${monto} · ${factura.concepto}. Vence: ${factura.fecha_vencimiento || 'sin fecha'}.`, en: `Invoice ${factura.numero} for ${monto} · ${factura.concepto}. Due: ${factura.fecha_vencimiento || 'no date'}.` },
+        push: { pose: pagado ? 'celebra' : 'laptop' },
+        metadata: { factura_id: factura.id, numero: factura.numero },
+      })
+    }
+    void mensajes
   } catch {}
 }

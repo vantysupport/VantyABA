@@ -3,15 +3,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getChildHistory } from '@/lib/child-history'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { childId, analyticsData, locale } = await req.json()
     const userLocale = locale || req.headers.get('x-locale') || 'es'
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
 
     // Cargar datos completos del paciente
-    const history = await getChildHistory(childId)
+    const history = await getChildHistory(childId, undefined, undefined, { centroId: caller.centroId })
 
     const { data: child } = await supabaseAdmin
       .from('children')

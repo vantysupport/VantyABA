@@ -1,11 +1,14 @@
+import { PLATFORM_NAME } from '@/lib/branding'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import webpush from 'web-push'
+import { getApiCaller, hasRole, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { isInternalApiCall } from '@/lib/calendar-integration'
 
 export async function POST(request: NextRequest) {
   // Configure VAPID inside the handler so env vars are available at runtime
   webpush.setVapidDetails(
-    'mailto:hola@santi.app',
+    process.env.VAPID_SUBJECT || (process.env.GMAIL_USER ? `mailto:${process.env.GMAIL_USER}` : 'mailto:noreply@vanty.app'),
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
     process.env.VAPID_PRIVATE_KEY!
   )
@@ -15,6 +18,14 @@ export async function POST(request: NextRequest) {
 
     if (!userId) {
       return NextResponse.json({ error: 'userId requerido' }, { status: 400 })
+    }
+
+    // Internal server calls (signed header), or staff pushing to a user of their own centro.
+    if (!isInternalApiCall(request)) {
+      const caller = await getApiCaller(request)
+      if (!caller) return unauthorized()
+      if (!hasRole(caller, ROLES.staff)) return forbidden()
+      if (!(await rowInCentro('profiles', userId, caller.centroId))) return notFound()
     }
 
     // Get all push subscriptions for this user
@@ -29,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = JSON.stringify({
-      title: title || 'SANTI',
+      title: title || PLATFORM_NAME,
       body: body || 'Tienes un nuevo mensaje',
       url: url || '/padre',
       icon: '/icons/icon-192x192.png',

@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n-context'
 
 import React from 'react'
 import { Loader2 } from 'lucide-react'
+import { motion } from 'motion/react'
 
 export function StatCard({icon, label, value, color, trend}: any) {
     return (
@@ -54,34 +55,42 @@ export function TimeSlotBtn({ time, isTaken, loading, onClick, isPast }: any) {
     )
 }
 
+let navIndice = 0
 export function NavBtnDesktop({icon, label, active, onClick, badge}: any) {
+    // badge puede ser número (contador) o texto corto ("IA", "NUEVO")
+    const esNumero = typeof badge === 'number'
+    // Entrada escalonada como en el panel del admin
+    const [indice] = React.useState(() => navIndice++ % 12)
     return (
-        <button
-            onClick={onClick}
-            className={`flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all relative ${active ? 'bg-sky-600 text-white shadow-lg shadow-sky-200' : 'hover:bg-slate-50 hover:text-slate-800'}`} style={{ color: active ? undefined : 'var(--text-muted)', textAlign: 'left' }}
-        >
-            <span style={{ flexShrink: 0 }}>{icon}</span>
-            <span className="font-bold text-sm" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>{label}</span>
-            {badge > 0 && <span className="absolute right-3 top-2 w-5 h-5 bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center">{badge}</span>}
-        </button>
+        <motion.button onClick={onClick}
+            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.03 * indice, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            whileTap={{ scale: 0.97 }}
+            className={`group relative flex w-full items-center gap-3 rounded-v-sm px-3 py-2.5 text-left text-sm font-medium transition-colors ${active ? 'text-white' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+            {active && (
+                <motion.span layoutId="padre-nav-active" transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                    className="v-brand absolute inset-0 overflow-hidden rounded-v-sm">
+                    <span className="v-sweep block size-full" style={{ ['--v-sweep-duration' as string]: '5s' }} />
+                </motion.span>
+            )}
+            <span className={`relative z-[2] shrink-0 transition-transform duration-200 group-hover:scale-110 ${active ? 'text-white' : 'text-v-subtle group-hover:text-v-accent'}`}>{icon}</span>
+            <span className="relative z-[2] min-w-0 flex-1 truncate">{label}</span>
+            {badge ? (
+                <span className={`relative z-[2] shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${esNumero ? 'min-w-5 bg-v-danger text-center text-white' : active ? 'bg-white/25 text-white' : 'bg-v-accent-soft text-v-accent'}`}>{badge}</span>
+            ) : null}
+        </motion.button>
     )
 }
 
 export function NavBtnMobile({icon, label, active, onClick, badge}: any) {
     return (
-        <button
-            onClick={onClick}
-            className={`flex flex-col items-center gap-0.5 flex-1 py-1 rounded-xl transition-all relative active:scale-95 ${active ? 'text-sky-500' : ''}`} style={{ color: active ? undefined : 'var(--text-muted)', minWidth: 0 }}
-        >
-            <div className={`relative p-1.5 rounded-xl transition-all ${active ? 'bg-sky-500/10' : ''}`}>
-                {icon}
-                {badge > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[8px] font-bold flex items-center justify-center">
-                        {badge}
-                    </span>
-                )}
-            </div>
-            <span className="text-[9px] font-bold leading-tight truncate w-full text-center">{label}</span>
+        <button onClick={onClick} className={`relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-v-sm py-1 transition-colors active:scale-95 ${active ? 'text-v-accent' : 'text-v-subtle'}`}>
+            <span className="relative grid h-8 w-12 place-items-center rounded-full">
+                {active && <motion.span layoutId="padre-nav-mobile" transition={{ type: 'spring', stiffness: 420, damping: 34 }} className="absolute inset-0 rounded-full bg-v-accent-soft" />}
+                <span className="relative">{icon}</span>
+                {badge > 0 && <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-v-danger px-1 text-[9px] font-bold text-white">{badge}</span>}
+            </span>
+            <span className="w-full truncate text-center text-[10px] font-semibold leading-tight">{label}</span>
         </button>
     )
 }

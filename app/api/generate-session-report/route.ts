@@ -1,10 +1,13 @@
 export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
+import { getCentroBranding } from '@/lib/centro-branding'
 import { callGroqSimple, GROQ_MODELS, GroqExhaustedError } from '@/lib/groq-client'
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildAIContext } from '@/lib/ai-context-builder';
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { getCentroMoneda } from '@/lib/centro-moneda';
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 
 
 // Helper: reintentar con backoff exponencial ante rate limit
@@ -23,6 +26,9 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: Request) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const userLocale = body.locale || req.headers.get('x-locale') || 'es';
@@ -43,10 +49,14 @@ export async function POST(req: Request) {
       // Paciente
       childName, childAge, childId,
     } = body;
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
+    const bloqueo = await sinTokens(caller.centroId, String(userLocale).startsWith('en'))
+    if (bloqueo) return bloqueo
+    const centro = await getCentroBranding({ childId, centroId: childId ? null : caller.centroId })
 
     // ── Construir contexto completo con RAG + historial + centro ─────────────
     const sessionQuery = `sesión ABA ${tipo_sesion || ''} ${conducta || ''} ${funcion_estimada || ''} intervención conductual`
-    const aiCtx = await buildAIContext(childId, childName, childAge ? String(childAge) : undefined, sessionQuery)
+    const aiCtx = await buildAIContext(childId, childName, childAge ? String(childAge) : undefined, sessionQuery, caller.centroId)
     const nombreNino = aiCtx.childName
     const edadNino = aiCtx.childAge
 
@@ -62,7 +72,7 @@ export async function POST(req: Request) {
     const patronEjemplo = isEn ? 'Gradual learning' : 'Aprendizaje gradual'
     const sinAlertas = isEn ? 'No significant clinical alerts' : 'Sin alertas clínicas significativas'
     const coordEjemplo = isEn ? 'Routine' : 'Rutinaria'
-    const firma = isEn ? 'With warmth and commitment,\\nNeuropsicología y Terapias SANTI Team' : 'Con afecto y compromiso,\\nEquipo Neuropsicología y Terapias SANTI'
+    const firma = isEn ? `With warmth and commitment,\\n${centro.name} Team` : `Con afecto y compromiso,\\nEquipo ${centro.name}`
     const actividadScaffold = isEn
       ? 'Activity: [name]\\n Goal: [skill it works on]\\n How to do it:\\n 1. [step]\\n 2. [step]\\n 3. [step]\\n Frequency: [X times/week, X-X min]\\n What to observe: [what to report next session]'
       : 'Actividad: [nombre]\\n Objetivo: [qué habilidad trabaja]\\n Cómo hacerlo:\\n 1. [paso]\\n 2. [paso]\\n 3. [paso]\\n Frecuencia: [X veces/semana, X-X min]\\n Qué observar: [qué reportar próxima sesión]'
@@ -78,12 +88,13 @@ export async function POST(req: Request) {
     const { data: productos } = await supabaseAdmin
       .from('store_products')
       .select('id, nombre, descripcion, precio_soles, tipo, categoria, imagen_url')
+      .eq('centro_id', caller.centroId)
       .eq('activo', true)
       .gt('stock', 0)
       .order('destacado', { ascending: false })
       .limit(6);   // menos productos = menos tokens por llamada (el detalle va solo en el sugerido)
 
-    const cur = await getCentroMoneda()
+    const cur = await getCentroMoneda(caller.centroId)
     const productosTexto = productos && productos.length > 0
       ? `\nPRODUCTOS EN TIENDA (sugiere UNO solo si ayuda a la tarea en casa):\n` +
         productos.map((p, i) =>
@@ -267,6 +278,7 @@ Responde SOLAMENTE con JSON válido (sin texto adicional, sin backticks, sin com
       responseData.efectividad_sesion = isNaN(ef) ? 3 : Math.min(5, Math.max(1, ef));
     }
 
+    await descontarToken(caller.centroId)
     return NextResponse.json(responseData);
 
   } catch (error: any) {

@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  const isStaff = hasRole(caller, ROLES.staff)
+  if (!isStaff && caller.role !== 'padre') return forbidden()
   try {
     const { searchParams } = new URL(request.url)
     const parentId = searchParams.get('parent_id')
     const childId = searchParams.get('child_id')
     const global = searchParams.get('global')
+    if (!caller.centroId) return NextResponse.json({ data: [] })
+    // Un padre solo ve lo suyo (o lo de sus hijos) y los recursos globales de su centro.
+    if (!isStaff) {
+      if (childId && !(await canAccessChild(caller, childId))) return notFound()
+      if (!childId && parentId !== caller.id) return notFound()
+    }
 
     let query = supabaseAdmin
       .from('parent_resources')
       .select('*')
+      .eq('centro_id', caller.centroId)
       .order('created_at', { ascending: false })
 
     if (childId) {
@@ -32,13 +44,19 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await request.json()
+    if (body.child_id && !(await canAccessChild(caller, body.child_id))) return notFound()
+    if (body.parent_id && !(await rowInCentro('profiles', body.parent_id, caller.centroId))) return notFound()
 
     const { data, error } = await supabaseAdmin
       .from('parent_resources')
       .insert([{
         ...body,
+        centro_id: caller.centroId,
         created_at: new Date().toISOString(),
       }])
       .select()
@@ -54,6 +72,7 @@ export async function POST(request: NextRequest) {
           message: `${body.title} - ${body.description || ''}`,
           type: 'resource',
           is_read: false,
+          centro_id: caller.centroId,
           created_at: new Date().toISOString(),
         }])
       } catch (_e) { /* best-effort */ }
@@ -66,9 +85,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { id } = await request.json()
-    const { error } = await supabaseAdmin.from('parent_resources').delete().eq('id', id)
+    if (!(await rowInCentro('parent_resources', id, caller.centroId))) return notFound()
+    const { error } = await supabaseAdmin.from('parent_resources').delete().eq('id', id).eq('centro_id', caller.centroId)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (error: any) {

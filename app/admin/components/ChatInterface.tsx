@@ -1,4 +1,5 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 
 import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
@@ -122,7 +123,7 @@ function detectsEmotion(t: string) {
   return EMOTIONAL_KEYWORDS.some(kw => l.includes(kw))
 }
 
-function getEmotionalPrefix(text: string): string {
+function getEmotionalPrefix(text: string, centroNombre: string): string {
   const { t } = useI18n()
 
   const l = text.toLowerCase()
@@ -133,7 +134,7 @@ function getEmotionalPrefix(text: string): string {
   if (l.includes('no avanza') || l.includes('no mejora'))
     return '💙 El progreso en terapia ABA no siempre es lineal, pero sí real. Hay avances que se acumulan aunque no los veamos cada día.\n\n'
   if (l.includes('solo') || l.includes('sola') || l.includes('nadie entiende'))
-    return '💙 No estás solo/a. Todo el equipo de Neuropsicología y Terapias SANTI está aquí para acompañarte — a ti y a tu familia.\n\n'
+    return '💙 No estás solo/a. Todo el equipo de ' + centroNombre + ' está aquí para acompañarte — a ti y a tu familia.\n\n'
   return '💙 Escucho cómo te sientes, y es completamente válido. Estoy aquí.\n\n'
 }
 
@@ -318,6 +319,7 @@ function TypingIndicator() {
 
 // ── Pantalla de bienvenida ────────────────────────────────────────────────────
 function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickSend: (q: string) => void }) {
+  const { name: centroNombre } = useCentroBranding()
   const { t } = useI18n()
 
   const quick = [
@@ -346,7 +348,7 @@ function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickS
         ¡Hola! Soy <span style={{ color: '#0284c7' }}>ARIA</span> 🤖
       </h3>
       <p className="text-sm text-slate-500 font-medium mb-1">
-        {t('auto.chatInterface.tuAsistenteClinicoDeNeuropsicologi')}
+        {t('auto.chatInterface.tuAsistenteClinicoDeCentro', { centro: centroNombre })}
       </p>
       <p className="text-xs text-slate-400 mb-6 leading-relaxed max-w-xs">
         {t('aria.revisadoHistorial')} <strong className="text-slate-600">{childName || 'tu hijo/a'}</strong> y estoy lista para ayudarte en lo que necesites.
@@ -385,6 +387,7 @@ function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickS
 
 // ── Componente principal ──────────────────────────────────────────────────────
 function ChatInterface({ childId, childName, onNavigateToStore }: any) {
+  const { name: centroNombre } = useCentroBranding()
   const { t, locale } = useI18n()
   const [messages, setMessages] = useState<any[]>([])
   const [input, setInput] = useState('')
@@ -440,7 +443,7 @@ function ChatInterface({ childId, childName, onNavigateToStore }: any) {
 
     let emotionalPrefix = ''
     if (isEmotional) {
-      emotionalPrefix = getEmotionalPrefix(txt)
+      emotionalPrefix = getEmotionalPrefix(txt, centroNombre)
       await new Promise(r => setTimeout(r, 700))
       const tempMsg = emotionalPrefix + 'Déjame revisar el historial clínico para darte información más precisa...'
       setMessages(p => [...p, { role: 'ai', text: tempMsg, type: 'emotional' }])
@@ -580,7 +583,7 @@ function ChatInterface({ childId, childName, onNavigateToStore }: any) {
               )}
             </div>
             <p className="text-xs text-slate-400 font-medium truncate">
-              Asistente clínico IA · {childName ? `Historial de ${childName}` : 'Neuropsicología y Terapias SANTI'}
+              Asistente clínico IA · {childName ? `Historial de ${childName}` : centroNombre}
             </p>
           </div>
           {/* Botón silenciar voz */}

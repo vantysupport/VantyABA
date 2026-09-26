@@ -1,13 +1,18 @@
 // app/api/notificaciones/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, unauthorized } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   const { searchParams } = new URL(req.url)
   const userId     = searchParams.get('user_id')
   const soloNoLeidas = searchParams.get('no_leidas') === 'true'
 
   if (!userId) return NextResponse.json({ error: 'user_id requerido' }, { status: 400 })
+  // Solo las notificaciones propias
+  if (userId !== caller.id) return NextResponse.json({ data: [], totalNoLeidas: 0 })
 
   try {
     let query = supabaseAdmin
@@ -30,17 +35,19 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const body = await req.json()
     const { action, id, userId } = body
 
     if (action === 'marcar_leida') {
-      await supabaseAdmin.from('notificaciones').update({ leida: true }).eq('id', id)
+      await supabaseAdmin.from('notificaciones').update({ leida: true }).eq('id', id).eq('user_id', caller.id)
       return NextResponse.json({ success: true })
     }
 
     if (action === 'marcar_todas_leidas') {
-      await supabaseAdmin.from('notificaciones').update({ leida: true }).eq('user_id', userId).eq('leida', false)
+      await supabaseAdmin.from('notificaciones').update({ leida: true }).eq('user_id', caller.id).eq('leida', false)
       return NextResponse.json({ success: true })
     }
 
@@ -51,9 +58,11 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { id } = await req.json()
-    await supabaseAdmin.from('notificaciones').delete().eq('id', id)
+    await supabaseAdmin.from('notificaciones').delete().eq('id', id).eq('user_id', caller.id)
     return NextResponse.json({ success: true })
   } catch (e: any) {
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : e.message }, { status: 500 })

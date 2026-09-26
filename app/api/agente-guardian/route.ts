@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 import { createHash } from 'crypto'
 
 // ─── Tipos de eventos auditables ────────────────────────────────────────────
@@ -21,9 +22,14 @@ function generarHashEvento(data: object): string {
 
 // ─── POST: Registrar evento de auditoría ─────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const body = await req.json()
-    const { accion, userId, userRole, recurso, detalles, ip } = body
+    const { accion, recurso, detalles, ip } = body
+    // El evento siempre se atribuye a quien llama (no al userId/rol del body).
+    const userId = caller.id
+    const userRole = caller.role
 
     if (!accion || !userId) {
       return NextResponse.json({ error: 'accion y userId requeridos' }, { status: 400 })
@@ -44,6 +50,7 @@ export async function POST(req: NextRequest) {
         ip_address: ip || req.headers.get('x-forwarded-for') || 'unknown',
         user_agent: req.headers.get('user-agent') || 'unknown',
         hash_verificacion: hashVerificacion,
+        centro_id: caller.centroId,
         timestamp
       })
       .select('id')
@@ -59,6 +66,7 @@ export async function POST(req: NextRequest) {
         nivel: anomalia.nivel,
         metadata: { accion, recurso, detalles },
         resuelto: false,
+        centro_id: caller.centroId,
         timestamp
       })
     }
@@ -78,6 +86,10 @@ export async function POST(req: NextRequest) {
 
 // ─── GET: Consultar logs y alertas ──────────────────────────────────────────
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.admins)) return forbidden()
+  const centroId = caller.centroId
   const { searchParams } = new URL(req.url)
   const tipo = searchParams.get('tipo') || 'resumen'
   const userId = searchParams.get('user_id')
@@ -91,6 +103,7 @@ export async function GET(req: NextRequest) {
       const { data } = await supabaseAdmin
         .from('alertas_seguridad')
         .select('*')
+        .eq('centro_id', centroId)
         .eq('resuelto', false)
         .gte('timestamp', fechaInicio.toISOString())
         .order('timestamp', { ascending: false })
@@ -102,6 +115,7 @@ export async function GET(req: NextRequest) {
       let query = supabaseAdmin
         .from('audit_logs')
         .select('*')
+        .eq('centro_id', centroId)
         .gte('timestamp', fechaInicio.toISOString())
         .order('timestamp', { ascending: false })
         .limit(200)
@@ -113,9 +127,9 @@ export async function GET(req: NextRequest) {
 
     // Resumen de seguridad
     const [logs, alertas, exportaciones] = await Promise.all([
-      supabaseAdmin.from('audit_logs').select('accion, user_role, timestamp').gte('timestamp', fechaInicio.toISOString()),
-      supabaseAdmin.from('alertas_seguridad').select('tipo, nivel, resuelto').gte('timestamp', fechaInicio.toISOString()),
-      supabaseAdmin.from('audit_logs').select('id').eq('accion', 'DATA_EXPORT').gte('timestamp', fechaInicio.toISOString())
+      supabaseAdmin.from('audit_logs').select('accion, user_role, timestamp').eq('centro_id', centroId).gte('timestamp', fechaInicio.toISOString()),
+      supabaseAdmin.from('alertas_seguridad').select('tipo, nivel, resuelto').eq('centro_id', centroId).gte('timestamp', fechaInicio.toISOString()),
+      supabaseAdmin.from('audit_logs').select('id').eq('centro_id', centroId).eq('accion', 'DATA_EXPORT').gte('timestamp', fechaInicio.toISOString())
     ])
 
     const totalAccesos = logs.data?.length || 0

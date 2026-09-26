@@ -1,5 +1,9 @@
-import { NextResponse } from 'next/server'
-export async function GET() {
+import { NextRequest, NextResponse } from 'next/server'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
+export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.admins) && caller.role !== 'programador') return forbidden()
   const url = process.env.WSP_SERVICE_URL
   const secret = process.env.WSP_SERVICE_SECRET
   if (!url || !secret) return NextResponse.json({ unconfigured: true })

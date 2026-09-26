@@ -8,6 +8,7 @@
 import { useI18n } from '@/lib/i18n-context'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { confirmar } from '@/components/ui/confirmar'
 import {
   FileText, Download, Trash2, Loader2, FileDown, Eye,
   AlertCircle, Clock, CheckCircle2, Sparkles, RefreshCw,
@@ -217,7 +218,7 @@ export default function ReportGenerator({
 
   // ─── Eliminar reporte ─────────────────────────────────────────────────────
   const handleDeleteReport = async (reporteId: string) => {
-    if (!confirm(t('auto.reportGenerator.eliminarEsteReportePermanentemente'))) return
+    if (!await confirmar(t('auto.reportGenerator.eliminarEsteReportePermanentemente'))) return
     try {
       const { error } = await supabase
         .from('reportes_generados')

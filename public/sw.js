@@ -1,5 +1,5 @@
 // Vanty Service Worker v3 — optimizado para iOS Safari PWA
-const CACHE_NAME = 'vanty-v3'
+const CACHE_NAME = 'vanty-v4'
 
 const STATIC_ASSETS = [
   '/',
@@ -84,42 +84,42 @@ self.addEventListener('fetch', event => {
   )
 })
 
-// ── Push notifications (mantener funcionalidad existente) ────────────────────
+// ── Push notifications (estilo Duolingo: ARIA a la derecha, botones de acción) ──
 self.addEventListener('push', event => {
   if (!event.data) return
-  try {
-    const data = event.data.json()
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'Vanty', {
-        body:    data.body    || '',
-        icon:    data.icon    || '/icons/icon-192x192.png',
-        badge:   data.badge   || '/icons/icon-96x96.png',
-        data:    data.data    || {},
-        actions: data.actions || [],
-        tag:     data.tag     || 'vanty-notification',
-        renotify: true,
-      })
-    )
-  } catch {
-    const text = event.data.text()
-    event.waitUntil(
-      self.registration.showNotification('Vanty', { body: text, icon: '/icons/icon-192x192.png' })
-    )
-  }
+  let data
+  try { data = event.data.json() } catch { data = { title: 'Vanty', body: event.data.text() } }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Vanty', {
+      body:     data.body  || '',
+      icon:     data.icon  || '/push/aria-saludo.png',
+      badge:    data.badge || '/push/badge.png',
+      image:    data.image || undefined,
+      data:     data.data  || { url: data.url || '/' },
+      actions:  data.actions || [],
+      tag:      data.tag || undefined,
+      renotify: !!data.tag,
+      requireInteraction: !!data.requireInteraction,
+      vibrate:  [80, 40, 80],
+      timestamp: Date.now(),
+    })
+  )
 })
 
 self.addEventListener('notificationclick', event => {
   event.notification.close()
-  const url = event.notification.data?.url || '/'
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.focus()
-          return
-        }
-      }
-      if (clients.openWindow) return clients.openWindow(url)
-    })
-  )
+  const d = event.notification.data || {}
+  const destino = (event.action && d.acciones && d.acciones[event.action]) || d.url || '/'
+  const url = new URL(destino, self.location.origin).href
+  event.waitUntil((async () => {
+    // Enlace externo (p. ej. la videollamada): ventana nueva
+    if (!url.startsWith(self.location.origin)) return clients.openWindow(url)
+    const abiertas = await clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const propia = abiertas.find(c => c.url.startsWith(self.location.origin))
+    if (propia) {
+      try { await propia.navigate(url) } catch { /* sin control del cliente */ }
+      return propia.focus()
+    }
+    return clients.openWindow(url)
+  })())
 })

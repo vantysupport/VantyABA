@@ -1,4 +1,5 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 import React from 'react'
 
 import { useI18n } from '@/lib/i18n-context'
@@ -27,6 +28,7 @@ interface VADIAgentChatProps {
 export default function VADIAgentChat({
   userId, childId, childName, contexto = 'general', compact = false
 }: VADIAgentChatProps) {
+  const { name: centroNombre } = useCentroBranding()
   const { t, locale } = useI18n()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -51,10 +53,10 @@ export default function VADIAgentChat({
       role: 'assistant',
       content: childId
         ? `¡Hola! Soy **VADI**, tu asistente clínico. Estoy revisando el expediente de **${childName || 'tu paciente'}** y tengo acceso a todo su historial, programas ABA y evaluaciones previas.\n\n¿En qué te puedo ayudar hoy? Puedo analizar tendencias de progreso, sugerirte estrategias clínicas, o responder dudas sobre el caso.`
-        : `¡Hola! Soy **VADI**, el cerebro clínico de SANTI. Tengo acceso a todos los expedientes del sistema.\n\n¿Cómo puedo ayudarte hoy?`,
+        : `¡Hola! Soy **VADI**, el cerebro clínico de ${centroNombre}. Tengo acceso a todos los expedientes del sistema.\n\n¿Cómo puedo ayudarte hoy?`,
       timestamp: new Date().toISOString(),
     }])
-  }, [childId, childName])
+  }, [childId, childName, centroNombre])
 
   const sendMessage = useCallback(async (text?: string) => {
     const msg = (text || input).trim()
@@ -80,7 +82,7 @@ export default function VADIAgentChat({
           userId,
           conversacionId,
           contexto,
-          locale: typeof window !== 'undefined' ? (localStorage.getItem('vanty_locale') || 'es') : 'es',
+          locale: locale || 'es',
         }),
       })
       const data = await res.json()

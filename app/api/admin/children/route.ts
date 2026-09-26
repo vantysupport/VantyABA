@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { requireRole, STAFF_ROLES } from '@/lib/require-staff'
+import { getApiCaller, hasRole, ROLES, rowInCentro, notFound } from '@/lib/api-auth'
 
 // GET /api/admin/children — lista todos los pacientes usando service role (bypassa RLS)
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, STAFF_ROLES)
-  if (!auth.ok) return NextResponse.json({ error: `No autorizado (${auth.reason})`, data: [] }, { status: 403 })
+  // Notas de un paciente (descifradas): ?notas=<child_id>
+  const notasDe = new URL(req.url).searchParams.get('notas')
+  if (notasDe) {
+    const quien = await getApiCaller(req)
+    if (!hasRole(quien, ROLES.staff)) return NextResponse.json({ error: 'No autorizado' }, { status: quien ? 403 : 401 })
+    if (!(await rowInCentro('children', notasDe, quien.centroId))) return notFound()
+    const { data } = await supabaseAdmin.from('children').select('notas').eq('id', notasDe).maybeSingle()
+    return NextResponse.json({ notas: (data?.notas as string | null) ?? '' }, { headers: { 'Cache-Control': 'no-store' } })
+  }
+
+  const caller = await getApiCaller(req)
+  if (!hasRole(caller, ROLES.staff)) return NextResponse.json({ error: 'No autorizado', data: [] }, { status: caller ? 403 : 401 })
   try {
     // Try full select first
     let { data, error } = await supabaseAdmin
       .from('children')
       .select('id, name, diagnosis, age, birth_date, parent_id, created_at')
+      .eq('centro_id', caller.centroId)
       .order('name')
 
     // If error due to missing columns, fallback to minimal select
@@ -18,6 +29,7 @@ export async function GET(req: NextRequest) {
       const fallback = await supabaseAdmin
         .from('children')
         .select('id, name, parent_id')
+        .eq('centro_id', caller.centroId)
         .order('name')
       if (fallback.error) throw fallback.error
       data = fallback.data as any[]
@@ -31,11 +43,23 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin/children — actualiza parent_id + sincroniza parent_accounts
 export async function PATCH(req: NextRequest) {
-  const auth = await requireRole(req, STAFF_ROLES)
-  if (!auth.ok) return NextResponse.json({ error: `No autorizado (${auth.reason})` }, { status: 403 })
+  const caller = await getApiCaller(req)
+  if (!hasRole(caller, ROLES.staff)) return NextResponse.json({ error: 'No autorizado' }, { status: caller ? 403 : 401 })
   try {
-    const { childId, parentId } = await req.json()
+    const body = await req.json()
+    const { childId, parentId } = body
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await rowInCentro('children', childId, caller.centroId))) return notFound()
+
+    // Notas del paciente: se guardan cifradas (lo hace el cliente de base del servidor)
+    if ('notas' in body) {
+      const notas = typeof body.notas === 'string' ? body.notas.trim().slice(0, 10000) : ''
+      const { error } = await supabaseAdmin.from('children').update({ notas: notas || null }).eq('id', childId)
+      if (error) throw error
+      return NextResponse.json({ ok: true })
+    }
+    // El padre asignado debe ser una cuenta del mismo centro.
+    if (parentId && !(await rowInCentro('profiles', parentId, caller.centroId))) return notFound()
 
     // 1. Actualizar parent_id en children
     const { error } = await supabaseAdmin
@@ -65,6 +89,7 @@ export async function PATCH(req: NextRequest) {
           notif_citas:     true,
           notif_reportes:  true,
           notif_tareas:    true,
+          centro_id:       caller.centroId,
         }, { onConflict: 'user_id,child_id', ignoreDuplicates: false })
     } else {
       await supabaseAdmin

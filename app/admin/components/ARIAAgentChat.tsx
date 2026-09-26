@@ -5,8 +5,11 @@ import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
-  Send, Loader2, User, Brain, BookOpen, Trash2, Volume2, VolumeX
+  Send, Loader2, User, BookOpen, Trash2, Volume2, VolumeX, Sparkles
 } from 'lucide-react'
+import { motion } from 'motion/react'
+import { AriaGlyph } from '@/components/ui/aria-glyph'
+import { confirmar } from '@/components/ui/confirmar'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -317,144 +320,104 @@ export default function ARIAAgentChat({
   }
 
   return (
-    <div
-      className={`flex flex-col overflow-hidden ${compact ? 'rounded-2xl border h-full' : 'h-full'}`}
-      style={compact ? {
-        background: 'var(--card)',
-        borderColor: 'var(--card-border)',
-      } : { background: 'var(--card)' }}
-    >
-      {/* Header */}
+    <div className="v-scope flex h-full flex-col overflow-hidden bg-v-bg">
+      {/* Header (solo vista completa; en la flotante lo pone el contenedor) */}
       {!compact && (
-        <div className="flex items-center justify-between px-5 py-3.5 flex-shrink-0"
-          style={{ background: 'var(--card)', borderBottom: '1px solid var(--card-border)' }}>
+        <div className="flex shrink-0 items-center justify-between border-b border-v-border bg-v-elevated px-5 py-3.5">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
-              <Brain size={15} style={{ color: 'var(--text-secondary)' }} />
-            </div>
+            <span className="relative size-9 shrink-0 overflow-hidden rounded-full ring-1 ring-v-border"><AriaGlyph /></span>
             <div>
-              <h3 className="font-bold text-sm flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-v-text">
                 {t('auto.aRIAAgentChat.ariaAsistenteClinicoIa')}
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold"
-                  style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
-                  BETA
-                </span>
+                <span className="rounded-full bg-v-accent-soft px-1.5 py-0.5 text-[9px] font-bold text-v-accent">BETA</span>
               </h3>
-              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                {childId ? `Caso activo: ${childName || 'Paciente'}` : 'Asistente clínico especializado'}
+              <p className="text-[11px] text-v-subtle">
+                {childId ? `${locale === 'en' ? 'Active case' : 'Caso activo'}: ${childName || 'Paciente'}` : (locale === 'en' ? 'Specialized clinical assistant' : 'Asistente clínica especializada')}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>{t('common.activo')}</span>
-          </div>
+          <span className="flex items-center gap-1.5 rounded-full bg-v-success/15 px-2.5 py-1 text-[10px] font-semibold text-v-success">
+            <span className="size-1.5 animate-pulse rounded-full bg-v-success" /> {t('common.activo')}
+          </span>
         </div>
       )}
 
       {/* Messages */}
-      <div
-        className="flex-1 overflow-y-auto p-5 space-y-4"
-        style={{ background: 'var(--background)', minHeight: 0 }}
-      >
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-5" style={{ scrollbarWidth: 'thin' }}>
         {messages.map((msg, i) => (
           <MessageBubble key={i} message={msg} />
         ))}
         {loading && (
-          <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}>
-              <Brain size={14} style={{ color: 'var(--text-muted)' }} />
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-end gap-2.5">
+            <AriaAvatar />
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-v-border bg-v-elevated px-4 py-3.5 shadow-v">
+              {[0, 1, 2].map(d => (
+                <motion.span key={d} className="size-1.5 rounded-full bg-v-accent"
+                  animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15 }} />
+              ))}
+              <span className="sr-only">{t('aria.ariaPensando')}</span>
             </div>
-            <div
-              className="rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2"
-              style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}
-            >
-              <Loader2 size={14} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{t('aria.ariaPensando')}</span>
-            </div>
-          </div>
+          </motion.div>
         )}
         <div ref={bottomRef} />
       </div>
 
       {/* Sugerencias */}
       {messages.length <= 1 && (
-        <div
-          className="px-5 pb-4"
-          style={{ background: 'var(--background)', borderTop: '1px solid var(--card-border)' }}
-        >
-          <p className="text-[10px] font-bold mb-2 mt-3" style={{ color: 'var(--text-muted)' }}>
+        <div className="shrink-0 px-4 pb-3">
+          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-v-subtle">
+            <Sparkles size={11} className="text-v-accent" />
             {locale === 'en' ? 'Suggested questions' : 'Preguntas sugeridas'}
           </p>
           <div className="flex flex-wrap gap-2">
             {sugerencias.map((s, i) => (
-              <button
+              <motion.button
                 key={i}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 + i * 0.06 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => sendMessage(s)}
-                className="px-3 py-2 rounded-lg text-xs font-medium text-left leading-tight transition-all"
-                style={{
-                  background: 'var(--muted-bg)',
-                  border: '1px solid var(--card-border)',
-                  color: 'var(--text-secondary)',
-                }}
+                className="rounded-full border border-v-border bg-v-elevated px-3.5 py-2 text-left text-xs font-medium leading-tight text-v-muted shadow-v transition-colors hover:border-v-accent/40 hover:bg-v-accent-soft hover:text-v-accent"
               >
                 {s}
-              </button>
+              </motion.button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Barra de acciones — borrar chat */}
-      <div
-        className="px-5 pt-2 pb-1 flex items-center justify-between flex-shrink-0"
-        style={{
-          background: 'var(--card)',
-          borderTop: '1px solid var(--card-border)',
-        }}
-      >
-        <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
-          {messages.length > 1
-            ? (locale === 'en'
-                ? `${messages.length - 1} saved message${messages.length > 2 ? 's' : ''}`
-                : `${messages.length - 1} mensaje${messages.length > 2 ? 's' : ''} guardado${messages.length > 2 ? 's' : ''}`)
-            : (locale === 'en' ? 'New conversation' : 'Conversación nueva')}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={toggleVoice}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all"
-            style={{
-              background: voiceEnabled ? 'rgba(134,239,172,0.18)' : 'var(--muted-bg)',
-              color: voiceEnabled ? '#16a34a' : 'var(--text-muted)',
-              border: `1px solid ${voiceEnabled ? 'rgba(22,163,74,0.35)' : 'var(--card-border)'}`,
-            }}
-            title={voiceEnabled ? (locale === 'en' ? "Disable ARIA's voice" : 'Desactivar voz de ARIA') : (locale === 'en' ? "Enable ARIA's voice" : 'Activar voz de ARIA')}
-          >
-            {voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
-            {speaking ? (locale === 'en' ? 'Speaking…' : 'Hablando…') : voiceEnabled ? (locale === 'en' ? 'Voice ON' : 'Voz ON') : (locale === 'en' ? 'Voice OFF' : 'Voz OFF')}
-          </button>
-          <button
-            onClick={() => { if (window.confirm(t('auto.aRIAAgentChat.borrarTodoElHistorialDe'))) clearHistory() }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all text-red-500 hover:text-white hover:bg-red-500 border border-red-500/30 hover:border-red-500"
-            title={t('auto.aRIAAgentChat.borrarHistorialDelChat')}
-          >
-            <Trash2 size={12} />
-            {locale === 'en' ? 'Clear chat' : 'Borrar chat'}
-          </button>
+      {/* Composer */}
+      <div className="shrink-0 border-t border-v-border bg-v-elevated px-4 pb-4 pt-2.5">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[11px] text-v-subtle">
+            {messages.length > 1
+              ? (locale === 'en'
+                  ? `${messages.length - 1} saved message${messages.length > 2 ? 's' : ''}`
+                  : `${messages.length - 1} mensaje${messages.length > 2 ? 's' : ''} guardado${messages.length > 2 ? 's' : ''}`)
+              : (locale === 'en' ? 'New conversation' : 'Conversación nueva')}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggleVoice}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${voiceEnabled ? 'bg-v-success/15 text-v-success' : 'text-v-subtle hover:bg-v-fill hover:text-v-text'}`}
+              title={voiceEnabled ? (locale === 'en' ? "Disable ARIA's voice" : 'Desactivar voz de ARIA') : (locale === 'en' ? "Enable ARIA's voice" : 'Activar voz de ARIA')}
+            >
+              {voiceEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
+              {speaking ? (locale === 'en' ? 'Speaking…' : 'Hablando…') : (locale === 'en' ? 'Voice' : 'Voz')}
+            </button>
+            <button
+              onClick={async () => { if (await confirmar(t('auto.aRIAAgentChat.borrarTodoElHistorialDe'))) clearHistory() }}
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold text-v-subtle transition-colors hover:bg-v-danger/10 hover:text-v-danger"
+              title={t('auto.aRIAAgentChat.borrarHistorialDelChat')}
+            >
+              <Trash2 size={13} />
+              {locale === 'en' ? 'Clear' : 'Borrar'}
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Input */}
-      <div
-        className="px-5 pt-2 pb-4 flex-shrink-0"
-        style={{
-          background: 'var(--card)',
-        }}
-      >
-        <div className="flex gap-2 items-end">
+        <div className="flex items-end gap-2 rounded-[22px] border border-v-border bg-v-bg p-1.5 pl-4 transition-shadow focus-within:border-v-accent/50 focus-within:ring-4 focus-within:ring-v-accent-soft">
           <textarea
             ref={inputRef}
             value={input}
@@ -462,29 +425,33 @@ export default function ARIAAgentChat({
             onKeyDown={handleKeyDown}
             rows={1}
             {...{placeholder: t('ui.ask_aria')}}
-            className="flex-1 p-3 rounded-xl text-sm resize-none outline-none transition-all leading-relaxed max-h-28"
-            style={{
-              background: 'var(--input-bg)',
-              border: '1.5px solid var(--input-border)',
-              color: 'var(--text-primary)',
-              minHeight: '44px',
-            }}
+            className="max-h-28 min-h-[36px] flex-1 resize-none bg-transparent py-2 text-sm leading-relaxed text-v-text outline-none placeholder:text-v-subtle"
           />
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={() => sendMessage()}
             disabled={!input.trim() || loading}
-            className="w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 disabled:opacity-40" style={{ background: 'var(--text-primary)', color: 'var(--card)' }}
+            aria-label={locale === 'en' ? 'Send' : 'Enviar'}
+            className="v-brand grid size-9 shrink-0 place-items-center rounded-full transition-opacity disabled:opacity-35 disabled:shadow-none"
           >
-            <Send size={16} />
-          </button>
+            {loading ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} className="-translate-x-px translate-y-px" />}
+          </motion.button>
         </div>
       </div>
     </div>
   )
 }
 
+function AriaAvatar() {
+  return (
+    <span className="relative size-7 shrink-0 overflow-hidden rounded-full ring-1 ring-v-border">
+      <AriaGlyph />
+    </span>
+  )
+}
+
 function MessageBubble({ message }: { message: Message; key?: any }) {
-  const { t, locale } = useI18n()
+  const { locale } = useI18n()
   const isUser = message.role === 'user'
 
   const formatContent = (text: string) => {
@@ -494,7 +461,7 @@ function MessageBubble({ message }: { message: Message; key?: any }) {
       const parts = line.split(/\*\*(.*?)\*\*/g)
       return (
         <span key={i}>
-          {parts.map((part, j) => j % 2 === 1 ? <strong key={j}>{part}</strong> : part)}
+          {parts.map((part, j) => j % 2 === 1 ? <strong key={j} className="font-semibold">{part}</strong> : part)}
           {i < arr.length - 1 && <br />}
         </span>
       )
@@ -502,51 +469,33 @@ function MessageBubble({ message }: { message: Message; key?: any }) {
   }
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
-      <div
-        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-        style={{ background: 'var(--muted-bg)', border: '1px solid var(--card-border)' }}
-      >
-        {isUser
-          ? <User size={13} style={{ color: 'var(--text-secondary)' }} />
-          : <Brain size={13} style={{ color: 'var(--text-secondary)' }} />
-        }
-      </div>
-      <div className={`max-w-[82%] flex flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
-        <div
-          className="rounded-xl px-4 py-3 text-sm leading-relaxed"
-          style={isUser
-            ? {
-                background: 'var(--text-primary)',
-                color: 'var(--card)',
-                borderRadius: '0.75rem 0.2rem 0.75rem 0.75rem',
-              }
-            : {
-                background: 'var(--card)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--card-border)',
-                borderRadius: '0.2rem 0.75rem 0.75rem 0.75rem',
-              }
-          }
-        >
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+      className={`flex items-end gap-2.5 ${isUser ? 'flex-row-reverse' : ''}`}
+    >
+      {isUser
+        ? <span className="grid size-7 shrink-0 place-items-center rounded-full bg-v-fill text-v-muted"><User size={13} /></span>
+        : <AriaAvatar />}
+      <div className={`flex max-w-[82%] flex-col gap-1 ${isUser ? 'items-end' : 'items-start'}`}>
+        <div className={`px-4 py-2.5 text-sm leading-relaxed ${isUser
+          ? 'v-brand rounded-2xl rounded-br-md'
+          : 'rounded-2xl rounded-bl-md border border-v-border bg-v-elevated text-v-text shadow-v'}`}
+          style={isUser ? { boxShadow: 'none' } : undefined}>
           {formatContent(message.content)}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+        <div className="flex flex-wrap items-center gap-1.5 px-1">
+          <span className="text-[10px] text-v-subtle">
             {new Date(message.timestamp).toLocaleTimeString(toBCP47(locale), { hour: '2-digit', minute: '2-digit' })}
           </span>
-          {message.fuentes && message.fuentes.length > 0 && (
-            <div className="flex gap-1">
-              {message.fuentes.map((f, i) => (
-                <span key={i} className="text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1"
-                  style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
-                  <BookOpen size={8} /> {f}
-                </span>
-              ))}
-            </div>
-          )}
+          {message.fuentes && message.fuentes.length > 0 && message.fuentes.map((f, i) => (
+            <span key={i} className="inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[9px] font-semibold text-v-accent">
+              <BookOpen size={9} /> {f}
+            </span>
+          ))}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

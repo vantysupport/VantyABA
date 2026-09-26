@@ -1,4 +1,5 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 import React from 'react'
 
 import { useI18n } from '@/lib/i18n-context'
@@ -7,8 +8,10 @@ import { toBCP47 } from '@/lib/i18n'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Calendar, ChevronLeft, ChevronRight, Clock, User, Plus, X, Loader2,
-  CheckCircle2, Trash2, Users, RefreshCw, Video, MapPin, Timer, Pencil, Check
+  CheckCircle2, Trash2, Users, RefreshCw, Video, MapPin, Timer, Pencil, Check,
+  CalendarCheck, CalendarRange, SlidersHorizontal, Repeat
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useToast } from '@/components/Toast'
 import VideoCallModal from '@/components/VideoCallModal'
 import { supabase } from '@/lib/supabase'
@@ -16,6 +19,7 @@ import GoogleCalendarSync from './GoogleCalendarSync'
 import MicrosoftCalendarSync from './MicrosoftCalendarSync'
 import ReservasOnlinePanel from './ReservasOnlinePanel'
 import { CalendarClock } from 'lucide-react'
+import { confirmar } from '@/components/ui/confirmar'
 
 // ── Cronómetro de 45 min por cita ──────────────────────────────────────────
 function SessionTimer({ apt, onExpired }: { apt: any; onExpired: (id: string) => void }) {
@@ -65,27 +69,22 @@ function SessionTimer({ apt, onExpired }: { apt: any; onExpired: (id: string) =>
   const warning = (remaining ?? 0) <= 10 * 60  // últimos 10 min
 
   return (
-    <div className={`mt-2.5 rounded-xl px-3 py-2 border flex items-center gap-2.5 transition-all
-      ${urgent  ? 'bg-red-50 border-red-200 animate-pulse' :
-        warning ? 'bg-amber-50 border-amber-200' :
-                  'bg-emerald-50 border-emerald-200'}`}>
-      <Timer size={13} className={urgent ? 'text-red-500' : warning ? 'text-amber-500' : 'text-emerald-600'} />
+    <div className={`mt-2.5 flex items-center gap-2.5 rounded-v-sm px-3 py-2 transition-all
+      ${urgent ? 'animate-pulse bg-v-danger/10 text-v-danger' : warning ? 'bg-v-warning/15 text-v-warning' : 'bg-v-success/15 text-v-success'}`}>
+      <Timer size={13} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          <span className={`text-[10px] font-bold
-            ${urgent ? 'text-red-600' : warning ? 'text-amber-600' : 'text-emerald-700'}`}>
+          <span className="text-[10px] font-semibold">
             {urgent ? '⚠️ Finalizando' : 'Sesión en curso'}
           </span>
-          <span className={`text-xs font-bold tabular-nums
-            ${urgent ? 'text-red-600' : warning ? 'text-amber-600' : 'text-emerald-700'}`}>
+          <span className="text-xs font-bold tabular-nums">
             {String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')}
           </span>
         </div>
         {/* Barra de progreso */}
-        <div className="h-1.5 rounded-full bg-white/70 overflow-hidden">
+        <div className="h-1.5 overflow-hidden rounded-full bg-v-fill">
           <div
-            className={`h-full rounded-full transition-all duration-1000
-              ${urgent ? 'bg-red-500' : warning ? 'bg-amber-400' : 'bg-emerald-500'}`}
+            className="h-full rounded-full bg-current transition-all duration-1000"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -99,14 +98,15 @@ const SERVICES = [
   'Evaluación Vineland-3','Evaluación WISC-V','Evaluación BASC-3',
   'Sesión Familiar','Sesión de Orientación','Visita Domiciliaria',
 ]
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  confirmed: { label: 'Confirmada', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
-  pending:   { label: 'Pendiente',  color: 'text-amber-700',   bg: 'bg-amber-50 border-amber-200'   },
-  cancelled: { label: 'Cancelada',  color: 'text-red-700',     bg: 'bg-red-50 border-red-200'       },
-  completed: { label: 'Completada', color: 'text-sky-700',    bg: 'bg-sky-50 border-sky-200'     },
+const STATUS_CONFIG: Record<string, { chip: string; dot: string }> = {
+  confirmed: { chip: 'bg-v-success/15 text-v-success', dot: 'bg-v-success' },
+  pending:   { chip: 'bg-v-warning/15 text-v-warning', dot: 'bg-v-warning' },
+  cancelled: { chip: 'bg-v-danger/10 text-v-danger',   dot: 'bg-v-danger' },
+  completed: { chip: 'bg-v-accent-soft text-v-accent', dot: 'bg-v-accent' },
 }
 
 function MonthlyCalendarView() {
+  const { name: centroNombre } = useCentroBranding()
   const toast = useToast()
   const { t, locale } = useI18n()
   const [apts, setApts] = useState<any[]>([])
@@ -118,6 +118,7 @@ function MonthlyCalendarView() {
   const [filterStatus, setFilterStatus] = useState('todos')
   const [filterEspecialista, setFilterEspecialista] = useState('todos')
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null)
+  const [monthDir, setMonthDir] = useState(0)
   const [tipoSesion, setTipoSesion] = useState<'individual'|'grupal'>('individual')
   const [modalidadCita, setModalidadCita] = useState<'presencial'|'virtual'>('presencial')
   const [newApt, setNewApt] = useState({ child_id:'', date:'', time:'09:00', service:locale==='en'?'ABA Therapy':'Terapia ABA', notes:'', group_name:'', status:'confirmed', specialist_id:'' })
@@ -272,9 +273,29 @@ function MonthlyCalendarView() {
     }
   }
 
+  // Respuesta a la solicitud de reprogramación enviada por la familia
+  const [respondiendo, setRespondiendo] = useState<string | null>(null)
+  const responderReprogramacion = async (id: string, accion: 'aprobar' | 'rechazar') => {
+    setRespondiendo(id)
+    try {
+      const res = await fetch('/api/admin/appointments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-locale': localStorage.getItem('vanty_locale') || 'es' },
+        body: JSON.stringify({ id, reprogramacion: accion }),
+      })
+      const json = await res.json()
+      if (json.error) throw new Error(json.error)
+      toast.success(accion === 'aprobar'
+        ? (locale === 'en' ? 'Appointment moved. The family was notified.' : 'Cita movida. La familia fue avisada.')
+        : (locale === 'en' ? 'Request declined. The family was notified.' : 'Solicitud rechazada. La familia fue avisada.'))
+      cargarCitas()
+    } catch (err: any) { toast.error(err?.message || 'Error') }
+    finally { setRespondiendo(null) }
+  }
+
   const eliminarCita = async (id:string, e:React.MouseEvent) => {
     e.stopPropagation()
-    if (!confirm(t('auto.calendarView.eliminarEstaCita'))) return
+    if (!await confirmar(t('auto.calendarView.eliminarEstaCita'))) return
     try {
       const res = await fetch('/api/admin/appointments', { method:'DELETE', headers:{'Content-Type':'application/json', 'x-locale': localStorage.getItem('vanty_locale') || 'es'}, body: JSON.stringify({ id }) })
       const json = await res.json()
@@ -516,6 +537,33 @@ function MonthlyCalendarView() {
   })
   const virtualApts = apts.filter(a => a.modalidad==='virtual')
 
+  const weekdayNames = locale === 'en' ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] : ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+  const hasFilters = !!filterDate || filterStatus !== 'todos' || filterEspecialista !== 'todos'
+  const inputClass = 'w-full rounded-v-sm border border-v-border bg-v-bg px-3.5 py-2.5 text-sm font-medium text-v-text outline-none transition-shadow focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft'
+  const labelClass = 'mb-1.5 block text-xs font-semibold text-v-muted'
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
+  // Control segmentado con píldora animada (layoutId único por grupo)
+  const segmento = (id: string, actual: string, opciones: { value: string; label: string; icon?: React.ReactNode }[], onChange: (v: string) => void) => (
+    <div className="grid gap-1 rounded-full bg-v-fill p-1" style={{ gridTemplateColumns: `repeat(${opciones.length}, minmax(0, 1fr))` }}>
+      {opciones.map(o => {
+        const on = actual === o.value
+        return (
+          <button key={o.value} type="button" onClick={() => onChange(o.value)}
+            className={`relative flex h-9 items-center justify-center gap-1.5 rounded-full text-xs font-semibold transition-colors sm:text-sm ${on ? 'text-v-text' : 'text-v-muted hover:text-v-text'}`}>
+            {on && <motion.span layoutId={id} transition={{ type: 'spring', stiffness: 420, damping: 34 }} className="absolute inset-0 rounded-full bg-v-elevated shadow-v" />}
+            <span className={`relative flex items-center gap-1.5 ${on ? 'text-v-accent' : ''}`}>{o.icon}</span>
+            <span className="relative" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+  const shiftMonth = (delta: number) => {
+    if (!currentMonth) return
+    setMonthDir(delta)
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + delta))
+  }
+
   return (
     <>
       {videoSession && (
@@ -523,7 +571,7 @@ function MonthlyCalendarView() {
           roomUrl={videoSession.roomUrl}
           sessionId={videoSession.sessionId}
           appointmentId={videoSession.appointmentId}
-          participantName="Terapeuta – Neuropsicología y Terapias SANTI"
+          participantName={`Terapeuta – ${centroNombre}`}
           onClose={() => { setVideoSession(null); cargarCitas() }}
         />
       )}
@@ -536,445 +584,587 @@ function MonthlyCalendarView() {
         />
       )}
 
-      <div className="min-h-full overflow-y-auto px-3 sm:px-5 pt-5 pb-28 md:pb-10 animate-fade-in-up" style={{ background: "var(--background)" }}>
+      <div className="v-scope flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 pb-28 pt-3 md:gap-5 md:px-4 md:pb-6 md:pt-4">
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          {/* Título */}
-          <div>
-            <h2 className="font-bold text-2xl md:text-3xl tracking-tight flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
-              <div className="p-2.5 rounded-2xl flex-shrink-0" style={{ background: "rgba(37,99,235,0.15)" }}>
-                <Calendar className="text-sky-500" size={28}/>
-              </div>
-              {t('agenda.tituloPagina')}
-            </h2>
-            <p className="text-slate-400 text-sm font-medium mt-1 ml-1">
-              {t('auto.calendarView.citasHoyVirtuales', { v1: String(apts.length), v2: String(todayApts.length), v3: String(virtualApts.length) })}
-            </p>
-          </div>
-
-          {/* Controles — una sola fila */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+        {/* Header: resumen + acciones */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-sm text-v-muted">
+            {t('auto.calendarView.citasHoyVirtuales', { v1: String(apts.length), v2: String(todayApts.length), v3: String(virtualApts.length) })}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
             <GoogleCalendarSync />
             <MicrosoftCalendarSync />
-            <div className="w-px h-6 bg-slate-200 dark:bg-[#30363d] hidden sm:block" />
+            <span className="mx-1 hidden h-6 w-px bg-v-border sm:block" />
             <button
               onClick={() => setShowReservas(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm
-                border-2 border-sky-500 text-sky-600 hover:bg-sky-50 transition-all whitespace-nowrap"
+              className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full border border-v-border bg-v-elevated px-4 text-sm font-semibold text-v-accent shadow-v transition-colors hover:bg-v-accent-soft"
             >
-              <CalendarClock size={16}/> {t('agenda.reservasOnline')}
+              <CalendarClock size={16} /> {t('agenda.reservasOnline')}
             </button>
-            <button
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.96 }}
               onClick={() => setShow(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm text-white
-                bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-sky-700
-                shadow-lg shadow-sky-500/25 transition-all whitespace-nowrap"
+              className="v-brand inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-5 text-sm font-semibold"
             >
-              <Plus size={16}/> {t('agenda.nuevaCita2')}
-            </button>
+              <Plus size={16} /> {t('agenda.nuevaCita2')}
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        {/* KPIs — mismos íconos que el Inicio: citas = calendario, hoy = calendario con check */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {[
-            {label:t('agenda.kpiTotal'),     value:apts.length,        color:'#0284c7', Icon:Calendar},
-            {label:t('agenda.kpiHoy'),       value:todayApts.length,   color:'#10b981', Icon:Clock},
-            {label:t('agenda.kpiSemana'),    value:weekApts.length,    color:'#06b6d4', Icon:Calendar},
-            {label:t('agenda.kpiVirtuales'), value:virtualApts.length, color:'#0ea5e9', Icon:Video},
-          ].map(({label,value,color,Icon}) => (
-            <div key={label} className="group rounded-2xl p-5 relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
-              style={{ background: `linear-gradient(157deg, ${color}0d 0%, var(--card) 46%)`, border: "1px solid var(--card-border)", boxShadow: 'var(--shadow-sm)' }}>
-              <div className="flex items-start justify-between mb-2">
-                <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>{label}</p>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                  style={{ background: `${color}1a`, color }}>
-                  <Icon size={15}/>
-                </div>
+            { label: t('agenda.kpiTotal'),     value: apts.length,        Icon: Calendar,      tone: 'bg-v-accent-soft text-v-accent' },
+            { label: t('agenda.kpiHoy'),       value: todayApts.length,   Icon: CalendarCheck, tone: 'bg-v-success/15 text-v-success' },
+            { label: t('agenda.kpiSemana'),    value: weekApts.length,    Icon: CalendarRange, tone: 'bg-v-accent-soft text-v-accent' },
+            { label: t('agenda.kpiVirtuales'), value: virtualApts.length, Icon: Video,         tone: 'bg-v-accent-soft text-v-accent' },
+          ].map(({ label, value, Icon, tone }, i) => (
+            <motion.div
+              key={label}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + i * 0.06, type: 'spring', stiffness: 200, damping: 22 }}
+              whileHover={{ y: -3 }}
+              className="group relative overflow-hidden rounded-v border border-v-border bg-v-elevated p-5 shadow-v"
+            >
+              <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 size-32 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+                style={{ background: 'var(--v-glow-1)' }} />
+              <div className="relative flex items-start justify-between">
+                <p className="text-xs font-medium text-v-muted">{label}</p>
+                <span className={`grid size-9 place-items-center rounded-[30%] transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 ${tone}`}>
+                  <Icon size={16} />
+                </span>
               </div>
-              <p className="text-3xl font-extrabold tabular-nums tracking-tight" style={{ color }}>{value}</p>
-            </div>
+              <p className="relative mt-2 text-4xl font-bold leading-none tracking-tight tabular-nums text-v-text">{value}</p>
+            </motion.div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:gap-5 xl:min-h-[560px] xl:flex-1 xl:grid-cols-12">
 
           {/* Calendario */}
-          <div className="xl:col-span-8 rounded-3xl shadow-sm overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}>
-            <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "var(--card-border)" }}>
-              <button onClick={() => currentMonth && setCurrentMonth(new Date(currentMonth.getFullYear(),currentMonth.getMonth()-1))} className="p-2 rounded-xl hover:bg-slate-100"><ChevronLeft size={20}/></button>
-              <h3 className="font-bold text-lg capitalize" style={{ color: "var(--text-primary)" }}>{monthYear}</h3>
-              <button onClick={() => currentMonth && setCurrentMonth(new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1))} className="p-2 rounded-xl hover:bg-slate-100"><ChevronRight size={20}/></button>
+          <motion.section
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, type: 'spring', stiffness: 180, damping: 24 }}
+            className="flex flex-col overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v xl:col-span-8"
+          >
+            <div className="flex items-center justify-between px-5 py-4">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-8 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Calendar size={15} /></span>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.h3
+                    key={monthYear}
+                    initial={{ opacity: 0, y: monthDir * 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: monthDir * -8 }}
+                    transition={{ duration: 0.18 }}
+                    className="text-lg font-semibold tracking-tight text-v-text first-letter:uppercase"
+                  >
+                    {monthYear}
+                  </motion.h3>
+                </AnimatePresence>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => { setMonthDir(0); setCurrentMonth(new Date()) }}
+                  className="mr-1 rounded-full px-3 py-1.5 text-xs font-semibold text-v-accent transition-colors hover:bg-v-accent-soft"
+                >
+                  {t('common.hoy')}
+                </button>
+                <button onClick={() => shiftMonth(-1)} aria-label="Mes anterior"
+                  className="grid size-9 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-text">
+                  <ChevronLeft size={18} />
+                </button>
+                <button onClick={() => shiftMonth(1)} aria-label="Mes siguiente"
+                  className="grid size-9 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-fill hover:text-v-text">
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-7 border-b" style={{ borderColor: "var(--card-border)" }}>
-              {(locale==='en' ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] : ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']).map(d => <div key={d} className="py-3 text-center text-xs font-bold text-slate-400">{d}</div>)}
+            <div className="grid grid-cols-7 border-y border-v-border bg-v-fill">
+              {weekdayNames.map(d => <div key={d} className="py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide text-v-subtle">{d}</div>)}
             </div>
-            <div className="grid grid-cols-7">
-              {Array.from({length:firstDay}).map((_,i) => <div key={`e${i}`} className="min-h-[56px] sm:min-h-[80px] border-b border-r border-slate-50 bg-slate-50/30"/>)}
-              {Array.from({length:daysInMonth},(_,i)=>i+1).map(day => {
-                if (!currentMonth) return null
-                const dayApts = getAptsForDay(day)
-                const ds = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-                const isToday=ds===todayStr; const isPast=ds<todayStr
-                return (
-                  <div key={day} onClick={()=>{setNewApt(p=>({...p,date:ds}));setShow(true)}} className={`min-h-[56px] sm:min-h-[80px] border-b border-r p-1 sm:p-2 cursor-pointer transition-all group ${isToday?'ring-2 ring-inset ring-sky-500':''}`} style={{ borderColor: 'var(--card-border)', background: isToday ? 'rgba(37,99,235,0.08)' : isPast ? 'var(--muted-bg)' : 'var(--card)' }}>
-                    <div className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full mb-1 ${isToday?'bg-sky-600 text-white':isPast?'text-slate-300':'text-slate-700 group-hover:bg-sky-100 group-hover:text-sky-700'}`}>{day}</div>
-                    <div className="space-y-0.5">
-                      {dayApts.slice(0,2).map(apt => (
-                        <div key={apt.id} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md truncate flex items-center gap-1 ${apt.modalidad==='virtual'?'bg-sky-100 text-sky-700':apt.is_group?'bg-sky-100 text-sky-700':'bg-sky-100 text-sky-700'}`}>
-                          {apt.modalidad==='virtual' && <Video size={8}/>}
-                          {apt.appointment_time?.slice(0,5)} {apt.children?.name||'?'}
-                        </div>
-                      ))}
-                      {dayApts.length>2 && <div className="text-[9px] text-slate-400 font-bold pl-1">+{dayApts.length-2} más</div>}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={monthYear}
+                initial={{ opacity: 0, x: monthDir * 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: monthDir * -24 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="grid flex-1 auto-rows-fr grid-cols-7"
+              >
+                {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} className="min-h-[60px] border-b border-r border-v-border sm:min-h-[88px]" />)}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+                  if (!currentMonth) return null
+                  const dayApts = getAptsForDay(day)
+                  const ds = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                  const isToday = ds === todayStr
+                  const isPast = ds < todayStr
+                  return (
+                    <div
+                      key={day}
+                      onClick={() => { setNewApt(p => ({ ...p, date: ds })); setShow(true) }}
+                      className={`group relative min-h-[60px] cursor-pointer border-b border-r border-v-border p-1.5 transition-colors sm:min-h-[88px] sm:p-2 ${isToday ? 'bg-v-accent-soft' : 'hover:bg-v-fill'}`}
+                    >
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className={`grid size-7 place-items-center rounded-full text-[13px] font-semibold tabular-nums ${isToday ? 'v-brand' : isPast ? 'text-v-subtle/60' : 'text-v-text'}`}
+                          style={isToday ? { boxShadow: 'none' } : undefined}>
+                          {day}
+                        </span>
+                        <Plus size={13} className="text-v-accent opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                      <div className="space-y-0.5">
+                        {dayApts.slice(0, 2).map(apt => {
+                          const sc = STATUS_CONFIG[apt.status || 'confirmed'] || STATUS_CONFIG.confirmed
+                          return (
+                            <div key={apt.id} className={`flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${sc.chip}`}>
+                              {apt.modalidad === 'virtual' ? <Video size={9} className="shrink-0" /> : <span className={`size-1.5 shrink-0 rounded-full ${sc.dot}`} />}
+                              <span className="truncate">{apt.appointment_time?.slice(0, 5)} {apt.children?.name || '?'}</span>
+                            </div>
+                          )
+                        })}
+                        {dayApts.length > 2 && <div className="pl-1 text-[10px] font-semibold text-v-subtle">+{dayApts.length - 2} {locale === 'en' ? 'more' : 'más'}</div>}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+                  )
+                })}
+              </motion.div>
+            </AnimatePresence>
+          </motion.section>
 
           {/* Panel derecho */}
-          <div className="xl:col-span-4 space-y-4">
+          <div className="flex flex-col gap-4 xl:col-span-4 xl:min-h-0">
 
             {/* Filtros */}
-            <div className="rounded-2xl p-5 shadow-sm space-y-3" style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}>
-              <p className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>{t('ui.filters')}</p>
-              <input type="date" value={filterDate} onChange={e=>setFilterDate(e.target.value)} className="w-full p-3 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }}/>
-              <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} className="w-full p-3 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }}>
+            <motion.section
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, type: 'spring', stiffness: 180, damping: 24 }}
+              className="space-y-2.5 rounded-v border border-v-border bg-v-elevated p-5 shadow-v"
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <p className="flex items-center gap-2 text-sm font-semibold text-v-text">
+                  <SlidersHorizontal size={14} className="text-v-accent" /> {t('ui.filters')}
+                </p>
+                {hasFilters && (
+                  <button onClick={() => { setFilterDate(''); setFilterStatus('todos'); setFilterEspecialista('todos') }}
+                    className="rounded-full px-2.5 py-1 text-xs font-semibold text-v-accent transition-colors hover:bg-v-accent-soft">
+                    {t('ui.clear_filters')}
+                  </button>
+                )}
+              </div>
+              <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className={inputClass} />
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={inputClass}>
                 <option value="todos">{t('ui.all_statuses')}</option>
                 <option value="confirmed">{t('ui.confirmed_pl')}</option>
                 <option value="pending">{t('ui.pending_pl')}</option>
                 <option value="completed">{t('ui.completed_pl')}</option>
                 <option value="cancelled">{t('ui.cancelled_pl')}</option>
               </select>
-              <select value={filterEspecialista} onChange={e=>setFilterEspecialista(e.target.value)} className="w-full p-3 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }}>
-                <option value="todos">{t("agenda.todosEspecialistas")}</option>
-                {especialistas.map(e=><option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
+              <select value={filterEspecialista} onChange={e => setFilterEspecialista(e.target.value)} className={inputClass}>
+                <option value="todos">{t('agenda.todosEspecialistas')}</option>
+                {especialistas.map(e => <option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
               </select>
-              {(filterDate||filterStatus!=='todos'||filterEspecialista!=='todos') && <button onClick={()=>{setFilterDate('');setFilterStatus('todos');setFilterEspecialista('todos')}} className="text-xs text-sky-600 font-bold hover:underline">{t('ui.clear_filters')}</button>}
-            </div>
+            </motion.section>
 
             {/* Lista citas */}
-            <div className="rounded-2xl shadow-sm overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--card-border)" }}>
-              <div className="p-4 border-b" style={{ borderColor: "var(--card-border)" }}>
-                <p className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>{t('agenda.citasLista')} ({filteredApts.length})</p>
+            <motion.section
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.36, type: 'spring', stiffness: 180, damping: 24 }}
+              className="flex flex-col overflow-hidden rounded-v border border-v-border bg-v-elevated shadow-v xl:min-h-0 xl:flex-1"
+            >
+              <div className="flex items-center gap-2.5 px-5 pb-3 pt-5">
+                <span className="grid size-8 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Calendar size={15} /></span>
+                <p className="text-[15px] font-semibold tracking-tight text-v-text">{t('agenda.citasLista')}</p>
+                {filteredApts.length > 0 && <span className="rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-bold text-v-accent">{filteredApts.length}</span>}
               </div>
-              <div className="max-h-[520px] overflow-y-auto divide-y divide-slate-50">
+              <div className="max-h-[560px] flex-1 space-y-1 overflow-y-auto px-2 pb-3 xl:max-h-none xl:min-h-0" style={{ scrollbarWidth: 'thin' }}>
                 {isLoading ? (
-                  <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-sky-400" size={28}/></div>
-                ) : filteredApts.length===0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <div className="p-4 bg-slate-100 rounded-2xl mb-3"><Calendar size={32} className="text-slate-300"/></div>
-                    <p className="font-bold text-slate-400 text-sm">{t('ui.no_appointments')}</p>
+                  <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin text-v-accent" size={26} /></div>
+                ) : filteredApts.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center px-6 py-10 text-center">
+                    <motion.span
+                      animate={{ y: [0, -4, 0] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                      className="grid size-12 place-items-center rounded-full bg-v-fill"
+                    >
+                      <Calendar size={20} className="text-v-subtle" />
+                    </motion.span>
+                    <p className="mt-3 text-sm text-v-muted">{t('ui.no_appointments')}</p>
+                    <button onClick={() => setShow(true)}
+                      className="mt-3 inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-3.5 py-1.5 text-xs font-semibold text-v-accent transition-transform hover:scale-105 active:scale-95">
+                      <Plus size={12} /> {t('agenda.nuevaCita2')}
+                    </button>
                   </div>
-                ) : filteredApts.map(a => {
-                  const sc = STATUS_CONFIG[a.status||'confirmed']||STATUS_CONFIG.confirmed
-                  const isVirtual = a.modalidad==='virtual'
-                  const isUpcoming = a.appointment_date>=todayStr && a.status!=='cancelled' && a.status!=='completed'
+                ) : filteredApts.map((a, idx) => {
+                  const sc = STATUS_CONFIG[a.status || 'confirmed'] || STATUS_CONFIG.confirmed
+                  const isVirtual = a.modalidad === 'virtual'
+                  const isUpcoming = a.appointment_date >= todayStr && a.status !== 'cancelled' && a.status !== 'completed'
+                  const fecha = new Date(a.appointment_date + 'T00:00:00')
+                  const esHoy = a.appointment_date === todayStr
                   return (
-                    <div key={a.id} className="p-4 transition-all group" style={{ borderBottom: "1px solid var(--card-border)" }}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${sc.bg} ${sc.color}`}>{t('estado.' + (a.status || 'confirmed'))}</span>
-                            {isVirtual
-                              ? <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-200 uppercase flex items-center gap-0.5"><Video size={9}/> {t('agenda.virtual')}</span>
-                              : <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 border border-slate-200 uppercase flex items-center gap-0.5"><MapPin size={9}/> {t('agenda.presencial')}</span>
-                            }
-                            {a.is_group && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-100 uppercase">{t("ui.grupal")}</span>}
-                          </div>
-                          <p className="font-bold text-sm truncate" style={{ color: "var(--text-primary)" }}>{a.children?.name||t('agenda.paciente')}</p>
-                          <p className="text-xs font-medium mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>{a.service_type}</p>
-                          {a.specialist?.full_name && (
-                            <p className="text-[11px] font-semibold mt-0.5 flex items-center gap-1 truncate" style={{ color: '#0284c7' }}>
-                              <User size={10}/>
-                              <span className="truncate">
-                                {a.specialist.full_name}
-                                {a.specialist.specialty && <span className="font-normal opacity-75"> · {a.specialist.specialty}</span>}
-                              </span>
-                            </p>
-                          )}
-                          {!a.specialist?.full_name && a.specialist_id && (
-                            <p className="text-[11px] italic mt-0.5 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-                              <User size={10}/> Especialista no encontrado
-                            </p>
-                          )}
-                          {editingId === a.id ? (
-                            <div className="flex items-center gap-2 mt-2 flex-wrap">
-                              <div className="flex items-center gap-1">
-                                <Calendar size={11} style={{ color: 'var(--text-muted)' }} />
-                                <input
-                                  type="date"
-                                  value={editDate}
-                                  onChange={e => setEditDate(e.target.value)}
-                                  onClick={e => e.stopPropagation()}
-                                  className="px-2 py-1 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-sky-400"
-                                  style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)' }}
-                                />
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Clock size={11} style={{ color: 'var(--text-muted)' }} />
-                                <input
-                                  type="time"
-                                  value={editTime}
-                                  onChange={e => setEditTime(e.target.value)}
-                                  onClick={e => e.stopPropagation()}
-                                  className="px-2 py-1 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-sky-400"
-                                  style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)' }}
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-3 mt-1.5 text-xs font-bold" style={{ color: "var(--text-muted)" }}>
-                              <span className="flex items-center gap-1"><Calendar size={11}/>{a.appointment_date}</span>
-                              <span className="flex items-center gap-1"><Clock size={11}/>{a.appointment_time?.slice(0,5)}</span>
-                            </div>
-                          )}
-                          {a.notes && <p className="text-[10px] text-slate-400 mt-1 italic truncate">{a.notes}</p>}
-
-                          {/* Cronómetro 45 min */}
-                          {isUpcoming && (
-                            <SessionTimer apt={a} onExpired={handleExpired} />
-                          )}
-
-                          {/* Botón iniciar videollamada */}
-                          {isVirtual && isUpcoming && (
-                            <button
-                              onClick={() => handleStartVideoCall(a)}
-                              disabled={startingCall===a.id}
-                              className="mt-2.5 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all hover:scale-105 active:scale-95 disabled:opacity-60"
-                              style={{background:'linear-gradient(135deg,#0284c7,#0ea5e9)',boxShadow:'0 3px 12px rgba(99,102,241,0.35)'}}
-                            >
-                              {startingCall===a.id
-                                ? <><Loader2 size={12} className="animate-spin"/> {t("agenda.iniciando")}</>
-                                : <><Video size={12}/> {t("agenda.iniciarVideollamada")}</>
-                              }
-                            </button>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {editingId === a.id ? (
-                            <>
-                              <button
-                                onClick={e => guardarEdicion(a.id, e)}
-                                disabled={savingEdit}
-                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all disabled:opacity-50"
-                                title={t("common.guardar")}
-                              >
-                                {savingEdit ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>}
-                              </button>
-                              <button
-                                onClick={cancelarEdicion}
-                                disabled={savingEdit}
-                                className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-all"
-                                title={t("common.cancelar")}
-                              >
-                                <X size={14}/>
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={e => iniciarEdicion(a, e)}
-                                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 bg-slate-100 text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-all"
-                                title={t("agenda.editarHorario")}
-                              >
-                                <Pencil size={14}/>
-                              </button>
-                              <button
-                                onClick={e=>eliminarCita(a.id,e)}
-                                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 bg-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                                title={t("common.eliminar")}
-                              >
-                                <Trash2 size={14}/>
-                              </button>
-                            </>
-                          )}
-                        </div>
+                    <motion.div
+                      key={a.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(idx, 8) * 0.04 }}
+                      className={`group flex gap-3 rounded-v-sm p-3 transition-colors ${esHoy ? 'bg-v-accent-soft' : 'hover:bg-v-fill'}`}
+                    >
+                      <div className={`flex size-11 shrink-0 flex-col items-center justify-center rounded-[30%] ${esHoy ? 'v-brand' : 'bg-v-fill text-v-muted'}`}
+                        style={esHoy ? { boxShadow: 'none' } : undefined}>
+                        <span className="text-[8px] font-bold uppercase leading-none">{fecha.toLocaleString(toBCP47(locale), { month: 'short' })}</span>
+                        <span className="text-base font-bold leading-none">{fecha.getDate()}</span>
                       </div>
-                    </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-v-text">{a.children?.name || t('agenda.paciente')}</p>
+                            <p className="truncate text-xs text-v-muted">{a.service_type}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-0.5">
+                            {editingId === a.id ? (
+                              <>
+                                <button onClick={e => guardarEdicion(a.id, e)} disabled={savingEdit} title={t('common.guardar')}
+                                  className="grid size-7 place-items-center rounded-full bg-v-success/15 text-v-success transition-colors disabled:opacity-50">
+                                  {savingEdit ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                                </button>
+                                <button onClick={cancelarEdicion} disabled={savingEdit} title={t('common.cancelar')}
+                                  className="grid size-7 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-text">
+                                  <X size={13} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={e => iniciarEdicion(a, e)} title={t('agenda.editarHorario')}
+                                  className="grid size-7 place-items-center rounded-full text-v-subtle opacity-0 transition-all hover:bg-v-accent-soft hover:text-v-accent group-hover:opacity-100">
+                                  <Pencil size={13} />
+                                </button>
+                                <button onClick={e => eliminarCita(a.id, e)} title={t('common.eliminar')}
+                                  className="grid size-7 place-items-center rounded-full text-v-subtle opacity-0 transition-all hover:bg-v-danger/10 hover:text-v-danger group-hover:opacity-100">
+                                  <Trash2 size={13} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${sc.chip}`}>{t('estado.' + (a.status || 'confirmed'))}</span>
+                          {isVirtual
+                            ? <span className="inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[10px] font-semibold text-v-accent"><Video size={10} /> {t('agenda.virtual')}</span>
+                            : <span className="inline-flex items-center gap-1 rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold text-v-muted"><MapPin size={10} /> {t('agenda.presencial')}</span>}
+                          {a.is_group && <span className="inline-flex items-center gap-1 rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold text-v-muted"><Users size={10} /> {t('ui.grupal')}</span>}
+                        </div>
+
+                        {editingId === a.id ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} onClick={e => e.stopPropagation()}
+                              className="rounded-full border border-v-border bg-v-bg px-3 py-1 text-xs font-semibold text-v-text outline-none focus:ring-4 focus:ring-v-accent-soft" />
+                            <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} onClick={e => e.stopPropagation()}
+                              className="rounded-full border border-v-border bg-v-bg px-3 py-1 text-xs font-semibold text-v-text outline-none focus:ring-4 focus:ring-v-accent-soft" />
+                          </div>
+                        ) : (
+                          <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-v-muted">
+                            <span className="inline-flex items-center gap-1"><Clock size={11} /> {a.appointment_time?.slice(0, 5)}</span>
+                            {a.specialist?.full_name && (
+                              <span className="inline-flex min-w-0 items-center gap-1 text-v-accent">
+                                <User size={11} />
+                                <span className="truncate">{a.specialist.full_name}{a.specialist.specialty && <span className="text-v-subtle"> · {a.specialist.specialty}</span>}</span>
+                              </span>
+                            )}
+                            {!a.specialist?.full_name && a.specialist_id && (
+                              <span className="inline-flex items-center gap-1 italic text-v-subtle"><User size={11} /> {locale === 'en' ? 'Specialist not found' : 'Especialista no encontrado'}</span>
+                            )}
+                          </p>
+                        )}
+                        {a.notes && <p className="mt-1 truncate text-[11px] italic text-v-subtle">{a.notes}</p>}
+
+                        {a.metadata?.reprogramacion?.estado === 'solicitada' && (() => {
+                          const r = a.metadata.reprogramacion
+                          const nueva = new Date(`${r.fecha}T12:00:00`).toLocaleDateString(toBCP47(locale), { weekday: 'short', day: 'numeric', month: 'short' })
+                          return (
+                            <div className="mt-2.5 rounded-v-sm border border-v-accent/25 bg-v-bg p-2.5">
+                              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-v-accent">
+                                <RefreshCw size={11} /> {L('The family asks to reschedule', 'La familia pide reprogramar')}
+                              </p>
+                              <p className="mt-1 text-xs font-semibold text-v-text first-letter:uppercase">{nueva}{r.hora ? ` · ${r.hora}` : ''}</p>
+                              {r.motivo && <p className="mt-0.5 text-[11px] text-v-muted">{r.motivo}</p>}
+                              <div className="mt-2 flex gap-1.5">
+                                <button onClick={() => responderReprogramacion(a.id, 'aprobar')} disabled={respondiendo === a.id}
+                                  className="v-brand inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-full text-[11px] font-semibold disabled:opacity-60">
+                                  {respondiendo === a.id ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} {L('Approve', 'Aprobar')}
+                                </button>
+                                <button onClick={() => responderReprogramacion(a.id, 'rechazar')} disabled={respondiendo === a.id}
+                                  className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded-full bg-v-fill text-[11px] font-semibold text-v-muted hover:text-v-text disabled:opacity-60">
+                                  <X size={11} /> {L('Keep original', 'Mantener')}
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })()}
+
+                        {isUpcoming && <SessionTimer apt={a} onExpired={handleExpired} />}
+
+                        {isVirtual && isUpcoming && (
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => handleStartVideoCall(a)}
+                            disabled={startingCall === a.id}
+                            className="v-brand mt-2.5 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold disabled:opacity-60"
+                          >
+                            {startingCall === a.id
+                              ? <><Loader2 size={12} className="animate-spin" /> {t('agenda.iniciando')}</>
+                              : <><Video size={12} /> {t('agenda.iniciarVideollamada')}</>}
+                          </motion.button>
+                        )}
+                      </div>
+                    </motion.div>
                   )
                 })}
               </div>
-            </div>
+            </motion.section>
           </div>
         </div>
 
         {/* ── Modal Nueva Cita ── */}
-        {show && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="p-6 md:p-8 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto" style={{ background: "var(--card)" }}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-xl flex items-center gap-2" style={{ color: "var(--text-primary)" }}><Plus size={20} className="text-sky-600"/> {t('agenda.nuevaCita')}</h3>
-                <button onClick={resetForm} className="p-2 rounded-full hover:bg-slate-100"><X size={20}/></button>
-              </div>
-
-              <div className="space-y-5">
-                {/* Tipo sesión */}
-                <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('agenda.tipoSesion2')}</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(['individual','grupal'] as const).map(tipo => (
-                      <button key={tipo} onClick={()=>{setTipoSesion(tipo);setSelectedParticipants([]);setNewApt(p=>({...p,child_id:''}))}}
-                        className={`p-4 rounded-2xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${tipoSesion===tipo?(tipo==='individual'?'bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-200':'bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-200'):'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-                        {tipo==='individual'?<><User size={16}/> {t("ui.individual")}</>:<><Users size={16}/> {t("ui.grupal")}</>}
-                      </button>
-                    ))}
+        <AnimatePresence>
+          {show && (
+            <motion.div
+              key="nueva-cita"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-end justify-center bg-[#081426]/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+              onClick={resetForm}
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                onClick={e => e.stopPropagation()}
+                role="dialog" aria-modal="true" aria-labelledby="nueva-cita-titulo"
+                className="v-scope flex max-h-[94dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[26px] border border-v-border bg-v-elevated shadow-v-lg sm:max-h-[90vh] sm:rounded-v-lg"
+              >
+                {/* Cabecera */}
+                <div className="relative flex items-center gap-3 border-b border-v-border px-5 py-4 sm:px-7">
+                  <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
+                  <span className="v-brand grid size-10 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><CalendarCheck size={19} /></span>
+                  <div className="min-w-0 flex-1">
+                    <h3 id="nueva-cita-titulo" className="text-lg font-semibold tracking-tight text-v-text">{t('agenda.nuevaCita')}</h3>
+                    <p className="text-xs text-v-muted">{L('Schedule a session for a patient or a group', 'Agenda una sesión para un paciente o un grupo')}</p>
                   </div>
+                  <button onClick={resetForm} aria-label={L('Close', 'Cerrar')} className="grid size-9 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-text"><X size={18} /></button>
                 </div>
 
-                {/* Modalidad */}
-                <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('agenda.modalidad')}</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {([
-                      {value:'presencial',icon:<MapPin size={16}/>,label:t('agenda.presencial'),active:'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-200'},
-                      {value:'virtual',   icon:<Video size={16}/>, label:t('agenda.virtualEmoji'), active:'bg-sky-600 text-white border-sky-600 shadow-lg shadow-sky-200'},
-                    ] as const).map(opt => (
-                      <button key={opt.value} onClick={()=>setModalidadCita(opt.value)}
-                        className={`p-4 rounded-2xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${modalidadCita===opt.value?opt.active:'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
-                        {opt.icon} {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  {modalidadCita==='virtual' && (
-                    <div className="mt-2 flex items-start gap-2 px-3 py-2.5 bg-sky-50 rounded-xl border border-sky-100">
-                      <Video size={13} className="text-sky-500 shrink-0 mt-0.5"/>
-                      <p className="text-xs text-sky-600 font-semibold leading-relaxed">{t("agenda.alIniciarLink")}</p>
-                    </div>
-                  )}
-                </div>
+                {/* Cuerpo */}
+                <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-7">
+                  <div className="grid gap-6 md:grid-cols-2 md:gap-7">
+                    {/* ── Quién ── */}
+                    <section className="space-y-4">
+                      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-v-subtle"><User size={12} /> {L('Who', 'Quién')}</p>
 
-                {/* Paciente / Grupo */}
-                {tipoSesion==='individual' && (
-                  <div>
-                    <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('agenda.pacienteStar')}</label>
-                    <select className="w-full p-4 rounded-xl text-sm font-bold outline-none focus:border-sky-500 transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} onChange={e=>setNewApt(p=>({...p,child_id:e.target.value}))} value={newApt.child_id}>
-                      <option value="">{t('ui.select_patient_option')}</option>
-                      {ninos.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
-                    </select>
-                  </div>
-                )}
-                {tipoSesion==='grupal' && (
-                  <>
-                    <div>
-                      <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('agenda.nombreGrupo')}</label>
-                      <input type="text" placeholder={t("agenda.phGrupo")} className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.group_name} onChange={e=>setNewApt(p=>({...p,group_name:e.target.value}))}/>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>Participantes ({selectedParticipants.length})</label>
-                      <div className="max-h-48 overflow-y-auto bg-slate-50 rounded-xl border-2 border-slate-200 p-3 space-y-2">
-                        {ninos.map(n => (
-                          <label key={n.id} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${selectedParticipants.includes(n.id)?'bg-sky-600 text-white shadow-md':'bg-white hover:bg-sky-50 border border-slate-100'}`}>
-                            <input type="checkbox" className="hidden" checked={selectedParticipants.includes(n.id)} onChange={()=>toggleParticipant(n.id)}/>
-                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${selectedParticipants.includes(n.id)?'bg-white border-white':'border-slate-300'}`}>{selectedParticipants.includes(n.id)&&<CheckCircle2 size={14} className="text-sky-600"/>}</div>
-                            <span className="font-bold text-sm">{n.name}</span>
-                          </label>
-                        ))}
+                      <div>
+                        <label className={labelClass}>{t('agenda.tipoSesion2')}</label>
+                        {segmento('cita-tipo', tipoSesion, [
+                          { value: 'individual', label: t('ui.individual'), icon: <User size={14} /> },
+                          { value: 'grupal', label: t('ui.grupal'), icon: <Users size={14} /> },
+                        ], v => { setTipoSesion(v as 'individual' | 'grupal'); setSelectedParticipants([]); setNewApt(p => ({ ...p, child_id: '' })) })}
                       </div>
-                    </div>
-                  </>
-                )}
 
-                {/* Servicio, fecha, hora, estado */}
-                <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t("agenda.servicio")}</label>
-                  <input type="text" className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.service} onChange={e=>setNewApt(p=>({...p,service:e.target.value}))} placeholder={t("agenda.phServicio")} />
-                </div>
-                <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t("agenda.especialistaAsignado")} <span style={{color:'var(--text-muted)',fontWeight:400,fontSize:10}}>{t('agenda.puedesElegirVarios')}</span></label>
-                  <div className="flex flex-wrap gap-2 p-3 rounded-xl min-h-[52px]" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)" }}>
-                    {newApt.specialist_id && newApt.specialist_id.split(',').filter(Boolean).map(sid => {
-                      const esp = especialistas.find(e => e.id === sid)
-                      return esp ? (
-                        <span key={sid} className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold" style={{background:'var(--primary)',color:'#fff'}}>
-                          {esp.full_name.split(' ')[0]}
-                          <button type="button" onClick={()=>setNewApt(p=>({...p,specialist_id:p.specialist_id.split(',').filter(id=>id!==sid).join(',')}))} className="ml-1 opacity-80 hover:opacity-100">×</button>
-                        </span>
-                      ) : null
-                    })}
-                    <select className="flex-1 min-w-[140px] text-sm font-bold outline-none bg-transparent" style={{color:'var(--text-primary)'}}
-                      value="" onChange={e=>{
-                        const v = e.target.value
-                        if(!v) return
-                        const current = newApt.specialist_id ? newApt.specialist_id.split(',').filter(Boolean) : []
-                        if(!current.includes(v)) setNewApt(p=>({...p,specialist_id:[...current,v].join(',')}))
-                      }}>
-                      <option value="">{t('auto.calendarView.agregarEspecialista')}</option>
-                      {especialistas.filter(e=>!newApt.specialist_id?.split(',').includes(e.id)).map(e=><option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
-                    </select>
+                      {tipoSesion === 'individual' && (
+                        <div>
+                          <label className={labelClass}>{t('agenda.pacienteStar')}</label>
+                          <div className="relative">
+                            <User size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
+                            <select className={`${inputClass} pl-10`} onChange={e => setNewApt(p => ({ ...p, child_id: e.target.value }))} value={newApt.child_id}>
+                              <option value="">{t('ui.select_patient_option')}</option>
+                              {ninos.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                      {tipoSesion === 'grupal' && (
+                        <>
+                          <div>
+                            <label className={labelClass}>{t('agenda.nombreGrupo')}</label>
+                            <input type="text" placeholder={t('agenda.phGrupo')} className={inputClass} value={newApt.group_name} onChange={e => setNewApt(p => ({ ...p, group_name: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label className={labelClass}>{L('Participants', 'Participantes')} ({selectedParticipants.length})</label>
+                            <div className="max-h-44 space-y-1 overflow-y-auto rounded-v-sm border border-v-border bg-v-bg p-1.5">
+                              {ninos.map(n => {
+                                const on = selectedParticipants.includes(n.id)
+                                return (
+                                  <label key={n.id} className={`flex cursor-pointer items-center gap-3 rounded-v-sm px-2.5 py-2 transition-colors ${on ? 'bg-v-accent-soft text-v-accent' : 'text-v-text hover:bg-v-fill'}`}>
+                                    <input type="checkbox" className="hidden" checked={on} onChange={() => toggleParticipant(n.id)} />
+                                    <span className={`grid size-5 shrink-0 place-items-center rounded-md border ${on ? 'v-brand border-transparent' : 'border-v-border'}`} style={on ? { boxShadow: 'none' } : undefined}>
+                                      {on && <Check size={12} />}
+                                    </span>
+                                    <span className="text-sm font-medium">{n.name}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      <div>
+                        <label className={labelClass}>{t('agenda.servicio')}</label>
+                        <input type="text" className={inputClass} value={newApt.service} onChange={e => setNewApt(p => ({ ...p, service: e.target.value }))} placeholder={t('agenda.phServicio')} />
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>{t('agenda.especialistaAsignado')} <span className="font-normal text-v-subtle">{t('agenda.puedesElegirVarios')}</span></label>
+                        <div className="flex min-h-[46px] flex-wrap items-center gap-1.5 rounded-v-sm border border-v-border bg-v-bg p-1.5 pl-2">
+                          {newApt.specialist_id && newApt.specialist_id.split(',').filter(Boolean).map(sid => {
+                            const esp = especialistas.find(e => e.id === sid)
+                            return esp ? (
+                              <span key={sid} className="inline-flex items-center gap-1.5 rounded-full bg-v-accent-soft py-1 pl-1 pr-1.5 text-xs font-semibold text-v-accent">
+                                <span className="v-brand grid size-5 place-items-center rounded-full text-[10px]" style={{ boxShadow: 'none' }}>{esp.full_name.charAt(0)}</span>
+                                {esp.full_name.split(' ')[0]}
+                                <button type="button" aria-label={L('Remove', 'Quitar')} onClick={() => setNewApt(p => ({ ...p, specialist_id: p.specialist_id.split(',').filter(id => id !== sid).join(',') }))}
+                                  className="grid size-4 place-items-center rounded-full hover:bg-v-accent/15"><X size={10} /></button>
+                              </span>
+                            ) : null
+                          })}
+                          <select className="min-w-[140px] flex-1 bg-transparent px-1.5 text-sm font-medium text-v-muted outline-none"
+                            value="" onChange={e => {
+                              const v = e.target.value
+                              if (!v) return
+                              const current = newApt.specialist_id ? newApt.specialist_id.split(',').filter(Boolean) : []
+                              if (!current.includes(v)) setNewApt(p => ({ ...p, specialist_id: [...current, v].join(',') }))
+                            }}>
+                            <option value="">{t('auto.calendarView.agregarEspecialista')}</option>
+                            {especialistas.filter(e => !newApt.specialist_id?.split(',').includes(e.id)).map(e => <option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* ── Cuándo ── */}
+                    <section className="space-y-4">
+                      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-v-subtle"><Clock size={12} /> {L('When', 'Cuándo')}</p>
+
+                      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3">
+                        <div>
+                          <label className={labelClass}>{t('agenda.fechaStar')}</label>
+                          <input type="date" className={inputClass} value={newApt.date} onChange={e => setNewApt(p => ({ ...p, date: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className={labelClass}>{t('agenda.horaStar')}</label>
+                          <input type="time" className={inputClass} value={newApt.time} onChange={e => setNewApt(p => ({ ...p, time: e.target.value }))} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>{t('agenda.modalidad')}</label>
+                        {segmento('cita-modalidad', modalidadCita, [
+                          { value: 'presencial', label: t('agenda.presencial'), icon: <MapPin size={14} /> },
+                          { value: 'virtual', label: 'Virtual', icon: <Video size={14} /> },
+                        ], v => setModalidadCita(v as typeof modalidadCita))}
+                        <AnimatePresence>
+                          {modalidadCita === 'virtual' && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                              <p className="mt-2 flex items-start gap-2 rounded-v-sm bg-v-accent-soft px-3 py-2.5 text-xs font-medium leading-relaxed text-v-accent">
+                                <Video size={13} className="mt-0.5 shrink-0" /> {t('agenda.alIniciarLink')}
+                              </p>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>{t('common.estado')}</label>
+                        <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 sm:grid-cols-[repeat(4,minmax(0,1fr))] md:grid-cols-[repeat(2,minmax(0,1fr))]">
+                          {([
+                            { value: 'confirmed', label: t('agenda.confirmada'), dot: 'bg-v-success' },
+                            { value: 'pending', label: t('common.pendiente'), dot: 'bg-v-warning' },
+                            { value: 'completed', label: t('ui.completed_status'), dot: 'bg-v-accent' },
+                            { value: 'cancelled', label: t('agenda.cancelada'), dot: 'bg-v-danger' },
+                          ]).map(opt => {
+                            const on = newApt.status === opt.value
+                            return (
+                              <button key={opt.value} type="button" onClick={() => setNewApt(p => ({ ...p, status: opt.value }))}
+                                className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${on ? 'border-v-accent/40 bg-v-accent-soft text-v-text' : 'border-v-border text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+                                <span className={`size-2 shrink-0 rounded-full ${opt.dot}`} /> {opt.label}
+                                {on && <Check size={13} className="ml-auto text-v-accent" />}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Recurrencia */}
+                      <div className="rounded-v-sm border border-v-border bg-v-bg p-3.5">
+                        <label className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold text-v-muted">
+                          <Repeat size={13} className="text-v-accent" /> {t('agenda.repetirCita')}
+                        </label>
+                        {segmento('cita-repetir', recurrencia, [
+                          { value: 'none', label: t('agenda.noRepetir') },
+                          { value: 'weekly', label: t('agenda.semanal') },
+                          { value: 'biweekly', label: t('agenda.quincenal') },
+                        ], v => setRecurrencia(v as typeof recurrencia))}
+                        <AnimatePresence>
+                          {recurrencia !== 'none' && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                              <div className="pt-3">
+                                <select value={recurrenciaSemanas} onChange={e => setRecurrenciaSemanas(Number(e.target.value))} className={inputClass}>
+                                  {[2, 3, 4, 6, 8, 12].map(n => <option key={n} value={n}>{L(`${n} appointments (${recurrencia === 'weekly' ? n : n * 2} weeks)`, `${n} citas (${recurrencia === 'weekly' ? n : n * 2} semanas)`)}</option>)}
+                                </select>
+                                <p className="mt-1.5 text-[11px] font-medium text-v-accent">
+                                  {t('auto.calendarView.seCrearanCitasAPartir', { v1: String(recurrenciaSemanas), v2: recurrencia === 'weekly' ? L('every week', 'cada semana') : L('every 2 weeks', 'cada 2 semanas') })}
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </section>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('agenda.fechaStar')}</label>
-                    <input type="date" className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.date} onChange={e=>setNewApt(p=>({...p,date:e.target.value}))}/>
+
+                  {/* Notas */}
+                  <div className="mt-5">
+                    <label className={labelClass}>{t('agenda.notasOpcional')}</label>
+                    <textarea rows={2} placeholder={t('agenda.phObservaciones')} className={`${inputClass} resize-none`} value={newApt.notes} onChange={e => setNewApt(p => ({ ...p, notes: e.target.value }))} />
                   </div>
-                  <div>
-                    <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('agenda.horaStar')}</label>
-                    <input type="time" className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.time} onChange={e=>setNewApt(p=>({...p,time:e.target.value}))}/>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t('common.estado')}</label>
-                  <select className="w-full p-4 rounded-xl text-sm font-bold outline-none transition-all" style={{ background: "var(--input-bg)", border: "2px solid var(--input-border)", color: "var(--text-primary)" }} value={newApt.status} onChange={e=>setNewApt(p=>({...p,status:e.target.value}))}>
-                    <option value="confirmed">{t('agenda.confirmada')}</option>
-                    <option value="pending">{t('common.pendiente')}</option>
-                    <option value="completed">{t('ui.completed_status')}</option>
-                    <option value="cancelled">{t('agenda.cancelada')}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold block mb-2" style={{ color: "var(--text-muted)" }}>{t("agenda.notasOpcional")}</label>
-                  <textarea rows={2} placeholder={t("agenda.phObservaciones")} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-sky-400 transition-all resize-none" value={newApt.notes} onChange={e=>setNewApt(p=>({...p,notes:e.target.value}))}/>
                 </div>
 
-                {/* Recurrencia */}
-                <div className="rounded-xl border-2 p-4" style={{ background: "var(--muted-bg)", borderColor: "var(--card-border)" }}>
-                  <label className="text-xs font-bold block mb-3" style={{ color: "var(--text-muted)" }}>
-                    🔄 {t('agenda.repetirCita')}
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    {([
-                      { value: 'none',      label: t('agenda.noRepetir') },
-                      { value: 'weekly',    label: t('agenda.semanal') },
-                      { value: 'biweekly',  label: t('agenda.quincenal') },
-                    ] as const).map(opt => (
-                      <button key={opt.value} onClick={() => setRecurrencia(opt.value)}
-                        className={`py-2.5 rounded-xl text-xs font-bold border-2 transition-all ${recurrencia === opt.value ? 'border-sky-500 text-sky-600' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}
-                        style={{ background: recurrencia === opt.value ? 'rgba(37,99,235,0.08)' : 'var(--card)' }}>
-                        {opt.label}
-                      </button>
-                    ))}
+                {/* Pie fijo: resumen + acciones */}
+                <div className="flex flex-col gap-3 border-t border-v-border bg-v-elevated px-5 py-4 sm:flex-row sm:items-center sm:px-7">
+                  <p className="flex min-w-0 flex-1 items-center gap-2 text-xs text-v-muted">
+                    <CalendarRange size={14} className="shrink-0 text-v-accent" />
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {newApt.date
+                        ? new Date(`${newApt.date}T12:00:00`).toLocaleDateString(toBCP47(locale), { weekday: 'short', day: 'numeric', month: 'short' })
+                        : L('No date', 'Sin fecha')}
+                      {newApt.time ? ` · ${newApt.time}` : ''} · {modalidadCita === 'virtual' ? 'Virtual' : t('agenda.presencial')}
+                      {recurrencia !== 'none' ? ` · ×${recurrenciaSemanas}` : ''}
+                    </span>
+                  </p>
+                  <div className="flex gap-2.5">
+                    <button onClick={resetForm} className="h-11 flex-1 rounded-full border border-v-border px-5 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill hover:text-v-text sm:flex-none">
+                      {t('common.cancelar')}
+                    </button>
+                    <motion.button whileTap={{ scale: 0.97 }} onClick={handleSave} disabled={isSaving}
+                      className="v-brand flex h-11 flex-[2] items-center justify-center gap-2 rounded-full px-6 text-sm font-semibold disabled:opacity-50 sm:flex-none">
+                      {isSaving ? <Loader2 size={17} className="animate-spin" /> : modalidadCita === 'virtual' ? <Video size={17} /> : <Check size={17} />}
+                      {isSaving ? t('agenda.guardando') : modalidadCita === 'virtual' ? t('agenda.agendarVirtual') : tipoSesion === 'grupal' ? t('agenda.agendarGrupo') : t('agenda.confirmarCita')}
+                    </motion.button>
                   </div>
-                  {recurrencia !== 'none' && (
-                    <div>
-                      <label className="text-[11px] font-bold mb-1 block" style={{ color: "var(--text-muted)" }}>{t('agenda.cantRepeticiones')}</label>
-                      <select value={recurrenciaSemanas} onChange={e => setRecurrenciaSemanas(Number(e.target.value))}
-                        className="w-full p-3 rounded-xl text-sm font-bold outline-none border-2" style={{ background: "var(--input-bg)", borderColor: "var(--input-border)", color: "var(--text-primary)" }}>
-                        {[2,3,4,6,8,12].map(n => <option key={n} value={n}>{n} citas ({recurrencia === 'weekly' ? `${n} semanas` : `${n*2} semanas`})</option>)}
-                      </select>
-                      <p className="text-[10px] mt-1.5 font-medium text-sky-500">
-                        {t('auto.calendarView.seCrearanCitasAPartir', { v1: String(recurrenciaSemanas), v2: String(recurrencia === 'weekly' ? 'cada semana' : 'cada 2 semanas') })}
-                      </p>
-                    </div>
-                  )}
                 </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button onClick={resetForm} className="flex-1 py-4 text-slate-400 font-bold uppercase text-xs tracking-widest hover:bg-slate-50 rounded-xl transition-all border-2 border-slate-100">{t('common.cancelar')}</button>
-                  <button onClick={handleSave} disabled={isSaving}
-                    className={`flex-[2] py-4 rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-white ${modalidadCita==='virtual'?'bg-gradient-to-r from-sky-600 to-cyan-600 shadow-sky-200':tipoSesion==='grupal'?'bg-gradient-to-r from-sky-600 to-cyan-600 shadow-sky-200':'bg-gradient-to-r from-sky-600 to-cyan-600 shadow-sky-200'}`}>
-                    {isSaving?<Loader2 size={18} className="animate-spin"/>:modalidadCita==='virtual'?<Video size={18}/>:<Plus size={18}/>}
-                    {isSaving?t('agenda.guardando'):modalidadCita==='virtual'?t('agenda.agendarVirtual'):tipoSesion==='grupal'?t('agenda.agendarGrupo'):t('agenda.confirmarCita')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </>
   )

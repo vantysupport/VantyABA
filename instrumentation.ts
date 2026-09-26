@@ -8,6 +8,8 @@ export async function onRequestError(
   request: { path?: string; method?: string },
   context: { routerKind?: string; routePath?: string; routeType?: string },
 ): Promise<void> {
+  // Solo en Node: el registro usa el cliente de base con cifrado (módulo crypto), que no existe en Edge.
+  if (process.env.NEXT_RUNTIME !== 'nodejs') return
   try {
     const { logServerError } = await import('@/lib/log-server-error')
     const e = err as { message?: string; stack?: string }

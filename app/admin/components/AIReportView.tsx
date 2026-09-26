@@ -7,8 +7,9 @@ import { toBCP47 } from '@/lib/i18n'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import ProgresoGraficas from '@/components/graficos/ProgresoGraficas'
 import {
-  Activity, Brain, CheckCircle2, ChevronDown, ChevronRight, Clock, Download, Eye, FileCheck, FileDown, FileText, History, Home, Loader2, MessageCircle, RefreshCw, Send, ShieldAlert, Sparkles, Target, User, Users, X, Zap, Mic, MicOff, Volume2, VolumeX, StopCircle, BarChart3
+  Activity, Brain, CheckCircle2, ChevronDown, ChevronRight, Clock, Download, Eye, FileCheck, FileDown, FileText, History, Home, Loader2, MessageCircle, RefreshCw, Send, ShieldAlert, Sparkles, Target, User, Users, X, Zap, Mic, MicOff, Volume2, VolumeX, StopCircle, BarChart3, ClipboardList
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 
 // ── Tipos Web Speech API ──────────────────────────────────────────────────────
 declare global {
@@ -137,6 +138,8 @@ function AIReportView({ onChildSelect, initialChildId }: { onChildSelect?: (chil
   const [showReportPanel, setShowReportPanel] = useState(true)
   const [showAnamnesisReport, setShowAnamnesisReport] = useState(false)
   const [mobileTab, setMobileTab] = useState<'chat' | 'history' | 'reports' | 'graficas'>('chat')
+  const [histFiltro, setHistFiltro] = useState<'todos' | 'programa' | 'aba' | 'hogar'>('todos')
+  const [histLimite, setHistLimite] = useState(15)
   
   const [messages, setMessages] = useState<any[]>([
       { role: 'ai', text: locale === 'en' ? 'Hi 👋. Select a patient to start the clinical analysis.' : 'Hola 👋. Selecciona un paciente para iniciar el análisis clínico.' }
@@ -227,23 +230,15 @@ function AIReportView({ onChildSelect, initialChildId }: { onChildSelect?: (chil
     // Esta es la fuente actual del gráfico de "Progreso ABA — Líneas" del padre.
     // Antes este conteo solo miraba registro_aba (legacy) y siempre daba 0 aunque
     // hubiera datos en los programas, lo que generaba la inconsistencia mostrada.
-    const { data: progIdsRaw } = await supabase
-      .from('programas_aba')
-      .select('id, titulo')
-      .eq('child_id', childId)
-    const progIds = (progIdsRaw || []).map((p: any) => p.id)
-    const progTitulos: Record<string, string> = {}
-    ;(progIdsRaw || []).forEach((p: any) => { progTitulos[p.id] = p.titulo })
-
+    // Las notas de sesión están cifradas: se piden al servidor, que las descifra.
     let sesionesDataAba: any[] = []
-    if (progIds.length > 0) {
-      const { data: sda } = await supabase
-        .from('sesiones_datos_aba')
-        .select('id, programa_id, fecha, fase, set, porcentaje_exito, oportunidades_totales, respuestas_correctas, notas')
-        .in('programa_id', progIds)
-        .order('fecha', { ascending: false })
-      sesionesDataAba = (sda || []).map((s: any) => ({ ...s, _programaTitulo: progTitulos[s.programa_id] || 'Programa ABA' }))
-    }
+    try {
+      const r = await fetch(`/api/programas-aba?child_id=${childId}&sesiones=1`, { cache: 'no-store' })
+      const j = r.ok ? await r.json() : { data: [], programas: [] }
+      const progTitulos: Record<string, string> = {}
+      ;(j.programas || []).forEach((p: any) => { progTitulos[p.id] = p.titulo })
+      sesionesDataAba = (j.data || []).map((s: any) => ({ ...s, _programaTitulo: progTitulos[s.programa_id] || 'Programa ABA' }))
+    } catch { sesionesDataAba = [] }
     console.log('📊 Sesiones de programas (sesiones_datos_aba):', sesionesDataAba.length)
 
     // Total visible al usuario = legacy + actuales
@@ -409,246 +404,252 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
 
   const toggleCard = (id: string) => setExpandedCardId(expandedCardId === id ? null : id)
 
+  // ── Línea de tiempo unificada del registro clínico ──
+  type Kind = 'programa' | 'aba' | 'hogar'
+  const items: { kind: Kind; key: string; fecha: Date | null; raw: any }[] = [
+    ...(historyData.sesionesDataAba || []).map((x: any) => ({ kind: 'programa' as const, key: `sda-${x.id}`, fecha: x.fecha ? new Date(x.fecha + 'T12:00:00') : null, raw: x })),
+    ...(historyData.aba || []).map((x: any) => ({ kind: 'aba' as const, key: `aba-${x.id}`, fecha: x.fecha_sesion ? new Date(String(x.fecha_sesion).slice(0, 10) + 'T12:00:00') : null, raw: x })),
+    ...(historyData.entorno || []).map((x: any) => ({ kind: 'hogar' as const, key: `entorno-${x.id}`, fecha: x.fecha_visita ? new Date(String(x.fecha_visita).slice(0, 10) + 'T12:00:00') : null, raw: x })),
+  ].sort((x, y) => (y.fecha?.getTime() ?? 0) - (x.fecha?.getTime() ?? 0))
+  const KIND = {
+    programa: { label: locale === 'en' ? 'Program sessions' : 'Sesiones de programas', Icon: ClipboardList },
+    aba:      { label: locale === 'en' ? 'ABA session forms' : 'Fichas de sesión ABA', Icon: Target },
+    hogar:    { label: locale === 'en' ? 'Home visits' : 'Visitas al hogar', Icon: Home },
+  } as const
+  const visibles = items.filter(it => histFiltro === 'todos' || it.kind === histFiltro)
+  const mostrados = visibles.slice(0, histLimite)
+  const grupos: { mes: string; items: typeof mostrados }[] = []
+  for (const it of mostrados) {
+    const mes = it.fecha ? it.fecha.toLocaleDateString(toBCP47(locale), { month: 'long', year: 'numeric' }) : '—'
+    const g = grupos[grupos.length - 1]
+    if (g && g.mes === mes) g.items.push(it); else grupos.push({ mes, items: [it] })
+  }
+  const pctTone = (pct: number | null) => pct == null ? 'text-v-subtle' : pct >= 90 ? 'text-v-success' : pct >= 70 ? 'text-v-accent' : pct >= 45 ? 'text-v-warning' : 'text-v-danger'
+  const setLabel = (v: any) => { const t = String(v ?? '').trim(); return !t ? '' : /^set\b/i.test(t) ? t : `Set ${t}` }
+  const faseLabel = (f: any) => ({ linea_base: 'Línea base', intervencion: 'Intervención', mantenimiento: 'Mantenimiento', dominado: 'Dominado' } as Record<string, string>)[f] || f || (locale === 'en' ? 'Session' : 'Sesión')
+
   return (
-    <div className="flex flex-col gap-3 animate-fade-in-up">
-      {/* Solo mostrar el selector si NO viene pre-seleccionado desde PatientsView */}
+    <div className="v-scope flex flex-col gap-4">
       {!initialChildId && (
-        <div className="rounded-2xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-          <h3 className="font-bold text-slate-700 dark:text-slate-200 text-lg md:text-xl flex items-center gap-2 md:gap-3 shrink-0">
-            <div className="p-2 bg-sky-50 rounded-xl">
-              <Brain size={24} className="text-sky-600"/>
-            </div>
+        <div className="flex flex-col items-start justify-between gap-4 rounded-v border border-v-border bg-v-elevated p-5 shadow-v md:flex-row md:items-center">
+          <h3 className="flex items-center gap-3 text-lg font-semibold tracking-tight text-v-text">
+            <span className="grid size-10 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Brain size={20} /></span>
             Analizador Inteligente
           </h3>
-          <select
-            className="p-3 md:p-4 bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl outline-none font-bold text-slate-700 dark:text-slate-200 text-sm w-full md:w-[400px] focus:bg-white dark:focus:bg-slate-600 focus:ring-4 focus:ring-sky-50 focus:border-sky-500 transition-all"
-            onChange={(e) => handleSelectChild(e.target.value)}
-            value={selectedChild}
-          >
+          <select onChange={e => handleSelectChild(e.target.value)} value={selectedChild}
+            className="w-full rounded-full border border-v-border bg-v-bg px-4 py-2.5 text-sm font-medium text-v-text outline-none focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft md:w-[360px]">
             <option value="">{t('auto.aIReportView.seleccionarPaciente')}</option>
-            {listaNinos.map(n => <option key={n.id} value={n.id}>👤 {n.name}</option>)}
+            {listaNinos.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
           </select>
         </div>
       )}
 
       {selectedChild ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
 
-          {/* ══ SECCIÓN 2: REGISTRO CLÍNICO (cerrado por defecto) ══ */}
+          {/* ══ REGISTRO CLÍNICO — línea de tiempo por mes ══ */}
           <AccordionSection
             id="historial"
             title={t('ui.clinical_record')}
-            icon={<History size={17}/>}
-            accent="#f59e0b"
-            badge={<span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)' }}>{(historyData.totalSesionesAba ?? historyData.aba.length) + historyData.entorno.length} {locale === 'en' ? 'records' : 'registros'}</span>}
-            defaultOpen={false}
+            icon={<History size={17} />}
+            badge={<span className="rounded-full bg-v-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-v-accent">{items.length} {locale === 'en' ? 'records' : 'registros'}</span>}
+            defaultOpen
           >
-            <div className="p-4 space-y-3" style={{ background: 'var(--background)' }}>
-              {historyData.entorno.map((visita: any) => {
-                const isExpanded = expandedCardId === `entorno-${visita.id}`
-                const d = visita.datos || {}
-                return (
-                  <div key={`entorno-${visita.id}`} className="rounded-2xl border-2 transition-all duration-200"
-                    style={{ background: 'var(--card)', borderColor: isExpanded ? '#22c55e' : 'var(--card-border)' }}>
-                    <div className="p-4 cursor-pointer flex items-center justify-between" onClick={() => toggleCard(`entorno-${visita.id}`)}>
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-col items-center justify-center bg-green-600 text-white rounded-xl p-2.5 min-w-[56px] shadow">
-                          <Home size={16}/>
-                          <span className="text-[9px] font-bold uppercase opacity-80 mt-0.5">{t('ui.home_env')}</span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{t("admin.visitaDomiciliaria")}</p>
-                          <span className="text-xs text-green-500 font-bold">{visita.fecha_visita}</span>
-                        </div>
-                      </div>
-                      <ChevronDown size={18} className={`transition-transform ${isExpanded ? 'rotate-180 text-green-400' : ''}`} style={{ color: isExpanded ? undefined : 'var(--text-muted)' }}/>
-                    </div>
-                    {isExpanded && (
-                      <div className="px-4 pb-4 border-t pt-3 animate-fade-in space-y-3" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)' }}>
-                        <DetailBox title={t('ui.people_present')} content={d.personas_presentes} icon={<Users size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
-                        <DetailBox title={t('ui.behavior')} content={d.comportamiento_observado} icon={<Eye size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
-                        <DetailBox title={t('ui.ai_impression')} content={d.impresion_general} icon={<Brain size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
-                        <div className="grid grid-cols-2 gap-3">
-                          <DetailBox title={t('ui.barriers')} content={d.barreras_identificadas} icon={<ShieldAlert size={13}/>} color="bg-red-50 border-red-200 text-red-700"/>
-                          <DetailBox title={t('ui.facilitators')} content={d.facilitadores} icon={<CheckCircle2 size={13}/>} color="bg-emerald-50 border-emerald-200 text-emerald-700"/>
-                        </div>
-                        <DetailBox title={t("ui.mensajePadresLabel")} content={d.mensaje_padres_entorno} icon={<MessageCircle size={13}/>} color="bg-emerald-50 border-emerald-200 text-emerald-700" full/>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-              {historyData.aba.map((sesion: any) => {
-                const isExpanded = expandedCardId === `aba-${sesion.id}`
-                const d = sesion.datos || {}
-                return (
-                  <div key={`aba-${sesion.id}`} className="rounded-2xl border-2 transition-all duration-200"
-                    style={{ background: 'var(--card)', borderColor: isExpanded ? '#0284c7' : 'var(--card-border)' }}>
-                    <div className="p-4 cursor-pointer flex items-center justify-between" onClick={() => toggleCard(`aba-${sesion.id}`)}>
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-col items-center justify-center bg-sky-700 text-white rounded-xl p-2.5 min-w-[56px] shadow">
-                          <span className="text-[9px] font-bold uppercase opacity-60">{new Date(sesion.fecha_sesion).toLocaleString('default', { month: 'short' })}</span>
-                          <span className="text-lg font-bold leading-none">{new Date(sesion.fecha_sesion).getDate() + 1}</span>
-                        </div>
-                        <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{d.conducta || (locale === 'en' ? 'ABA Session' : 'Sesión ABA')}</p>
-                      </div>
-                      <ChevronDown size={18} className={`transition-transform ${isExpanded ? 'rotate-180 text-sky-400' : ''}`} style={{ color: isExpanded ? undefined : 'var(--text-muted)' }}/>
-                    </div>
-                    {isExpanded && (
-                      <div className="px-4 pb-4 border-t pt-3 animate-fade-in space-y-3" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)' }}>
-                        <DetailBox title={t("familias.objetivo")} content={d.objetivo_principal} icon={<Target size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
-                        <DetailBox title={t('ui.observations')} content={d.observaciones_tecnicas} icon={<Eye size={13}/>} color="bg-slate-50 border-slate-200 text-slate-700" full/>
-                        <div className="grid grid-cols-2 gap-3">
-                          <DetailBox title="ABC" content={d.antecedente} icon={<Activity size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700"/>
-                          <DetailBox title={t('ui.intervencion')} content={d.estrategias_manejo} icon={<Zap size={13}/>} color="bg-orange-50 border-orange-200 text-orange-700"/>
-                        </div>
-                        <div className="rounded-xl p-3 bg-amber-50 border border-amber-200">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <MessageCircle size={11} className="text-amber-600"/>
-                            <span className="text-[10px] font-bold text-amber-700">{t('ui.mensajePadresLabel')}</span>
-                            <span className="ml-auto text-[9px] font-bold text-amber-700 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-full">{t('ui.enBandeja')}</span>
-                          </div>
-                          <p className="text-xs text-amber-800 italic">"{d.mensaje_padres}"</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+            <div className="space-y-4 p-4 sm:p-5">
+              {/* Filtros por tipo */}
+              <div className="flex flex-wrap gap-2">
+                {(['todos', 'programa', 'aba', 'hogar'] as const).map(k => {
+                  const n = k === 'todos' ? items.length : items.filter(it => it.kind === k).length
+                  if (k !== 'todos' && n === 0) return null
+                  const on = histFiltro === k
+                  const Icon = k === 'todos' ? History : KIND[k].Icon
+                  return (
+                    <button key={k} onClick={() => { setHistFiltro(k); setHistLimite(15) }}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors ${on ? 'border-v-accent/40 bg-v-accent-soft text-v-accent' : 'border-v-border bg-v-elevated text-v-muted hover:text-v-text'}`}>
+                      <Icon size={13} /> {k === 'todos' ? (locale === 'en' ? 'All' : 'Todos') : KIND[k].label}
+                      <span className="text-[10px] opacity-70">{n}</span>
+                    </button>
+                  )
+                })}
+              </div>
 
-              {/* Sesiones registradas en programas ABA (sesiones_datos_aba) */}
-              {(historyData.sesionesDataAba || []).map((ses: any) => {
-                const isExpanded = expandedCardId === `sda-${ses.id}`
-                const fechaObj = ses.fecha ? new Date(ses.fecha + 'T12:00:00') : null
-                const pct = ses.porcentaje_exito ?? null
-                const pctColor = pct == null ? '#94a3b8' : pct >= 90 ? '#10b981' : pct >= 70 ? '#0284c7' : pct >= 45 ? '#f59e0b' : '#ef4444'
-                return (
-                  <div key={`sda-${ses.id}`} className="rounded-2xl border-2 transition-all duration-200"
-                    style={{ background: 'var(--card)', borderColor: isExpanded ? '#0284c7' : 'var(--card-border)' }}>
-                    <div className="p-4 cursor-pointer flex items-center justify-between" onClick={() => toggleCard(`sda-${ses.id}`)}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex flex-col items-center justify-center text-white rounded-xl p-2.5 min-w-[56px] shadow"
-                          style={{ background: 'linear-gradient(135deg,#0284c7,#0369a1)' }}>
-                          <span className="text-[9px] font-bold uppercase opacity-70">{fechaObj ? fechaObj.toLocaleString('default', { month: 'short' }) : '—'}</span>
-                          <span className="text-lg font-bold leading-none">{fechaObj ? fechaObj.getDate() : '·'}</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{ses._programaTitulo}</p>
-                          <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                            {ses.set ? `Set ${ses.set} · ` : ''}{ses.fase || (locale === 'en' ? 'Session' : 'Sesión')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {pct != null && <span className="text-base font-extrabold tabular-nums" style={{ color: pctColor }}>{pct}%</span>}
-                        <ChevronDown size={18} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} style={{ color: isExpanded ? '#0284c7' : 'var(--text-muted)' }}/>
+              {items.length === 0 ? (
+                <div className="flex flex-col items-center rounded-v border border-dashed border-v-border py-14 text-center">
+                  <span className="mb-3 grid size-12 place-items-center rounded-full bg-v-fill"><History size={20} className="text-v-subtle" /></span>
+                  <p className="text-sm text-v-muted">{t('admin.sinRegistros')}</p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {grupos.map(g => (
+                    <div key={g.mes}>
+                      <p className="sticky top-0 z-[1] mb-2 inline-flex rounded-full bg-v-elevated px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-v-subtle shadow-v">{g.mes}</p>
+                      <div className="relative space-y-2 border-l-2 border-v-border pl-4 sm:ml-2">
+                        {g.items.map(it => {
+                          const open = expandedCardId === it.key
+                          const Icon = KIND[it.kind].Icon
+                          const r = it.raw
+                          const d = r.datos || {}
+                          const pct = it.kind === 'programa' ? (r.porcentaje_exito ?? null) : null
+                          const titulo = it.kind === 'programa' ? (r._programaTitulo || (locale === 'en' ? 'Program' : 'Programa'))
+                            : it.kind === 'aba' ? (d.conducta || (locale === 'en' ? 'ABA session' : 'Sesión ABA'))
+                            : t('admin.visitaDomiciliaria')
+                          const sub = it.kind === 'programa' ? [setLabel(r.set), faseLabel(r.fase)].filter(Boolean).join(' · ')
+                            : it.kind === 'aba' ? (locale === 'en' ? 'ABA session form' : 'Ficha de sesión ABA')
+                            : (locale === 'en' ? 'Home environment' : 'Entorno del hogar')
+                          return (
+                            <motion.div key={it.key} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                              className={`relative overflow-hidden rounded-v-sm border bg-v-elevated transition-colors ${open ? 'border-v-accent/40 shadow-v' : 'border-v-border hover:border-v-accent/30'}`}>
+                              <span className={`absolute -left-[23px] top-5 size-3 rounded-full ring-4 ring-[var(--v-bg-elevated)] ${it.kind === 'hogar' ? 'bg-v-success' : 'bg-v-accent'}`} />
+                              <button onClick={() => toggleCard(it.key)} className="flex w-full items-center gap-3 p-3 text-left">
+                                <div className="flex w-12 shrink-0 flex-col items-center rounded-[30%] bg-v-fill py-1.5 text-v-muted">
+                                  <span className="text-[9px] font-semibold uppercase leading-none">{it.fecha ? it.fecha.toLocaleDateString(toBCP47(locale), { month: 'short' }).replace('.', '') : '—'}</span>
+                                  <span className="text-lg font-bold leading-tight tabular-nums text-v-text">{it.fecha ? it.fecha.getDate() : '·'}</span>
+                                </div>
+                                <span className={`grid size-8 shrink-0 place-items-center rounded-full ${it.kind === 'hogar' ? 'bg-v-success/15 text-v-success' : 'bg-v-accent-soft text-v-accent'}`}><Icon size={15} /></span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-semibold text-v-text">{titulo}</p>
+                                  <p className="truncate text-xs text-v-subtle">{sub}</p>
+                                </div>
+                                {pct != null && <span className={`text-base font-bold tabular-nums ${pctTone(pct)}`}>{pct}%</span>}
+                                <ChevronDown size={16} className={`shrink-0 transition-transform ${open ? 'rotate-180 text-v-accent' : 'text-v-subtle'}`} />
+                              </button>
+                              <AnimatePresence initial={false}>
+                                {open && (
+                                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
+                                    <div className="space-y-3 border-t border-v-border bg-v-bg p-4">
+                                      {it.kind === 'programa' && (
+                                        <>
+                                          <div className="grid grid-cols-3 gap-2">
+                                            {[
+                                              { v: pct != null ? `${pct}%` : '—', l: t('admin.exito'), tone: pctTone(pct) },
+                                              { v: r.respuestas_correctas ?? '—', l: t('admin.correctas'), tone: 'text-v-text' },
+                                              { v: r.oportunidades_totales ?? '—', l: locale === 'en' ? 'Opportunities' : 'Oportunidades', tone: 'text-v-text' },
+                                            ].map(k => (
+                                              <div key={k.l} className="rounded-v-sm border border-v-border bg-v-elevated p-3 text-center">
+                                                <p className={`text-xl font-bold tabular-nums ${k.tone}`}>{k.v}</p>
+                                                <p className="text-[11px] text-v-subtle">{k.l}</p>
+                                              </div>
+                                            ))}
+                                          </div>
+                                          {r.notas && <DetailBox title={t('common.notas')} content={r.notas} icon={<MessageCircle size={13} />} full />}
+                                        </>
+                                      )}
+                                      {it.kind === 'aba' && (
+                                        <>
+                                          <DetailBox title={t('familias.objetivo')} content={d.objetivo_principal} icon={<Target size={13} />} full />
+                                          <DetailBox title={t('ui.observations')} content={d.observaciones_tecnicas} icon={<Eye size={13} />} full />
+                                          <div className="grid gap-3 sm:grid-cols-2">
+                                            <DetailBox title="ABC" content={d.antecedente} icon={<Activity size={13} />} />
+                                            <DetailBox title={t('ui.intervencion')} content={d.estrategias_manejo} icon={<Zap size={13} />} />
+                                          </div>
+                                          <DetailBox title={t('ui.mensajePadresLabel')} content={d.mensaje_padres} icon={<MessageCircle size={13} />} tone="family"
+                                            extra={<span className="ml-auto rounded-full bg-v-warning/15 px-2 py-0.5 text-[10px] font-semibold text-v-warning">{t('ui.enBandeja')}</span>} full />
+                                        </>
+                                      )}
+                                      {it.kind === 'hogar' && (
+                                        <>
+                                          <DetailBox title={t('ui.people_present')} content={d.personas_presentes} icon={<Users size={13} />} full />
+                                          <DetailBox title={t('ui.behavior')} content={d.comportamiento_observado} icon={<Eye size={13} />} full />
+                                          <DetailBox title={t('ui.ai_impression')} content={d.impresion_general} icon={<Sparkles size={13} />} full />
+                                          <div className="grid gap-3 sm:grid-cols-2">
+                                            <DetailBox title={t('ui.barriers')} content={d.barreras_identificadas} icon={<ShieldAlert size={13} />} tone="danger" />
+                                            <DetailBox title={t('ui.facilitators')} content={d.facilitadores} icon={<CheckCircle2 size={13} />} tone="success" />
+                                          </div>
+                                          <DetailBox title={t('ui.mensajePadresLabel')} content={d.mensaje_padres_entorno} icon={<MessageCircle size={13} />} tone="family" full />
+                                        </>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                          )
+                        })}
                       </div>
                     </div>
-                    {isExpanded && (
-                      <div className="px-4 pb-4 border-t pt-3 animate-fade-in" style={{ borderColor: 'var(--card-border)', background: 'var(--muted-bg)' }}>
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                          <div className="rounded-xl p-2.5 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-                            <p className="text-lg font-extrabold tabular-nums" style={{ color: pctColor }}>{pct ?? '—'}{pct != null ? '%' : ''}</p>
-                            <p className="text-[9px] font-semibold" style={{ color: 'var(--text-muted)' }}>{t("admin.exito")}</p>
-                          </div>
-                          <div className="rounded-xl p-2.5 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-                            <p className="text-lg font-extrabold tabular-nums" style={{ color: 'var(--text-primary)' }}>{ses.respuestas_correctas ?? '—'}</p>
-                            <p className="text-[9px] font-semibold" style={{ color: 'var(--text-muted)' }}>{t("admin.correctas")}</p>
-                          </div>
-                          <div className="rounded-xl p-2.5 text-center" style={{ background: 'var(--card)', border: '1px solid var(--card-border)' }}>
-                            <p className="text-lg font-extrabold tabular-nums" style={{ color: 'var(--text-primary)' }}>{ses.oportunidades_totales ?? '—'}</p>
-                            <p className="text-[9px] font-semibold" style={{ color: 'var(--text-muted)' }}>Oportunidades</p>
-                          </div>
-                        </div>
-                        {ses.notas && (
-                          <DetailBox title={t("common.notas")} content={ses.notas} icon={<MessageCircle size={13}/>} color="bg-sky-50 border-sky-200 text-sky-700" full/>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-
-              {(historyData.aba.length === 0 && historyData.entorno.length === 0 && (historyData.sesionesDataAba || []).length === 0) && (
-                <div className="py-16 text-center" style={{ color: 'var(--text-muted)' }}>
-                  <History size={48} className="mx-auto mb-3 opacity-20"/>
-                  <p className="font-bold text-sm">{t("admin.sinRegistros")}</p>
+                  ))}
+                  {visibles.length > histLimite && (
+                    <button onClick={() => setHistLimite(n => n + 20)}
+                      className="mx-auto flex items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-4 py-2 text-xs font-semibold text-v-muted shadow-v transition-colors hover:text-v-accent">
+                      <ChevronDown size={14} /> {locale === 'en' ? `Show more (${visibles.length - histLimite} left)` : `Ver más (quedan ${visibles.length - histLimite})`}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           </AccordionSection>
 
-          {/* ══ SECCIÓN 3: FICHA DE INGRESO (cerrado por defecto) ══ */}
+          {/* ══ FICHA DE INGRESO ══ */}
           <AccordionSection
             id="anamnesis"
             title={t('ui.fichaIngreso')}
-            icon={<FileText size={17}/>}
-            accent="#0ea5e9"
+            icon={<FileText size={17} />}
             defaultOpen={false}
             badge={historyData.anamnesis && selectedChild ? (
-              <button
-                onClick={e => { e.stopPropagation(); setShowAnamnesisReport(true) }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-sky-600 text-white hover:bg-sky-700 transition-colors shadow-sm"
-              >
-                <FileText size={11}/> Generar reporte Word
+              <button onClick={e => { e.stopPropagation(); setShowAnamnesisReport(true) }}
+                className="v-brand inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold" style={{ boxShadow: 'none' }}>
+                <FileDown size={12} /> {locale === 'en' ? 'Word report' : 'Generar reporte Word'}
               </button>
             ) : undefined}
           >
-            <div className="p-4 space-y-2" style={{ background: 'var(--background)' }}>
-              {historyData.anamnesis ? Object.entries(historyData.anamnesis).slice(0, 20).map(([key, value]: any) => (
-                <div key={key} className="px-3 py-2.5 rounded-xl" style={{ borderBottom: '1px solid var(--card-border)' }}>
-                  <span className="text-[10px] font-bold uppercase block mb-0.5 tracking-wider" style={{ color: 'var(--text-muted)' }}>{key.replace(/_/g, ' ')}</span>
-                  <p className="text-sm font-semibold leading-snug" style={{ color: 'var(--text-primary)' }}>{String(value)}</p>
-                </div>
-              )) : (
-                <div className="py-12 text-center">
-                  <FileText size={36} className="mx-auto mb-2 opacity-20" style={{ color: 'var(--text-muted)' }}/>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{t('ui.sinFichaIngreso')}</p>
-                </div>
-              )}
-            </div>
-          </AccordionSection>
-
-          {/* ══ SECCIÓN 4: REPORTES WORD (cerrado por defecto) ══ */}
-          <AccordionSection
-            id="reportes"
-            title={t("admin.reportesGenerados")}
-            icon={<FileText size={17}/>}
-            accent="#0891b2"
-            badge={reportesHistorial.length > 0 ? <span className="text-xs bg-sky-600 text-white px-2 py-0.5 rounded-full font-bold">{reportesHistorial.length}</span> : undefined}
-            defaultOpen={false}
-          >
-            <div className="p-4" style={{ background: 'var(--background)' }}>
-              {loadingReportes ? (
-                <div className="flex items-center justify-center gap-2 py-8" style={{ color: 'var(--text-muted)' }}>
-                  <Loader2 className="animate-spin" size={18}/><span className="text-xs font-bold">{t('common.cargando')}</span>
-                </div>
-              ) : reportesHistorial.length === 0 ? (
-                <div className="py-10 text-center rounded-xl border-2 border-dashed" style={{ background: 'var(--muted-bg)', borderColor: 'var(--card-border)' }}>
-                  <FileText size={32} className="mx-auto mb-2 opacity-20" style={{ color: 'var(--text-muted)' }}/>
-                  <p className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>{t("admin.sinReportesGenerados")}</p>
+            <div className="p-4 sm:p-5">
+              {historyData.anamnesis ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {Object.entries(historyData.anamnesis)
+                    .filter(([k, v]: any) => v !== null && v !== '' && !/^(id|child_id|centro_id|created_at|updated_at)$/.test(k))
+                    .slice(0, 24).map(([key, value]: any) => (
+                    <div key={key} className="rounded-v-sm border border-v-border bg-v-bg px-3.5 py-2.5 [overflow-wrap:anywhere]">
+                      <span className="mb-0.5 block text-[11px] font-medium capitalize text-v-subtle">{key.replace(/_/g, ' ')}</span>
+                      <p className="text-sm leading-snug text-v-text">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</p>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {reportesHistorial.map(rep => <ReporteHistorialCard key={rep.id} reporte={rep}/>)}
+                <div className="flex flex-col items-center rounded-v border border-dashed border-v-border py-12 text-center">
+                  <span className="mb-3 grid size-12 place-items-center rounded-full bg-v-fill"><FileText size={20} className="text-v-subtle" /></span>
+                  <p className="text-sm text-v-muted">{t('ui.sinFichaIngreso')}</p>
                 </div>
               )}
             </div>
           </AccordionSection>
 
-
+          {/* ══ REPORTES WORD ══ */}
+          <AccordionSection
+            id="reportes"
+            title={t('admin.reportesGenerados')}
+            icon={<FileDown size={17} />}
+            badge={reportesHistorial.length > 0 ? <span className="rounded-full bg-v-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-v-accent">{reportesHistorial.length}</span> : undefined}
+            defaultOpen={false}
+          >
+            <div className="p-4 sm:p-5">
+              {loadingReportes ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-v-subtle">
+                  <Loader2 className="animate-spin text-v-accent" size={18} /><span className="text-xs font-semibold">{t('common.cargando')}</span>
+                </div>
+              ) : reportesHistorial.length === 0 ? (
+                <div className="flex flex-col items-center rounded-v border border-dashed border-v-border py-12 text-center">
+                  <span className="mb-3 grid size-12 place-items-center rounded-full bg-v-fill"><FileDown size={20} className="text-v-subtle" /></span>
+                  <p className="text-sm text-v-muted">{t('admin.sinReportesGenerados')}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {reportesHistorial.map(rep => <ReporteHistorialCard key={rep.id} reporte={rep} />)}
+                </div>
+              )}
+            </div>
+          </AccordionSection>
         </div>
       ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-300 py-40">
-              <Brain size={120} className="mb-8 text-slate-200"/>
-              <p className="text-2xl font-bold uppercase tracking-[0.4em] text-slate-300">{t('ui.seleccionarPacienteOpc')}</p>
-          </div>
+        <div className="flex flex-col items-center justify-center py-32 text-center">
+          <span className="mb-4 grid size-20 place-items-center rounded-[30%] bg-v-accent-soft"><Brain size={36} className="text-v-accent" /></span>
+          <p className="text-lg font-semibold text-v-text">{t('ui.seleccionarPacienteOpc')}</p>
+        </div>
       )}
 
       {/* ══ MODAL: REPORTE WORD ANAMNESIS ══ */}
       {showAnamnesisReport && selectedChild && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
-          <div className="w-full max-w-xl animate-fade-in-up">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#081426]/50 p-4 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, y: 20, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="w-full max-w-xl">
             <ReportGenerator
               childId={selectedChild}
               childName={listaNinos.find(n => n.id === selectedChild)?.name || ''}
@@ -658,7 +659,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
               compact={false}
               onClose={() => setShowAnamnesisReport(false)}
             />
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
@@ -666,7 +667,7 @@ const nombre = listaNinos.find(n => n.id === childId)?.name || t('nav.pacientes'
 }
 
 // ── Componente acordeón reutilizable ──────────────────────────────────────────
-function AccordionSection({ id, title, icon, badge, defaultOpen, accent = '#0284c7', children }: {
+function AccordionSection({ title, icon, badge, defaultOpen, children }: {
   id: string
   title: string
   icon: React.ReactNode
@@ -677,22 +678,23 @@ function AccordionSection({ id, title, icon, badge, defaultOpen, accent = '#0284
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false)
   return (
-    <div className="rounded-2xl overflow-hidden transition-all" style={{ background: "var(--card)", border: "1px solid var(--card-border)", boxShadow: 'var(--shadow-sm)' }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 transition-all hover:opacity-90"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: `${accent}18`, color: accent }}>
-            {icon}
-          </div>
-          <span className="font-bold text-sm" style={{ color: "var(--text-primary)" }}>{title}</span>
+    <div className={`overflow-hidden rounded-v border bg-v-elevated shadow-v transition-colors ${open ? 'border-v-accent/25' : 'border-v-border'}`}>
+      <button onClick={() => setOpen(o => !o)} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-v-fill">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent">{icon}</span>
+          <span className="text-[15px] font-semibold tracking-tight text-v-text">{title}</span>
           {badge}
         </div>
-        <ChevronDown size={16} className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`} style={{ color: "var(--text-muted)" }} />
+        <span className={`grid size-8 shrink-0 place-items-center rounded-full transition-all ${open ? 'rotate-180 bg-v-accent-soft text-v-accent' : 'text-v-subtle'}`}><ChevronDown size={16} /></span>
       </button>
-      {open && <div className="border-t" style={{ borderColor: "var(--card-border)" }}>{children}</div>}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }}
+            className="border-t border-v-border bg-v-bg">
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -701,26 +703,10 @@ function AccordionSection({ id, title, icon, badge, defaultOpen, accent = '#0284
 // ==============================================================================
 // SUBCOMPONENTE: TARJETA DE REPORTE EN HISTORIAL
 // ==============================================================================
-const COLORES_REPORTE: Record<string, string> = {
-  aba:           'from-sky-500 to-sky-600',
-  anamnesis:     'from-sky-500 to-sky-600',
-  entorno_hogar: 'from-green-500 to-green-600',
-  brief2:        'from-sky-500 to-sky-600',
-  ados2:         'from-teal-500 to-teal-600',
-  vineland3:     'from-emerald-500 to-emerald-600',
-  wiscv:         'from-sky-500 to-sky-600',
-  basc3:         'from-rose-500 to-rose-600',
-}
-
-const BADGE_REPORTE: Record<string, string> = {
-  aba:           'bg-sky-100 text-sky-700 border-sky-200',
-  anamnesis:     'bg-sky-100 text-sky-700 border-sky-200',
-  entorno_hogar: 'bg-green-100 text-green-700 border-green-200',
-  brief2:        'bg-sky-100 text-sky-700 border-sky-200',
-  ados2:         'bg-teal-100 text-teal-700 border-teal-200',
-  vineland3:     'bg-emerald-100 text-emerald-700 border-emerald-200',
-  wiscv:         'bg-sky-100 text-sky-700 border-sky-200',
-  basc3:         'bg-rose-100 text-rose-700 border-rose-200',
+const TIPO_REPORTE: Record<string, string> = {
+  aba: 'Sesión ABA', anamnesis: 'Ficha de ingreso', entorno_hogar: 'Entorno del hogar', brief2: 'BRIEF-2',
+  ados2: 'ADOS-2', vineland3: 'Vineland-3', wiscv: 'WISC-V', basc3: 'BASC-3', programas: 'Programas',
+  seguro: 'Informe clínico', clinico: 'Informe clínico', general: 'Reporte general', comparativo: 'Comparativo',
 }
 
 function ReporteHistorialCard({ reporte }: { reporte: any; key?: any }) {
@@ -750,74 +736,51 @@ function ReporteHistorialCard({ reporte }: { reporte: any; key?: any }) {
     }
   }
 
-  const gradiente = COLORES_REPORTE[reporte.tipo_reporte] || 'from-slate-500 to-slate-600'
-  const badge     = BADGE_REPORTE[reporte.tipo_reporte]   || 'bg-slate-100 text-slate-600 border-slate-200'
+  const tipo = TIPO_REPORTE[reporte.tipo_reporte] || String(reporte.tipo_reporte || '').replace(/_/g, ' ')
 
   return (
-    <div className="rounded-2xl overflow-hidden transition-all duration-200 group" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-      {/* Barra superior con color del tipo */}
-      <div className={`bg-gradient-to-r ${gradiente} p-4 flex items-center gap-3`}>
-        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-          <FileText size={20} className="text-white" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-white font-bold text-xs truncate">{reporte.titulo}</p>
-          <p className="text-white/70 text-[10px] font-bold mt-0.5">
-            {(reporte.tamano_bytes / 1024).toFixed(0)} KB
-          </p>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -2 }}
+      className="group flex flex-col rounded-v border border-v-border bg-v-elevated p-4 shadow-v">
+      <div className="mb-3 flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><FileText size={18} /></span>
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-sm font-semibold leading-snug text-v-text">{reporte.titulo}</p>
+          <span className="mt-1 inline-flex rounded-full bg-v-fill px-2 py-0.5 text-[10px] font-semibold capitalize text-v-muted">{tipo}</span>
         </div>
       </div>
-
-      {/* Info */}
-      <div className="p-3 space-y-2.5">
-        <span className={`inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full border ${badge}`}>
-          {reporte.tipo_reporte}
-        </span>
-
-        <div className="flex items-center gap-1.5 text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-          <Clock size={10} />
-          <span>
-            {new Date(reporte.fecha_generacion).toLocaleDateString(toBCP47(locale), {
-              day: '2-digit', month: 'short', year: 'numeric',
-              hour: '2-digit', minute: '2-digit'
-            })}
-          </span>
-        </div>
-
-        {reporte.generado_por && (
-          <div className="flex items-center gap-1.5 text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
-            <User size={10} />
-            <span>{reporte.generado_por}</span>
-          </div>
-        )}
-
-        <button
-          onClick={handleDownload}
-          className={`w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r ${gradiente} text-white rounded-xl font-bold text-xs transition-all shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-95`}
-        >
-          <Download size={14} />
-          Descargar .docx
-        </button>
+      <div className="mb-3 space-y-1 text-[11px] text-v-subtle">
+        <p className="flex items-center gap-1.5"><Clock size={11} />
+          {new Date(reporte.fecha_generacion).toLocaleDateString(toBCP47(locale), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+        </p>
+        {reporte.generado_por && <p className="flex items-center gap-1.5"><User size={11} /> {reporte.generado_por}</p>}
+        {reporte.tamano_bytes ? <p className="flex items-center gap-1.5"><FileDown size={11} /> {(reporte.tamano_bytes / 1024).toFixed(0)} KB</p> : null}
       </div>
-    </div>
+      <button onClick={handleDownload}
+        className="mt-auto flex h-9 w-full items-center justify-center gap-2 rounded-full border border-v-accent/30 bg-v-accent-soft text-xs font-semibold text-v-accent transition-colors hover:bg-v-accent hover:text-white">
+        <Download size={14} /> {locale === 'en' ? 'Download .docx' : 'Descargar .docx'}
+      </button>
+    </motion.div>
   )
 }
 
-function DetailBox({ title, content, icon, color, full }: any) {
-    const safeContent = content ? String(content) : ""; 
-    const isEmpty = safeContent === "" || safeContent === "undefined";
-    const finalStyle = isEmpty ? "bg-slate-50 border-slate-200 text-slate-400" : color;
+const DETAIL_TONES: Record<string, string> = {
+  neutral: 'border-v-border bg-v-elevated',
+  success: 'border-v-success/30 bg-v-success/10',
+  danger: 'border-v-danger/30 bg-v-danger/10',
+  family: 'border-v-warning/30 bg-v-warning/10',
+}
 
-    return (
-        <div className={`p-4 rounded-2xl border ${finalStyle} shadow-sm transition-all ${full ? 'w-full' : ''}`}>
-            <p className={`font-bold uppercase mb-2 flex items-center gap-2 text-[10px] tracking-widest opacity-80`}>
-              {icon} {title}
-            </p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium" style={{ color: 'inherit' }}>
-              {isEmpty ? "SIN REGISTRO" : safeContent}
-            </p>
-        </div>
-    )
+function DetailBox({ title, content, icon, full, tone = 'neutral', extra }: { title: string; content: any; icon?: React.ReactNode; full?: boolean; tone?: string; extra?: React.ReactNode; color?: string }) {
+  const text = content == null ? '' : String(content)
+  const empty = !text || text === 'undefined'
+  return (
+    <div className={`rounded-v-sm border p-3.5 ${empty ? 'border-dashed border-v-border' : DETAIL_TONES[tone] ?? DETAIL_TONES.neutral} ${full ? 'w-full' : ''}`}>
+      <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-v-muted">{icon} {title}{extra}</p>
+      <p className={`whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere] ${empty ? 'italic text-v-subtle' : 'text-v-text'}`}>
+        {empty ? 'Sin registro' : text}
+      </p>
+    </div>
+  )
 }
 
 

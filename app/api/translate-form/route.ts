@@ -6,10 +6,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
+import { getApiCaller, unauthorized, forbidden } from '@/lib/api-auth'
 
 export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!caller.centroId) return forbidden()
   try {
     const { texts, target } = await req.json()
     if (!Array.isArray(texts) || texts.length === 0) {

@@ -1,48 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller } from '@/lib/api-auth'
 
-// Verifica si el padre que llama está DENTRO del límite de cuentas de padres
-// (definido por el programador en /control → Límites). El orden es por fecha de
-// creación: los primeros N entran, el resto queda bloqueado para registrarse.
-// A prueba de fallos: ante cualquier error NO bloquea (allowed:true).
-
+// Whether the calling parent is within their centro's parent-account limit (plan max_parents + purchased extra slots).
+// Order is by account creation: the first N parents of the centro are in. Mirrors the enforce_padre_limit trigger.
 export async function GET(req: NextRequest) {
-  try {
-    const token = req.headers.get('authorization')?.replace('Bearer ', '')
-    if (!token) return NextResponse.json({ allowed: true })
+  const caller = await getApiCaller(req)
+  if (!caller || caller.role !== 'padre') return NextResponse.json({ allowed: true })
+  if (!caller.centroId) return NextResponse.json({ allowed: false, limit: 0 })
 
-    const { data: u } = await supabaseAdmin.auth.getUser(token)
-    const uid = u?.user?.id
-    if (!uid) return NextResponse.json({ allowed: true })
+  const [{ data: centro }, { data: me }] = await Promise.all([
+    supabaseAdmin.from('centros').select('extra_parents, plans(max_parents)').eq('id', caller.centroId).maybeSingle(),
+    supabaseAdmin.from('profiles').select('created_at').eq('id', caller.id).maybeSingle(),
+  ])
+  const maxParents = (centro?.plans as unknown as { max_parents: number | null } | null)?.max_parents ?? null
+  if (maxParents === null) return NextResponse.json({ allowed: true })
 
-    const { data: me } = await supabaseAdmin
-      .from('profiles').select('role, created_at').eq('id', uid).maybeSingle()
-    const role = (me as { role?: string } | null)?.role
-    // Solo se limita a los padres; cualquier otro rol pasa.
-    if (role !== 'padre') return NextResponse.json({ allowed: true })
-
-    const { data: s } = await supabaseAdmin
-      .from('app_settings').select('limits').eq('id', 1).maybeSingle()
-    const limit = Math.floor(Number((s as { limits?: Record<string, number> } | null)?.limits?.padre || 0))
-    if (limit <= 0) return NextResponse.json({ allowed: true, limit: 0 })
-
-    const myCreated = (me as { created_at?: string } | null)?.created_at
-
-    if (myCreated) {
-      // Cuántos padres se crearon ANTES que yo (tienen prioridad por orden).
-      const { count } = await supabaseAdmin
-        .from('profiles').select('id', { count: 'exact', head: true })
-        .eq('role', 'padre').lt('created_at', myCreated)
-      const before = count || 0
-      return NextResponse.json({ allowed: before < limit, limit, rank: before + 1 })
-    }
-
-    // Respaldo (sin created_at): cuántos OTROS padres existen.
-    const { count } = await supabaseAdmin
-      .from('profiles').select('id', { count: 'exact', head: true })
-      .eq('role', 'padre').neq('id', uid)
-    return NextResponse.json({ allowed: (count || 0) < limit, limit })
-  } catch {
-    return NextResponse.json({ allowed: true }) // fail open
-  }
+  const limit = maxParents + (centro?.extra_parents ?? 0)
+  const { count } = await supabaseAdmin
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'padre')
+    .eq('centro_id', caller.centroId)
+    .lt('created_at', me?.created_at ?? new Date().toISOString())
+  const before = count ?? 0
+  return NextResponse.json({ allowed: before < limit, limit, rank: before + 1 })
 }

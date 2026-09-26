@@ -2,6 +2,7 @@
 // Genera un .docx profesional de la Historia Clínica (Anamnesis) de un paciente
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
@@ -10,8 +11,9 @@ import {
 import {
   selloQRVerificacionAsync, piePaginaOficial,
   generarCodigoDocumento, generarIniciales, DOC_PAGE_PROPS,
-} from '@/lib/santi-report-template'
+} from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 // ── Estilos base ──────────────────────────────────────────────────────────────
 const BD   = { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' }
@@ -102,6 +104,9 @@ function espacio() {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { registroId } = await req.json()
     if (!registroId) return NextResponse.json({ error: 'registroId requerido' }, { status: 400 })
@@ -113,6 +118,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error || !registro) return NextResponse.json({ error: 'Registro no encontrado' }, { status: 404 })
+    if ((registro as any).centro_id !== caller.centroId) return notFound()
 
     const d = registro.datos || {}
     const child = (registro as any).children || {}
@@ -128,18 +134,20 @@ export async function POST(req: NextRequest) {
     const fileName = `Historia_Clinica_${nombrePaciente.replace(/\s+/g, '_')}_${hoyISO}.docx`
 
     // ── QR de verificación del documento ──
+    const centro = await getCentroBranding({ childId: registro.child_id })
     const codigoDoc = generarCodigoDocumento((registro as any).child_id || nombrePaciente, 'anamnesis')
     const sellosVerif = await selloQRVerificacionAsync({
+      branding: centro,
       codigoDoc,
       fechaEmision: hoy,
-      especialista: 'Equipo Clínico SANTI',
+      especialista: 'Equipo Clínico',
     })
 
     const doc = new Document({
       styles: { default: { document: { run: { font: 'Arial', size: 20 } } } },
       sections: [{
         properties: DOC_PAGE_PROPS,
-        footers: { default: piePaginaOficial() },
+        footers: { default: piePaginaOficial(centro) },
         children: [
 
           // ── PORTADA ────────────────────────────────────────────────────────
@@ -147,7 +155,7 @@ export async function POST(req: NextRequest) {
             spacing: { before: 0, after: 20 },
             border: { bottom: { style: BorderStyle.SINGLE, size: 10, color: '5B21B6', space: 8 } },
             children: [
-              new TextRun({ text: 'NEUROPSICOLOGÍA Y TERAPIAS SANTI', bold: true, size: 36, font: 'Arial', color: '4C1D95' }),
+              new TextRun({ text: centro.name.toUpperCase(), bold: true, size: 36, font: 'Arial', color: '4C1D95' }),
               new TextRun({ text: '  ·  Centro Especializado en Neurodesarrollo', size: 20, font: 'Arial', color: '9CA3AF' }),
             ],
           }),
@@ -292,7 +300,7 @@ export async function POST(req: NextRequest) {
           }),
           new Paragraph({
             spacing: { before: 60, after: 0 },
-            children: [new TextRun({ text: `Neuropsicología y Terapias SANTI  ·  ${hoy}  ·  Documento clínico confidencial`, size: 16, font: 'Arial', color: '94A3B8', italics: true })],
+            children: [new TextRun({ text: `${centro.name}  ·  ${hoy}  ·  Documento clínico confidencial`, size: 16, font: 'Arial', color: '94A3B8', italics: true })],
           }),
         ],
       }],

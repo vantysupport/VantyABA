@@ -4,7 +4,9 @@
 // estancamientos, regresiones y consistencia de conductas
 
 import { NextRequest, NextResponse } from 'next/server'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
 
@@ -175,12 +177,19 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { childId, childName, semanas = 16 } = body
     const userLocale = body.locale || req.headers.get('x-locale') || 'es'
     const isEN = String(userLocale).toLowerCase().startsWith('en')
     if (!childId) return NextResponse.json({ error: 'childId requerido' }, { status: 400 })
+    if (!(await canAccessChild(caller, childId))) return notFound()
+    // Tokens de análisis del centro
+    const bloqueo = await sinTokens(caller.centroId, isEN)
+    if (bloqueo) return bloqueo
 
     const fechaInicio = new Date()
     fechaInicio.setDate(fechaInicio.getDate() - semanas * 7)
@@ -364,7 +373,7 @@ export async function POST(req: NextRequest) {
     // ━━━ CEREBRO IA ━━━
     let _cerebroCtx = ''
     try {
-      const _kb = await buildAIContext(undefined, undefined, undefined, 'patrones conducta ABA TEA análisis')
+      const _kb = await buildAIContext(undefined, undefined, undefined, 'patrones conducta ABA TEA análisis', caller.centroId)
       _cerebroCtx = _kb.knowledgeContext
     } catch { /* fallback */ }
     // ━━━ FIN CEREBRO IA ━━━
@@ -397,7 +406,7 @@ ${patrones.map(p => `▸ [${p.tipo.toUpperCase()}] ${p.area}
    Sessions involved: ${p.sesiones_involucradas}`).join('\n\n')}
 
 ─── RECENT SESSION HISTORY ─────────────────────────
-${sesiones.slice(-8).map((s, i) => `Session ${sesiones.length - (sesiones.slice(-8).length - 1 - i)} (${s.fecha_sesion}):
+${sesiones.slice(-3).map((s, i) => `Session ${sesiones.length - (sesiones.slice(-3).length - 1 - i)} (${s.fecha_sesion}):
   • Goal achievement: ${s.datos?.nivel_logro_objetivos ?? 'N/A'}
   • Attention level: ${s.datos?.nivel_atencion ?? 'N/A'}/5
   • Frustration tolerance: ${s.datos?.tolerancia_frustracion ?? 'N/A'}/5
@@ -444,7 +453,7 @@ ${patrones.map(p => `▸ [${p.tipo.toUpperCase()}] ${p.area}
    Sesiones involucradas: ${p.sesiones_involucradas}`).join('\n\n')}
 
 ─── HISTORIAL DE SESIONES RECIENTES ────────────────
-${sesiones.slice(-8).map((s, i) => `Sesión ${sesiones.length - (sesiones.slice(-8).length - 1 - i)} (${s.fecha_sesion}):
+${sesiones.slice(-3).map((s, i) => `Sesión ${sesiones.length - (sesiones.slice(-3).length - 1 - i)} (${s.fecha_sesion}):
   • Logro de objetivos: ${s.datos?.nivel_logro_objetivos ?? 'N/D'}
   • Nivel de atención: ${s.datos?.nivel_atencion ?? 'N/D'}/5
   • Tolerancia frustración: ${s.datos?.tolerancia_frustracion ?? 'N/D'}/5
@@ -495,13 +504,18 @@ Identifica recursos conductuales y habilidades del paciente que son activos tera
         patrones,
         sesiones_analizadas: sesiones.length,
         analisis_ia,
+        centro_id: caller.centroId,
         updated_at: new Date().toISOString()
       }, { onConflict: 'child_id' })
     } catch { /* no bloquear */ }
 
     const tiposUrgentes = patrones.filter(p => p.tipo === 'regresion' || p.tipo === 'estancamiento')
 
+    // Se descuenta un token solo cuando el análisis se generó bien
+    const tokens = await descontarToken(caller.centroId)
+
     return NextResponse.json({
+      tokens,
       patrones,
       sesiones_analizadas: sesiones.length,
       patrones_urgentes: tiposUrgentes.length,
@@ -522,12 +536,17 @@ Identifica recursos conductuales y habilidades del paciente que son activos tera
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const childId = searchParams.get('child_id')
   try {
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
     let q = supabaseAdmin
       .from('patrones_detectados')
       .select('*, children(name)')
+      .eq('centro_id', caller.centroId)
       .order('updated_at', { ascending: false })
       .limit(100)
     if (childId) q = q.eq('child_id', childId)

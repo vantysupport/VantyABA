@@ -8,6 +8,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { borrarArchivosDePaciente } from '@/lib/borrar-archivos'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -69,6 +71,9 @@ const TABLAS_HIJAS_DIRECTAS = [
 ]
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.clinical)) return forbidden()
   try {
     const { child_id, confirm_name } = await req.json()
 
@@ -79,13 +84,13 @@ export async function POST(req: NextRequest) {
     // 1. Verificar que el paciente exista y obtener su nombre para confirmación
     const { data: child, error: childErr } = await supabaseAdmin
       .from('children')
-      .select('id, name, parent_id')
+      .select('id, name, parent_id, centro_id')
       .eq('id', child_id)
       .maybeSingle()
 
     if (childErr) throw childErr
-    if (!child) {
-      return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
+    if (!child || (child as any).centro_id !== caller.centroId) {
+      return notFound()
     }
 
     // 2. Si el paciente tiene cuenta de padre vinculada, requerir confirmación por nombre
@@ -185,6 +190,9 @@ export async function POST(req: NextRequest) {
         detalle_limpieza: resultado,
       }, { status: 500 })
     }
+
+    // Borrado definitivo de sus archivos (documentos y adjuntos del chat con la familia)
+    await borrarArchivosDePaciente(child_id)
 
     return NextResponse.json({
       ok: true,

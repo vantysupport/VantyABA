@@ -2,6 +2,7 @@
 // Genera un .docx profesional a partir de una ficha clínica completada
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getCentroBranding } from '@/lib/centro-branding'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
@@ -10,8 +11,9 @@ import {
 import {
   selloQRVerificacionAsync, piePaginaOficial,
   generarCodigoDocumento, generarIniciales, DOC_PAGE_PROPS,
-} from '@/lib/santi-report-template'
+} from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 // ── Estilos ───────────────────────────────────────────────────────────────────
 const BD   = { style: BorderStyle.SINGLE, size: 1, color: 'D1D5DB' }
@@ -89,6 +91,9 @@ function espacio() {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { responseId } = await req.json()
     if (!responseId) return NextResponse.json({ error: 'responseId requerido' }, { status: 400 })
@@ -105,6 +110,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error || !resp) return NextResponse.json({ error: 'Ficha no encontrada' }, { status: 404 })
+    if ((resp as any).centro_id !== caller.centroId) return notFound()
 
     const template   = (resp as any).clinical_templates || {}
     const child      = (resp as any).children || {}
@@ -135,11 +141,13 @@ export async function POST(req: NextRequest) {
 
     // ── QR + footer institucional ──
     const fechaActual = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+    const centro = await getCentroBranding({ childId: resp.child_id })
     const codigoDoc = generarCodigoDocumento((resp as any).child_id || nombrePaciente, 'ficha')
     const sellosVerif = await selloQRVerificacionAsync({
+      branding: centro,
       codigoDoc,
       fechaEmision: fechaActual,
-      especialista: (resp as any).filler_name || 'Equipo Clínico SANTI',
+      especialista: (resp as any).filler_name || 'Equipo Clínico',
     })
 
     const doc = new Document({
@@ -151,7 +159,7 @@ export async function POST(req: NextRequest) {
             children: [new Paragraph({
               alignment: AlignmentType.CENTER,
               children: [
-                new TextRun({ text: `Neuropsicología y Terapias SANTI · Vanty ABA  ·  ${nombrePlantilla} — ${nombrePaciente}  ·  `, size: 16, font: 'Arial', color: '9CA3AF' }),
+                new TextRun({ text: `${centro.name} · Vanty ABA  ·  ${nombrePlantilla} — ${nombrePaciente}  ·  `, size: 16, font: 'Arial', color: '9CA3AF' }),
                 new TextRun({ children: [PageNumber.CURRENT], size: 16, font: 'Arial', color: '9CA3AF' }),
               ],
             })],
@@ -163,7 +171,7 @@ export async function POST(req: NextRequest) {
             spacing: { before: 0, after: 20 },
             border: { bottom: { style: BorderStyle.SINGLE, size: 10, color: '4F46E5', space: 8 } },
             children: [
-              new TextRun({ text: 'NEUROPSICOLOGÍA Y TERAPIAS SANTI', bold: true, size: 36, font: 'Arial', color: '4C1D95' }),
+              new TextRun({ text: centro.name.toUpperCase(), bold: true, size: 36, font: 'Arial', color: '4C1D95' }),
               new TextRun({ text: '  ·  Centro Especializado en Neurodesarrollo', size: 20, font: 'Arial', color: '9CA3AF' }),
             ],
           }),
@@ -265,7 +273,7 @@ export async function POST(req: NextRequest) {
       tipo: 'ficha_clinica',
       pacienteNombre: nombrePaciente,
       pacienteIniciales: generarIniciales(nombrePaciente),
-      especialista: (resp as any).filler_name || 'Equipo Clínico SANTI',
+      especialista: (resp as any).filler_name || 'Equipo Clínico',
       fileName,
       metadata: { plantilla: nombrePlantilla },
     })

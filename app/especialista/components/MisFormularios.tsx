@@ -17,6 +17,8 @@ import {
 import { ANAMNESIS_DATA_EN, ABA_DATA_EN, ENTORNO_HOGAR_DATA_EN, BRIEF2_DATA_EN, ADOS2_DATA_EN, VINELAND3_DATA_EN, WISCV_DATA_EN, BASC3_DATA_EN } from '@/app/admin/data/formConstants-en'
 import { ALL_FORMS_EN } from '@/app/admin/data/neurodivergentForms-en'
 import { calcularEdadNumerica } from '@/app/admin/utils/helpers'
+import { avisarTokens } from '@/components/TokensPrediccion'
+import { ElegirModoLlenado, ChipModoLlenado, CostoToken, type ModoLlenado } from '@/components/ModoLlenado'
 
 
 
@@ -71,9 +73,14 @@ const ALL_SPECIALIST_FORMS = [
 ]
 
 // ─── QUESTION RENDERER ───────────────────────────────────────────────────────
-function QuestionField({ q, value, onChange }: any) {
+function QuestionField({ q, value, onChange, manual = false }: any) {
   const { t, locale } = useI18n()
   const base = "w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+
+  // Modo manual (sin costo): lo que normalmente completa la IA o se calcula, lo escribe el profesional.
+  if (manual && (q.aiGenerated || q.readonly) && (!q.type || ['textarea', 'text', 'number'].includes(q.type))) return q.type === 'textarea'
+    ? <textarea value={value || ''} onChange={e => onChange(e.target.value)} rows={3} placeholder={q.placeholder || ''} className={`${base} resize-none`} />
+    : <input type="text" value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={q.placeholder || ''} className={base} />
 
   if (q.type === 'select' || q.type === 'frequency') return (
     <div className="space-y-2">
@@ -210,6 +217,8 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
   const [editedMsg, setEditedMsg] = useState('')
   const [editedActividades, setEditedActividades] = useState('')
   const [done, setDone] = useState(false)
+  // Cómo se llena: a mano (sin costo) o con apoyo de IA (1 token por análisis)
+  const [modo, setModo] = useState<ModoLlenado | null>(null)
 
   const sections = (locale === 'en' ? (SECTIONS_EN[form.formKey] || (ALL_FORMS_EN.find((x: any) => x.id === form.id)?.sections) || form.sections) : form.sections) || []
   const total = sections.length
@@ -287,7 +296,11 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
       )
       setEditedActividades(analysis?.actividades_casa || analysis?.actividad_casa || '')
       toast.success(t('auto.misFormularios.analisisIaGenerado'))
-    } catch (e: any) { toast.error('Error: ' + e.message) }
+      avisarTokens(false)
+    } catch (e: any) {
+      if (/tokens/i.test(String(e.message))) { avisarTokens(true); toast.error(e.message) }
+      else toast.error('Error: ' + e.message)
+    }
     finally { setAnalyzing(false) }
   }
 
@@ -387,6 +400,8 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
     </div>
   )
 
+  if (!modo) return <ElegirModoLlenado titulo={dTitle(form, locale)} subtitulo={dSubtitle(form, locale)} onElegir={setModo} onBack={onBack} />
+
   return (
     <div className="flex flex-col h-full pb-20 md:pb-6">
       {/* Top progress bar */}
@@ -406,6 +421,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
               <div className="h-full bg-gradient-to-r from-sky-500 to-cyan-500 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
           </div>
+          <ChipModoLlenado modo={modo} onCambiar={setModo} />
         </div>
       </div>
 
@@ -444,7 +460,7 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
                       {q.label}{q.required && <span className="text-red-500"> *</span>}
                     </label>
                     {q.helpText && <p className="text-xs text-slate-400">{q.helpText}</p>}
-                    <QuestionField q={q} value={responses[q.id]} onChange={(v: any) => answer(q.id, v)} />
+                    <QuestionField q={q} value={responses[q.id]} manual={modo === 'manual'} onChange={(v: any) => answer(q.id, v)} />
                   </div>
                 ))}
               </div>
@@ -458,11 +474,12 @@ function FormFillView({ form, children, onBack, userId, toast }: any) {
               <ChevronLeft size={18} /> Anterior
             </button>
             <div className="flex items-center gap-3">
-              {(step === total - 1 || (form.formKey === 'aba' && step >= 5)) && (
+              {modo === 'ia' && (step === total - 1 || (form.formKey === 'aba' && step >= 5)) && (
                 <button onClick={handleAnalyze} disabled={analyzing || !childId}
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-600 to-cyan-600 text-white rounded-xl font-bold disabled:opacity-40 transition-all shadow-lg shadow-sky-200 hover:opacity-90">
                   {analyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                  {analyzing ? 'Analizando...' : 'Analizar con IA'}
+                  {analyzing ? (locale === 'en' ? 'Analyzing…' : 'Analizando...') : (locale === 'en' ? 'Analyze with AI' : 'Analizar con IA')}
+                  {!analyzing && <CostoToken claro />}
                 </button>
               )}
               {step < total - 1 ? (

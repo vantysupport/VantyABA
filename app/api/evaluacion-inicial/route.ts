@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { logAuditEvent } from '@/lib/audit-log'
 
 export const dynamic = 'force-dynamic'
@@ -16,6 +17,8 @@ export const revalidate = 0
 
 // ─── GET ───────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
@@ -29,6 +32,7 @@ export async function GET(req: NextRequest) {
         .maybeSingle()
       if (error) throw error
       if (!eval_) return NextResponse.json({ error: 'Evaluación no encontrada' }, { status: 404 })
+      if (!(await canAccessChild(caller, eval_.child_id))) return notFound()
 
       const { data: servicios } = await supabaseAdmin
         .from('evaluacion_servicios')
@@ -41,6 +45,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (childId) {
+      if (!(await canAccessChild(caller, childId))) return notFound()
       const { data: eval_, error } = await supabaseAdmin
         .from('evaluaciones_iniciales')
         .select('*')
@@ -71,9 +76,16 @@ export async function GET(req: NextRequest) {
 
 // ─── POST (intake del padre) ──────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const body = await req.json()
-    const { child_id, parent_id, respuestas } = body
+    const { child_id, respuestas } = body
+    if (child_id && !(await canAccessChild(caller, child_id))) return notFound()
+    // Un padre solo puede registrarse a sí mismo; el staff solo a padres de su centro.
+    let parent_id: string | null = body.parent_id || null
+    if (caller.role === 'padre') parent_id = caller.id
+    else if (parent_id && !(await rowInCentro('profiles', parent_id, caller.centroId))) parent_id = null
 
     if (!child_id || !respuestas) {
       return NextResponse.json({ error: 'child_id y respuestas son obligatorios' }, { status: 400 })
@@ -82,7 +94,7 @@ export async function POST(req: NextRequest) {
     // Verificar que existe el child
     const { data: child } = await supabaseAdmin
       .from('children')
-      .select('id, name, parent_id')
+      .select('id, name, parent_id, centro_id')
       .eq('id', child_id)
       .maybeSingle()
     if (!child) return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
@@ -107,6 +119,8 @@ export async function POST(req: NextRequest) {
         .update({
           respuestas_intake: respuestas,
           intake_completado_en: ahora,
+          intake_llenado_por: caller.id,
+          intake_llenado_rol: caller.role,
           estado: 'analizando',
           updated_at: ahora,
         })
@@ -123,8 +137,11 @@ export async function POST(req: NextRequest) {
       .insert({
         child_id,
         parent_id: parentIdFinal,
+        centro_id: (child as any).centro_id,
         respuestas_intake: respuestas,
         intake_completado_en: ahora,
+        intake_llenado_por: caller.id,
+        intake_llenado_rol: caller.role,
         estado: 'analizando',
       })
       .select()
@@ -140,10 +157,15 @@ export async function POST(req: NextRequest) {
 
 // ─── PATCH (admin actualiza estado / asigna especialista / documento) ────
 export async function PATCH(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { id, ...campos } = body
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('evaluaciones_iniciales', id, caller.centroId))) return notFound()
+    if (campos.especialista_asignado_id && !(await rowInCentro('profiles', campos.especialista_asignado_id, caller.centroId))) return notFound()
 
     const permitidos = [
       'estado',
@@ -159,10 +181,20 @@ export async function PATCH(req: NextRequest) {
       'terapias_seleccionadas',
       'nota_cambio_terapias',
       'terapias_cambiadas_por_admin',
+      // El equipo puede corregir las respuestas de las fichas (queda registrado quién y cuándo)
+      'respuestas_intake',
+      'anamnesis_especifica',
     ]
     const patch: Record<string, any> = { updated_at: new Date().toISOString() }
     for (const k of Object.keys(campos)) {
       if (permitidos.includes(k)) patch[k] = campos[k]
+    }
+    if ('respuestas_intake' in patch || 'anamnesis_especifica' in patch) {
+      for (const k of ['respuestas_intake', 'anamnesis_especifica']) {
+        if (k in patch && (typeof patch[k] !== 'object' || patch[k] === null || Array.isArray(patch[k]))) return NextResponse.json({ error: 'respuestas inválidas' }, { status: 400 })
+      }
+      patch.editado_por = caller.id
+      patch.editado_en = patch.updated_at
     }
 
     const { data, error } = await supabaseAdmin
@@ -182,10 +214,14 @@ export async function PATCH(req: NextRequest) {
 
 // ─── DELETE ──────────────────────────────────────────────────────────────
 export async function DELETE(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.clinical)) return forbidden()
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+    if (!(await rowInCentro('evaluaciones_iniciales', id, caller.centroId))) return notFound()
 
     // Cargar info para el audit log antes de borrar
     const { data: evalToDelete } = await supabaseAdmin

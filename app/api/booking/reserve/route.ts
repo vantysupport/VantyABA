@@ -3,14 +3,24 @@
 // POST { token, parentUserId, childId?, slots: [{fecha, time}] }
 //   → crea appointments (aparecen en la agenda de todos) e incrementa slots_used.
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized } from '@/lib/api-auth'
+import { notifyOnlineBooking } from '@/lib/booking-notify'
+import { getLocaleFromRequest } from '@/lib/lang'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const { token, parentUserId, childId, slots } = await req.json()
+    // The booking page requires login; the caller comes from the session, never from the body.
+    const caller = await getApiCaller(req)
+    if (!caller) return unauthorized()
+    const { token, childId, slots, inviteEmail } = await req.json()
+    const cleanInvite = typeof inviteEmail === 'string' ? inviteEmail.trim().toLowerCase() : ''
+    if (cleanInvite && (cleanInvite.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanInvite))) {
+      return NextResponse.json({ error: 'El correo para la invitación no es válido.' }, { status: 400 })
+    }
     if (!token) return NextResponse.json({ error: 'token requerido' }, { status: 400 })
     if (!Array.isArray(slots) || slots.length === 0) {
       return NextResponse.json({ error: 'Selecciona al menos un horario' }, { status: 400 })
@@ -18,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     const { data: link } = await supabaseAdmin
       .from('booking_links').select('*').eq('token', token).maybeSingle()
-    if (!link) return NextResponse.json({ error: 'Link no encontrado' }, { status: 404 })
+    if (!link || !link.centro_id) return NextResponse.json({ error: 'Link no encontrado' }, { status: 404 })
     if (!link.active) return NextResponse.json({ error: 'Este link ya no está activo.' }, { status: 410 })
     if (link.expires_at && new Date(link.expires_at) < new Date()) {
       return NextResponse.json({ error: 'Este link de reserva ya venció.' }, { status: 410 })
@@ -30,17 +40,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Determinar el paciente: el del link, o el que pasa el padre (validando que sea suyo)
-    let finalChildId = link.child_id || childId
+    const finalChildId = link.child_id || childId
     if (!finalChildId) {
       return NextResponse.json({ error: 'Falta indicar el paciente.' }, { status: 400 })
     }
-    // Validar que el paciente pertenezca al padre (si vino parentUserId)
-    if (parentUserId && !link.child_id) {
-      const { data: child } = await supabaseAdmin
-        .from('children').select('id, parent_id').eq('id', finalChildId).maybeSingle()
-      if (!child || (child as any).parent_id !== parentUserId) {
-        return NextResponse.json({ error: 'No tenés permiso para reservar para este paciente.' }, { status: 403 })
-      }
+    // The patient must belong to the link's centro, and the caller must be that patient's parent
+    // or staff of the same centro (booking on the family's behalf). Applies to fixed-patient links too.
+    const { data: child } = await supabaseAdmin
+      .from('children').select('id, parent_id, centro_id').eq('id', finalChildId).maybeSingle()
+    const isFamily = !!child && child.parent_id === caller.id
+    const isCentroStaff = hasRole(caller, ROLES.staff) && caller.centroId === link.centro_id
+    if (!child || child.centro_id !== link.centro_id || !(isFamily || isCentroStaff)) {
+      return NextResponse.json({ error: 'No tenés permiso para reservar para este paciente.' }, { status: 403 })
     }
 
     // Re-validar disponibilidad (anti doble-reserva)
@@ -48,6 +59,7 @@ export async function POST(req: NextRequest) {
     const { data: existentes } = await supabaseAdmin
       .from('appointments')
       .select('appointment_date, appointment_time, specialist_id, status')
+      .eq('centro_id', link.centro_id)
       .in('appointment_date', fechas as string[])
     const ocupados = new Set<string>()
     for (const a of (existentes || [])) {
@@ -70,23 +82,39 @@ export async function POST(req: NextRequest) {
       appointment_time: `${s.time}:00`,
       service_type: link.service_type || 'Terapia',
       modalidad: link.modalidad || 'presencial',
+      ...(link.modalidad === 'virtual' ? { video_link: `https://meet.jit.si/VantyMeet-${crypto.randomUUID()}` } : {}),
       status: 'confirmed',
       is_group: false,
       notes: `Reserva online${link.plan_type ? ` · ${link.plan_type}` : ''}${link.notas ? ` · ${link.notas}` : ''}`,
       reservado_online: true,
+      centro_id: link.centro_id,
     }))
 
+    // Calendar sync + emails run after the response, so the family isn't kept waiting.
+    const notifyContext = {
+      centroId: link.centro_id as string,
+      childId: finalChildId as string,
+      specialistId: (link.specialist_id as string | null) || null,
+      serviceType: rows[0].service_type,
+      modalidad: rows[0].modalidad,
+      notes: rows[0].notes,
+      parentUserId: (child.parent_id as string | null) ?? null,
+      inviteEmail: cleanInvite || null,
+      locale: getLocaleFromRequest(req),
+    }
+
     const { data: inserted, error: insErr } = await supabaseAdmin
-      .from('appointments').insert(rows).select('id, appointment_date, appointment_time')
+      .from('appointments').insert(rows).select('id, appointment_date, appointment_time, video_link')
     if (insErr) {
       // Si falla por columna reservado_online inexistente, reintentar sin ella
       if (/reservado_online/.test(insErr.message)) {
         const rows2 = rows.map(({ reservado_online, ...r }) => r)
         const { data: ins2, error: e2 } = await supabaseAdmin
-          .from('appointments').insert(rows2).select('id, appointment_date, appointment_time')
+          .from('appointments').insert(rows2).select('id, appointment_date, appointment_time, video_link')
         if (e2) throw e2
         await supabaseAdmin.from('booking_links')
           .update({ slots_used: link.slots_used + slots.length }).eq('id', link.id)
+        after(() => notifyOnlineBooking(ins2 || [], notifyContext))
         return NextResponse.json({ ok: true, citas: ins2 })
       }
       throw insErr
@@ -96,6 +124,7 @@ export async function POST(req: NextRequest) {
     await supabaseAdmin.from('booking_links')
       .update({ slots_used: link.slots_used + slots.length }).eq('id', link.id)
 
+    after(() => notifyOnlineBooking(inserted || [], notifyContext))
     return NextResponse.json({ ok: true, citas: inserted })
   } catch (e: any) {
     console.error('[booking/reserve]', e)

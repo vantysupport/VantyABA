@@ -4,16 +4,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { useI18n } from '@/lib/i18n-context'
-import { Check, Loader2, RefreshCw } from 'lucide-react'
-
-const MSIcon = ({ size = 14 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 21 21">
-    <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-    <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-    <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-    <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-  </svg>
-)
+import { CalendarConnectPill, MicrosoftLogo } from '@/components/ui/calendar-connect-pill'
+import { confirmar } from '@/components/ui/confirmar'
 
 export default function MicrosoftCalendarSync() {
   const toast = useToast()
@@ -59,7 +51,7 @@ export default function MicrosoftCalendarSync() {
   }
 
   const handleDisconnect = async () => {
-    if (!userId || !confirm(t('agenda.msDesconectarConfirm'))) return
+    if (!userId || !await confirmar(t('agenda.msDesconectarConfirm'))) return
     await fetch(`/api/microsoft-calendar?action=disconnect&userId=${userId}`)
     setStatus('disconnected')
     toast.success(t('agenda.msDesconectado'))
@@ -83,46 +75,20 @@ export default function MicrosoftCalendarSync() {
 
   if (status === 'loading') return null
 
-  if (status === 'disconnected') {
-    return (
-      <button
-        onClick={handleConnect}
-        disabled={connecting}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl border transition-all disabled:opacity-50
-          border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold
-          dark:bg-[#21262d] dark:border-[#30363d] dark:text-slate-300 dark:hover:bg-[#30363d]"
-      >
-        {connecting ? <Loader2 size={14} className="animate-spin text-sky-500" /> : <MSIcon />}
-        {connecting ? t('agenda.msConectando') : t('agenda.msConectar')}
-      </button>
-    )
-  }
-
   return (
-    <div className="flex items-center gap-1.5">
-      {/* Estado conectado */}
-      <button
-        onClick={handleDisconnect}
-        title={t('agenda.msClickDesconectar')}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all
-          bg-sky-50 text-sky-700 border border-sky-200
-          hover:bg-red-50 hover:text-red-600 hover:border-red-200
-          dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800
-          dark:hover:bg-red-900/30 dark:hover:text-red-400 dark:hover:border-red-800"
-      >
-        <MSIcon /> Outlook
-      </button>
-      {/* Sync */}
-      <button
-        onClick={handleSync}
-        disabled={syncing}
-        title={t('agenda.msSincronizar')}
-        className="p-2 rounded-xl border transition-all disabled:opacity-50
-          border-slate-200 text-slate-400 hover:text-sky-600 hover:border-sky-300 hover:bg-sky-50
-          dark:border-[#30363d] dark:text-slate-500 dark:hover:text-sky-400 dark:hover:border-sky-700 dark:hover:bg-sky-900/20"
-      >
-        {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-      </button>
-    </div>
+    <CalendarConnectPill
+      logo={<MicrosoftLogo />}
+      label="Outlook"
+      connected={status === 'connected'}
+      connecting={connecting}
+      syncing={syncing}
+      connectLabel={t('agenda.msConectar')}
+      connectingLabel={t('agenda.msConectando')}
+      disconnectTitle={t('agenda.msClickDesconectar')}
+      syncTitle={t('agenda.msSincronizar')}
+      onConnect={handleConnect}
+      onDisconnect={handleDisconnect}
+      onSync={handleSync}
+    />
   )
 }

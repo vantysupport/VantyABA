@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Brain, X, Send, Loader2, User, BookOpen, Minus, Maximize2, Minimize2, HelpCircle, Stethoscope, Map, Trash2, Volume2, VolumeX } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
+import { confirmar } from '@/components/ui/confirmar'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -723,7 +724,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                     {speaking ? 'Hablando…' : voiceEnabled ? 'Voz ON' : 'Voz OFF'}
                   </button>
                   <button
-                    onClick={() => { if (window.confirm(t('auto.aRIAFloatingChat.borrarTodoElHistorialDe'))) clearHistory() }}
+                    onClick={async () => { if (await confirmar(t('auto.aRIAFloatingChat.borrarTodoElHistorialDe'))) clearHistory() }}
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10"
                     title={t("admin.borrarHistorial")}
                   >

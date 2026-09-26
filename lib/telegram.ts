@@ -1,16 +1,17 @@
+import { PLATFORM_NAME } from '@/lib/branding'
 // lib/telegram.ts
-// Sistema de notificaciones Telegram para SANTI
+// Sistema de notificaciones Telegram de Vanty
 // 100% GRATIS, sin límites prácticos, sin registro de empresa
 //
 // ══════════════════════════════════════════════════════════════
 // SETUP (3 minutos):
 //
 //  1. Abrir Telegram → buscar @BotFather → /newbot
-//     → Nombre del bot: "SANTI Neuropsicología y Terapias SANTI"
-//     → Username: vanty_santi_bot (o el que quieras)
+//     → Nombre del bot: "Vanty Alertas" (o el nombre del centro)
+//     → Username: vanty_alertas_bot (o el que quieras)
 //     → BotFather te da el TOKEN → guardarlo
 //
-//  2. Crear un grupo en Telegram "SANTI Alertas"
+//  2. Crear un grupo en Telegram "Vanty Alertas"
 //     → Agregar el bot al grupo
 //     → Enviar cualquier mensaje en el grupo
 //     → Abrir en navegador:
@@ -36,25 +37,28 @@ export interface TelegramNotif {
   vars?: Record<string, string>
   locale?: NotifLocale
   chatId?: string
+  /** Name of the center the notification is about (getCentroBranding().name). */
+  centroNombre: string
 }
 
 // ── Templates en español ──────────────────────────────────────────────────────
 export function telegramTemplate(
   tipo: NotifTipo,
-  vars: Record<string, string> = {},
+  vars: Record<string, string>,
+  centroNombre: string,
   locale: NotifLocale = 'es'
 ): string {
   const v = vars
-  const centro = process.env.CENTRO_NOMBRE || 'Neuropsicología y Terapias SANTI'
+  const centro = centroNombre
 
   const T: Record<NotifTipo, string> = {
-    cita_confirmada:   `✅ *Cita confirmada*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}\n📍 ${v.tipo || 'Presencial'}\n\n_${centro} · SANTI_`,
-    cita_cancelada:    `❌ *Cita cancelada*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}\n\nContactar recepción para reagendar.\n_${centro} · SANTI_`,
-    formulario_nuevo:  `📋 *Formulario subido*\nTipo: ${v.tipo}\nPaciente: ${v.paciente}${v.especialista ? `\nEspecialista: ${v.especialista}` : ''}\n\nRevisar en portal 👆\n_${centro} · SANTI_`,
-    informe_nuevo:     `📊 *Nuevo informe disponible*\nPaciente: ${v.paciente}${v.periodo ? `\nPeríodo: ${v.periodo}` : ''}\n\nVer en SANTI 👆\n_${centro}_`,
-    alerta_clinica:    `⚠️ *Alerta clínica*\nPaciente: ${v.paciente}\n${v.descripcion}\n\nRevisar Análisis Predictivo 🤖\n_${centro} · SANTI_`,
-    mensaje_terapeuta: `💬 *Mensaje del terapeuta*\n👤 ${v.terapeuta}\n\n"${v.preview}"\n\nResponder en SANTI 👆\n_${centro}_`,
-    recurso_nuevo:     `📚 *Nuevo recurso disponible*\n${v.titulo}${v.descripcion ? `\n${v.descripcion}` : ''}\n\nBiblioteca 📖\n_${centro} · SANTI_`,
+    cita_confirmada:   `✅ *Cita confirmada*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}\n📍 ${v.tipo || 'Presencial'}\n\n_${centro} · ${PLATFORM_NAME}_`,
+    cita_cancelada:    `❌ *Cita cancelada*\n📅 ${v.fecha} a las ${v.hora}\n👤 Paciente: ${v.paciente}\n\nContactar recepción para reagendar.\n_${centro} · ${PLATFORM_NAME}_`,
+    formulario_nuevo:  `📋 *Formulario subido*\nTipo: ${v.tipo}\nPaciente: ${v.paciente}${v.especialista ? `\nEspecialista: ${v.especialista}` : ''}\n\nRevisar en portal 👆\n_${centro} · ${PLATFORM_NAME}_`,
+    informe_nuevo:     `📊 *Nuevo informe disponible*\nPaciente: ${v.paciente}${v.periodo ? `\nPeríodo: ${v.periodo}` : ''}\n\nVer en ${PLATFORM_NAME} 👆\n_${centro}_`,
+    alerta_clinica:    `⚠️ *Alerta clínica*\nPaciente: ${v.paciente}\n${v.descripcion}\n\nRevisar Análisis Predictivo 🤖\n_${centro} · ${PLATFORM_NAME}_`,
+    mensaje_terapeuta: `💬 *Mensaje del terapeuta*\n👤 ${v.terapeuta}\n\n"${v.preview}"\n\nResponder en ${PLATFORM_NAME} 👆\n_${centro}_`,
+    recurso_nuevo:     `📚 *Nuevo recurso disponible*\n${v.titulo}${v.descripcion ? `\n${v.descripcion}` : ''}\n\nBiblioteca 📖\n_${centro} · ${PLATFORM_NAME}_`,
     custom:            v.mensaje || '',
   }
 
@@ -71,7 +75,7 @@ export async function sendTelegram(notif: TelegramNotif): Promise<boolean> {
     return false
   }
 
-  const text = telegramTemplate(notif.tipo, notif.vars || {}, notif.locale || 'es')
+  const text = telegramTemplate(notif.tipo, notif.vars || {}, notif.centroNombre, notif.locale || 'es')
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -105,10 +109,11 @@ export async function broadcastTelegram(
   chatIds: string[],
   tipo: NotifTipo,
   vars: Record<string, string>,
+  centroNombre: string,
   locale: NotifLocale = 'es'
 ): Promise<{ sent: number; failed: number }> {
   const results = await Promise.allSettled(
-    chatIds.map(chatId => sendTelegram({ chatId, tipo, vars, locale }))
+    chatIds.map(chatId => sendTelegram({ chatId, tipo, vars, locale, centroNombre }))
   )
   const sent   = results.filter(r => r.status === 'fulfilled' && (r as any).value).length
   const failed = results.length - sent
@@ -119,7 +124,8 @@ export async function broadcastTelegram(
 export async function notifyAdmin(
   tipo: NotifTipo,
   vars: Record<string, string>,
+  centroNombre: string,
   locale: NotifLocale = 'es'
 ): Promise<void> {
-  sendTelegram({ tipo, vars, locale }).catch(() => {})
+  sendTelegram({ tipo, vars, locale, centroNombre }).catch(() => {})
 }

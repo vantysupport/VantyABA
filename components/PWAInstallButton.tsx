@@ -1,62 +1,57 @@
 'use client'
+import { PLATFORM_NAME } from '@/lib/branding'
 
 import { useState, useEffect } from 'react'
-import { Download, X, Share, MoreVertical, Plus } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Download, X, Share, MoreVertical, SquarePlus, Check, Compass, Smartphone } from 'lucide-react'
+import { useI18n } from '@/lib/i18n-context'
 
+type Plataforma = 'android' | 'ios' | 'desktop'
+
+// Aviso para instalar Vanty como app en el celular + guía paso a paso (iPhone / Android).
 export default function PWAInstallButton() {
+  const { locale } = useI18n()
+  const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [installPrompt, setInstallPrompt] = useState<any>(null)
-  const [isInstalled, setIsInstalled]     = useState(false)
-  const [platform, setPlatform]           = useState<'android' | 'ios' | 'desktop' | null>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
+  const [platform, setPlatform] = useState<Plataforma | null>(null)
+  const [iosSafari, setIosSafari] = useState(true)
   const [showInstructions, setShowInstructions] = useState(false)
-  const [installing, setInstalling]       = useState(false)
-  const [dismissed, setDismissed]         = useState(false)
+  const [installing, setInstalling] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    // Detectar si ya está instalada como PWA
-    if (window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true) {
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
       setIsInstalled(true)
       return
     }
+    try { if (sessionStorage.getItem('pwa_install_dismissed')) { setDismissed(true); return } } catch { /* sin storage */ }
 
-    // Detectar si ya fue descartado en esta sesión
-    if (sessionStorage.getItem('pwa_install_dismissed')) {
-      setDismissed(true)
-      return
-    }
-
-    // Detectar plataforma
     const ua = navigator.userAgent.toLowerCase()
-    const isIOS = /iphone|ipad|ipod/.test(ua)
-    const isAndroid = /android/.test(ua)
+    const isIOS = /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    if (isIOS) {
+      setPlatform('ios')
+      // En iPhone solo Safari permite "Añadir a pantalla de inicio"
+      setIosSafari(!/crios|fxios|edgios|opios/.test(ua))
+    } else setPlatform(/android/.test(ua) ? 'android' : 'desktop')
 
-    if (isIOS) setPlatform('ios')
-    else if (isAndroid) setPlatform('android')
-    else setPlatform('desktop')
-
-    // Android/Desktop Chrome: capturar el evento beforeinstallprompt
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setInstallPrompt(e)
-    }
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e) }
+    const instalada = () => { setIsInstalled(true); setInstallPrompt(null) }
     window.addEventListener('beforeinstallprompt', handler)
-
-    // Detectar si se instaló
-    window.addEventListener('appinstalled', () => {
-      setIsInstalled(true)
-      setInstallPrompt(null)
-    })
-
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', instalada)
+    return () => { window.removeEventListener('beforeinstallprompt', handler); window.removeEventListener('appinstalled', instalada) }
   }, [])
 
-  const handleInstall = async () => {
-    if (platform === 'ios') {
-      setShowInstructions(true)
-      return
-    }
+  const bannerVisible = !isInstalled && !dismissed && !!platform && platform !== 'desktop' && !showInstructions
 
-    if (installPrompt) {
+  // Avisa a otros avisos flotantes (notificaciones) para que no se encimen
+  useEffect(() => {
+    document.body.dataset.pwaBanner = bannerVisible || showInstructions ? '1' : ''
+    window.dispatchEvent(new Event('vanty:pwa-banner'))
+  }, [bannerVisible, showInstructions])
+
+  const handleInstall = async () => {
+    if (platform === 'android' && installPrompt) {
       setInstalling(true)
       try {
         installPrompt.prompt()
@@ -68,168 +63,99 @@ export default function PWAInstallButton() {
       }
       return
     }
-
-    // Fallback — mostrar instrucciones manuales
     setShowInstructions(true)
   }
 
   const dismiss = () => {
-    sessionStorage.setItem('pwa_install_dismissed', '1')
+    try { sessionStorage.setItem('pwa_install_dismissed', '1') } catch { /* sin storage */ }
     setDismissed(true)
     setShowInstructions(false)
   }
 
-  // No mostrar si ya instalada, descartada, o no en mobile
-  if (isInstalled || dismissed || !platform || platform === 'desktop') return null
-  // No mostrar si no hay prompt de Android disponible Y no es iOS
-  if (platform === 'android' && !installPrompt) return null
+  if (isInstalled || !platform || platform === 'desktop') return null
+
+  const pasosIOS = iosSafari ? [
+    { Icon: Share, t: L('Tap Share', 'Toca Compartir'), d: L('The square with an arrow, at the bottom of Safari.', 'El cuadrado con una flecha, en la barra inferior de Safari.') },
+    { Icon: SquarePlus, t: L('"Add to Home Screen"', '"Añadir a pantalla de inicio"'), d: L('Scroll down the menu until you see it.', 'Desliza el menú hacia abajo hasta encontrarlo.') },
+    { Icon: Check, t: L('Tap "Add"', 'Toca "Añadir"'), d: L(`${PLATFORM_NAME} will appear on your home screen like any app.`, `${PLATFORM_NAME} aparecerá en tu pantalla de inicio como cualquier app.`) },
+  ] : [
+    { Icon: Compass, t: L('Open this page in Safari', 'Abre esta página en Safari'), d: L('On iPhone, only Safari can install apps from the web.', 'En iPhone, solo Safari puede instalar apps desde la web.') },
+    { Icon: Share, t: L('Tap Share', 'Toca Compartir'), d: L('The square with an arrow, at the bottom of Safari.', 'El cuadrado con una flecha, en la barra inferior de Safari.') },
+    { Icon: SquarePlus, t: L('"Add to Home Screen"', '"Añadir a pantalla de inicio"'), d: L('Then tap "Add".', 'Luego toca "Añadir".') },
+  ]
+  const pasosAndroid = [
+    { Icon: MoreVertical, t: L('Open the Chrome menu', 'Abre el menú de Chrome'), d: L('The three dots in the top-right corner.', 'Los tres puntos en la esquina superior derecha.') },
+    { Icon: Download, t: L('"Install app"', '"Instalar app"'), d: L('Or "Add to Home screen", depending on your phone.', 'O "Añadir a pantalla de inicio", según tu celular.') },
+    { Icon: Check, t: L('Confirm with "Install"', 'Confirma con "Instalar"'), d: L(`${PLATFORM_NAME} will appear with your other apps.`, `${PLATFORM_NAME} aparecerá junto a tus otras apps.`) },
+  ]
+  const pasos = platform === 'ios' ? pasosIOS : pasosAndroid
 
   return (
-    <>
-      {/* ── BANNER DE INSTALACIÓN ── */}
-      {!showInstructions && (
-        <div
-          className="fixed bottom-20 left-3 right-3 z-50 flex items-center gap-3 p-3 rounded-2xl shadow-xl border"
-          style={{
-            background: 'linear-gradient(135deg, #5B3FC8, #7c3aed)',
-            borderColor: 'rgba(255,255,255,0.15)',
-            animation: 'slide-up 0.4s ease-out',
-          }}>
-          {/* Ícono */}
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Download size={18} className="text-white"/>
-          </div>
-
-          {/* Texto */}
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-sm leading-tight">Instalar SANTI</p>
-            <p className="text-white/75 text-xs mt-0.5">
-              {platform === 'ios' ? 'Añadir a pantalla de inicio' : 'Instalar como app'}
-            </p>
-          </div>
-
-          {/* Botones */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={handleInstall}
-              disabled={installing}
-              className="px-3 py-1.5 bg-white text-violet-700 rounded-lg text-xs font-black hover:bg-white/90 transition-all">
-              {installing ? '...' : 'Instalar'}
+    <AnimatePresence>
+      {/* ── Aviso de instalación ── */}
+      {bannerVisible && (
+        <motion.div key="banner" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+          className="v-scope fixed bottom-24 left-3 right-3 z-50">
+          <div className="relative flex items-center gap-3 overflow-hidden rounded-v border border-v-border bg-v-elevated p-3 pr-2 shadow-v">
+            <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
+            <img src="/brand/vanty-logo-96.png" alt="" className="size-11 shrink-0 rounded-[26%] shadow-v" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-v-text">{L(`Install ${PLATFORM_NAME} ABA`, `Instala ${PLATFORM_NAME} ABA`)}</p>
+              <p className="text-xs text-v-muted">{L('Faster access, like a real app', 'Acceso más rápido, como una app')}</p>
+            </div>
+            <button onClick={handleInstall} disabled={installing}
+              className="v-brand inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-xs font-semibold disabled:opacity-60">
+              {installing ? <span className="size-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <><Download size={13} /> {L('Install', 'Instalar')}</>}
             </button>
-            <button onClick={dismiss} className="p-1.5 text-white/60 hover:text-white transition-colors">
-              <X size={16}/>
-            </button>
+            <button onClick={dismiss} aria-label={L('Close', 'Cerrar')} className="grid size-8 shrink-0 place-items-center rounded-full text-v-muted hover:bg-v-fill"><X size={15} /></button>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* ── MODAL INSTRUCCIONES iOS ── */}
-      {showInstructions && platform === 'ios' && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
-          onClick={dismiss}>
-          <div
-            className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl"
-            style={{ animation: 'slide-up 0.3s ease-out' }}
-            onClick={e => e.stopPropagation()}>
+      {/* ── Guía paso a paso ── */}
+      {showInstructions && (
+        <motion.div key="guia" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="v-scope fixed inset-0 z-[120] flex items-end justify-center bg-black/45 p-3 backdrop-blur-sm sm:items-center" onClick={dismiss}>
+          <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+            role="dialog" aria-modal="true" aria-labelledby="pwa-guia-titulo"
+            className="w-full max-w-md overflow-hidden rounded-[26px] bg-v-elevated shadow-v" onClick={e => e.stopPropagation()}>
 
-            {/* Header */}
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-violet-600 to-purple-700 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-white font-black text-lg">V</span>
-                </div>
-                <div>
-                  <p className="font-black text-slate-800">Instalar SANTI</p>
-                  <p className="text-xs text-slate-500">en iPhone / iPad</p>
-                </div>
+            {/* Cabecera con ARIA */}
+            <div className="v-brand relative flex items-end gap-3 px-5 pt-5 text-white">
+              <div className="min-w-0 flex-1 pb-5">
+                <p className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold">
+                  <Smartphone size={12} /> {platform === 'ios' ? 'iPhone / iPad' : 'Android'}
+                </p>
+                <h2 id="pwa-guia-titulo" className="mt-2 text-xl font-bold leading-tight">{L(`Install ${PLATFORM_NAME} ABA on your phone`, `Instala ${PLATFORM_NAME} ABA en tu celular`)}</h2>
+                <p className="mt-1 text-[13px] text-white/85">{L('3 steps, less than a minute.', '3 pasos, menos de un minuto.')}</p>
               </div>
-              <button onClick={dismiss} className="p-2 text-slate-400 hover:text-slate-600">
-                <X size={18}/>
-              </button>
+              <img src="/aria/pose-8.webp" alt="" className="h-auto w-24 shrink-0 drop-shadow-[0_10px_18px_rgba(0,30,90,0.35)]" />
+              <button onClick={dismiss} aria-label={L('Close', 'Cerrar')} className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-white/15 text-white hover:bg-white/25"><X size={15} /></button>
             </div>
 
             {/* Pasos */}
-            <div className="space-y-4">
-              <Step n={1} icon={<Share size={18} className="text-blue-500"/>}>
-                Toca el ícono de <strong>Compartir</strong>
-                <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-500 rounded-md ml-1">
-                  <Share size={12} className="text-white"/>
-                </span>
-                {' '}en la barra de Safari
-              </Step>
+            <ol className="space-y-2.5 p-5">
+              {pasos.map(({ Icon, t, d }, i) => (
+                <motion.li key={t} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.08 }}
+                  className="flex items-center gap-3 rounded-v-sm border border-v-border bg-v-bg/60 p-3">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-v-fill text-xs font-bold text-v-muted">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-v-text">{t}</p>
+                    <p className="text-xs leading-relaxed text-v-muted">{d}</p>
+                  </div>
+                  <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Icon size={18} /></span>
+                </motion.li>
+              ))}
+            </ol>
 
-              <Step n={2} icon={<Plus size={18} className="text-slate-600"/>}>
-                Baja y toca <strong>"Añadir a pantalla de inicio"</strong>
-              </Step>
-
-              <Step n={3} icon={<span className="text-lg">✅</span>}>
-                Toca <strong>"Añadir"</strong> — SANTI aparecerá en tu pantalla de inicio
-              </Step>
+            <div className="px-5 pb-5">
+              <button onClick={dismiss} className="v-brand h-11 w-full rounded-full text-sm font-semibold">{L('Got it', 'Entendido')}</button>
             </div>
-
-            {/* Nota */}
-            <p className="text-xs text-slate-400 text-center mt-5 leading-relaxed">
-              Solo funciona desde <strong>Safari</strong>. Chrome e otros navegadores no permiten instalar apps en iPhone.
-            </p>
-
-            <button
-              onClick={dismiss}
-              className="w-full mt-4 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
-              Entendido
-            </button>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
-
-      {/* ── MODAL INSTRUCCIONES Android fallback ── */}
-      {showInstructions && platform === 'android' && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
-          onClick={dismiss}>
-          <div
-            className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl"
-            style={{ animation: 'slide-up 0.3s ease-out' }}
-            onClick={e => e.stopPropagation()}>
-
-            <div className="flex items-center justify-between mb-5">
-              <p className="font-black text-slate-800">Instalar en Android</p>
-              <button onClick={dismiss} className="p-2 text-slate-400"><X size={18}/></button>
-            </div>
-
-            <div className="space-y-4">
-              <Step n={1} icon={<MoreVertical size={18} className="text-slate-600"/>}>
-                Toca el menú <strong>⋮</strong> (tres puntos) en Chrome
-              </Step>
-              <Step n={2} icon={<Plus size={18} className="text-slate-600"/>}>
-                Toca <strong>"Instalar app"</strong> o <strong>"Añadir a pantalla de inicio"</strong>
-              </Step>
-              <Step n={3} icon={<span className="text-lg">✅</span>}>
-                Toca <strong>"Instalar"</strong> para confirmar
-              </Step>
-            </div>
-
-            <button onClick={dismiss}
-              className="w-full mt-5 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-bold text-sm">
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
-
-function Step({ n, icon, children }: { n: number; icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="w-7 h-7 bg-violet-100 text-violet-700 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
-        {n}
-      </div>
-      <div className="flex items-start gap-2 flex-1">
-        <span className="flex-shrink-0 mt-0.5">{icon}</span>
-        <p className="text-sm text-slate-600 leading-relaxed">{children}</p>
-      </div>
-    </div>
+    </AnimatePresence>
   )
 }

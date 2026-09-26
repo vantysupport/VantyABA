@@ -5,8 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, rowInCentro, unauthorized, forbidden } from '@/lib/api-auth'
 
 const DEFAULT_BUCKET = 'public-images'
+// Solo buckets públicos de imágenes: nunca buckets privados con documentos clínicos.
+const ALLOWED_BUCKETS = new Set([DEFAULT_BUCKET, 'store-images'])
 const MAX_SIZE = 5 * 1024 * 1024 // 5 MB para imágenes
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']
 
@@ -27,6 +30,9 @@ async function ensureBucket(bucket: string): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  const isStaff = hasRole(caller, ROLES.staff)
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
@@ -35,6 +41,14 @@ export async function POST(req: NextRequest) {
     // ✅ FIX: parámetro opcional — si se pasa, el servidor actualiza avatar_url
     // usando supabaseAdmin (sin restricciones de RLS del cliente browser)
     const updateProfileId = (formData.get('updateProfileId') as string | null) || null
+
+    if (!ALLOWED_BUCKETS.has(bucket)) return forbidden()
+    // Cada quien solo cambia su propio avatar; un admin, los de su centro.
+    if (updateProfileId && updateProfileId !== caller.id) {
+      if (!hasRole(caller, ROLES.admins) || !(await rowInCentro('profiles', updateProfileId, caller.centroId))) return forbidden()
+    }
+    // Quien no es personal del centro (p. ej. padres) solo sube su avatar.
+    if (!isStaff && (bucket !== DEFAULT_BUCKET || !updateProfileId)) return forbidden()
 
     if (!file) return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 })
     if (file.size > MAX_SIZE) return NextResponse.json({ error: 'Imagen demasiado grande (máx 5 MB)' }, { status: 413 })
@@ -46,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().slice(0, 5)
     const safeFolder = folder.replace(/[^a-z0-9_\-\/]/gi, '').replace(/^\/+|\/+$/g, '') || 'misc'
-    const path = `${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const path = `${caller.centroId || 'sin-centro'}/${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)

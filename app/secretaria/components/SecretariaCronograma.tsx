@@ -52,7 +52,7 @@ export default function SecretariaCronograma() {
     try {
       const { data } = await supabase
         .from('appointments')
-        .select('*, children(name, profiles!children_parent_id_fkey(full_name, email))')
+        .select('*, children(name, profiles!fk_children_parent(full_name, email))')
         .gte('appointment_date', fmtDate(rangeStart))
         .lte('appointment_date', fmtDate(rangeEnd))
         .neq('status', 'cancelled')

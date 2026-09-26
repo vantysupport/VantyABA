@@ -37,6 +37,27 @@ export default function AuthCallbackPage() {
           return
         }
 
+        // Registro por invitación con Google/Microsoft: une la cuenta al centro antes de enviarla a su panel.
+        const invite = new URLSearchParams(window.location.search).get('invite')
+        if (invite) {
+          const r = await fetch('/api/invitaciones/aceptar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({ token: invite }),
+          })
+          if (!r.ok) {
+            const j = await r.json().catch(() => ({}))
+            await supabase.auth.signOut().catch(() => {})
+            router.replace(`/invitar/${encodeURIComponent(invite)}?error=${encodeURIComponent(j.error || 'generic')}`)
+            return
+          }
+        }
+
+        if (new URLSearchParams(window.location.search).get('type') === 'recovery') {
+          router.replace('/reset-password')
+          return
+        }
+
         const user = session.user
         const oauthName =
           user.user_metadata?.full_name ||
@@ -63,8 +84,10 @@ export default function AuthCallbackPage() {
           await supabase.from('profiles').update({ full_name: oauthName }).eq('id', user.id)
         }
 
-        const adminRoles = ['admin', 'jefe', 'especialista', 'terapeuta']
-        if (adminRoles.includes(profile.role)) router.replace('/admin')
+        const adminRoles = ['admin', 'jefe', 'terapeuta']
+        if (profile.role === 'programador') router.replace('/control')
+        else if (profile.role === 'especialista') router.replace('/especialista')
+        else if (adminRoles.includes(profile.role)) router.replace('/admin')
         else if (profile.role === 'secretaria') router.replace('/secretaria')
         else router.replace('/padre')
 

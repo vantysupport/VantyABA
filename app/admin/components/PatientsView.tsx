@@ -9,9 +9,12 @@ import {
   ArrowLeft, Baby, BarChart3, Brain, Calendar, Check, ChevronRight,
   ClipboardList, Edit, Link, Link2Off, Loader2, Mail, Plus, Save,
   Search, Stethoscope, User, UserCheck, Users, X,
-  FolderOpen, FileText, Heart, Trash2, Settings, Smile, Meh, Frown, Sparkles
+  FolderOpen, FileText, Heart, Trash2, Settings, Smile, Meh, Frown, Sparkles,
+  ClipboardCheck, ClipboardPen, History, Cake, StickyNote, Tag, Activity
 } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import { supabase } from '@/lib/supabase'
+import { subirArchivoPrivado } from '@/lib/subir-archivo'
 import { getControlStatus } from '@/lib/control'
 import { adminFetch } from '@/lib/admin-fetch'
 import { useToast } from '@/components/Toast'
@@ -20,8 +23,10 @@ import ProgramasABAView from './ProgramasABAView'
 import EvaluacionesUnificadas from './EvaluacionesUnificadas'
 import AIReportView from './AIReportView'
 import DocumentosView from './DocumentosView'
+import { ScrollRow } from '@/components/ui/scroll-row'
 import { RellenarFicha, GestorPlantillas } from './PlantillasClinicas'
 import EvaluacionInicialAdmin from './EvaluacionInicialAdmin'
+import { confirmar } from '@/components/ui/confirmar'
 
 // ── Color badge por diagnóstico ────────────────────────────────────────────
 const DX_BORDER: Record<string, string> = {
@@ -39,37 +44,33 @@ const getDisplayName = (p: any, role: string) => {
   const useApodo = ['admin', 'secretaria', 'jefe'].includes(role)
   return (useApodo && p.apodo) ? p.apodo : p.name
 }
-const PALETTES = [
-  'from-sky-500 to-sky-600', 'from-blue-500 to-sky-600',
-  'from-emerald-500 to-teal-600',  'from-rose-500 to-pink-600',
-  'from-amber-500 to-orange-600',
-]
-function Avatar({ name, size = 'md' }: { name: string; size?: 'sm'|'md'|'lg' }) {
-  const pal = PALETTES[name.charCodeAt(0) % PALETTES.length]
-  const sz  = { sm: 'w-9 h-9 text-base', md: 'w-12 h-12 text-lg', lg: 'w-16 h-16 text-2xl' }[size]
+function Avatar({ name, size = 'md', active = false }: { name: string; size?: 'sm'|'md'|'lg'; active?: boolean }) {
+  const sz = { sm: 'size-9 text-sm', md: 'size-12 text-lg', lg: 'size-16 text-2xl' }[size]
   return (
-    <div className={`bg-gradient-to-br ${pal} ${sz} rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0 shadow-sm`}>
+    <div className={`${sz} grid shrink-0 place-items-center rounded-[30%] font-semibold transition-colors ${active ? 'v-brand' : 'bg-v-accent-soft text-v-accent'}`}
+      style={active ? { boxShadow: 'none' } : undefined}>
       {name.charAt(0).toUpperCase()}
     </div>
   )
 }
 
 // ── InfoCard premium (ícono en tile tintado + jerarquía) ───────────────────
-function InfoCard({ icon: Icon, label, color = '#0284c7', children }: {
-  icon: any; label: string; color?: string; children: React.ReactNode
+function InfoCard({ icon: Icon, label, children, className = '' }: {
+  icon: any; label: string; color?: string; children: React.ReactNode; className?: string
 }) {
   return (
-    <div className="rounded-2xl p-4 transition-all hover:shadow-md"
-      style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
-      <div className="flex items-center gap-2 mb-2.5">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: `${color}18`, color }}>
-          <Icon size={13} />
-        </div>
-        <p className="text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>{label}</p>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+      className={`min-w-0 rounded-v border border-v-border bg-v-elevated p-4 shadow-v [overflow-wrap:anywhere] ${className}`}
+    >
+      <div className="mb-2 flex items-center gap-2">
+        <span className="grid size-7 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Icon size={14} /></span>
+        <p className="text-xs font-medium text-v-muted">{label}</p>
       </div>
       {children}
-    </div>
+    </motion.div>
   )
 }
 
@@ -164,7 +165,7 @@ function LinkedAccountSection({ nino, onLinked }: { nino: any; onLinked: () => v
 
   return (
     <>
-      <div className="rounded-2xl p-4 mt-3" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
+      <div className="rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5">
             <UserCheck size={13} style={{ color: 'var(--text-muted)' }} />
@@ -331,7 +332,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
+      <div className="rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
         <div className="flex items-center gap-1.5 mb-2">
           <Heart size={12} style={{ color: 'var(--text-muted)' }} />
           <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
@@ -347,7 +348,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
 
   if (checkins.length === 0) {
     return (
-      <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
+      <div className="rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
         <div className="flex items-center gap-1.5 mb-2">
           <Heart size={12} style={{ color: 'var(--text-muted)' }} />
           <p className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
@@ -366,7 +367,7 @@ function ParentWellbeingCard({ childId }: { childId: string }) {
   const fechaUltimo = new Date(ultimo.created_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
+    <div className="rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
           <Heart size={12} style={{ color: 'var(--text-muted)' }} />
@@ -498,7 +499,7 @@ function SessionCounterCard({ nino, onSaved }: { nino: any; onSaved: () => void 
   }
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
+    <div className="rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
           <BarChart3 size={12} style={{ color: 'var(--text-muted)' }} />
@@ -667,31 +668,31 @@ function PatientAISummaryCard({ childId }: { childId: string }) {
     : null
 
   return (
-    <div className="rounded-2xl p-4 md:col-span-2" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
+    <div className="relative min-w-0 overflow-hidden rounded-v border border-v-border bg-v-elevated p-5 shadow-v [overflow-wrap:anywhere] md:col-span-2">
+      <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-[3px]" />
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <div className="flex items-center gap-1.5">
-          <Sparkles size={14} style={{ color: '#7c3aed' }} />
-          <p className="text-[11px] font-bold" style={{ color: 'var(--text-muted)' }}>{t('pacientes.resumenIA')}</p>
-          {fecha && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>· {fecha}</span>}
+          <span className="grid size-7 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Sparkles size={14} /></span>
+          <p className="text-sm font-semibold text-v-text">{t('pacientes.resumenIA')}</p>
+          {fecha && <span className="text-[11px] text-v-subtle">· {fecha}</span>}
         </div>
         <div className="flex items-center gap-1.5">
           {!editing && summary && lang && lang !== locale && (
             <button onClick={traducir} disabled={busy || loading || translating}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white disabled:opacity-50"
-              style={{ background: '#0ea5e9' }}>
+              className="inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-3 py-1.5 text-[11px] font-semibold text-v-accent disabled:opacity-50">
               {translating ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
               {locale === 'en' ? 'Translate to English' : 'Traducir al español'}
             </button>
           )}
           {!editing && (
             <button onClick={() => { setDraft(summary); setEditing(true) }} disabled={busy || loading}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-500 border border-slate-200 hover:bg-slate-100 disabled:opacity-50">
+              className="inline-flex items-center gap-1 rounded-full border border-v-border px-3 py-1.5 text-[11px] font-semibold text-v-muted transition-colors hover:bg-v-fill hover:text-v-text disabled:opacity-50">
               <Edit size={11} /> {t('common.editar')}
             </button>
           )}
           <button onClick={generar} disabled={busy || loading || saving}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(to right, #7c3aed, #2563eb)' }}>
+            className="v-brand inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold disabled:opacity-50"
+            style={{ boxShadow: 'none' }}>
             {busy ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
             {busy ? t('pacientes.resumenGenerando') : (summary ? t('pacientes.resumenRegenerar') : t('pacientes.resumenGenerar'))}
           </button>
@@ -707,21 +708,21 @@ function PatientAISummaryCard({ childId }: { childId: string }) {
             style={{ background: 'var(--input-bg)', border: '1.5px solid var(--input-border)', color: 'var(--text-primary)' }} />
           <div className="flex gap-2">
             <button onClick={guardarEdicion} disabled={saving}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white disabled:opacity-50">
+              className="v-brand inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold disabled:opacity-50" style={{ boxShadow: 'none' }}>
               {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} {t('common.guardar')}
             </button>
             <button onClick={() => setEditing(false)} disabled={saving}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 border border-slate-200 hover:bg-slate-100">{t('common.cancelar')}</button>
+              className="rounded-full border border-v-border px-3.5 py-1.5 text-xs font-semibold text-v-muted hover:bg-v-fill">{t('common.cancelar')}</button>
           </div>
         </div>
       ) : summary ? (
-        <div className="text-sm leading-relaxed space-y-1.5" style={{ color: 'var(--text-primary)' }}>
+        <div className="space-y-1.5 text-sm leading-relaxed text-v-text">
           {summary.replace(/<br\s*\/?>/gi, '\n').split('\n').map((raw, i) => {
             const line = raw.trim()
             if (!line) return null
             // Título de sección: línea que es solo **Texto**
             const heading = line.match(/^\*\*(.+?)\*\*:?$/)
-            if (heading) return <p key={i} className="font-bold text-[13px] mt-2" style={{ color: '#7c3aed' }}>{heading[1]}</p>
+            if (heading) return <p key={i} className="mt-3 text-[13px] font-semibold text-v-accent">{heading[1]}</p>
             // Resto: negritas inline + viñeta/número conservado
             const parts = line.split(/\*\*(.*?)\*\*/g)
             return <p key={i}>{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}</p>
@@ -740,13 +741,25 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
   const [editing, setEditing] = useState(false)
   const [saving, setSaving]   = useState(false)
   const [specialists, setSpecialists] = useState<any[]>([])
+  // Las notas se guardan cifradas: se piden al servidor ya descifradas
+  const [notasClaras, setNotasClaras] = useState('')
+  useEffect(() => {
+    let vivo = true
+    setNotasClaras('')
+    adminFetch(`/api/admin/children?notas=${nino.id}`).then(r => (r.ok ? r.json() : null)).then(j => {
+      if (!vivo || !j) return
+      setNotasClaras(j.notas || '')
+      setForm(f => ({ ...f, notas: j.notas || '' }))
+    }).catch(() => {})
+    return () => { vivo = false }
+  }, [nino.id])
   const [form, setForm] = useState({
     name:          nino.name || '',
     birth_date:    nino.birth_date || '',
     diagnosis:     nino.diagnosis || '',
     age:           String(nino.age || '').replace(/[^0-9]/g, ''),
     apodo:         nino.apodo || '',
-    notas:         nino.notas || '',
+    notas:         '',
     specialist_id: nino.specialist_id || '',
   })
 
@@ -766,7 +779,7 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
       diagnosis:     nino.diagnosis || '',
       age:           String(nino.age || '').replace(/[^0-9]/g, ''),
       apodo:         nino.apodo || '',
-      notas:         nino.notas || '',
+      notas:         notasClaras,
       specialist_id: nino.specialist_id || '',
     })
     setEditing(false)
@@ -785,9 +798,14 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
         diagnosis:     form.diagnosis.trim() || null,
         age:           edadNum,
         apodo:         form.apodo.trim() || null,
-        notas:         form.notas.trim() || null,
         specialist_id: form.specialist_id || null,
       }).eq('id', nino.id)
+      // Las notas van por el servidor, que las guarda cifradas
+      if (!error && form.notas.trim() !== notasClaras.trim()) {
+        const rn = await adminFetch('/api/admin/children', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ childId: nino.id, notas: form.notas }) })
+        if (!rn.ok) throw new Error('No se pudieron guardar las notas')
+        setNotasClaras(form.notas.trim())
+      }
       if (error) throw error
       toast.success(t('common.exitoGuardado'))
       setEditing(false)
@@ -828,7 +846,7 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
       }
       confirmName = respuesta.trim()
     } else {
-      if (!confirm(mensaje)) return
+      if (!await confirmar(mensaje)) return
     }
 
     setDeleting(true)
@@ -870,26 +888,24 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
   const specialistName = specialistObj?.full_name || null
   const specialistSpecialty = specialistObj?.specialty || null   // solo visible en panel interno
 
-  const fieldCls = "w-full px-3 py-2.5 rounded-lg text-sm border outline-none transition-colors"
-  const fieldStyle = { borderColor: 'var(--card-border)', color: 'var(--text-primary)', background: 'var(--muted-bg)' }
-  const labelCls = "block text-[10px] font-bold mb-1.5"
+  const fieldCls = "w-full rounded-v-sm border border-v-border bg-v-bg px-3.5 py-2.5 text-sm text-v-text outline-none transition-shadow focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft"
+  const fieldStyle = {}
+  const labelCls = "mb-1.5 block text-xs font-semibold text-v-muted"
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="v-scope p-4 md:p-6">
       {!editing ? (
         /* ───────────── VISTA ───────────── */
-        <div className="space-y-2">
-          <div className="flex justify-end mb-1 gap-2">
+        <div className="space-y-3">
+          <div className="mb-1 flex justify-end gap-2">
             <button onClick={() => setEditing(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{ background: 'var(--muted-bg)', color: 'var(--text-secondary)', border: '1px solid var(--card-border)' }}>
+              className="inline-flex items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-3.5 py-1.5 text-xs font-semibold text-v-muted shadow-v transition-colors hover:text-v-accent">
               <Edit size={12}/> {t('common.editar')}
             </button>
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50"
-              style={{ background: 'transparent', color: '#dc2626', border: '1px solid rgba(220,38,38,0.30)' }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-v-danger/30 px-3.5 py-1.5 text-xs font-semibold text-v-danger transition-colors hover:bg-v-danger/10 disabled:opacity-50"
               title={nino.parent_id ? 'Paciente con cuenta de padre vinculada — requiere confirmación por nombre' : 'Eliminar paciente'}
             >
               {deleting ? <Loader2 size={12} className="animate-spin"/> : <Trash2 size={12}/>}
@@ -897,60 +913,43 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
             </button>
           </div>
 
-          {/* Fila 1: Fecha nacimiento + Edad */}
-          <div className="grid grid-cols-2 gap-2">
-            <InfoCard icon={Calendar} label={t('pacientes.fechaNacimiento')} color="#0284c7">
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {birthFormatted || '—'}
-              </p>
+          {/* Datos básicos en una fila */}
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <InfoCard icon={Cake} label={t('pacientes.fechaNacimiento')}>
+              <p className="text-sm font-semibold text-v-text">{birthFormatted || '—'}</p>
             </InfoCard>
-            <InfoCard icon={Baby} label={t('ui.age')} color="#06b6d4">
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{ageDisplay}</p>
+            <InfoCard icon={Baby} label={t('ui.age')}>
+              <p className="text-sm font-semibold text-v-text">{ageDisplay}</p>
             </InfoCard>
-          </div>
-
-          {/* Fila 2: Diagnóstico + Apodo */}
-          <div className="grid grid-cols-2 gap-2">
-            <InfoCard icon={Stethoscope} label={t('pacientes.diagnostico')} color="#0ea5e9">
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {nino.diagnosis || '—'}
-              </p>
+            <InfoCard icon={Activity} label={t('pacientes.diagnostico')}>
+              <p className="text-sm font-semibold text-v-text">{nino.diagnosis || '—'}</p>
             </InfoCard>
-            <InfoCard icon={User} label={t('pacientes.apodoLabel')} color="#0369a1">
+            <InfoCard icon={Tag} label={t('pacientes.apodoLabel')}>
               {nino.apodo
-                ? <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{nino.apodo}</p>
-                : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.sinApodo')}</p>
-              }
+                ? <p className="text-sm font-semibold text-v-text">{nino.apodo}</p>
+                : <p className="text-xs italic text-v-subtle">{t('pacientes.sinApodo')}</p>}
             </InfoCard>
           </div>
 
-          {/* Fila 3: Especialista asignado */}
-          <InfoCard icon={Stethoscope} label={t('pacientes.especialistaAsignado')} color="#0284c7">
-            {specialistName
-              ? <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-sky-500 flex items-center justify-center flex-shrink-0">
-                    <User size={11} className="text-white"/>
+          {/* Especialista + notas */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <InfoCard icon={Stethoscope} label={t('pacientes.especialistaAsignado')}>
+              {specialistName
+                ? <div className="flex items-center gap-2.5">
+                    <Avatar name={specialistName} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold leading-tight text-v-text">{specialistName}</p>
+                      {specialistSpecialty && <p className="truncate text-xs leading-tight text-v-accent">{specialistSpecialty}</p>}
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>{specialistName}</p>
-                    {specialistSpecialty && (
-                      <p className="text-[11px] leading-tight truncate" style={{ color: '#0284c7' }}>{specialistSpecialty}</p>
-                    )}
-                  </div>
-                </div>
-              : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.sinEspecialista')}</p>
-            }
-          </InfoCard>
-
-          {/* Fila 4: Notas */}
-          <InfoCard icon={ClipboardList} label={t('pacientes.notasPaciente')} color="#0284c7">
-            {nino.notas
-              ? <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
-                  {nino.notas}
-                </p>
-              : <p className="text-xs italic" style={{ color: 'var(--text-muted)' }}>{t('pacientes.sinNotas')}</p>
-            }
-          </InfoCard>
+                : <p className="text-xs italic text-v-subtle">{t('pacientes.sinEspecialista')}</p>}
+            </InfoCard>
+            <InfoCard icon={StickyNote} label={t('pacientes.notasPaciente')}>
+              {notasClaras
+                ? <p className="whitespace-pre-wrap text-sm leading-relaxed text-v-text">{notasClaras}</p>
+                : <p className="text-xs italic text-v-subtle">{t('pacientes.sinNotas')}</p>}
+            </InfoCard>
+          </div>
 
           {/* ── Resumen clínico IA (persistente, editable) ── */}
           <PatientAISummaryCard childId={nino.id} />
@@ -967,7 +966,7 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
 
       ) : (
         /* ───────────── EDICIÓN ───────────── */
-        <div className="space-y-3 rounded-2xl p-4" style={{ background: 'var(--card)', border: '1px solid var(--card-border)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="space-y-3 rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
           {/* Header edición */}
           <div className="flex items-center justify-between pb-2 mb-1" style={{ borderBottom: '1px solid var(--card-border)' }}>
             <p className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>
@@ -975,13 +974,11 @@ function PatientInfoTab({ nino, onSaved, onDeleted }: { nino: any; onSaved: () =
             </p>
             <div className="flex gap-2">
               <button onClick={() => setEditing(false)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={{ background: 'var(--muted-bg)', color: 'var(--text-muted)', border: '1px solid var(--card-border)' }}>
+                className="rounded-full border border-v-border px-3.5 py-1.5 text-xs font-semibold text-v-muted transition-colors hover:bg-v-fill">
                 {t('common.cancelar')}
               </button>
               <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                style={{ background: 'var(--text-primary)', color: 'var(--card)' }}>
+                className="v-brand inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold" style={{ boxShadow: 'none' }}>
                 {saving ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>}
                 {t('common.guardar')}
               </button>
@@ -1075,27 +1072,25 @@ function FichasTab({ childId, childName, currentRole }: {
   const [subTab, setSubTab] = useState<'plantillas' | 'rellenar'>('rellenar')
   const canManage = ['jefe', 'admin', 'especialista'].includes(currentRole)
 
-  const cc = {
-    active:   isDark ? 'bg-[#161b22] text-slate-100 shadow border border-[#30363d]' : 'bg-white text-slate-800 shadow border border-slate-200',
-    inactive: isDark ? 'text-slate-500 hover:text-slate-300 border border-transparent' : 'text-slate-400 hover:text-slate-600 border border-transparent',
-    bar:      isDark ? 'bg-[#0d1117] border-[#21262d]' : 'bg-slate-50 border-slate-200',
-  }
-
   return (
     <div className="flex flex-col">
       {/* Sub-tabs */}
-      <div className={`flex-shrink-0 px-3 sm:px-5 pt-4 pb-3 border-b ${isDark ? 'border-[#21262d]' : 'border-slate-100'}`}>
-        <div className={`flex rounded-2xl p-1.5 gap-1.5 border ${cc.bar}`}>
-          {canManage && (
-            <button onClick={() => setSubTab('plantillas')}
-              className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'plantillas' ? cc.active : cc.inactive}`}>
-              <Settings size={15} /> {locale === 'en' ? 'Manage forms' : 'Gestionar fichas'}
-            </button>
-          )}
-          <button onClick={() => setSubTab('rellenar')}
-            className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${subTab === 'rellenar' ? cc.active : cc.inactive}`}>
-            <ClipboardList size={15} /> {locale === 'en' ? 'Patient forms' : 'Fichas del paciente'}
-          </button>
+      <div className="v-scope shrink-0 px-3 pb-2 pt-4 sm:px-5">
+        <div className="flex rounded-full bg-v-fill p-1">
+          {([
+            ...(canManage ? [{ id: 'plantillas' as const, Icon: Settings, label: locale === 'en' ? 'Manage forms' : 'Gestionar fichas' }] : []),
+            { id: 'rellenar' as const, Icon: ClipboardList, label: locale === 'en' ? 'Patient forms' : 'Fichas del paciente' },
+          ]).map(tb => {
+            const on = subTab === tb.id
+            return (
+              <button key={tb.id} onClick={() => setSubTab(tb.id)}
+                className={`relative flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-semibold transition-colors ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+                {on && <motion.span layoutId="fichas-subtab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                <tb.Icon size={15} className="relative" />
+                <span className="relative">{tb.label}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -1134,10 +1129,7 @@ function RellenarFichaConWord({ childId, childName, isDark }: {
       const path = `${childId}/${Date.now()}_${fileName}`
       const file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
 
-      const { error: upErr } = await supabase.storage.from('patient-documents').upload(path, file, { upsert: false })
-      if (upErr) throw upErr
-
-      const { data: { publicUrl } } = supabase.storage.from('patient-documents').getPublicUrl(path)
+      const { url: publicUrl } = await subirArchivoPrivado('patient-documents', childId, file)
 
       await supabase.from('patient_documents').insert({
         child_id:         childId,
@@ -1301,10 +1293,10 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
   type TabId = 'info'|'programas'|'evaluaciones'|'eval-inicial'|'historial'|'fichas'|'documentos'
   const ALL_TABS: { id: TabId; icon: React.ReactNode; label: string; short: string }[] = [
     { id:'info',         icon:<User size={14}/>,          label: t('pacientes.informacion'), short: 'Info'  },
-    { id:'programas',    icon:<BarChart3 size={14}/>,     label: t('nav.programas'),          short: 'ABA'   },
-    { id:'evaluaciones', icon:<ClipboardList size={14}/>, label: t('nav.evaluaciones'),       short: 'Eval.' },
-    { id:'eval-inicial', icon:<ClipboardList size={14}/>, label: t('pacientes.tabEvalInicial'), short: t('pacientes.tabEvalInicialShort') },
-    { id:'historial',    icon:<Brain size={14}/>,         label: t('pacientes.tabHistorial'),   short: t('pacientes.tabHistorialShort') },
+    { id:'programas',    icon:<ClipboardList size={14}/>,  label: t('nav.programas'),          short: 'ABA'   },
+    { id:'evaluaciones', icon:<ClipboardCheck size={14}/>, label: t('nav.evaluaciones'),       short: 'Eval.' },
+    { id:'eval-inicial', icon:<ClipboardPen size={14}/>,   label: t('pacientes.tabEvalInicial'), short: t('pacientes.tabEvalInicialShort') },
+    { id:'historial',    icon:<History size={14}/>,        label: t('pacientes.tabHistorial'),   short: t('pacientes.tabHistorialShort') },
     { id:'fichas',       icon:<FileText size={14}/>,      label: t('pacientes.tabFichas'),      short: t('pacientes.tabFichas')},
     { id:'documentos',   icon:<FolderOpen size={14}/>,    label: t('pacientes.tabDocumentos'),  short: t('pacientes.tabDocumentosShort')  },
   ]
@@ -1314,71 +1306,71 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
   const ListPanel = (
     <div
       className={`
-        flex flex-col bg-white dark:bg-slate-900 overflow-hidden
-        /* móvil: ocupa todo si no hay detalle */
+        v-scope flex h-full flex-col overflow-hidden border-v-border bg-v-elevated
         ${mobileView === 'detail' ? 'hidden' : 'flex'}
-        /* desktop: columna fija al lado */
-        md:flex md:w-64 xl:w-72 md:flex-shrink-0 md:border-r
-        h-full
+        md:flex md:w-72 md:flex-shrink-0 md:border-r xl:w-80
       `}
-      style={{ borderColor:'var(--card-border)', background:'var(--card)' }}
     >
       {/* Header */}
-      <div className="p-3 border-b space-y-2 flex-shrink-0" style={{ borderColor:'var(--card-border)' }}>
+      <div className="shrink-0 space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold" style={{ color:'var(--text-muted)' }}>
-            {t('nav.pacientes')} · <span className="font-normal">{filtrados.length}</span>
+          <div className="flex items-center gap-2">
+            <p className="text-[15px] font-semibold tracking-tight text-v-text">{t('nav.pacientes')}</p>
+            <span className="rounded-full bg-v-accent-soft px-2 py-0.5 text-[11px] font-bold text-v-accent">{filtrados.length}</span>
             {pacienteLimit > 0 && (
-              <span className={`ml-1.5 font-bold ${pacientes.length >= pacienteLimit ? 'text-rose-500' : 'text-slate-400'}`}>
-                ({pacientes.length}/{pacienteLimit})
+              <span className={`text-[11px] font-semibold ${pacientes.length >= pacienteLimit ? 'text-v-danger' : 'text-v-subtle'}`}>
+                {pacientes.length}/{pacienteLimit}
               </span>
             )}
-          </h2>
-          <button onClick={()=>setShowNew(true)}
-            className="w-7 h-7 rounded-lg bg-sky-600 hover:bg-sky-700 flex items-center justify-center transition-all shadow-sm">
-            <Plus size={14} className="text-white"/>
-          </button>
+          </div>
+          <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.06 }} onClick={() => setShowNew(true)}
+            title={t('pacientes.nuevo')}
+            className="v-brand grid size-9 place-items-center rounded-full">
+            <Plus size={16} />
+          </motion.button>
         </div>
         <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color:'var(--text-muted)' }}/>
-          <input value={search} onChange={e=>setSearch(e.target.value)}
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-v-subtle" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder={t('ui.search_patient')}
-            className="w-full pl-8 pr-3 py-2 rounded-xl text-xs outline-none border"
-            style={{ background:'var(--muted-bg)', borderColor:'var(--card-border)', color:'var(--text-primary)' }}/>
+            className="w-full rounded-full border border-v-border bg-v-bg py-2.5 pl-10 pr-4 text-sm text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft" />
         </div>
       </div>
 
       {/* Lista */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <div className="flex-1 space-y-1 overflow-y-auto px-2.5 pb-4" style={{ scrollbarWidth: 'thin' }}>
         {isLoading
-          ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={20} style={{ color:'var(--text-muted)' }}/></div>
+          ? <div className="flex justify-center py-12"><Loader2 className="animate-spin text-v-accent" size={22} /></div>
           : filtrados.length === 0
-            ? <div className="py-12 text-center">
-                <Users className="mx-auto mb-2" size={32} style={{ color:'var(--text-muted)', opacity:0.3 }}/>
-                <p className="text-xs font-bold" style={{ color:'var(--text-muted)' }}>
-                  {search ? t('common.sinResultados') : t('pacientes.sinPacientes')}
-                </p>
+            ? <div className="flex flex-col items-center py-12 text-center">
+                <span className="grid size-12 place-items-center rounded-full bg-v-fill"><Users size={20} className="text-v-subtle" /></span>
+                <p className="mt-3 text-sm text-v-muted">{search ? t('common.sinResultados') : t('pacientes.sinPacientes')}</p>
               </div>
-            : filtrados.map(p => (
-                <button key={p.id} onClick={()=>selectPatient(p)}
-                  className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all border
-                    ${selected?.id===p.id
-                      ? 'bg-sky-50 border-sky-200 dark:bg-sky-900/30'
-                      : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                  <Avatar name={p.name} size="sm"/>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate" style={{ color:'var(--text-primary)' }}>
-                      {getDisplayName(p, currentRole)}
-                    </p>
-                    <p className="text-[11px] truncate" style={{ color:'var(--text-muted)' }}>
-                      {p.diagnosis || t('pacientes.sinDiagnostico')} · {p.birth_date ? calcularEdadNumerica(p.birth_date) : (p.age || '?')} {t('common.anos')}
-                    </p>
-                  </div>
-                  {selected?.id===p.id
-                    ? <Check size={13} className="text-sky-500 flex-shrink-0"/>
-                    : <ChevronRight size={13} className="flex-shrink-0 opacity-30"/>}
-                </button>
-              ))
+            : filtrados.map((p, i) => {
+                const active = selected?.id === p.id
+                return (
+                  <motion.button key={p.id} onClick={() => selectPatient(p)}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: Math.min(i, 12) * 0.025 }}
+                    className={`group relative flex w-full items-center gap-3 rounded-v-sm px-2.5 py-2.5 text-left transition-colors ${active ? '' : 'hover:bg-v-fill'}`}>
+                    {active && (
+                      <motion.span layoutId="patient-active" className="absolute inset-0 rounded-v-sm bg-v-accent-soft"
+                        transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
+                    )}
+                    <span className="relative"><Avatar name={p.name} size="sm" active={active} /></span>
+                    <div className="relative min-w-0 flex-1">
+                      <p className={`truncate text-sm font-semibold ${active ? 'text-v-accent' : 'text-v-text'}`}>
+                        {getDisplayName(p, currentRole)}
+                      </p>
+                      <p className="truncate text-xs text-v-subtle">
+                        {p.diagnosis || t('pacientes.sinDiagnostico')} · {p.birth_date ? calcularEdadNumerica(p.birth_date) : (p.age || '?')} {t('common.anos')}
+                      </p>
+                    </div>
+                    <ChevronRight size={14} className={`relative shrink-0 transition-all ${active ? 'text-v-accent' : 'text-v-subtle opacity-0 group-hover:translate-x-0.5 group-hover:opacity-100'}`} />
+                  </motion.button>
+                )
+              })
         }
       </div>
     </div>
@@ -1388,7 +1380,7 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
   const DetailPanel = (
     <div
       className={`
-        flex-1 flex flex-col overflow-hidden
+        min-w-0 flex-1 flex flex-col overflow-y-auto md:overflow-hidden
         ${mobileView === 'list' ? 'hidden' : 'flex'}
         md:flex
       `}
@@ -1396,14 +1388,14 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
       {selected ? (
         <>
           {/* Header paciente */}
-          <div className="flex-shrink-0" style={{ background:'var(--card)' }}>
-            <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+          <div className="v-scope shrink-0 border-b border-v-border bg-v-elevated">
+            <motion.div key={selected.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 px-5 pb-3 pt-5">
               {/* Botón volver — solo móvil */}
               <button onClick={goBack}
-                className="md:hidden p-2 -ml-1 rounded-xl hover:bg-slate-100 transition-all flex-shrink-0">
-                <ArrowLeft size={18} style={{ color:'var(--text-primary)' }}/>
+                className="-ml-1 grid size-9 shrink-0 place-items-center rounded-full text-v-text transition-colors hover:bg-v-fill md:hidden">
+                <ArrowLeft size={18}/>
               </button>
-              <Avatar name={selected.name} size="md"/>
+              <Avatar name={selected.name} size="md" active/>
               <div className="flex-1 min-w-0">
                 {editingHeaderName ? (
                   <div className="flex items-center gap-1.5">
@@ -1428,7 +1420,7 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 group">
-                    <h1 className="text-lg font-bold truncate leading-tight" style={{ color:'var(--text-primary)' }}>
+                    <h1 className="truncate text-xl font-semibold leading-tight tracking-tight text-v-text">
                       {selected.name}
                     </h1>
                     <button onClick={startEditHeaderName}
@@ -1440,55 +1432,53 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={getDxStyle(selected.diagnosis)}>
+                  <span className="rounded-full bg-v-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-v-accent">
                     {selected.diagnosis || t('pacientes.sinDiagnostico')}
                   </span>
                   {(selected.birth_date || selected.age) &&
-                    <span className="text-xs" style={{ color:'var(--text-muted)' }}>
+                    <span className="text-xs text-v-subtle">
                       {selected.birth_date ? calcularEdadNumerica(selected.birth_date) : selected.age} {t('common.anos')}
                     </span>}
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Tabs premium — pill activo con tinte + indicador degradado */}
-            <div className="border-b px-2" style={{ borderColor: 'var(--card-border)' }}>
-              <div className="flex w-full gap-0.5">
+            {/* Tabs — indicador animado que se desliza entre pestañas */}
+            {/* Si las pestañas no caben (ventana angosta), se deslizan con flechas, rueda o barra */}
+            <ScrollRow className="px-1 sm:px-3" activeKey={tab}>
+              <div className="grid w-full gap-0.5 sm:flex sm:min-w-max sm:gap-1" style={{ gridTemplateColumns: `repeat(${TABS.length}, minmax(0, 1fr))` }}>
               {TABS.map(tb => {
-                const activo = tab===tb.id
+                const activo = tab === tb.id
                 return (
-                <button key={tb.id} onClick={()=>setTab(tb.id)}
-                  className="group relative flex flex-1 flex-col items-center gap-1.5 px-1 pt-3 pb-3 transition-all rounded-t-xl"
-                  style={{
-                    color: activo ? '#0284c7' : 'var(--text-muted)',
-                    background: activo ? 'rgba(2,132,199,0.06)' : 'transparent',
-                  }}
+                <button key={tb.id} onClick={() => setTab(tb.id)} data-active={activo}
+                  className={`group relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 pb-2.5 pt-2 text-[10px] font-medium transition-colors sm:flex-row sm:gap-2 sm:px-3 sm:py-3 sm:text-[13px] ${activo ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}
                   title={tb.label}>
-                  <span className="flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 group-hover:scale-105"
-                    style={{ background: activo ? 'rgba(2,132,199,0.14)' : 'transparent' }}>
-                    {tb.id === 'info'         && <User         size={17}/>}
-                    {tb.id === 'programas'    && <BarChart3    size={17}/>}
-                    {tb.id === 'evaluaciones' && <ClipboardList size={17}/>}
-                    {tb.id === 'eval-inicial' && <ClipboardList size={17}/>}
-                    {tb.id === 'historial'    && <Brain        size={17}/>}
-                    {tb.id === 'fichas'       && <FileText     size={17}/>}
-                    {tb.id === 'documentos'   && <FolderOpen   size={17}/>}
+                  <span className={`grid size-7 place-items-center rounded-[30%] transition-all duration-200 group-hover:scale-105 ${activo ? 'bg-v-accent-soft' : ''}`}>
+                    {tb.id === 'info'         && <User           size={16}/>}
+                    {tb.id === 'programas'    && <ClipboardList  size={16}/>}
+                    {tb.id === 'evaluaciones' && <ClipboardCheck size={16}/>}
+                    {tb.id === 'eval-inicial' && <ClipboardPen   size={16}/>}
+                    {tb.id === 'historial'    && <History        size={16}/>}
+                    {tb.id === 'fichas'       && <FileText       size={16}/>}
+                    {tb.id === 'documentos'   && <FolderOpen     size={16}/>}
                   </span>
-                  <span className="sm:hidden text-[9px] font-semibold whitespace-nowrap">{tb.short}</span>
-                  <span className="hidden sm:block text-[10.5px] font-semibold whitespace-nowrap">{tb.label}</span>
+                  <span className="w-full truncate text-center sm:hidden">{tb.short}</span>
+                  <span className="hidden whitespace-nowrap sm:inline">{tb.label}</span>
                   {activo && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-9 h-[3px] rounded-full"
-                      style={{ background: 'linear-gradient(90deg,#0284c7,#06b6d4)' }}/>
+                    <motion.span layoutId="patient-tab" className="v-brand absolute inset-x-2 bottom-0 h-[3px] rounded-full sm:inset-x-3"
+                      style={{ boxShadow: 'none' }} transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
                   )}
                 </button>
                 )
               })}
               </div>
-            </div>
+            </ScrollRow>
           </div>
 
           {/* Contenido tab */}
-          <div className="flex-1 overflow-y-auto pb-28 md:pb-10">
+          <AnimatePresence mode="wait">
+          <motion.div key={`${selected.id}-${tab}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+            className="min-w-0 flex-1 overflow-x-hidden pb-28 md:overflow-y-auto md:pb-24">
             {tab==='info' &&
               <PatientInfoTab
                 nino={selected}
@@ -1516,20 +1506,22 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
               />
             )}
             {tab==='documentos' && <div className="p-3 sm:p-5"><DocumentosView childId={selected.id} childName={selected.name} currentRole="admin" /></div>}
-          </div>
+          </motion.div>
+          </AnimatePresence>
         </>
       ) : (
         /* Empty state — solo visible en desktop */
-        <div className="flex-1 hidden md:flex flex-col items-center justify-center gap-4 p-8">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-sky-50 to-cyan-100 flex items-center justify-center">
-            <Users size={36} className="text-sky-400"/>
-          </div>
+        <div className="v-scope hidden flex-1 flex-col items-center justify-center gap-4 p-8 md:flex">
+          <motion.span animate={{ y: [0, -6, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+            className="grid size-20 place-items-center rounded-[30%] bg-v-accent-soft">
+            <Users size={34} className="text-v-accent"/>
+          </motion.span>
           <div className="text-center">
-            <h3 className="font-bold text-lg mb-1" style={{ color:'var(--text-primary)' }}>{t('pacientes.seleccionaUno')}</h3>
-            <p className="text-sm max-w-xs" style={{ color:'var(--text-muted)' }}>{t('pacientes.seleccionaDesc')}</p>
+            <h3 className="mb-1 text-lg font-semibold text-v-text">{t('pacientes.seleccionaUno')}</h3>
+            <p className="max-w-xs text-sm text-v-muted">{t('pacientes.seleccionaDesc')}</p>
           </div>
           <button onClick={()=>setShowNew(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold shadow-sm">
+            className="v-brand inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold">
             <Plus size={15}/> {t('pacientes.nuevo')}
           </button>
         </div>
@@ -1539,13 +1531,17 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
 
   // ── MODAL nuevo paciente ──────────────────────────────────────────────────
   const NewModal = showNew && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-      <div className="rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md shadow-2xl p-5 space-y-4"
-        style={{ background:'var(--card)' }}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#081426]/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={()=>setShowNew(false)}>
+      <motion.div initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+        onClick={e => e.stopPropagation()}
+        className="v-scope w-full space-y-4 rounded-t-v-lg border border-v-border bg-v-elevated p-6 shadow-v-lg sm:max-w-md sm:rounded-v-lg">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold" style={{ color:'var(--text-primary)' }}>{t('pacientes.nuevo')}</h3>
-          <button onClick={()=>setShowNew(false)} className="p-2 rounded-xl hover:bg-slate-100">
-            <X size={16} style={{ color:'var(--text-muted)' }}/>
+          <h3 className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-v-text">
+            <span className="v-brand grid size-9 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><Plus size={18}/></span>
+            {t('pacientes.nuevo')}
+          </h3>
+          <button onClick={()=>setShowNew(false)} className="grid size-9 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-text">
+            <X size={16}/>
           </button>
         </div>
         <div className="space-y-3">
@@ -1555,35 +1551,33 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
             { key:'diagnosis',  label:t('pacientes.diagnostico'),    type:'text', placeholder:'Ej: TEA Nivel 2',  req:false },
           ].map(f => (
             <div key={f.key}>
-              <label className="block text-xs font-bold mb-1.5" style={{ color:'var(--text-muted)' }}>
-                {f.label}{f.req && <span className="text-red-400 ml-0.5">*</span>}
+              <label className="mb-1.5 block text-xs font-semibold text-v-muted">
+                {f.label}{f.req && <span className="ml-0.5 text-v-danger">*</span>}
               </label>
               <input type={f.type} placeholder={f.placeholder}
                 value={(newForm as any)[f.key]}
                 onChange={e=>setNewForm(fm=>({...fm,[f.key]:e.target.value}))}
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none border"
-                style={{ background:'var(--muted-bg)', borderColor:'var(--card-border)', color:'var(--text-primary)' }}/>
+                className="w-full rounded-v-sm border border-v-border bg-v-bg px-3.5 py-2.5 text-sm text-v-text outline-none transition-shadow focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft"/>
             </div>
           ))}
         </div>
         <div className="flex gap-3 pt-1">
           <button onClick={()=>setShowNew(false)}
-            className="flex-1 py-3 rounded-xl font-bold text-sm border"
-            style={{ borderColor:'var(--card-border)', color:'var(--text-muted)' }}>
+            className="flex-1 rounded-full border border-v-border py-3 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill">
             {t('common.cancelar')}
           </button>
           <button onClick={handleCreate} disabled={saving||!newForm.name.trim()}
-            className="flex-1 py-3 rounded-xl font-bold text-sm bg-sky-600 text-white disabled:opacity-50 flex items-center justify-center gap-2">
+            className="v-brand flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold disabled:opacity-50">
             {saving ? <Loader2 size={14} className="animate-spin"/> : <Plus size={14}/>}
             {t('pacientes.crear')}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden" style={{ background:'var(--bg)' }}>
+    <div className="flex h-full min-h-0 overflow-hidden bg-v-bg">
       {ListPanel}
       {DetailPanel}
       {NewModal}

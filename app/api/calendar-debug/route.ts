@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, unauthorized, notFound } from '@/lib/api-auth'
 
+// Debug endpoint: exposes any user's calendar state and uses their stored token. Platform owner only;
+// everyone else gets a 404 so the route isn't discoverable.
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (caller.role !== 'programador') return notFound()
   const userId = req.nextUrl.searchParams.get('userId')
   if (!userId) return NextResponse.json({ error: 'userId required' })
 

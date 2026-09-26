@@ -1,4 +1,5 @@
 'use client'
+import { useCentroBranding } from '@/components/CentroBrandingContext'
 import { useI18n } from '@/lib/i18n-context'
 // components/portal-padres/ChatPadres.tsx
 import { useState, useEffect, useRef } from 'react'
@@ -25,6 +26,7 @@ const SUGERENCIAS = [
 ]
 
 export default function ChatPadres({ childId, parentUserId, childName }: ChatPadresProps) {
+  const { name: centroNombre } = useCentroBranding()
   const { t, locale } = useI18n()
   const [mensajes, setMensajes]   = useState<Mensaje[]>([])
   const [input, setInput]         = useState('')
@@ -63,7 +65,7 @@ export default function ChatPadres({ childId, parentUserId, childName }: ChatPad
       const res = await fetch('/api/parent-chat', {
         method: 'POST',
         headers: { 'x-locale': locale || 'es', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale: localStorage.getItem('vanty_locale') || 'es', mensaje: msg, childId, parentUserId })
+        body: JSON.stringify({ locale: locale || 'es', mensaje: msg, childId, parentUserId })
       })
       const data = await res.json()
 
@@ -93,7 +95,7 @@ export default function ChatPadres({ childId, parentUserId, childName }: ChatPad
           </div>
           <div>
             <p className="font-semibold">Asistente Virtual</p>
-            <p className="text-blue-100 text-xs">{t('auto.chatPadres.neuropsicologiaYTerapiasSantiSiemp')}</p>
+            <p className="text-blue-100 text-xs">{t('auto.chatPadres.centroSiempreDisponible', { centro: centroNombre })}</p>
           </div>
           <div className="ml-auto flex items-center gap-1">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />

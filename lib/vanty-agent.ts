@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { buildKnowledgeContext, searchKnowledge, buscarItemsPorCodigo } from '@/lib/knowledge-base'
 import { getChildHistory } from '@/lib/child-history'
 import { callGroq, callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
+import { reglaIdiomaRespuesta } from '@/lib/idioma-ia'
 
 
 
@@ -13,19 +14,20 @@ import { callGroq, callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 
 const AGENT_TOOLS = {
   // Buscar en base de conocimiento
-  async buscarConocimiento(query: string) {
-    const results = await searchKnowledge(query, { maxResults: 4, threshold: 0.6 })
+  async buscarConocimiento(query: string, centroId: string) {
+    const results = await searchKnowledge(query, { maxResults: 4, threshold: 0.6, centroId })
     return results.length > 0
       ? results.map(r => `[${r.fuente}]: ${r.contenido}`).join('\n\n')
       : 'No se encontró información específica sobre este tema en la base de conocimiento.'
   },
 
   // Obtener datos de un programa ABA
-  async obtenerDatosPrograma(programaId: string) {
+  async obtenerDatosPrograma(programaId: string, centroId: string) {
     const { data: programa } = await supabaseAdmin
       .from('programas_aba')
       .select('id, titulo, area, fase_actual, estado, criterio_dominio_pct, criterio_sesiones_consecutivas, objetivo_lp')
       .eq('id', programaId)
+      .eq('centro_id', centroId)
       .single()
 
     if (!programa) return 'Programa no encontrado.'
@@ -54,12 +56,13 @@ const AGENT_TOOLS = {
   },
 
   // Obtener todos los programas de un niño
-  async obtenerProgramasNino(childId: string) {
+  async obtenerProgramasNino(childId: string, centroId: string) {
     // FIX: sin filtro de estado — evita fallos por case mismatch
     const { data } = await supabaseAdmin
       .from('programas_aba')
       .select('id, titulo, area, estado, fase_actual')
       .eq('child_id', childId)
+      .eq('centro_id', centroId)
       .order('created_at', { ascending: false })
 
     if (!data || data.length === 0) return 'No hay programas activos para este paciente.'
@@ -89,16 +92,17 @@ const AGENT_TOOLS = {
   },
 
   // Historial clínico del niño
-  async obtenerHistorialNino(childId: string) {
-    const history = await getChildHistory(childId)
+  async obtenerHistorialNino(childId: string, centroId: string) {
+    const history = await getChildHistory(childId, undefined, undefined, { centroId })
     return `Paciente: ${history.nombre}, ${history.edad}\nDiagnóstico: ${history.diagnostico}\n${history.historialTexto}`
   },
 
   // FIX: Resumen de TODOS los pacientes para preguntas generales
-  async obtenerResumenTodosPacientes() {
+  async obtenerResumenTodosPacientes(centroId: string) {
     const { data: pacientes } = await supabaseAdmin
       .from('children')
-      .select('id, name, age, birth_date, diagnosis, status')
+      .select('id, name, age, birth_date, diagnosis, is_active')
+      .eq('centro_id', centroId)
       .order('name', { ascending: true })
       .limit(50)
 
@@ -318,7 +322,6 @@ Al citar diagnósticos, SIEMPRE incluye el código CIE-11 y DSM-5 cuando corresp
 - ARIA es COMPLEMENTO del terapeuta. Las decisiones clínicas (cambiar programas, objetivos, estrategias) SIEMPRE las toma el especialista certificado. Si te piden tomar una decisión clínica, sugiere opciones pero derivá siempre al terapeuta
 - NUNCA sugieras modificar el programa terapéutico vigente sin indicar que debe ser validado por el especialista
 - Si hay dilema ético: aplica el modelo de 7 pasos IBAO
-- Si preguntan por el nombre del sistema: es VANTY, no mencionas "Neuropsicología y Terapias SANTI" en respuestas clínicas
 - Cuando analices tendencias, considera el contexto clínico COMPLETO del paciente`
 
 // ── Clase principal del Agente ────────────────────────────────────────────────
@@ -342,6 +345,8 @@ export class VantyAgent {
     options: {
       childId?: string
       userId: string
+      /** Centro del usuario: todo lo que se envía al LLM sale solo de este centro. */
+      centroId: string
       conversacionId?: string
       contexto?: string
       locale?: string
@@ -357,7 +362,8 @@ export class VantyAgent {
           options.conversacionId,
           options.userId,
           options.childId,
-          options.contexto
+          options.contexto,
+          options.centroId
         )
       } catch (convErr: any) {
         console.warn('[vanty-agent] loadOrCreateConversacion falló — usando conversación temporal:', convErr?.message)
@@ -369,19 +375,19 @@ export class VantyAgent {
 
       // FIX: cada query es defensiva — si una falla, el chat sigue con las otras
       const [knowledgeCtx, codigoCtx, childCtx, globalCtx] = await Promise.all([
-        buildKnowledgeContext(userMessage).catch((e) => {
+        buildKnowledgeContext(userMessage, options.centroId).catch((e) => {
           console.warn('[vanty-agent] buildKnowledgeContext falló:', e?.message)
           return ''
         }),
-        buscarItemsPorCodigo(userMessage).catch(() => ''),
+        buscarItemsPorCodigo(userMessage, options.centroId).catch(() => ''),
         options.childId
-          ? AGENT_TOOLS.obtenerHistorialNino(options.childId).catch((e) => {
+          ? AGENT_TOOLS.obtenerHistorialNino(options.childId, options.centroId).catch((e) => {
               console.warn('[vanty-agent] obtenerHistorialNino falló:', e?.message)
               return ''
             })
           : Promise.resolve(''),
         (!options.childId && preguntaSobrePacientes)
-          ? AGENT_TOOLS.obtenerResumenTodosPacientes().catch((e) => {
+          ? AGENT_TOOLS.obtenerResumenTodosPacientes(options.centroId).catch((e) => {
               console.warn('[vanty-agent] obtenerResumenTodosPacientes falló:', e?.message)
               return ''
             })
@@ -411,9 +417,11 @@ export class VantyAgent {
       if (childCtxTrimmed) systemContext += '\nPACIENTE ACTIVO:\n' + childCtxTrimmed
       if (globalCtxTrimmed) systemContext += '\n\n' + globalCtxTrimmed
 
+      const reglaIdioma = reglaIdiomaRespuesta(userLocale)
       const groqMessages = [
-        { role: 'system' as const, content: systemContext },
+        { role: 'system' as const, content: `${systemContext}\n\n${reglaIdioma}` },
         ...historialReciente.map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+        { role: 'system' as const, content: reglaIdioma },
         { role: 'user' as const, content: userMessage },
       ]
 
@@ -425,7 +433,7 @@ export class VantyAgent {
       }) || 'No pude generar una respuesta.'
 
       // 5. Detectar si necesita usar herramientas
-      const toolResult = await this.detectAndUseTool(userMessage, aiResponse, options.childId)
+      const toolResult = await this.detectAndUseTool(userMessage, aiResponse, options.centroId, options.childId)
       const finalResponse = toolResult ? `${aiResponse}\n\n${toolResult}` : aiResponse
 
       // 6. Guardar en historial
@@ -441,10 +449,12 @@ export class VantyAgent {
             .from('agente_conversaciones')
             .update({ mensajes: updatedMessages, updated_at: new Date().toISOString() })
             .eq('id', conversacion.id)
+            .eq('user_id', options.userId)
 
           await supabaseAdmin.from('agente_acciones').insert({
             conversacion_id: conversacion.id,
             child_id: options.childId,
+            centro_id: options.centroId,
             tipo_accion: 'chat',
             input_data: { mensaje: userMessage },
             output_data: { respuesta: finalResponse, tiempo_ms: Date.now() - startTime },
@@ -488,13 +498,15 @@ export class VantyAgent {
   }
 
   // Análisis proactivo de un paciente
-  async analizarPacienteProactivo(childId: string): Promise<ProactiveAnalysis> {
+  // `centroId`: centro del paciente (el llamador ya verificó el acceso al niño).
+  async analizarPacienteProactivo(childId: string, centroId: string): Promise<ProactiveAnalysis> {
     try {
       // FIX: sin filtro de estado
       const { data: programas } = await supabaseAdmin
         .from('programas_aba')
         .select('id, titulo, area, fase_actual, estado, criterio_dominio_pct, criterio_sesiones_consecutivas, objetivos_cp(estado, numero_set, descripcion)')
         .eq('child_id', childId)
+        .eq('centro_id', centroId)
 
       if (!programas || programas.length === 0) {
         return { alertas: [], sugerencias: [], resumen: 'No hay programas activos para analizar.' }
@@ -694,11 +706,12 @@ export class VantyAgent {
             programa_id: a.programa_id,
             prioridad: a.prioridad,
             resuelta: false,
+            centro_id: centroId,
           }))
         )
       }
 
-      const childHistory = await getChildHistory(childId)
+      const childHistory = await getChildHistory(childId, undefined, undefined, { centroId })
       const resumenPrompt = `Eres ARIA, analista de conducta. Resume el estado clínico actual de ${childHistory.nombre} en 2-3 oraciones basándote en estos datos:
       - ${programas.length} programas activos
       - Alertas detectadas: ${alertas.map(a => a.titulo).join(', ') || 'ninguna'}
@@ -722,6 +735,7 @@ export class VantyAgent {
   private async detectAndUseTool(
     userMessage: string,
     aiResponse: string,
+    centroId: string,
     childId?: string
   ): Promise<string | null> {
     const msg = userMessage.toLowerCase()
@@ -730,7 +744,7 @@ export class VantyAgent {
     const preguntaSobrePrograma = /tendencia|progreso|programa|objetivo|set|avance|sesion|sesión|porcentaje|logro|área|area|habilidad|skill|fase|criterio|dominio/i.test(userMessage)
 
     if (preguntaSobrePrograma && childId) {
-      const programas = await AGENT_TOOLS.obtenerProgramasNino(childId)
+      const programas = await AGENT_TOOLS.obtenerProgramasNino(childId, centroId)
       if (programas !== 'No hay programas activos para este paciente.') {
         return `\n**Programas ABA activos:**\n${programas}`
       }
@@ -742,7 +756,7 @@ export class VantyAgent {
       aiResponse.includes('no puedo proporcionar') ||
       aiResponse.includes('sin acceso')
     ) && /paciente|peor|mejor|progreso|estado/i.test(msg)) {
-      const resumen = await AGENT_TOOLS.obtenerResumenTodosPacientes()
+      const resumen = await AGENT_TOOLS.obtenerResumenTodosPacientes(centroId)
       return `\n**Datos del sistema (respuesta directa):**\n${resumen}`
     }
 
@@ -762,14 +776,17 @@ export class VantyAgent {
     conversacionId?: string,
     userId?: string,
     childId?: string,
-    contexto?: string
+    contexto?: string,
+    centroId?: string
   ) {
     try {
       if (conversacionId) {
+        // Solo conversaciones del propio usuario.
         const { data } = await supabaseAdmin
           .from('agente_conversaciones')
           .select('*')
           .eq('id', conversacionId)
+          .eq('user_id', userId || '')
           .single()
         if (data) return data
       }
@@ -779,6 +796,7 @@ export class VantyAgent {
         .insert({
           user_id: userId,
           child_id: childId,
+          centro_id: centroId,
           contexto: contexto || 'general',
           mensajes: [],
           titulo: `Consulta ${new Date().toLocaleDateString('es-PE')}`,

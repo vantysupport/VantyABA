@@ -4,7 +4,9 @@ export const maxDuration = 60;
 import { NextRequest, NextResponse } from 'next/server'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { buildAIContext, parseAIJson } from '@/lib/ai-context-builder'
+import { sinTokens, descontarToken } from '@/lib/tokens-ia'
 
 const FORM_LABELS: Record<string, string> = {
   screening_tdah: 'Screening TDAH (Conners)',
@@ -55,15 +57,24 @@ function getLangInstruction(locale: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  const isStaff = hasRole(caller, ROLES.staff)
   try {
     const body = await request.json()
     const userLocale = body.locale || request.headers.get('x-locale') || 'es'
     const { formType, formData, childName, childAge, diagnosis, sessionContext, childId } = body
+    // Con paciente: acceso al paciente. Sin paciente: solo personal del centro.
+    if (childId ? !(await canAccessChild(caller, childId)) : !isStaff) return childId ? notFound() : forbidden()
+    // Tokens: el análisis lo paga el centro cuando lo pide el personal (las familias no se bloquean)
+    const centroCobro = isStaff ? caller.centroId : null
+    const bloqueo = await sinTokens(centroCobro, String(userLocale).startsWith('en'))
+    if (bloqueo) return bloqueo
 
 
     const searchQuery = `${FORM_LABELS[formType] || formType} ${diagnosis || ''} evaluación ABA`
-    const ctx = await buildAIContext(childId, childName, childAge ? String(childAge) : undefined, searchQuery)
-    const contextoClinico = (ctx.fullContext || '').slice(0, 12000)  // tope duro: evita exceder tokens
+    const ctx = await buildAIContext(childId, childName, childAge ? String(childAge) : undefined, searchQuery, isStaff ? caller.centroId : null)
+    const contextoClinico = (ctx.fullContext || '').slice(0, 6000)  // tope duro: menos tokens de IA
 
     const prompt = `Eres un neuropsicólogo clínico y analista de conducta certificado (IBA) con 15+ años de experiencia.
 
@@ -109,12 +120,14 @@ Responde SOLO con JSON:
           form_type: formType,
           child_name: ctx.childName,
           analysis: parsedResult,
+          centro_id: caller.centroId,
           created_at: new Date().toISOString(),
         }])
       } catch (_) {}
     }
 
-    return NextResponse.json({ success: true, analysis: parsedResult })
+    const tokens = await descontarToken(centroCobro)
+    return NextResponse.json({ success: true, analysis: parsedResult, tokens })
   } catch (error: any) {
     const isQuota = error.message === 'CUOTA_AGOTADA'
     return NextResponse.json({

@@ -1,14 +1,19 @@
 // app/api/programas-aba/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   const { searchParams } = new URL(req.url)
   const childId = searchParams.get('child_id')
   const programaId = searchParams.get('id')
 
   try {
     if (programaId) {
+      const { data: owner } = await supabaseAdmin.from('programas_aba').select('child_id').eq('id', programaId).maybeSingle()
+      if (!owner || !(await canAccessChild(caller, owner.child_id))) return notFound()
       // Obtener programa con sus sets y sesiones
       const { data, error } = await supabaseAdmin
         .from('programas_aba')
@@ -24,7 +29,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ data })
     }
 
+    // Sesiones del paciente con sus notas (las notas se guardan cifradas; aquí llegan descifradas)
+    if (childId && searchParams.get('sesiones') === '1') {
+      if (!(await canAccessChild(caller, childId))) return notFound()
+      const { data: progs } = await supabaseAdmin.from('programas_aba').select('id, titulo').eq('child_id', childId)
+      const ids = (progs || []).map(p => p.id)
+      if (ids.length === 0) return NextResponse.json({ data: [], programas: [] })
+      const { data, error } = await supabaseAdmin
+        .from('sesiones_datos_aba')
+        .select('id, programa_id, fecha, fase, set, porcentaje_exito, oportunidades_totales, respuestas_correctas, notas')
+        .in('programa_id', ids)
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return NextResponse.json({ data: data || [], programas: progs || [] }, { headers: { 'Cache-Control': 'no-store' } })
+    }
+
     if (childId) {
+      if (!(await canAccessChild(caller, childId))) return notFound()
       const { data, error } = await supabaseAdmin
         .from('programas_aba')
         .select(`
@@ -47,14 +68,30 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
     const { action } = body
 
+    // Ownership: todo registro tocado debe pertenecer al centro del usuario
+    const own = (table: string, id: any) => rowInCentro(table, id, caller.centroId)
+    if (['actualizar_programa', 'agregar_set', 'editar_programa', 'eliminar_programa', 'cambiar_fase'].includes(action) && !(await own('programas_aba', body.programa_id))) return notFound()
+    if (['actualizar_objetivo', 'eliminar_set'].includes(action) && !(await own('objetivos_cp', body.objetivo_id))) return notFound()
+    if (['editar_sesion', 'eliminar_sesion', 'actualizar_sesion_fecha'].includes(action) && !(await own('sesiones_datos_aba', body.sesion_id))) return notFound()
+    if (action === 'registrar_sesion' && !(await own('programas_aba', body.sesion?.programa_id))) return notFound()
+    if (action === 'crear_programa' && !(await canAccessChild(caller, body.programa?.child_id))) return notFound()
+    if (action === 'cambiar_fase' && body.child_id && !(await canAccessChild(caller, body.child_id))) return notFound()
+    if (body.updates && typeof body.updates === 'object') {
+      delete body.updates.centro_id
+      if (body.updates.child_id && !(await canAccessChild(caller, body.updates.child_id))) return notFound()
+    }
+
     if (action === 'crear_programa') {
       const { programa, objetivos } = body
       // Default fase_actual to 'intervencion' — never let the DB silently put 'linea_base'
-      const programaConFase = { fase_actual: 'intervencion', ...programa }
+      const programaConFase = { fase_actual: 'intervencion', ...programa, centro_id: caller.centroId }
       const { data: prog, error } = await supabaseAdmin
         .from('programas_aba')
         .insert(programaConFase)
@@ -65,7 +102,7 @@ export async function POST(req: NextRequest) {
       // Insertar objetivos CP si vienen
       if (objetivos && objetivos.length > 0) {
         const objConId = objetivos.map((o: any, i: number) => ({
-          ...o, programa_id: (prog as any).id, numero_set: i + 1,
+          ...o, programa_id: (prog as any).id, numero_set: i + 1, centro_id: caller.centroId,
         }))
         await supabaseAdmin.from('objetivos_cp').insert(objConId)
       }
@@ -75,7 +112,7 @@ export async function POST(req: NextRequest) {
     if (action === 'registrar_sesion') {
       const { sesion } = body
       // Calcular porcentaje_exito si no viene explícito pero hay oportunidades/respuestas
-      const sesionConPct = { ...sesion }
+      const sesionConPct = { ...sesion, centro_id: caller.centroId }
       if (sesionConPct.porcentaje_exito == null && sesionConPct.oportunidades_totales > 0) {
         sesionConPct.porcentaje_exito = Math.round(
           (Number(sesionConPct.respuestas_correctas) / Number(sesionConPct.oportunidades_totales)) * 100
@@ -89,7 +126,7 @@ export async function POST(req: NextRequest) {
       if (error) throw error
 
       // Verificar si se alcanzó el criterio de dominio
-      await verificarCriterioDominio((sesion as any).programa_id)
+      await verificarCriterioDominio((sesion as any).programa_id, caller.centroId)
 
       return NextResponse.json({ data })
     }
@@ -200,7 +237,7 @@ export async function POST(req: NextRequest) {
         .order('numero_set', { ascending: false })
         .limit(1)
       const nextNum = (existing && existing.length > 0 ? (existing[0] as any).numero_set : 0) + 1
-      const setData: any = { programa_id, descripcion: descripcion.trim(), numero_set: nextNum, estado: 'pendiente' }
+      const setData: any = { programa_id, centro_id: caller.centroId, descripcion: descripcion.trim(), numero_set: nextNum, estado: 'pendiente' }
       if (materiales) setData.materiales = materiales
       if (sd_estimulo) setData.sd_estimulo = sd_estimulo
       if (unidad_positiva) setData.unidad_positiva = unidad_positiva
@@ -376,7 +413,7 @@ export async function POST(req: NextRequest) {
       const { programa_id, child_id, fase_nueva, motivo, fase_anterior } = body
       const [cambio] = await Promise.all([
         supabaseAdmin.from('cambios_fase_aba').insert({
-          programa_id, child_id, fase_nueva, fase_anterior, motivo,
+          programa_id, child_id, fase_nueva, fase_anterior, motivo, centro_id: caller.centroId,
         }).select().single(),
         supabaseAdmin.from('programas_aba').update({
           fase_actual: fase_nueva,
@@ -404,9 +441,14 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await req.json()
-    const { id, ...updates } = body
+    const { id, centro_id: _ignoredCentro, ...updates } = body
+    if (!(await rowInCentro('programas_aba', id, caller.centroId))) return notFound()
+    if (updates.child_id && !(await canAccessChild(caller, updates.child_id))) return notFound()
     const { data, error } = await supabaseAdmin
       .from('programas_aba')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -421,7 +463,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 // Verificar si se cumplió el criterio de dominio automáticamente
-async function verificarCriterioDominio(programaId: string) {
+async function verificarCriterioDominio(programaId: string, centroId: string) {
   try {
     const { data: prog } = await supabaseAdmin
       .from('programas_aba')
@@ -465,6 +507,7 @@ async function verificarCriterioDominio(programaId: string) {
       // Crear alerta de dominio alcanzado (positiva, prioridad informativa)
       await supabaseAdmin.from('agente_alertas').insert({
         child_id: (prog as any).child_id,
+        centro_id: centroId,
         programa_id: programaId,
         tipo: `logro_criterio_${programaId}`,
         titulo: `🎯 Criterio dominado: "${(prog as any).titulo}"`,

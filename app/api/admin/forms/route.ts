@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { notifyAsync, sendWspToParent, buildParentMessage } from '@/lib/notifications'
+import { getCentroBranding } from '@/lib/centro-branding'
 
 // GET: List forms assigned to parents (optionally filter by parent_id or status)
 export async function GET(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  const isStaff = hasRole(caller, ROLES.staff)
+  if (!isStaff && caller.role !== 'padre') return forbidden()
   try {
     const { searchParams } = new URL(request.url)
     const parentId = searchParams.get('parent_id')
@@ -12,9 +18,12 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from('parent_forms')
-      .select('*, profiles!parent_forms_parent_id_fkey(full_name, email), children!parent_forms_child_id_fkey(name)')
+      .select('*, profiles!fk_pf_parent(full_name, email), children!fk_pf_child(name)')
       .order('created_at', { ascending: false })
 
+    // Staff: solo su centro. Padre: solo sus propios formularios.
+    if (isStaff) query = query.eq('centro_id', caller.centroId!)
+    else query = query.eq('parent_id', caller.id)
     if (parentId) query = query.eq('parent_id', parentId)
     if (childId) query = query.eq('child_id', childId)
     if (status) query = query.eq('status', status)
@@ -29,9 +38,14 @@ export async function GET(request: NextRequest) {
 
 // POST: Admin sends a form to a parent
 export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const body = await request.json()
     const { parent_id, child_id, form_type, form_title, form_description, message_to_parent, deadline } = body
+    if (child_id && !(await canAccessChild(caller, child_id))) return notFound()
+    if (parent_id && !(await rowInCentro('profiles', parent_id, caller.centroId))) return notFound()
 
     const { data, error } = await supabaseAdmin
       .from('parent_forms')
@@ -44,6 +58,7 @@ export async function POST(request: NextRequest) {
         message_to_parent,
         deadline,
         status: 'pending',
+        centro_id: caller.centroId,
         created_at: new Date().toISOString(),
       }])
       .select()
@@ -59,12 +74,14 @@ export async function POST(request: NextRequest) {
           message: `${form_title} - ${message_to_parent || 'Por favor completa este formulario.'}`,
           type: 'form_request',
           is_read: false,
+          centro_id: caller.centroId,
           created_at: new Date().toISOString(),
         }])
       } catch (_e) { /* best-effort */ }
     }
 
     // WhatsApp al admin del centro — formulario subido/enviado
+    const centro = await getCentroBranding({ childId: child_id })
     notifyAsync({
       tipo: 'formulario_nuevo',
       vars: {
@@ -72,6 +89,7 @@ export async function POST(request: NextRequest) {
         paciente: child_id || '',
         especialista: '',
       },
+      centro,
     })
 
     // WhatsApp directo al padre — nuevo formulario para completar
@@ -86,7 +104,7 @@ export async function POST(request: NextRequest) {
             const { data: ch } = await supabaseAdmin.from('children').select('name').eq('id', child_id).maybeSingle()
             if ((ch as any)?.name) pName = (ch as any).name
           }
-          const msg = buildParentMessage('formulario_nuevo', { tipo: form_title || form_type || 'Formulario', paciente: pName })
+          const msg = buildParentMessage('formulario_nuevo', { tipo: form_title || form_type || 'Formulario', paciente: pName }, centro)
           sendWspToParent((pProf as any).phone, msg).catch(() => {})
         }
       } catch { /* silencioso */ }
@@ -101,9 +119,17 @@ export async function POST(request: NextRequest) {
 
 // PATCH: Update form status or save responses
 export async function PATCH(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
   try {
     const body = await request.json()
     const { id, status, responses, completed_at } = body
+    const { data: form } = await supabaseAdmin.from('parent_forms').select('centro_id, parent_id').eq('id', id || '').maybeSingle()
+    const ok = !!form && (
+      (hasRole(caller, ROLES.staff) && form.centro_id === caller.centroId) ||
+      (caller.role === 'padre' && form.parent_id === caller.id)
+    )
+    if (!ok) return notFound()
 
     const updateData: any = {}
     if (status) updateData.status = status
@@ -124,9 +150,13 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const caller = await getApiCaller(request)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { id } = await request.json()
-    const { error } = await supabaseAdmin.from('parent_forms').delete().eq('id', id)
+    if (!(await rowInCentro('parent_forms', id, caller.centroId))) return notFound()
+    const { error } = await supabaseAdmin.from('parent_forms').delete().eq('id', id).eq('centro_id', caller.centroId)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (error: any) {

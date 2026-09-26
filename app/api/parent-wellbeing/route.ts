@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -12,11 +13,14 @@ const MOODS_VALIDOS = ['bien', 'regular', 'dificil'] as const
 type Mood = typeof MOODS_VALIDOS[number]
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const body = await req.json()
     const { parent_id, child_id, mood, nota } = body || {}
 
     if (!parent_id) return NextResponse.json({ error: 'parent_id requerido' }, { status: 400 })
+    if (parent_id !== caller.id) return forbidden()
     if (!child_id)  return NextResponse.json({ error: 'child_id requerido' },  { status: 400 })
     if (!MOODS_VALIDOS.includes(mood)) {
       return NextResponse.json({ error: 'mood inválido (bien|regular|dificil)' }, { status: 400 })
@@ -74,6 +78,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { searchParams } = new URL(req.url)
     const childId = searchParams.get('child_id')
@@ -82,6 +88,12 @@ export async function GET(req: NextRequest) {
 
     if (!childId && !parentId) {
       return NextResponse.json({ error: 'child_id o parent_id requerido' }, { status: 400 })
+    }
+    if (childId && !(await canAccessChild(caller, childId))) return notFound()
+    if (parentId && parentId !== caller.id) {
+      if (!hasRole(caller, ROLES.staff)) return forbidden()
+      const { data: parentProfile } = await supabaseAdmin.from('profiles').select('centro_id').eq('id', parentId).maybeSingle()
+      if (parentProfile?.centro_id !== caller.centroId) return notFound()
     }
 
     let query = supabaseAdmin

@@ -5,16 +5,28 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+
+// Evaluación → su paciente/centro, para verificar acceso antes de tocarla.
+async function evalOwner(id: string | null | undefined) {
+  if (!id) return null
+  const { data } = await supabaseAdmin.from('evaluaciones_iniciales').select('child_id, centro_id').eq('id', id).maybeSingle()
+  return data as { child_id: string; centro_id: string | null } | null
+}
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
   try {
     const { evaluacion_id, acepta, motivo_rechazo } = await req.json()
     if (!evaluacion_id) {
       return NextResponse.json({ error: 'evaluacion_id requerido' }, { status: 400 })
     }
+    const owner = await evalOwner(evaluacion_id)
+    if (!owner || !(await canAccessChild(caller, owner.child_id))) return notFound()
 
     const ahora = new Date().toISOString()
     const patch: Record<string, any> = { updated_at: ahora }
@@ -42,6 +54,7 @@ export async function POST(req: NextRequest) {
         .from('profiles')
         .select('id')
         .in('role', ['admin', 'jefe', 'especialista'])
+        .eq('centro_id', owner.centro_id || '')
 
       const nombre = (data as any)?.children?.name || 'Paciente'
       const titulo = acepta
@@ -57,6 +70,7 @@ export async function POST(req: NextRequest) {
         message: mensaje,
         type: 'evaluacion_inicial',
         is_read: false,
+        centro_id: owner.centro_id,
         created_at: ahora,
       }))
       if (notis.length > 0) await supabaseAdmin.from('notifications').insert(notis)

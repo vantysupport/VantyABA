@@ -1,8 +1,10 @@
 'use client'
 
+import { fileUrl } from '@/lib/file-url'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
+import { subirArchivoPrivado } from '@/lib/subir-archivo'
 import { useToast } from '@/components/Toast'
 import { useTheme } from '@/components/ThemeContext'
 import {
@@ -157,6 +159,18 @@ function MessageContextMenu({ menu, esMio, onClose, onReply, onCopy, onReact, on
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
+
+// El texto del chat del equipo se guarda cifrado: se envía y se lee por /api/chat-equipo.
+async function insertarMensaje(fila: Record<string, unknown>) {
+  const r = await fetch('/api/chat-equipo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fila) })
+  const j = await r.json().catch(() => ({}))
+  return { data: j.data ?? null, error: r.ok ? null : new Error(j.error || 'No se pudo enviar') }
+}
+async function mensajeCifradoPorId(id: string) {
+  const r = await fetch(`/api/chat-equipo?id=${encodeURIComponent(id)}`, { cache: 'no-store' })
+  return r.ok ? ((await r.json()).data ?? null) : null
+}
+
 export default function ChatConAdmin({
   userId,
   userName,
@@ -216,29 +230,16 @@ export default function ChatConAdmin({
         .order('full_name')
       if (!perfiles) return
 
-      const conInfo = await Promise.all(
-        perfiles.map(async (p) => {
-          const { data: msgs } = await supabase
-            .from('chat_especialista_admin')
-            .select('content, created_at, read_at, sender_id, message_type')
-            .or(
-              `and(sender_id.eq.${userId},recipient_id.eq.${p.id}),and(sender_id.eq.${p.id},recipient_id.eq.${userId})`
-            )
-            .order('created_at', { ascending: false })
-            .limit(1)
-          const { count } = await supabase
-            .from('chat_especialista_admin')
-            .select('id', { count: 'exact', head: true })
-            .eq('sender_id', p.id)
-            .eq('recipient_id', userId)
-            .is('read_at', null)
-          const last = msgs?.[0]
-          let preview = last?.content || null
-          if (last?.message_type === 'file') preview = '📎 Archivo'
-          if (last?.message_type === 'audio') preview = '🎤 Nota de voz'
-          return { ...p, unread: count || 0, lastMessage: preview, lastTime: last?.created_at || null }
-        })
-      )
+      const resumenRes = await fetch('/api/chat-equipo?resumen=1', { cache: 'no-store' })
+      const resumen: Record<string, { last: { content: string | null; created_at: string; message_type: string | null } | null; unread: number }> = resumenRes.ok ? (await resumenRes.json()).data || {} : {}
+      const conInfo = perfiles.map((p) => {
+        const r = resumen[p.id]
+        const last = r?.last
+        let preview = last?.content || null
+        if (last?.message_type === 'file') preview = '📎 ' + 'Archivo'
+        if (last?.message_type === 'audio') preview = '🎤 ' + 'Nota de voz'
+        return { ...p, unread: r?.unread || 0, lastMessage: preview, lastTime: last?.created_at || null }
+      })
       conInfo.sort((a, b) => {
         if (b.unread !== a.unread) return b.unread - a.unread
         if (a.lastTime && b.lastTime) return new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime()
@@ -256,21 +257,12 @@ export default function ChatConAdmin({
   const cargarMensajes = useCallback(async (contactoId: string) => {
     setLoadingMsg(true)
     try {
-      const { data, error } = await supabase
-        .from('chat_especialista_admin')
-        .select('*')
-        .or(
-          `and(sender_id.eq.${userId},recipient_id.eq.${contactoId}),and(sender_id.eq.${contactoId},recipient_id.eq.${userId})`
-        )
-        .order('created_at', { ascending: true })
-      if (error) throw error
+      const res = await fetch(`/api/chat-equipo?con=${contactoId}`, { cache: 'no-store' })
+      if (!res.ok) throw new Error('chat')
+      const data = (await res.json()).data as Mensaje[]
       setMensajes(data || [])
       scrollAbajo()
-      const noLeidos = (data || []).filter((m: Mensaje) => m.sender_id === contactoId && !m.read_at)
-      if (noLeidos.length > 0) {
-        await supabase.from('chat_especialista_admin').update({ read_at: new Date().toISOString() }).in('id', noLeidos.map((m: Mensaje) => m.id))
-        setContactos(prev => prev.map(c => c.id === contactoId ? { ...c, unread: 0 } : c))
-      }
+      setContactos(prev => prev.map(c => c.id === contactoId ? { ...c, unread: 0 } : c))
     } catch {
       toast.error(t('auto.chatConAdmin.errorAlCargarMensajes'))
     } finally {
@@ -290,8 +282,12 @@ export default function ChatConAdmin({
         const esEstaConv = (nuevo.sender_id === userId && nuevo.recipient_id === seleccionado.id) ||
                            (nuevo.sender_id === seleccionado.id && nuevo.recipient_id === userId)
         if (!esEstaConv) return
-        setMensajes(prev => prev.find(m => m.id === nuevo.id) ? prev : [...prev, nuevo])
-        scrollAbajo()
+        // El aviso trae el texto cifrado: se pide el mensaje al servidor
+        mensajeCifradoPorId(nuevo.id).then((claro: Mensaje | null) => {
+          if (!claro) return
+          setMensajes(prev => prev.find(m => m.id === claro.id) ? prev : [...prev, claro])
+          scrollAbajo()
+        })
         if (nuevo.sender_id !== userId) {
           supabase.from('chat_especialista_admin').update({ read_at: new Date().toISOString() }).eq('id', nuevo.id).then(() => {})
         }
@@ -308,7 +304,7 @@ export default function ChatConAdmin({
     if (!contenido || enviando || !seleccionado) return
     setEnviando(true); setTexto(''); setReplyTo(null)
     try {
-      const { error } = await supabase.from('chat_especialista_admin').insert({
+      const { error } = await insertarMensaje({
         content: replyTo ? `↩ ${replyTo.sender_name}: "${replyTo.content.slice(0, 60)}"\n\n${contenido}` : contenido,
         sender_id: userId, sender_role: 'especialista', sender_name: userName,
         recipient_id: seleccionado.id, message_type: 'text', read_at: null,
@@ -325,13 +321,10 @@ export default function ChatConAdmin({
     if (file.size > 10 * 1024 * 1024) { toast.error(t('auto.chatConAdmin.maximo10mb')); return }
     setSubiendo(true)
     try {
-      const ext = file.name.split('.').pop()
-      const path = `chat/${userId}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('chat-files').upload(path, file, { contentType: file.type, upsert: false })
-      if (upErr) throw new Error(upErr.message)
-      const { data: { publicUrl } } = supabase.storage.from('chat-files').getPublicUrl(path)
+      // Directo a R2 (privado); las fotos se comprimen antes de subir
+      const { url: publicUrl } = await subirArchivoPrivado('chat-files', `chat/${userId}`, file)
       const isImage = file.type.startsWith('image/')
-      const { error } = await supabase.from('chat_especialista_admin').insert({
+      const { error } = await insertarMensaje({
         content: isImage ? '📷 Imagen' : `📎 ${file.name}`,
         sender_id: userId, sender_role: 'especialista', sender_name: userName,
         recipient_id: seleccionado.id, message_type: 'file',
@@ -380,11 +373,8 @@ export default function ChatConAdmin({
     setSubiendo(true)
     try {
       const audioName = `audio_${Date.now()}.webm`
-      const path = `chat/${userId}/${audioName}`
-      const { error: upErr } = await supabase.storage.from('chat-files').upload(path, audioBlob, { contentType: 'audio/webm', upsert: false })
-      if (upErr) throw new Error(upErr.message)
-      const { data: { publicUrl } } = supabase.storage.from('chat-files').getPublicUrl(path)
-      const { error } = await supabase.from('chat_especialista_admin').insert({
+      const { url: publicUrl } = await subirArchivoPrivado('chat-files', `chat/${userId}`, new File([audioBlob], audioName, { type: 'audio/webm' }))
+      const { error } = await insertarMensaje({
         content: '🎤 Nota de voz', sender_id: userId, sender_role: 'especialista', sender_name: userName,
         recipient_id: seleccionado.id, message_type: 'audio',
         file_url: publicUrl, file_name: audioName, file_type: 'audio/webm', read_at: null,
@@ -620,10 +610,10 @@ export default function ChatConAdmin({
                                 {/* Archivo */}
                                 {msg.message_type === 'file' && msg.file_url && (
                                   msg.file_type?.startsWith('image/') ? (
-                                    <img src={msg.file_url} alt={msg.file_name || 'imagen'} className="max-w-[240px] rounded-2xl shadow-sm border border-slate-100 cursor-pointer hover:opacity-90 transition-opacity"
-                                      onClick={() => window.open(msg.file_url!, '_blank')} />
+                                    <img src={fileUrl(msg.file_url)} alt={msg.file_name || 'imagen'} className="max-w-[240px] rounded-2xl shadow-sm border border-slate-100 cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => window.open(fileUrl(msg.file_url), '_blank')} />
                                   ) : (
-                                    <a href={msg.file_url} target="_blank" rel="noopener noreferrer"
+                                    <a href={fileUrl(msg.file_url)} target="_blank" rel="noopener noreferrer"
                                       className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-sm border ${esMio ? 'bg-sky-600 border-sky-500 text-white' : isDark ? 'bg-[#1c2128] border-[#21262d] text-slate-200' : 'bg-white border-slate-100 text-slate-700'}`}>
                                       <FileText size={18} className={esMio ? 'text-sky-200' : 'text-slate-400'} />
                                       <div>

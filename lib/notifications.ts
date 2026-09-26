@@ -4,6 +4,10 @@
 
 import { sendWhatsApp, wspTemplate, notifyParent as wspNotifyParent, type WspTipo } from './whatsapp'
 import { supabaseAdmin } from './supabase-admin'
+import type { CentroBranding } from './centro-branding'
+
+/** Center the notification belongs to (getCentroBranding). */
+export type NotifCentro = Pick<CentroBranding, 'id' | 'name'>
 
 export type NotifTipo = WspTipo
 export type NotifLocale = 'es'
@@ -12,16 +16,20 @@ export interface Notif {
   tipo: NotifTipo
   vars?: Record<string, string>
   locale?: NotifLocale
+  centro: NotifCentro
 }
 
 // ── Obtener número de admin del centro ───────────────────────────────────────
-async function getAdminPhone(): Promise<string | null> {
+async function getAdminPhone(centroId: string | null): Promise<string | null> {
+  // Multi-tenant: only the admin of THE center the notification is about; no center, no recipient.
+  if (!centroId) return null
   try {
     const { data } = await supabaseAdmin
       .from('profiles')
       .select('phone')
       .in('role', ['admin', 'jefe'])
       .not('phone', 'is', null)
+      .eq('centro_id', centroId)
       .limit(1)
       .maybeSingle()
     return (data as any)?.phone ?? null
@@ -46,12 +54,12 @@ export function notifyAsync(notif: Notif): Promise<boolean> {
 }
 
 export async function notify(notif: Notif): Promise<boolean> {
-  const adminPhone = await getAdminPhone()
+  const adminPhone = await getAdminPhone(notif.centro.id)
   if (!adminPhone) {
     console.log('[Notify] Sin número de admin configurado')
     return false
   }
-  const message = wspTemplate(notif.tipo, notif.vars ?? {})
+  const message = wspTemplate(notif.tipo, notif.vars ?? {}, notif.centro.name)
   return sendWhatsApp(adminPhone, message)
 }
 
@@ -59,13 +67,14 @@ export async function notify(notif: Notif): Promise<boolean> {
 export async function notifyParentDirect(
   parentPhone: string | null | undefined,
   tipo: NotifTipo,
-  vars: Record<string, string> = {}
+  vars: Record<string, string>,
+  centro: NotifCentro
 ): Promise<void> {
   if (!parentPhone) {
-    await notifyAsync({ tipo, vars })
+    await notifyAsync({ tipo, vars, centro })
     return
   }
-  await wspNotifyParent(parentPhone, tipo, vars)
+  await wspNotifyParent(parentPhone, tipo, vars, centro.name)
 }
 
 // ── Helper: enviar WhatsApp a un padre + notificar al admin ──────────────────
@@ -79,7 +88,8 @@ export async function sendWspToParent(
 // ── Helper: construir mensaje para un padre ───────────────────────────────────
 export function buildParentMessage(
   tipo: NotifTipo,
-  vars: Record<string, string> = {}
+  vars: Record<string, string>,
+  centro: NotifCentro
 ): string {
-  return wspTemplate(tipo, vars)
+  return wspTemplate(tipo, vars, centro.name)
 }

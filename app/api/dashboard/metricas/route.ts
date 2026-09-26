@@ -1,6 +1,7 @@
 // app/api/dashboard/metricas/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getApiCaller, hasRole, ROLES, unauthorized, forbidden } from '@/lib/api-auth'
 
 // Desactiva cache de Next.js — el dashboard debe reflejar cambios inmediatos
 // (citas creadas/editadas/borradas, alertas resueltas, etc.)
@@ -8,6 +9,9 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   const { searchParams } = new URL(req.url)
   const periodo = searchParams.get('periodo') || '7d' // 7d | 30d | 90d
   const hoy = new Date().toISOString().split('T')[0]
@@ -23,6 +27,7 @@ export async function GET(req: NextRequest) {
     const { data: sesionesHoy } = await supabaseAdmin
       .from('agenda_sesiones')
       .select('id, estado, hora_inicio, hora_fin, tipo')
+      .eq('centro_id', caller.centroId)
       .eq('fecha', hoy)
 
     const totalHoy       = sesionesHoy?.length || 0
@@ -34,6 +39,7 @@ export async function GET(req: NextRequest) {
     const { count: totalPacientes } = await supabaseAdmin
       .from('children')
       .select('*', { count: 'exact', head: true })
+      .eq('centro_id', caller.centroId)
 
     // Pacientes nuevos este mes
     const inicioMes = new Date()
@@ -41,12 +47,14 @@ export async function GET(req: NextRequest) {
     const { count: pacientesNuevosMes } = await supabaseAdmin
       .from('children')
       .select('*', { count: 'exact', head: true })
+      .eq('centro_id', caller.centroId)
       .gte('created_at', inicioMes.toISOString())
 
     // ── ALERTAS ──────────────────────────────────────────────
     const { data: alertas } = await supabaseAdmin
       .from('agente_alertas')
       .select('id, prioridad, tipo, created_at')
+      .eq('centro_id', caller.centroId)
       .eq('resuelta', false)
       .order('prioridad', { ascending: true })
       .limit(100)
@@ -58,6 +66,7 @@ export async function GET(req: NextRequest) {
     const { data: sesionesPeriodo } = await supabaseAdmin
       .from('agenda_sesiones')
       .select('fecha, estado')
+      .eq('centro_id', caller.centroId)
       .gte('fecha', fechaInicioStr)
       .lte('fecha', hoy)
 
@@ -75,6 +84,7 @@ export async function GET(req: NextRequest) {
     const { data: tareas } = await supabaseAdmin
       .from('tareas_hogar')
       .select('id, completada, fecha_asignada')
+      .eq('centro_id', caller.centroId)
       .eq('activa', true)
       .gte('fecha_asignada', fechaInicioStr)
 
@@ -86,12 +96,14 @@ export async function GET(req: NextRequest) {
     const { count: formPendientes } = await supabaseAdmin
       .from('parent_forms')
       .select('*', { count: 'exact', head: true })
+      .eq('centro_id', caller.centroId)
       .eq('status', 'pending')
 
     // ── PROGRESO PROMEDIO PACIENTES ───────────────────────────
     const { data: ultimasSesiones } = await supabaseAdmin
       .from('registro_aba')
       .select('datos')
+      .eq('centro_id', caller.centroId)
       .gte('fecha_sesion', fechaInicioStr)
       .limit(50)
 
@@ -115,13 +127,14 @@ export async function GET(req: NextRequest) {
     const { data: allChildren } = await supabaseAdmin
       .from('children')
       .select('id, name')
+      .eq('centro_id', caller.centroId)
       .order('name')
 
     const [{ data: conSesAgenda }, { data: conSesABA }, { data: conSesV2 }, { data: conSesPrograma }] = await Promise.all([
-      supabaseAdmin.from('agenda_sesiones').select('child_id').in('estado', ['realizada', 'completada']).gte('fecha', hace30str),
-      supabaseAdmin.from('registro_aba').select('child_id').gte('fecha_sesion', hace30str),
-      supabaseAdmin.from('aba_sessions_v2').select('child_id').gte('session_date', hace30str),
-      supabaseAdmin.from('sesiones_datos_aba').select('child_id').gte('fecha', hace30str),
+      supabaseAdmin.from('agenda_sesiones').select('child_id').eq('centro_id', caller.centroId).in('estado', ['realizada', 'completada']).gte('fecha', hace30str),
+      supabaseAdmin.from('registro_aba').select('child_id').eq('centro_id', caller.centroId).gte('fecha_sesion', hace30str),
+      supabaseAdmin.from('aba_sessions_v2').select('child_id').eq('centro_id', caller.centroId).gte('session_date', hace30str),
+      supabaseAdmin.from('sesiones_datos_aba').select('child_id').eq('centro_id', caller.centroId).gte('fecha', hace30str),
     ])
     const conSesionSet = new Set([
       ...(conSesAgenda || []).map(s => s.child_id),
@@ -135,6 +148,7 @@ export async function GET(req: NextRequest) {
     const { data: proximasSesiones } = await supabaseAdmin
       .from('agenda_sesiones')
       .select('*, children(name, diagnosis)')
+      .eq('centro_id', caller.centroId)
       .gte('fecha', hoy)
       .in('estado', ['programada', 'confirmada'])
       .order('fecha', { ascending: true })
@@ -147,6 +161,7 @@ export async function GET(req: NextRequest) {
     const { data: alertasRecientes } = await supabaseAdmin
       .from('agente_alertas')
       .select('*, children(name)')
+      .eq('centro_id', caller.centroId)
       .eq('resuelta', false)
       .order('created_at', { ascending: false })
       .limit(30)
@@ -155,6 +170,7 @@ export async function GET(req: NextRequest) {
     const { data: terapeutasCarga } = await supabaseAdmin
       .from('agenda_sesiones')
       .select('terapeuta_id, estado')
+      .eq('centro_id', caller.centroId)
       .eq('fecha', hoy)
 
     const cargaTerapeutas: Record<string, { total: number; realizadas: number }> = {}
@@ -168,6 +184,7 @@ export async function GET(req: NextRequest) {
     const { data: ingresosMes } = await supabaseAdmin
       .from('facturas')
       .select('monto, estado')
+      .eq('centro_id', caller.centroId)
       .gte('fecha_emision', inicioMes.toISOString().split('T')[0])
       .eq('estado', 'pagado')
 
@@ -175,6 +192,7 @@ export async function GET(req: NextRequest) {
     const facturasPendientes = await supabaseAdmin
       .from('facturas')
       .select('*', { count: 'exact', head: true })
+      .eq('centro_id', caller.centroId)
       .eq('estado', 'pendiente')
 
     return NextResponse.json({

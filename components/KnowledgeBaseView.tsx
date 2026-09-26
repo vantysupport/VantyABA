@@ -12,6 +12,7 @@ import {
   FileText, File, Plus, X, Brain, Database, Zap, AlertTriangle, Save, Link
 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
+import { confirmar } from '@/components/ui/confirmar'
 
 // Modos de ingesta
 type InputMode = 'archivo' | 'url' | 'texto'
@@ -128,7 +129,7 @@ export default function KnowledgeBaseView() {
   }
 
   const handleDelete = async (id: string, titulo: string) => {
-    if (!confirm(t('auto.knowledgeBaseView.eliminarDeLaBaseDe', { v1: String(titulo) }))) return
+    if (!await confirmar(t('auto.knowledgeBaseView.eliminarDeLaBaseDe', { v1: String(titulo) }))) return
     try {
       await fetch('/api/knowledge/ingest', {
         method: 'DELETE',

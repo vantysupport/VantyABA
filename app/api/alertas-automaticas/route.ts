@@ -4,15 +4,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { getLangInstruction } from '@/lib/lang'
+import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 // ─── GET: ejecutar análisis proactivo de todos los pacientes ──
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const cronSecret = searchParams.get('secret')
+    || req.headers.get('x-cron-secret')
+    || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
+    || null
 
-  // Proteger endpoint del cron
-  if (cronSecret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  // Proteger endpoint del cron: secreto compartido o el programador de la plataforma
+  const secretOk = !!process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET
+  if (!secretOk) {
+    const caller = await getApiCaller(req)
+    if (caller?.role !== 'programador') {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
   }
 
   try {
@@ -25,9 +33,13 @@ export async function GET(req: NextRequest) {
 
 // ─── POST: analizar paciente específico ──────────────────────
 export async function POST(req: NextRequest) {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff)) return forbidden()
   try {
     const { child_id } = await req.json()
-    const alertas = await analizarPaciente(child_id)
+    if (!(await canAccessChild(caller, child_id))) return notFound()
+    const alertas = await analizarPaciente(child_id, caller.centroId)
     return NextResponse.json({ alertas })
   } catch (e: any) {
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : e.message }, { status: 500 })
@@ -39,21 +51,27 @@ async function ejecutarMotorAlertas() {
   const hoy = new Date().toISOString().split('T')[0]
   const resultados = { analizados: 0, alertasGeneradas: 0, errores: 0 }
 
-  // Obtener todos los pacientes activos
-  const { data: pacientes } = await supabaseAdmin
-    .from('children')
-    .select('id, name, diagnosis')
+  // Procesar centro por centro: cada alerta queda en el centro de su paciente
+  const { data: centros } = await supabaseAdmin.from('centros').select('id')
 
-  if (!pacientes) return resultados
+  for (const centro of (centros || [])) {
+    // Obtener todos los pacientes activos del centro
+    const { data: pacientes } = await supabaseAdmin
+      .from('children')
+      .select('id, name, diagnosis')
+      .eq('centro_id', centro.id)
 
-  for (const paciente of pacientes) {
-    try {
-      const alertas = await analizarPaciente(paciente.id)
-      resultados.analizados++
-      resultados.alertasGeneradas += alertas.length
-    } catch (err) {
-      console.error('Error analizando paciente:', paciente.id, err)
-      resultados.errores++
+    if (!pacientes) continue
+
+    for (const paciente of pacientes) {
+      try {
+        const alertas = await analizarPaciente(paciente.id, centro.id)
+        resultados.analizados++
+        resultados.alertasGeneradas += alertas.length
+      } catch (err) {
+        console.error('Error analizando paciente:', paciente.id, err)
+        resultados.errores++
+      }
     }
   }
 
@@ -61,7 +79,7 @@ async function ejecutarMotorAlertas() {
 }
 
 // ─── ANÁLISIS POR PACIENTE ────────────────────────────────────
-async function analizarPaciente(childId: string): Promise<any[]> {
+async function analizarPaciente(childId: string, centroId: string): Promise<any[]> {
   const hoy = new Date()
   const hoyStr = hoy.toISOString().split('T')[0]
   const alertasNuevas: any[] = []
@@ -79,7 +97,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
   if (ultimaSesion) {
     const diasSinSesion = Math.floor((hoy.getTime() - new Date(ultimaSesion.fecha).getTime()) / (1000 * 60 * 60 * 24))
     if (diasSinSesion > 14) {
-      await crearAlertaSiNoExiste({
+      await crearAlertaSiNoExiste(centroId, {
         child_id: childId,
         tipo: 'ausencia_prolongada',
         titulo: `Sin sesion hace ${diasSinSesion} dias`,
@@ -95,7 +113,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
     if (child) {
       const diasDesdeCreacion = Math.floor((hoy.getTime() - new Date((child as any).created_at).getTime()) / (1000 * 60 * 60 * 24))
       if (diasDesdeCreacion > 7) {
-        await crearAlertaSiNoExiste({
+        await crearAlertaSiNoExiste(centroId, {
           child_id: childId,
           tipo: 'sin_sesiones',
           titulo: 'Paciente sin sesiones registradas',
@@ -177,7 +195,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
       const esPlana = Math.abs(slope) <= 1.5
       const lejosDelCriterio = prom < Math.min(70, criterio - 10)
       if (esPlana && lejosDelCriterio) {
-        await crearAlertaSiNoExiste({
+        await crearAlertaSiNoExiste(centroId, {
           child_id: childId,
           tipo: `estancamiento_${(prog as any).id}`,
           titulo: `Estancamiento en "${nombre}"${etiquetaSet}`,
@@ -196,7 +214,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
       const todasCumplen = ultimas.every((s: any) => s.porcentaje_exito >= criterio)
       if (todasCumplen) {
         const promUltimas = Math.round(ultimas.reduce((a: number, s: any) => a + s.porcentaje_exito, 0) / ultimas.length)
-        await crearAlertaSiNoExiste({
+        await crearAlertaSiNoExiste(centroId, {
           child_id: childId,
           tipo: `logro_dominio_${(prog as any).id}`,
           titulo: `🎯 Criterio alcanzado: "${nombre}"${etiquetaSet}`,
@@ -215,7 +233,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
       const promV = valoresV.reduce((a: number, b: number) => a + b, 0) / valoresV.length
       const slopeV = Math.round(slopeLineal(valoresV) * 10) / 10
       if (slopeV >= 5 && promV >= 60) {
-        await crearAlertaSiNoExiste({
+        await crearAlertaSiNoExiste(centroId, {
           child_id: childId,
           tipo: `logro_progreso_${(prog as any).id}`,
           titulo: `📈 Progreso consistente en "${nombre}"${etiquetaSet}`,
@@ -235,7 +253,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
       const promReciente = recientes.reduce((a: number, b: number) => a + b, 0) / recientes.length
       const promAnterior = anteriores.reduce((a: number, b: number) => a + b, 0) / anteriores.length
       if (promAnterior - promReciente > 15) {
-        await crearAlertaSiNoExiste({
+        await crearAlertaSiNoExiste(centroId, {
           child_id: childId,
           tipo: `regresion_${(prog as any).id}`,
           titulo: `Regresión en "${nombre}"${etiquetaSet}`,
@@ -265,7 +283,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
         .single()
 
       if (!eval_) {
-        await crearAlertaSiNoExiste({
+        await crearAlertaSiNoExiste(centroId, {
           child_id: childId,
           tipo: `evaluacion_pendiente_${tabla}`,
           titulo: `Evaluacion ${tabla.replace('evaluacion_', '').toUpperCase()} pendiente`,
@@ -276,7 +294,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
         alertasNuevas.push({ tipo: `evaluacion_pendiente_${tabla}` })
       } else if (new Date((eval_ as any).created_at) < haceSeisM) {
         const mesesDesde = Math.floor((hoy.getTime() - new Date((eval_ as any).created_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
-        await crearAlertaSiNoExiste({
+        await crearAlertaSiNoExiste(centroId, {
           child_id: childId,
           tipo: `evaluacion_vencida_${tabla}`,
           titulo: `Evaluacion ${tabla.replace('evaluacion_', '').toUpperCase()} vencida (${mesesDesde} meses)`,
@@ -302,7 +320,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
     .lte('fecha_asignada', hace7dias.toISOString().split('T')[0])
 
   if (tareasSinRespuesta && tareasSinRespuesta.length > 0) {
-    await crearAlertaSiNoExiste({
+    await crearAlertaSiNoExiste(centroId, {
       child_id: childId,
       tipo: 'tareas_sin_respuesta',
       titulo: `${tareasSinRespuesta.length} tarea(s) sin respuesta de la familia`,
@@ -319,7 +337,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
       const sesionesParaIA = ultimasSesionesABA.map(s => ({ fecha_sesion: s.fecha, datos: { nivel_logro_objetivos: s.porcentaje_exito, objetivo_principal: 'Programa ABA' } }))
       const alertaIA = await analizarTendenciaConIA(childId, sesionesParaIA)
       if (alertaIA) {
-        await crearAlertaSiNoExiste({
+        await crearAlertaSiNoExiste(centroId, {
           child_id: childId,
           tipo: 'analisis_ia_tendencia',
           titulo: 'Analisis IA: Patron detectado',
@@ -336,7 +354,7 @@ async function analizarPaciente(childId: string): Promise<any[]> {
 }
 
 // ─── HELPER: Crear alerta sin duplicar ────────────────────────
-async function crearAlertaSiNoExiste(alerta: any) {
+async function crearAlertaSiNoExiste(centroId: string, alerta: any) {
   // Verificar si ya existe alerta del mismo tipo no resuelta
   const hace3dias = new Date()
   hace3dias.setDate(hace3dias.getDate() - 3)
@@ -351,7 +369,7 @@ async function crearAlertaSiNoExiste(alerta: any) {
     .single()
 
   if (!existente) {
-    await supabaseAdmin.from('agente_alertas').insert(alerta)
+    await supabaseAdmin.from('agente_alertas').insert({ ...alerta, centro_id: centroId })
   }
 }
 

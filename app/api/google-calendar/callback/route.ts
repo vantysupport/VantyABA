@@ -2,6 +2,7 @@
 // Handles Google OAuth callback, saves tokens to Supabase
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { verifyOAuthState } from '@/lib/calendar-integration'
 
 const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CALENDAR_CLIENT_ID     || ''
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CALENDAR_CLIENT_SECRET || ''
@@ -15,15 +16,17 @@ export async function GET(req: NextRequest) {
   const stateRaw  = searchParams.get('state') || ''
   const error     = searchParams.get('error')
 
-  // state puede ser "userId:role" (nuevo) o solo "userId" (legacy)
-  const [userId, stateRole] = stateRaw.includes(':')
-    ? stateRaw.split(':')
-    : [stateRaw, null]
+  // state is signed by /api/*-calendar?action=auth-url for the signed-in user; unsigned/expired states are rejected
+  // so nobody can attach their own calendar account to another user's profile.
+  const verified = verifyOAuthState(stateRaw)
+  const userId = verified?.userId ?? null
+  const stateRole = verified?.role ?? null
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
   // Determinar destino de error basado en el role del state
-  const errorDest = stateRole === 'padre' ? '/padre' : '/admin'
+  const panelDe = (r: string | null | undefined) => r === 'padre' ? '/padre' : r === 'especialista' ? '/especialista' : r === 'secretaria' ? '/secretaria' : '/admin'
+  const errorDest = panelDe(stateRole)
 
   if (error || !code || !userId) {
     return NextResponse.redirect(`${appUrl}${errorDest}?gcal=error`)
@@ -77,7 +80,7 @@ export async function GET(req: NextRequest) {
 
     // Redirect to correct panel based on role (state tiene prioridad sobre DB)
     const role = stateRole || updatedProfile?.role || 'admin'
-    const destination = role === 'padre' ? '/padre' : '/admin'
+    const destination = panelDe(role)
     return NextResponse.redirect(`${appUrl}${destination}?gcal=connected&email=${encodeURIComponent(googleEmail || '')}`)
   } catch (e: any) {
     console.error('Google Calendar callback error:', e)

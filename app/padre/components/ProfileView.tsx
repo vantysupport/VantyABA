@@ -1,98 +1,125 @@
 'use client'
+// app/padre/components/ProfileView.tsx
+// Perfil de la familia: datos, cuenta, seguridad, calendarios vinculados y avisos por WhatsApp.
 
+import { useCentroBranding } from '@/components/CentroBrandingContext'
+import { TwoFactorCard } from '@/components/ui/two-factor-card'
 import { useI18n } from '@/lib/i18n-context'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import {
-  ChevronRight, HelpCircle, Lock, LogOut, Mail, Phone, User,
-  Check, Unlink, Loader2, CalendarDays, Shield, Star, Settings,
-  Bell, MessageCircle, Heart, CheckCircle, AlertCircle, X, Camera
+  ChevronRight, HelpCircle, Lock, LogOut, Mail, Phone, User, Check, Loader2, Shield, CheckCircle2,
+  Camera, CalendarDays, CalendarX, FileText, MessageCircle, Smartphone, Heart,
 } from 'lucide-react'
-import { InfoRow, HelpItem } from './shared'
+import { motion } from 'motion/react'
+import { confirmar } from '@/components/ui/confirmar'
 
-function CalBtn({ label, icon, grad, profile, apiBase, paramKey, role='padre' }: any) {
-  const { t } = useI18n()
+const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
+
+function useL() {
+  const { locale } = useI18n()
+  return (e: string, s: string) => (locale === 'en' ? e : s)
+}
+
+function Seccion({ titulo, children, className = '', delay = 0 }: { titulo?: string; children: React.ReactNode; className?: string; delay?: number }) {
+  return (
+    <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, type: 'spring', stiffness: 170, damping: 22 }}
+      className={`${cardClass} overflow-hidden ${className}`}>
+      {titulo && <p className="border-b border-v-border px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-v-subtle">{titulo}</p>}
+      {children}
+    </motion.section>
+  )
+}
+
+function Fila({ Icon, tone = 'bg-v-accent-soft text-v-accent', label, sub, onClick, right }: { Icon: any; tone?: string; label: string; sub?: string; onClick?: () => void; right?: React.ReactNode }) {
+  return (
+    <button onClick={onClick} className="group flex w-full items-center gap-3.5 border-b border-v-border px-5 py-3.5 text-left transition-colors last:border-b-0 hover:bg-v-fill/60">
+      <span className={`grid size-10 shrink-0 place-items-center rounded-[30%] ${tone}`}><Icon size={18} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-v-text">{label}</span>
+        {sub && <span className="mt-0.5 block truncate text-xs text-v-muted">{sub}</span>}
+      </span>
+      {right ?? <ChevronRight size={17} className="shrink-0 text-v-subtle transition-transform group-hover:translate-x-0.5" />}
+    </button>
+  )
+}
+
+function GoogleLogo() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" /><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" /><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" /><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" /></svg>
+  )
+}
+function MicrosoftLogo() {
+  return <svg width="16" height="16" viewBox="0 0 21 21" aria-hidden><rect x="1" y="1" width="9" height="9" fill="#f25022" /><rect x="11" y="1" width="9" height="9" fill="#7fba00" /><rect x="1" y="11" width="9" height="9" fill="#00a4ef" /><rect x="11" y="11" width="9" height="9" fill="#ffb900" /></svg>
+}
+
+// ── Calendario vinculado (Google / Outlook) ────────────────────────────────────
+function CalBtn({ label, logo, profile, apiBase, paramKey, role = 'padre' }: { label: string; logo: React.ReactNode; profile: any; apiBase: string; paramKey: string; role?: string }) {
+  const L = useL()
   const toast = useToast()
-  const [status, setStatus] = useState<'loading'|'connected'|'disconnected'>('loading')
-  const [email, setEmail] = useState<string|null>(null)
+  const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading')
+  const [email, setEmail] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
 
   const check = async () => {
     if (!profile?.id) return
     try {
-      const r = await fetch(`/api/${apiBase}?action=status&userId=${profile.id}`)
-      const d = await r.json()
-      setStatus(d.connected?'connected':'disconnected'); setEmail(d.email||null)
+      const d = await (await fetch(`/api/${apiBase}?action=status&userId=${profile.id}`)).json()
+      setStatus(d.connected ? 'connected' : 'disconnected'); setEmail(d.email || null)
     } catch { setStatus('disconnected') }
   }
-  useEffect(()=>{
+  useEffect(() => {
     check()
-    const p = new URLSearchParams(window.location.search)
-    const v = p.get(paramKey)
-    if (v==='connected') { toast.success(`${label} conectado.`); check(); window.history.replaceState({},'',window.location.pathname) }
-    else if (v==='error') { toast.error(t('auto.profileView.errorAlConectar', { v1: String(label) })); window.history.replaceState({},'',window.location.pathname) }
-  },[profile?.id])
+    const v = new URLSearchParams(window.location.search).get(paramKey)
+    if (v === 'connected') { toast.success(L(`${label} connected.`, `${label} conectado.`)); check(); window.history.replaceState({}, '', window.location.pathname) }
+    else if (v === 'error') { toast.error(L(`Could not connect ${label}.`, `No se pudo conectar ${label}.`)); window.history.replaceState({}, '', window.location.pathname) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id])
 
   const connect = async () => {
-    if (!profile?.id) return; setConnecting(true)
+    if (!profile?.id) return
+    setConnecting(true)
     try {
-      const r = await fetch(`/api/${apiBase}?action=auth-url&userId=${profile.id}&role=${role}`)
-      const d = await r.json(); if (d.url) window.location.href = d.url
-    } catch { toast.error(t('auto.profileView.errorIniciandoConexion')); setConnecting(false) }
+      const d = await (await fetch(`/api/${apiBase}?action=auth-url&userId=${profile.id}&role=${role}`)).json()
+      if (d.url) window.location.href = d.url
+      else throw new Error()
+    } catch { toast.error(L('Could not start the connection.', 'No se pudo iniciar la conexión.')); setConnecting(false) }
   }
   const disconnect = async () => {
-    if (!profile?.id||!confirm(t('auto.profileView.desconectar', { v1: String(label) }))) return
+    if (!profile?.id || !await confirmar(L(`Disconnect ${label}?`, `¿Desconectar ${label}?`))) return
     await fetch(`/api/${apiBase}?action=disconnect&userId=${profile.id}`)
-    setStatus('disconnected'); setEmail(null); toast.success(`${label} desconectado`)
+    setStatus('disconnected'); setEmail(null); toast.success(L(`${label} disconnected`, `${label} desconectado`))
   }
 
-  if (status==='loading') return null
-  return status==='connected' ? (
-    <div style={{ display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:'1px solid var(--c-border)' }}>
-      <div style={{ width:42,height:42,background:grad,borderRadius:13,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:18,boxShadow:'0 4px 12px rgba(0,0,0,.15)',flexShrink:0 }}>{icon}</div>
-      <div style={{ flex:1,minWidth:0 }}>
-        <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-primary)',margin:0 }}>{label}</p>
-        <p style={{ fontSize:12,color:'#10b981',display:'flex',alignItems:'center',gap:4,margin:'2px 0 0' }}><Check size={11}/>{t("perfil.conectado")}<span style={{ color:'var(--c-text-muted)' }}>{email}</span></p>
+  const icono = <span className="grid size-10 shrink-0 place-items-center rounded-[30%] border border-v-border bg-white">{logo}</span>
+  if (status === 'loading') return (
+    <div className="flex items-center gap-3.5 border-b border-v-border px-5 py-3.5 last:border-b-0">{icono}<span className="h-3 w-32 animate-pulse rounded-full bg-v-fill" /></div>
+  )
+  return status === 'connected' ? (
+    <div className="flex items-center gap-3.5 border-b border-v-border px-5 py-3.5 last:border-b-0">
+      {icono}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-v-text">{label}</p>
+        <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-v-success"><Check size={11} /> {L('Connected', 'Conectado')}{email && <span className="truncate text-v-muted">· {email}</span>}</p>
       </div>
-      <button onClick={disconnect} style={{ fontSize:12,fontWeight:700,color:'#ef4444',background:'rgba(239,68,68,0.10)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:10,padding:'6px 12px',cursor:'pointer',flexShrink:0 }}>{t("perfil.quitar")}</button>
+      <button onClick={disconnect} className="h-8 shrink-0 rounded-full border border-v-border px-3 text-xs font-semibold text-v-danger hover:bg-v-danger/10">{L('Remove', 'Quitar')}</button>
     </div>
   ) : (
-    <button onClick={connect} disabled={connecting} style={{ width:'100%',display:'flex',alignItems:'center',gap:14,padding:'14px 20px',borderBottom:'1px solid var(--c-border)',background:'none',border:'none',cursor:'pointer',transition:'background .15s',fontFamily:'inherit' }}
-      onMouseEnter={e=>(e.currentTarget as any).style.background='var(--c-surface)'}
-      onMouseLeave={e=>(e.currentTarget as any).style.background='transparent'}>
-      <div style={{ width:42,height:42,background:`${grad.replace('linear-gradient(135deg,','').split(',')[0]}18`,borderRadius:13,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0 }}>
-        {connecting?<Loader2 size={18} style={{ animation:'spin 1s linear infinite' }} color="var(--c-text-muted)"/>:icon}
-      </div>
-      <div style={{ textAlign:'left',flex:1,minWidth:0 }}>
-        <p style={{ fontWeight:700,fontSize:14,color:'var(--c-text-primary)',margin:0 }}>{connecting?'Conectando...':label}</p>
-        <p style={{ fontSize:12,color:'var(--c-text-muted)',margin:'2px 0 0' }}>{t("perfil.sincronizaCitas")}</p>
-      </div>
-      {!connecting&&<ChevronRight size={18} color="var(--c-text-muted)" style={{ flexShrink:0 }}/>}
+    <button onClick={connect} disabled={connecting} className="group flex w-full items-center gap-3.5 border-b border-v-border px-5 py-3.5 text-left transition-colors last:border-b-0 hover:bg-v-fill/60">
+      {icono}
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-v-text">{label}</span>
+        <span className="mt-0.5 block text-xs text-v-muted">{L('Sync your appointments automatically', 'Sincroniza tus citas automáticamente')}</span>
+      </span>
+      {connecting ? <Loader2 size={16} className="animate-spin text-v-accent" /> : <span className="shrink-0 rounded-full bg-v-accent-soft px-3 py-1 text-xs font-semibold text-v-accent">{L('Connect', 'Conectar')}</span>}
     </button>
   )
 }
 
-function MenuItem({ icon, label, sub, onClick, danger=false, badge='' }: any) {
-  return (
-    <button onClick={onClick} style={{ width:'100%',display:'flex',alignItems:'center',gap:14,padding:'14px 20px',background:'none',border:'none',borderBottom:'1px solid var(--c-border)',cursor:'pointer',transition:'background .15s',fontFamily:'inherit' }}
-      onMouseEnter={e=>(e.currentTarget as any).style.background = danger ? 'rgba(239,68,68,0.08)' : 'var(--c-surface)'}
-      onMouseLeave={e=>(e.currentTarget as any).style.background='transparent'}>
-      <div style={{ width:42,height:42,borderRadius:13,background:danger?'rgba(239,68,68,0.10)':'var(--c-surface)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,border:'1px solid var(--c-border)' }}>{icon}</div>
-      <div style={{ flex:1,textAlign:'left' }}>
-        <p style={{ fontWeight:700,fontSize:14,color:danger?'#ef4444':'var(--c-text-primary)',margin:0 }}>{label}</p>
-        {sub&&<p style={{ fontSize:12,color:'var(--c-text-muted)',margin:'2px 0 0' }}>{sub}</p>}
-      </div>
-      <div style={{ display:'flex',alignItems:'center',gap:6 }}>
-        {badge&&<span style={{ background:'#0284c7',color:'#fff',fontSize:10,fontWeight:800,padding:'2px 8px',borderRadius:20 }}>{badge}</span>}
-        {!danger&&<ChevronRight size={16} color="var(--c-text-muted)"/>}
-      </div>
-    </button>
-  )
-}
-
+// ── Avisos por WhatsApp ────────────────────────────────────────────────────────
 function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: string) => void }) {
-  const { t } = useI18n()
+  const L = useL()
   const [phone, setPhone] = useState(profile?.phone || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -100,17 +127,12 @@ function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: 
   const [editing, setEditing] = useState(!profile?.phone)
 
   const handleSave = async () => {
-    if (!phone.trim()) { setError('Ingresá tu número'); return }
     const clean = phone.replace(/\s/g, '')
-    if (!clean.startsWith('+') || clean.length < 10) {
-      setError('Incluí el código de país, ej: +51 XXX XXX XXX'); return
-    }
+    if (!clean) { setError(L('Enter your number', 'Ingresa tu número')); return }
+    if (!clean.startsWith('+') || clean.length < 10) { setError(L('Include the country code, e.g. +51 XXX XXX XXX', 'Incluye el código de país, ej: +51 XXX XXX XXX')); return }
     setSaving(true); setError('')
     try {
-      const { error: err } = await supabase
-        .from('profiles')
-        .update({ phone: clean, wsp_notif: true, updated_at: new Date().toISOString() })
-        .eq('id', profile.id)
+      const { error: err } = await supabase.from('profiles').update({ phone: clean, wsp_notif: true, updated_at: new Date().toISOString() }).eq('id', profile.id)
       if (err) throw err
       setSaved(true); setEditing(false); onUpdated(clean)
       setTimeout(() => setSaved(false), 3000)
@@ -119,7 +141,7 @@ function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: 
   }
 
   const handleRemove = async () => {
-    if (!confirm(t('auto.profileView.desactivarNotificacionesWhatsapp'))) return
+    if (!await confirmar(L('Turn off WhatsApp notifications?', '¿Desactivar las notificaciones por WhatsApp?'))) return
     setSaving(true)
     try {
       await supabase.from('profiles').update({ phone: null, wsp_notif: false }).eq('id', profile.id)
@@ -127,76 +149,61 @@ function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: 
     } finally { setSaving(false) }
   }
 
-  const hasPhone = !!profile?.phone && !editing
+  const avisos = [
+    { Icon: CalendarDays, t: L('New appointment', 'Nueva cita agendada') },
+    { Icon: CalendarX, t: L('Cancelled appointment', 'Cita cancelada') },
+    { Icon: FileText, t: L('Report available', 'Informe disponible') },
+    { Icon: MessageCircle, t: L('Message from the therapist', 'Mensaje del terapeuta') },
+  ]
 
   return (
-    <div style={{ background:'var(--c-card)', borderRadius:22, border:'1px solid var(--c-border)', overflow:'hidden', boxShadow:'0 4px 20px rgba(0,0,0,.04)' }}>
-      <div style={{ padding:'14px 20px 10px' }}>
-        <p style={{ fontSize:10,fontWeight:800,color:'var(--c-text-muted)',textTransform:'uppercase',letterSpacing:1,margin:0 }}>{t("perfil.notifWhatsApp")}</p>
-      </div>
-
-      {hasPhone ? (
-        <div style={{ padding:'12px 20px 16px' }}>
-          {/* Estado activo */}
-          <div style={{ display:'flex',alignItems:'center',gap:14,padding:'12px 14px',background:'linear-gradient(135deg,#f0fdf4,#dcfce7)',borderRadius:16,border:'1.5px solid #86efac',marginBottom:12 }}>
-            <div style={{ width:40,height:40,background:'linear-gradient(135deg,#22c55e,#16a34a)',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0 }}>📱</div>
-            <div style={{ flex:1,minWidth:0 }}>
-              <p style={{ fontWeight:800,fontSize:13,color:'#15803d',margin:0,display:'flex',alignItems:'center',gap:5 }}>
-                <CheckCircle size={13}/> Activo
-              </p>
-              <p style={{ fontSize:12,color:'#16a34a',margin:'2px 0 0',fontWeight:600 }}>{profile?.phone}</p>
-            </div>
-            <div style={{ display:'flex',gap:6 }}>
-              <button onClick={() => setEditing(true)} style={{ fontSize:11,fontWeight:700,color:'#0369a1',background:'var(--c-stat-purple)',border:'1px solid var(--c-border)',borderRadius:10,padding:'6px 10px',cursor:'pointer' }}>{t("perfil.cambiar")}</button>
-              <button onClick={handleRemove} disabled={saving} style={{ fontSize:11,fontWeight:700,color:'#dc2626',background:'rgba(239,68,68,0.10)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:10,padding:'6px 10px',cursor:'pointer' }}>{t("perfil.quitar")}</button>
-            </div>
+    <div className="p-5">
+      {profile?.phone && !editing ? (
+        <div className="flex items-center gap-3 rounded-v-sm border border-v-success/30 bg-v-success/10 p-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-[#25D366] text-white"><Smartphone size={18} /></span>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1 text-sm font-semibold text-v-success"><CheckCircle2 size={13} /> {L('Active', 'Activo')}</p>
+            <p className="truncate text-xs font-medium text-v-text">{profile.phone}</p>
           </div>
-          {/* Qué recibirá */}
-          <div style={{ display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6 }}>
-            {['📅 Nueva cita agendada','❌ Cita cancelada','📊 Informe disponible','💬 Mensaje del terapeuta'].map(item => (
-              <div key={item} style={{ fontSize:11,color:'var(--c-text-muted)',fontWeight:600,padding:'6px 10px',background:'var(--c-surface)',border:'1px solid var(--c-border)',borderRadius:10,display:'flex',alignItems:'center',gap:6 }}>
-                {item}
-              </div>
-            ))}
-          </div>
+          <button onClick={() => setEditing(true)} className="h-8 rounded-full bg-v-elevated px-3 text-xs font-semibold text-v-accent shadow-v">{L('Change', 'Cambiar')}</button>
+          <button onClick={handleRemove} disabled={saving} className="h-8 rounded-full px-3 text-xs font-semibold text-v-danger hover:bg-v-danger/10">{L('Remove', 'Quitar')}</button>
         </div>
       ) : (
-        <div style={{ padding:'4px 20px 16px' }}>
-          <p style={{ fontSize:12,color:'var(--c-text-muted)',lineHeight:1.5,margin:'0 0 12px' }}>
-            {t('auto.profileView.ingresaTuNumeroConCodigo')}
-          </p>
-          <div style={{ display:'flex',gap:8,marginBottom:error?8:0 }}>
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => { setPhone(e.target.value); setError('') }}
-              placeholder="+51 XXX XXX XXX"
-              style={{ flex:1,padding:'11px 14px',borderRadius:14,border:`1.5px solid ${error?'#fca5a5':'var(--c-border)'}`,fontSize:13,fontWeight:600,color:'var(--c-text-primary)',outline:'none',fontFamily:'inherit',background:'var(--c-surface)' }}
-              onKeyDown={e => e.key==='Enter' && handleSave()}
-            />
-            <button onClick={handleSave} disabled={saving} style={{ padding:'11px 18px',borderRadius:14,border:'none',background:'linear-gradient(135deg,#22c55e,#16a34a)',color:'#fff',fontWeight:700,fontSize:13,cursor:saving?'not-allowed':'pointer',flexShrink:0,display:'flex',alignItems:'center',gap:6,fontFamily:'inherit',boxShadow:'0 4px 12px rgba(34,197,94,.3)' }}>
-              {saving ? <Loader2 size={14} style={{ animation:'spin 1s linear infinite' }}/> : <Check size={14}/>}
-              {saving ? '' : 'Activar'}
+        <>
+          <p className="mb-3 text-xs leading-relaxed text-v-muted">{L('Enter your number with the country code to receive notices from the center.', 'Ingresa tu número con código de país para recibir avisos del centro.')}</p>
+          <div className="flex gap-2">
+            <input type="tel" value={phone} onChange={e => { setPhone(e.target.value); setError('') }} onKeyDown={e => e.key === 'Enter' && handleSave()} placeholder="+51 XXX XXX XXX"
+              className={`h-11 min-w-0 flex-1 rounded-full border bg-v-bg px-4 text-sm text-v-text outline-none placeholder:text-v-subtle focus:ring-4 focus:ring-v-accent-soft ${error ? 'border-v-danger/60' : 'border-v-border focus:border-v-accent/50'}`} />
+            <button onClick={handleSave} disabled={saving} className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-4 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-60">
+              {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {L('Activate', 'Activar')}
             </button>
           </div>
-          {error && <p style={{ fontSize:11,color:'#dc2626',margin:'4px 0 0',fontWeight:600 }}>{error}</p>}
-          {saved && <p style={{ fontSize:11,color:'#16a34a',margin:'6px 0 0',fontWeight:700,display:'flex',alignItems:'center',gap:5 }}><CheckCircle size={11}/>{t("perfil.listoNotifActivadas")}</p>}
-          <p style={{ fontSize:10,color:'var(--c-text-muted)',margin:'8px 0 0' }}>{t("perfil.paisesNota")}</p>
-        </div>
+          {error && <p className="mt-2 text-xs font-medium text-v-danger">{error}</p>}
+          <p className="mt-2 text-[11px] text-v-subtle">{L('Works with numbers from any country.', 'Funciona con números de cualquier país.')}</p>
+        </>
       )}
+      {saved && <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-v-success"><CheckCircle2 size={12} /> {L('Done! Notifications are on.', '¡Listo! Notificaciones activadas.')}</p>}
+      <p className="mb-2 mt-4 text-[11px] font-semibold text-v-subtle">{L('You will be notified about', 'Te avisaremos de')}</p>
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2">
+        {avisos.map(({ Icon, t }) => (
+          <div key={t} className="flex items-center gap-2 rounded-v-sm bg-v-fill px-3 py-2 text-xs font-medium text-v-text"><Icon size={13} className="shrink-0 text-v-accent" /><span className="leading-tight">{t}</span></div>
+        ))}
+      </div>
     </div>
   )
 }
 
+// ── Vista principal ───────────────────────────────────────────────────────────
 function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy, onHelp, onPhoneUpdated }: any) {
-  const { t } = useI18n()
+  const { name: centroNombre, logoUrl } = useCentroBranding()
+  const L = useL()
   const toast = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(profile?.avatar_url || null)
+  const [avatarError, setAvatarError] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const initial = profile?.full_name?.charAt(0)||'U'
-  const name = profile?.full_name||'Usuario'
-  const email = profile?.email||'—'
+  const name = profile?.full_name || L('User', 'Usuario')
+  const email = profile?.email || '—'
   const phone = profile?.phone
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,128 +211,80 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
     if (!file || !profile?.id) return
     setUploadingPhoto(true)
     try {
-      // ✅ FIX: usar endpoint server-side para subir y guardar en DB
-      // evita el fallo silencioso de RLS al usar el cliente browser
-      try {
-        const fd = new FormData()
-        fd.append('file', file)
-        fd.append('folder', `avatars/${profile.id}`)
-        fd.append('updateProfileId', profile.id)
-        const upRes = await fetch('/api/admin/upload-imagen', { method: 'POST', body: fd })
-        const upData = await upRes.json()
-        if (!upRes.ok || !upData.url) throw new Error(upData.error || 'No se pudo subir la imagen')
-        const finalUrl = `${upData.url}?t=${Date.now()}`
-        setAvatarUrl(finalUrl)
-        toast.success(t('auto.profileView.fotoActualizada'))
-      } catch (err: any) {
-        toast.error('Error: ' + (err.message || 'No se pudo subir la foto'))
-      } finally { setUploadingPhoto(false) }
-    } catch { toast.error(t('auto.profileView.errorAlLeerElArchivo')); setUploadingPhoto(false) }
+      // Subida server-side: evita el fallo silencioso de RLS del cliente
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', `avatars/${profile.id}`)
+      fd.append('updateProfileId', profile.id)
+      const upRes = await fetch('/api/admin/upload-imagen', { method: 'POST', body: fd })
+      const upData = await upRes.json()
+      if (!upRes.ok || !upData.url) throw new Error(upData.error || '')
+      setAvatarUrl(`${upData.url}?t=${Date.now()}`); setAvatarError(false)
+      toast.success(L('Photo updated', 'Foto actualizada'))
+    } catch (err: any) {
+      toast.error(L('Could not upload the photo', 'No se pudo subir la foto') + (err?.message ? `: ${err.message}` : ''))
+    } finally { setUploadingPhoto(false); if (fileRef.current) fileRef.current.value = '' }
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-10 w-full max-w-2xl mx-auto">
-      <style>{`
-        @keyframes pv-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-        .pv-card{animation:pv-in .3s ease both}
-        .pv-card:nth-child(1){animation-delay:.04s}.pv-card:nth-child(2){animation-delay:.08s}
-        .pv-card:nth-child(3){animation-delay:.12s}.pv-card:nth-child(4){animation-delay:.16s}
-      `}</style>
-
-      {/* ── HERO CARD ── */}
-      <div className="pv-card relative rounded-3xl overflow-hidden"
-        style={{ background: 'linear-gradient(135deg,#0c2c47 0%,#0369a1 55%,#0ea5e9 100%)', minHeight: 180 }}>
-        {/* Decorative circles */}
-        <div style={{ position:'absolute',top:-40,right:-40,width:200,height:200,background:'rgba(255,255,255,.07)',borderRadius:'50%',pointerEvents:'none' }}/>
-        <div style={{ position:'absolute',bottom:-30,left:20,width:120,height:120,background:'rgba(14,165,233,.28)',borderRadius:'50%',pointerEvents:'none' }}/>
-
-        <div className="relative z-10 px-6 pt-8 pb-6 flex items-end gap-5">
-          {/* Avatar upload */}
-          <div className="relative group cursor-pointer flex-shrink-0" onClick={() => fileRef.current?.click()}>
-            <div className="relative">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Foto" className="w-20 h-20 rounded-2xl object-cover shadow-xl" style={{ border:'3px solid rgba(255,255,255,.3)' }}/>
-              ) : (
-                <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-xl" style={{ background:'rgba(255,255,255,.2)', border:'3px solid rgba(255,255,255,.3)', backdropFilter:'blur(8px)' }}>
-                  {initial}
-                </div>
-              )}
-              {/* Overlay */}
-              <div className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background:'rgba(0,0,0,.55)' }}>
-                {uploadingPhoto
-                  ? <Loader2 size={20} className="text-white animate-spin"/>
-                  : <div className="flex flex-col items-center gap-1">
-                      <Camera size={18} className="text-white"/>
-                      <span className="text-white text-[9px] font-bold">{t("perfil.cambiar")}</span>
-                    </div>
-                }
-              </div>
-              {/* Camera badge */}
-              {!uploadingPhoto && (
-                <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-white dark:bg-[#0d1117] rounded-full flex items-center justify-center shadow-lg">
-                  <Camera size={13} className="text-sky-600"/>
-                </div>
-              )}
+    <div className="v-scope grid gap-4 pb-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-5">
+      {/* Columna izquierda: identidad + cuenta */}
+      <div className="space-y-4 lg:sticky lg:top-0">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 160, damping: 22 }} className={`relative overflow-hidden ${cardClass}`}>
+          <div aria-hidden className="v-brand absolute inset-x-0 top-0 h-24 rounded-none" style={{ boxShadow: 'none' }} />
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-24" style={{ background: 'radial-gradient(20rem 8rem at 90% 0%, rgba(255,255,255,.28), transparent 70%)' }} />
+          <div className="relative px-5 pb-5 pt-12 text-center">
+            <button onClick={() => fileRef.current?.click()} disabled={uploadingPhoto} aria-label={L('Change photo', 'Cambiar foto')}
+              className="group relative mx-auto block size-24 rounded-full bg-v-elevated p-1 shadow-v-lg">
+              <span className="relative block size-full overflow-hidden rounded-full">
+                {avatarUrl && !avatarError
+                  ? <img src={avatarUrl} alt="" onError={() => setAvatarError(true)} className="absolute inset-0 w-full object-cover" style={{ height: '100%' }} />
+                  : <span className="v-brand grid size-full place-items-center text-3xl font-bold" style={{ boxShadow: 'none' }}>{name.charAt(0).toUpperCase()}</span>}
+                <span className={`absolute inset-0 grid place-items-center bg-black/50 text-white transition-opacity ${uploadingPhoto ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  {uploadingPhoto ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
+                </span>
+              </span>
+              <span className="absolute bottom-0.5 right-0.5 grid size-8 place-items-center rounded-full border-2 border-v-elevated bg-v-accent text-white"><Camera size={13} /></span>
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+            <h2 className="mt-3 text-xl font-semibold tracking-tight text-v-text">{name}</h2>
+            <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+              <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-v-fill px-3 py-1 text-xs text-v-muted"><Mail size={12} className="shrink-0" /><span className="truncate">{email}</span></span>
+              {phone && <span className="inline-flex items-center gap-1.5 rounded-full bg-v-success/10 px-3 py-1 text-xs font-medium text-v-success"><Phone size={12} /> {phone}</span>}
             </div>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload}/>
+            <div className="mt-4 flex items-center justify-center gap-2 border-t border-v-border pt-4">
+              {logoUrl
+                ? <span className="grid size-7 place-items-center overflow-hidden rounded-[30%] bg-white ring-1 ring-v-border"><img src={logoUrl} alt="" className="size-full object-contain p-0.5" /></span>
+                : <Heart size={14} className="text-v-accent" />}
+              <p className="truncate text-xs text-v-muted">{L('Family portal', 'Portal Familias')} · <span className="font-semibold text-v-text">{centroNombre}</span></p>
+            </div>
           </div>
+        </motion.div>
 
-          {/* Info */}
-          <div className="flex-1 min-w-0 pb-1">
-            <h2 className="font-bold text-xl text-white leading-tight tracking-tight">{name}</h2>
-            <p className="text-sm mt-1 flex items-center gap-1.5" style={{ color:'rgba(255,255,255,.65)' }}>
-              <Mail size={12}/>{email}
-            </p>
-            {phone && (
-              <p className="text-sm mt-0.5 flex items-center gap-1.5 font-semibold" style={{ color:'#6ee7b7' }}>
-                <Phone size={12}/>{phone}
-              </p>
-            )}
-            <p className="text-[10px] mt-2 font-bold" style={{ color:'rgba(255,255,255,.4)' }}>
-              Portal Familias · Neuropsicología y Terapias SANTI
-            </p>
-          </div>
-        </div>
+        <Seccion titulo={L('My account', 'Mi cuenta')} delay={0.05}>
+          <Fila Icon={User} label={L('Edit profile', 'Editar perfil')} sub={L('Name and phone', 'Nombre y teléfono')} onClick={onEditProfile} />
+          <Fila Icon={Lock} label={L('Change password', 'Cambiar contraseña')} sub={L('Update your access', 'Actualiza tu acceso')} onClick={onChangePass} />
+          <Fila Icon={Shield} label={L('Privacy and security', 'Privacidad y seguridad')} sub={L('Data management', 'Gestión de datos')} onClick={onPrivacy} />
+          <Fila Icon={HelpCircle} tone="bg-v-success/15 text-v-success" label={L('Help center', 'Centro de ayuda')} sub={L('Guides and support', 'Guías y soporte')} onClick={onHelp} />
+        </Seccion>
 
-        {/* Tap to change photo hint */}
-        <div className="relative z-10 px-6 py-2.5 flex items-center gap-2" style={{ background:'rgba(0,0,0,.2)', borderTop:'1px solid rgba(255,255,255,.1)' }}>
-          <Camera size={12} style={{ color:'rgba(255,255,255,.5)', flexShrink:0 }}/>
-          <p className="text-[11px] font-medium" style={{ color:'rgba(255,255,255,.5)' }}>
-            {uploadingPhoto ? 'Subiendo foto...' : 'Toca la foto para cambiarla'}
-          </p>
-        </div>
+        <motion.button initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} onClick={onLogout}
+          className={`${cardClass} flex w-full items-center gap-3.5 px-5 py-3.5 text-left transition-colors hover:border-v-danger/40 hover:bg-v-danger/5`}>
+          <span className="grid size-10 place-items-center rounded-[30%] bg-v-danger/10 text-v-danger"><LogOut size={18} /></span>
+          <span className="text-sm font-semibold text-v-danger">{L('Sign out', 'Cerrar sesión')}</span>
+        </motion.button>
       </div>
 
-      {/* ── MI CUENTA ── */}
-      <div className="pv-card bg-white dark:bg-[#0d1117] rounded-2xl border border-slate-100 dark:border-[#21262d] shadow-sm overflow-hidden">
-        <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--c-border)" }}>
-          <div className="w-1 h-4 bg-sky-500 rounded-full"/>
-          <p className="text-[10px] font-bold" style={{ color: "var(--c-text-muted)" }}>{t("perfil.miCuenta")}</p>
-        </div>
-        <MenuItem icon={<User size={17} color="#0284c7"/>} label={t('auto.profileView.editarPerfil')} sub="Nombre y teléfono" onClick={onEditProfile}/>
-        <MenuItem icon={<Lock size={17} color="#0284c7"/>} label={t('auto.profileView.cambiarContrasena')} sub="Actualizar acceso" onClick={onChangePass}/>
-        <MenuItem icon={<Shield size={17} color="#0ea5e9"/>} label="Privacidad y seguridad" sub="Gestión de datos" onClick={onPrivacy}/>
-        <MenuItem icon={<HelpCircle size={17} color="#10b981"/>} label={t('auto.profileView.centroDeAyuda')} sub="Guías y soporte" onClick={onHelp}/>
-      </div>
-
-      {/* ── CALENDARIOS ── */}
-      <div className="pv-card bg-white dark:bg-[#0d1117] rounded-2xl border border-slate-100 dark:border-[#21262d] shadow-sm overflow-hidden">
-        <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--c-border)" }}>
-          <div className="w-1 h-4 bg-sky-500 rounded-full"/>
-          <p className="text-[10px] font-bold" style={{ color: "var(--c-text-muted)" }}>{t("perfil.calendariosVinculados")}</p>
-        </div>
-        <CalBtn label="Google Calendar" icon="📅" grad="linear-gradient(135deg,#4285f4,#1a73e8)" profile={profile} apiBase="google-calendar" paramKey="gcal"/>
-        <CalBtn label="Outlook Calendar" icon={<svg width="16" height="16" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>} grad="linear-gradient(135deg,#0078d4,#106ebe)" profile={profile} apiBase="microsoft-calendar" paramKey="mscal"/>
-      </div>
-
-      {/* ── WHATSAPP ── */}
-      <div className="pv-card">
-        <WhatsAppSection profile={profile} onUpdated={onPhoneUpdated || (()=>{})}/>
-      </div>
-
-      {/* ── CERRAR SESIÓN ── */}
-      <div className="pv-card rounded-2xl overflow-hidden" style={{ background: "var(--c-card)", border: "1px solid rgba(239,68,68,0.25)" }}>
-        <MenuItem icon={<LogOut size={17} color="#ef4444"/>} label={t('auto.profileView.cerrarSesion')} danger onClick={onLogout}/>
+      {/* Columna derecha: seguridad, calendarios y avisos */}
+      <div className="space-y-4">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}><TwoFactorCard /></motion.div>
+        <Seccion titulo={L('Linked calendars', 'Calendarios vinculados')} delay={0.12}>
+          <CalBtn label="Google Calendar" logo={<GoogleLogo />} profile={profile} apiBase="google-calendar" paramKey="gcal" />
+          <CalBtn label="Outlook Calendar" logo={<MicrosoftLogo />} profile={profile} apiBase="microsoft-calendar" paramKey="mscal" />
+        </Seccion>
+        <Seccion titulo={L('WhatsApp notifications', 'Notificaciones por WhatsApp')} delay={0.16}>
+          <WhatsAppSection profile={profile} onUpdated={onPhoneUpdated || (() => {})} />
+        </Seccion>
       </div>
     </div>
   )
