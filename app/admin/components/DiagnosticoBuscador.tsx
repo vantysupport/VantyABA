@@ -67,6 +67,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
   const [copied, setCopied]     = useState<string | null>(null)
   const [history, setHistory]   = useState<string[]>([])
   const [breadcrumb, setBreadcrumb] = useState<{ code: string; title: string }[]>([])
+  const [verTerminos, setVerTerminos] = useState(false)
   const inputRef  = useRef<HTMLInputElement>(null)
   const debounce  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const detailRef = useRef<HTMLDivElement>(null)
@@ -111,6 +112,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
   // Cargar detalle
   const loadDetail = async (r: { id?: string; code: string; title: string }, addBreadcrumb = true) => {
     setDL(true)
+    setVerTerminos(false)
     if (addBreadcrumb && selected) {
       setBreadcrumb(bc => [...bc, { code: selected.code, title: selected.title }])
     }
@@ -275,7 +277,7 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
             {selected.definition && (
               <div className="space-y-1.5">
                 <p className={seccion}><BookOpen size={12} /> {L('Definition', 'Definición')}</p>
-                <p className="text-sm leading-relaxed text-v-text/90">{selected.definition}</p>
+                <p className="max-w-3xl text-sm leading-relaxed text-v-text/90">{selected.definition}</p>
               </div>
             )}
 
@@ -297,29 +299,34 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
               <div className="space-y-2">
                 <p className={seccion}><Tag size={12} /> {L('Included terms / synonyms', 'Términos incluidos / sinónimos')}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {selected.indexTerms.map((term, i) => (
+                  {(verTerminos ? selected.indexTerms : selected.indexTerms.slice(0, 10)).map((term, i) => (
                     <span key={i} className="rounded-full bg-v-fill px-2.5 py-1 text-xs font-medium text-v-text/80">{term}</span>
                   ))}
+                  {selected.indexTerms.length > 10 && (
+                    <button onClick={() => setVerTerminos(v => !v)} className="rounded-full px-2.5 py-1 text-xs font-semibold text-v-accent hover:bg-v-accent-soft">
+                      {verTerminos ? L('Show less', 'Ver menos') : L(`+${selected.indexTerms.length - 10} more`, `+${selected.indexTerms.length - 10} más`)}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
 
             {(selected.inclusions.length > 0 || selected.exclusions.length > 0) && (
-              <div className="grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-x-8">
                 {selected.inclusions.length > 0 && (
-                  <div className="rounded-v-sm border border-v-border p-3.5">
-                    <p className={`${seccion} mb-2 !text-v-success`}><CheckCircle2 size={12} /> {L('Includes', 'Incluye')}</p>
-                    <ul className="space-y-1">
-                      {selected.inclusions.map((inc, i) => <li key={i} className="text-sm text-v-text/90">{inc}</li>)}
-                    </ul>
+                  <div className="min-w-0 space-y-1.5">
+                    <p className={`${seccion} !text-v-success`}><CheckCircle2 size={12} /> {L('Includes', 'Incluye')}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selected.inclusions.map((inc, i) => <span key={i} className="rounded-full bg-v-success/10 px-2.5 py-1 text-xs font-medium text-v-text">{inc}</span>)}
+                    </div>
                   </div>
                 )}
                 {selected.exclusions.length > 0 && (
-                  <div className="rounded-v-sm border border-v-border p-3.5">
-                    <p className={`${seccion} mb-2 !text-v-danger`}><XCircle size={12} /> {L('Excludes', 'Excluye')}</p>
-                    <ul className="space-y-1">
-                      {selected.exclusions.map((exc, i) => <li key={i} className="text-sm text-v-text/90">{exc}</li>)}
-                    </ul>
+                  <div className="min-w-0 space-y-1.5">
+                    <p className={`${seccion} !text-v-danger`}><XCircle size={12} /> {L('Excludes', 'Excluye')}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selected.exclusions.map((exc, i) => <span key={i} className="rounded-full bg-v-danger/10 px-2.5 py-1 text-xs font-medium text-v-text">{exc}</span>)}
+                    </div>
                   </div>
                 )}
               </div>
@@ -330,17 +337,24 @@ export default function DiagnosticoBuscador({ onAsignar, showAsignar = false }: 
                 <p className={seccion}><GitBranch size={12} /> {L('Related categories', 'Categorías relacionadas')}</p>
                 <div className="overflow-hidden rounded-v-sm border border-v-border">
                   {selected.parent && (
-                    <button onClick={() => loadDetail(selected.parent!)} className="flex w-full items-center gap-3 border-b border-v-border px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-v-fill">
-                      <ArrowUp size={14} className="shrink-0 text-v-subtle" />
-                      <span className="shrink-0 font-mono text-xs font-bold text-v-muted">{selected.parent.code}</span>
-                      <span className="min-w-0 flex-1 text-sm text-v-text">{selected.parent.title}</span>
+                    <button onClick={() => loadDetail(selected.parent!)}
+                      className="grid w-full grid-cols-[4.75rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-v-border bg-v-fill/50 px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-v-fill">
+                      <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-v-muted">
+                        <ArrowUp size={12} /> {esCodigo(selected.parent.code) ? selected.parent.code : ''}
+                      </span>
+                      <span className="text-sm text-v-text">
+                        <span className="mr-1.5 text-[11px] font-semibold uppercase tracking-wide text-v-subtle">{L('Parent', 'Superior')}</span>
+                        {selected.parent.title}
+                      </span>
+                      <ChevronRight size={14} className="text-v-subtle" />
                     </button>
                   )}
                   {selected.children.map((child, i) => (
-                    <button key={i} onClick={() => loadDetail(child)} className="group flex w-full items-center gap-3 border-b border-v-border px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-v-fill">
-                      <span className="w-14 shrink-0 font-mono text-xs font-bold text-v-accent">{child.code}</span>
-                      <span className="min-w-0 flex-1 text-sm text-v-text">{child.title || (L('View subcategory ', 'Ver subcategoría ') + child.code)}</span>
-                      <ChevronRight size={14} className="shrink-0 text-v-subtle transition-transform group-hover:translate-x-0.5" />
+                    <button key={i} onClick={() => loadDetail(child)}
+                      className="group grid w-full grid-cols-[4.75rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-v-border px-3.5 py-2.5 text-left transition-colors last:border-b-0 hover:bg-v-fill">
+                      <span className="font-mono text-xs font-bold text-v-accent">{esCodigo(child.code) ? child.code : '—'}</span>
+                      <span className="text-sm leading-snug text-v-text">{child.title || (L('View subcategory', 'Ver subcategoría'))}</span>
+                      <ChevronRight size={14} className="text-v-subtle transition-transform group-hover:translate-x-0.5" />
                     </button>
                   ))}
                 </div>
@@ -444,6 +458,10 @@ const CHAPTER_NAMES_EN: Record<string, string> = {
   '12':'Respiratory system', '13':'Digestive system',
   '14':'Skin', '15':'Musculoskeletal', '16':'Genitourinary',
   '22':'Injuries', '24':'Health factors',
+}
+
+function esCodigo(c: string | null | undefined): boolean {
+  return !!c && /^[0-9A-Z]{2,4}(\.[0-9A-Z]{1,3})?$/.test(c)
 }
 
 function chapterName(code: string, locale: string): string {

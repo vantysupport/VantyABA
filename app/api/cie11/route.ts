@@ -121,6 +121,33 @@ export async function GET(req: NextRequest) {
         const top = Math.max(0, ...ents.map(e => Number(e.score) || 0))
         return ents.filter(e => !top || (Number(e.score) || 0) >= top * 0.45)
       }
+      // Si lo escrito es un código CIE-11 (6A02, 6A02.Z…), resolverlo directo por código:
+      // la búsqueda de texto de la OMS no encuentra bien los códigos y devuelve cualquier cosa.
+      const codigo = q.trim().toUpperCase()
+      if (/^[0-9A-Z]{4}(\.[0-9A-Z]{1,3})?$/.test(codigo) && /\d/.test(codigo)) {
+        const ci = await fetch(`https://id.who.int/icd/release/11/2024-01/mms/codeinfo/${encodeURIComponent(codigo)}?flexiblemode=true`, { headers: WHO_HEADERS(token, lang), cache: 'no-store' })
+        if (ci.ok) {
+          const info = await ci.json()
+          const stem = String(info.stemId || '').replace('http://', 'https://')
+          if (stem) {
+            const er = await fetch(stem, { headers: WHO_HEADERS(token, lang), cache: 'no-store' })
+            const ent = er.ok ? await er.json() : null
+            const titulo = ent ? txt(ent.title, lang) : ''
+            // Sus subcategorías también, para ver la familia completa del código
+            const hijos = ent?.child ? await Promise.all((ent.child as string[]).slice(0, 12).map(async (u: string) => {
+              try {
+                const r = await fetch(u.replace('http://', 'https://'), { headers: WHO_HEADERS(token, lang), cache: 'no-store' })
+                if (!r.ok) return null
+                const c = await r.json()
+                return c.code ? { id: u.replace('http://', 'https://'), code: c.code, title: txt(c.title, lang), chapter: String(c.code).startsWith('6') ? '06' : '' } : null
+              } catch { return null }
+            })) : []
+            const principal = { id: stem, code: info.code || codigo, title: titulo, chapter: String(info.code || codigo).startsWith('6') ? '06' : '' }
+            return NextResponse.json({ results: [principal, ...hijos.filter(Boolean)], fallback: false })
+          }
+        }
+      }
+
       let ents = await buscar(false)
       if (ents.length < 3) ents = await buscar(true)
 
@@ -173,10 +200,16 @@ export async function GET(req: NextRequest) {
           const seg = url.split('/').pop() || ''
           const isSpecial = seg === 'other' || seg === 'unspecified'
           if (isSpecial) {
+            // En la CIE-11, "otro especificado" y "sin especificación" llevan el código del padre + .Y / .Z
+            const base = String(d.code || '')
+            const sufijo = seg === 'other' ? 'Y' : 'Z'
+            const titulo = txt(d.title, lang)
             return {
               id:    url.replace('http://', 'https://'),
-              code:  seg === 'other' ? (lang === 'en' ? 'Other specified' : 'Otro especificado') : (lang === 'en' ? 'Unspecified' : 'Sin especificación'),
-              title: seg === 'other' ? (lang === 'en' ? 'Other specified disorder' : 'Otro trastorno especificado') : (lang === 'en' ? 'Unspecified' : 'Sin especificación'),
+              code:  base && !base.includes('.') ? `${base}.${sufijo}` : '',
+              title: seg === 'other'
+                ? (lang === 'en' ? `Other specified ${titulo.toLowerCase()}` : `${titulo}, otro especificado`)
+                : (lang === 'en' ? `${titulo}, unspecified` : `${titulo}, sin especificación`),
             }
           }
           try {
