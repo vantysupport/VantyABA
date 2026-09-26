@@ -6,7 +6,7 @@ import { getCentroBranding } from '@/lib/centro-branding'
 import { internalApiHeaders } from '@/lib/calendar-integration'
 import { after } from 'next/server'
 import { sincronizarCalendarios } from '@/lib/calendar-sync'
-import { enviarCorreoCitaFamilia } from '@/lib/cita-correo'
+import { enviarCorreoCitaFamilia, avisarEspecialistaCita } from '@/lib/cita-correo'
 import { avisarCitaFamilia, avisarFamilia } from '@/lib/avisos'
 
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     if (error) throw error
 
     // Aviso en el portal y en el celular de cada familia
-    after(() => Promise.all((data || []).flatMap((apt: any) => [avisarCitaFamilia(apt, 'nueva'), enviarCorreoCitaFamilia(apt, 'nueva', getLocaleFromRequest(request) === 'en')])))
+    after(() => Promise.all((data || []).flatMap((apt: any) => [avisarCitaFamilia(apt, 'nueva'), enviarCorreoCitaFamilia(apt, 'nueva', getLocaleFromRequest(request) === 'en'), avisarEspecialistaCita(apt, 'nueva', caller.id)])))
 
     // Responder inmediatamente — las notificaciones corren en background
     return NextResponse.json({ data })
@@ -163,11 +163,11 @@ export async function PATCH(request: NextRequest) {
           : { pose: 'pensando' },
         metadata: { appointment_id: id },
       })
-      if (aprobada) after(() => enviarCorreoCitaFamilia(data, 'actualizada', getLocaleFromRequest(request) === 'en'))
+      if (aprobada) after(() => Promise.all([enviarCorreoCitaFamilia(data, 'actualizada', getLocaleFromRequest(request) === 'en'), avisarEspecialistaCita(data, 'actualizada', caller.id)]))
     } else if (status === 'cancelled') {
-      after(() => Promise.all([avisarCitaFamilia(data, 'cancelada'), enviarCorreoCitaFamilia(data, 'cancelada', getLocaleFromRequest(request) === 'en')]))
+      after(() => Promise.all([avisarCitaFamilia(data, 'cancelada'), enviarCorreoCitaFamilia(data, 'cancelada', getLocaleFromRequest(request) === 'en'), avisarEspecialistaCita(data, 'cancelada', caller.id)]))
     } else if (appointment_date !== undefined || appointment_time !== undefined) {
-      after(() => Promise.all([avisarCitaFamilia(data, 'actualizada'), enviarCorreoCitaFamilia(data, 'actualizada', getLocaleFromRequest(request) === 'en')]))
+      after(() => Promise.all([avisarCitaFamilia(data, 'actualizada'), enviarCorreoCitaFamilia(data, 'actualizada', getLocaleFromRequest(request) === 'en'), avisarEspecialistaCita(data, 'actualizada', caller.id)]))
     }
 
     // ── Calendarios externos (Google / Outlook): mover o borrar el evento según el cambio ──
@@ -195,13 +195,13 @@ export async function DELETE(request: NextRequest) {
     // 1. Leer la cita ANTES de borrarla — necesitamos los event IDs y el especialista
     const { data: apt } = await supabaseAdmin
       .from('appointments')
-      .select('id, google_calendar_event_id, microsoft_calendar_event_id, parent_google_calendar_event_id, parent_microsoft_calendar_event_id, created_by, child_id, appointment_date, appointment_time, service_type, status')
+      .select('id, google_calendar_event_id, microsoft_calendar_event_id, parent_google_calendar_event_id, parent_microsoft_calendar_event_id, created_by, child_id, appointment_date, appointment_time, service_type, status, specialist_id, centro_id, modalidad')
       .eq('id', id)
       .single()
 
     // Si era una cita futura y activa, la familia recibe el aviso de cancelación
     if (apt && apt.status !== 'completed' && apt.status !== 'cancelled' && String(apt.appointment_date) >= new Date().toISOString().slice(0, 10)) {
-      after(() => Promise.all([avisarCitaFamilia(apt, 'cancelada'), enviarCorreoCitaFamilia(apt, 'cancelada', getLocaleFromRequest(request) === 'en')]))
+      after(() => Promise.all([avisarCitaFamilia(apt, 'cancelada'), enviarCorreoCitaFamilia(apt, 'cancelada', getLocaleFromRequest(request) === 'en'), avisarEspecialistaCita(apt, 'cancelada', caller.id)]))
     }
 
     // 2. Quitar el evento de los calendarios conectados (centro y familia) antes de borrar la cita

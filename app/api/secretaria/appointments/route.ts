@@ -7,6 +7,8 @@ import { sendEmail, buildEmailCita, buildEmailAdmin } from '@/lib/email'
 import { getCentroBranding, type CentroBranding } from '@/lib/centro-branding'
 import { internalApiHeaders } from '@/lib/calendar-integration'
 import { sincronizarCalendarios } from '@/lib/calendar-sync'
+import { avisarEspecialistaCita } from '@/lib/cita-correo'
+import { enviarPush, panelDeRol } from '@/lib/push'
 import { getLocaleFromRequest } from '@/lib/lang'
 import { getApiCaller, hasRole, canAccessChild, rowInCentro, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { avisarCitaFamilia } from '@/lib/avisos'
@@ -99,6 +101,9 @@ async function crearNotifInApp(userId: string, payload: {
       mensaje: payload.mensaje, prioridad: payload.prioridad ?? 2,
       canal: 'in_app', leida: false, metadata: payload.metadata || {},
     })
+    // y al celular
+    const { data: perfil } = await supabaseAdmin.from('profiles').select('role').eq('id', userId).maybeSingle()
+    await enviarPush([userId], { title: payload.titulo, body: payload.mensaje, url: `${panelDeRol(perfil?.role)}?vista=agenda`, pose: 'corre', tag: `cita:${payload.metadata?.appointment_id ?? ''}` })
   } catch (e) { console.error('[notif] error insertando notificacion:', e) }
 }
 
@@ -218,6 +223,7 @@ export async function POST(req: NextRequest) {
 
     await Promise.all([
       notificarPadre(apt.child_id, 'nueva', apt, en),
+      avisarEspecialistaCita(apt, 'nueva', caller.id),
       notificarAdmins('created', apt, childName, secretaria_name || 'Secretaria', en),
       sincronizarCalendario(apt, childName), // ← agrega al Google/Outlook del admin y del padre
     ])
@@ -252,6 +258,7 @@ export async function PATCH(req: NextRequest) {
       // Calendarios conectados: borrar el evento si se canceló, moverlo si cambió el horario
       tipo === 'cancelada' ? sincronizarCalendarios(id, 'cancelar') : cambioHorario ? sincronizarCalendarios(id, 'actualizar') : null,
       notificarPadre(apt.child_id, tipo, apt, en),
+      tipo === 'cancelada' || cambioHorario ? avisarEspecialistaCita(apt, tipo, caller.id) : null,
       notificarAdmins(accion || 'updated', apt, childName, secretaria_name || 'Secretaria', en),
     ])
 
@@ -282,6 +289,7 @@ export async function DELETE(req: NextRequest) {
       const childName = (apt as any).children?.name || 'Paciente'
       await Promise.all([
         notificarPadre(apt.child_id, 'cancelada', apt, en),
+        avisarEspecialistaCita(apt, 'cancelada', caller.id),
         notificarAdmins('cancelled', apt, childName, secretaria_name || 'Secretaria', en),
       ])
     }
