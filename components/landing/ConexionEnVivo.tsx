@@ -9,16 +9,26 @@ import { Building2, Users } from 'lucide-react'
 
 const ease = [0.22, 1, 0.36, 1] as const
 
-// Haz de luz que sale de ARIA hacia un lado
+// Ritmo compartido: cada PULSO segundos ARIA emite un anillo y un destello hacia cada lado
+const PULSO = 1.2
+
+// Haz de luz que sale de ARIA hacia un lado. Los extremos se desvanecen con una máscara (sin cortes
+// bruscos) y el destello nace y muere con opacidad, sincronizado con los anillos.
 function Haz({ hacia }: { hacia: 'izq' | 'der' }) {
   const quieto = useReducedMotion()
+  // Posiciones en % del ancho del destello (la pista mide 2.5 veces el destello); la izquierda es el espejo
+  const ida = [-100, -28, 170, 260]
+  const desdeAria = (hacia === 'der' ? ida : ida.map(v => 150 - v)).map(v => `${v}%`)
+  const mascara = 'linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent)'
   return (
-    <div className="relative h-[3px] w-full overflow-hidden rounded-full bg-v-accent-soft">
+    <div className="relative h-[3px] w-full" style={{ maskImage: mascara, WebkitMaskImage: mascara }}>
+      <span className="absolute inset-0 rounded-full bg-v-accent-soft" />
       {!quieto && (
-        <motion.span className="absolute inset-y-0 w-10 rounded-full"
-          style={{ background: 'linear-gradient(90deg, transparent, #01abfc, #0063d8, transparent)', boxShadow: '0 0 14px 2px rgba(1,171,252,0.6)' }}
-          animate={{ left: hacia === 'der' ? ['-30%', '110%'] : ['110%', '-30%'] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.3 }} />
+        <motion.span className="absolute inset-y-0 left-0 w-[40%] rounded-full"
+          style={{ background: 'linear-gradient(90deg, transparent, #01abfc, #0063d8, transparent)', boxShadow: '0 0 10px 1px rgba(1,171,252,0.55)', willChange: 'transform, opacity' }}
+          initial={{ x: desdeAria[0], opacity: 0 }}
+          animate={{ x: desdeAria, opacity: [0, 1, 1, 0] }}
+          transition={{ duration: PULSO, repeat: Infinity, ease: 'easeOut', times: [0, 0.2, 0.75, 1] }} />
       )}
     </div>
   )
@@ -123,7 +133,7 @@ export function ConexionEnVivo({ en }: { en: boolean }) {
                 style={{ willChange: 'transform, opacity' }}
                 initial={{ scale: 1, opacity: 0 }}
                 animate={{ scale: [1, 1.07, 1.35], opacity: [0, 0.55, 0] }}
-                transition={{ duration: 2.4, repeat: Infinity, delay: k * 1.2, ease: 'easeOut', times: [0, 0.2, 1] }} />
+                transition={{ duration: PULSO * 2, repeat: Infinity, delay: k * PULSO, ease: 'easeOut', times: [0, 0.2, 1] }} />
             ))}
 
             {/* Sombra en el piso: se achica cuando ARIA sube (más barata que un drop-shadow animado) */}
