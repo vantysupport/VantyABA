@@ -238,7 +238,7 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
         {/* ── Confían en nosotros: banda de logos en movimiento ── */}
         <section className="pb-2 pt-16 sm:pt-20">
           <Aparece className="px-4 text-center">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{L('Institutions and centers that ', 'Instituciones y centros que ')}<span className="v-brand-text">{L('trust us', 'confían en nosotros')}</span></h2>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{L('Backed and ', 'Con el respaldo y ')}<span className="v-brand-text">{L('validated by:', 'validación de:')}</span></h2>
           </Aparece>
           <div className="relative mt-10 overflow-hidden" style={{ maskImage: 'linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)' }}>
             <motion.div className="flex w-max items-center" animate={{ x: ['0%', '-50%'] }} transition={{ duration: 28, ease: 'linear', repeat: Infinity }}>
