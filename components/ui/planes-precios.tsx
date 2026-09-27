@@ -3,7 +3,7 @@
 // visitante (p. ej. soles en Perú) y debajo, como referencia, el monto que se cobra (USD / EUR).
 // Si el servidor no pudo detectar el país (p. ej. en local), se deduce de la zona horaria del navegador.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { Check, Minus, Sparkles } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
@@ -96,6 +96,27 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
   const conLocal = monedaLocal !== moneda
   const lc = en ? 'en' : 'es'
 
+  // Carrusel en celular: qué tarjeta está a la vista (para los puntos)
+  const carrusel = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(0)
+  const alDeslizar = () => {
+    const el = carrusel.current
+    if (!el) return
+    const hijos = Array.from(el.children) as HTMLElement[]
+    const centro = el.scrollLeft + el.clientWidth / 2
+    let mejor = 0, dist = Infinity
+    hijos.forEach((h, i) => { const d = Math.abs(h.offsetLeft + h.offsetWidth / 2 - centro); if (d < dist) { dist = d; mejor = i } })
+    setVisible(mejor)
+  }
+  // En celular empieza mostrando el plan destacado
+  useEffect(() => {
+    const el = carrusel.current
+    const i = planes.findIndex(p => p.code === DESTACADO)
+    if (!el || i < 0 || window.innerWidth >= 768) return
+    const h = el.children[i] as HTMLElement | undefined
+    if (h) { el.scrollLeft = h.offsetLeft - (el.clientWidth - h.offsetWidth) / 2; setVisible(i) }
+  }, [planes])
+
   return (
     <div className="v-scope">
       {/* Controles */}
@@ -112,8 +133,10 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
         <span className="rounded-full bg-v-success/15 px-3 py-1 text-xs font-semibold text-v-success">{L('Yearly: 2 months free', 'Anual: 2 meses gratis')}</span>
       </div>
 
-      {/* Planes */}
-      <div className="mt-10 grid gap-5 md:grid-cols-[repeat(3,minmax(0,1fr))] md:items-stretch">
+      {/* Planes: en celular, carrusel horizontal (una tarjeta por pantalla); en escritorio, 3 columnas */}
+      <div ref={carrusel} onScroll={alDeslizar}
+        className="-mx-4 mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 pt-2 md:mx-0 md:mt-10 md:grid md:snap-none md:grid-cols-[repeat(3,minmax(0,1fr))] md:items-stretch md:gap-5 md:overflow-visible md:px-0 md:pb-0"
+        style={{ scrollbarWidth: 'none' }}>
         {planes.map((p, i) => {
           const mensual = precioMensual(p.precio_region, region)
           const total = mensual != null ? precioCiclo(mensual, ciclo) : null
@@ -127,7 +150,7 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
           return (
             <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}
               whileHover={{ y: -4 }}
-              className={`relative flex flex-col overflow-hidden rounded-[28px] p-6 sm:p-7 ${destacado ? 'v-brand shadow-[0_30px_70px_-25px_rgba(0,99,216,0.7)] md:-my-4 md:py-10' : 'border border-v-border bg-v-elevated shadow-v'}`}>
+              className={`relative flex w-[84%] shrink-0 snap-center flex-col overflow-hidden rounded-[24px] p-5 sm:p-7 md:w-auto md:rounded-[28px] ${destacado ? 'v-brand shadow-[0_30px_70px_-25px_rgba(0,99,216,0.7)] md:-my-4 md:py-10' : 'border border-v-border bg-v-elevated shadow-v'}`}>
               {destacado && <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-white/15 blur-2xl" />}
               <div className="relative flex items-center justify-between gap-2">
                 <h3 className={`text-xl font-semibold ${tx}`}>{en ? p.name_en : p.name_es}</h3>
@@ -139,12 +162,12 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
                   : L('For clinics that need everything.', 'Para clínicas que lo necesitan todo.')}
               </p>
 
-              <div className="relative mt-6 min-h-[104px]">
+              <div className="relative mt-4 sm:mt-6 sm:min-h-[104px]">
                 {principal != null ? (
                   <>
                     <p className="flex items-end gap-2">
                       <motion.span key={`${ciclo}-${principal}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                        className={`v-headline text-5xl leading-none tabular-nums ${tx}`}>{formatoMoneda(principal, monedaPrincipal, lc)}</motion.span>
+                        className={`v-headline text-4xl leading-none tabular-nums sm:text-5xl ${tx}`}>{formatoMoneda(principal, monedaPrincipal, lc)}</motion.span>
                       <span className={`pb-1 text-sm ${txSuave}`}>/ {L('month', 'mes')}</span>
                     </p>
                     <p className={`mt-2 text-xs ${txSuave}`}>
@@ -160,13 +183,13 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
               </div>
 
               <button type="button" onClick={() => onElegir(p, ciclo)}
-                className={`relative mt-5 h-12 w-full rounded-full text-sm font-semibold transition-transform active:scale-[0.98] ${destacado ? 'bg-white text-[#0063d8] shadow-v-lg hover:bg-white/95' : 'border border-v-border text-v-text hover:bg-v-fill'}`}>
+                className={`relative mt-4 h-11 w-full rounded-full sm:mt-5 sm:h-12 text-sm font-semibold transition-transform active:scale-[0.98] ${destacado ? 'bg-white text-[#0063d8] shadow-v-lg hover:bg-white/95' : 'border border-v-border text-v-text hover:bg-v-fill'}`}>
                 {L('Start free trial', 'Empezar prueba gratis')}
               </button>
 
-              <ul className={`relative mt-6 space-y-2.5 border-t pt-5 text-sm ${destacado ? 'border-white/20' : 'border-v-border'}`}>
+              <ul className={`relative mt-4 space-y-2 border-t pt-4 text-[13px] sm:mt-6 sm:space-y-2.5 sm:pt-5 sm:text-sm ${destacado ? 'border-white/20' : 'border-v-border'}`}>
                 {caracteristicas(p, en).map(f => (
-                  <li key={f.txt} className={`flex items-start gap-2.5 ${f.ok ? tx : destacado ? 'text-white/45' : 'text-v-subtle'}`}>
+                  <li key={f.txt} className={`items-start gap-2.5 ${f.ok ? 'flex' : 'hidden sm:flex'} ${f.ok ? tx : destacado ? 'text-white/45' : 'text-v-subtle'}`}>
                     {f.ok
                       ? <span className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full ${destacado ? 'bg-white/25' : 'bg-v-accent-soft text-v-accent'}`}><Check size={11} strokeWidth={3} /></span>
                       : <Minus size={16} className="mt-0.5 shrink-0" />}
@@ -179,7 +202,16 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
         })}
       </div>
 
-      <p className="mx-auto mt-8 max-w-2xl text-center text-[11px] text-v-subtle">
+      {/* Puntos del carrusel (solo celular) */}
+      <div className="mt-3 flex justify-center gap-1.5 md:hidden">
+        {planes.map((p, i) => (
+          <button key={p.id} type="button" aria-label={en ? p.name_en : p.name_es}
+            onClick={() => carrusel.current?.children[i]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })}
+            className={`h-1.5 rounded-full transition-all ${i === visible ? 'w-6 bg-v-accent' : 'w-1.5 bg-v-border'}`} />
+        ))}
+      </div>
+
+      <p className="mx-auto mt-6 max-w-2xl text-center text-[11px] text-v-subtle md:mt-8">
         {conLocal
           ? L(`Charged in ${moneda}; ${monedaLocal} amounts are approximate, based on the day's exchange rate.`,
               `Se cobra en ${moneda}; los montos en ${monedaLocal} son referenciales según el tipo de cambio del día.`)
