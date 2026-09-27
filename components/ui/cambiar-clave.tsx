@@ -92,7 +92,7 @@ export function CambiarClaveHost() {
     <AnimatePresence>
       {pedido && (
         <motion.div key="clave" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="v-scope fixed inset-0 z-[80] grid place-items-center bg-black/40 p-4 backdrop-blur-sm" onClick={cancelar}>
+          className="v-scope fixed inset-0 z-[500] grid place-items-center bg-black/40 p-4 backdrop-blur-sm" onClick={cancelar}>
           <motion.div role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}
             initial={{ opacity: 0, y: 14, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.97 }}
             className="relative w-full max-w-sm rounded-v border border-v-border bg-v-elevated p-6 shadow-v-lg">

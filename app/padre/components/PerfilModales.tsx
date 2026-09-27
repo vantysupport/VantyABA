@@ -159,7 +159,7 @@ export function CambiarPassModal({ onClose }: { onClose: () => void }) {
           <input type={ver ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" placeholder={L('Repeat the password', 'Repite la contraseña')} className={inputClass} />
         </Campo>
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-v-sm bg-v-fill/60 px-3 py-2.5">
-          <Req ok={largoOk} t={L('6+ characters', '6+ caracteres')} />
+          <Req ok={largoOk} t={L('8+ characters', '8+ caracteres')} />
           <Req ok={coincide} t={L('Both match', 'Ambas coinciden')} />
         </div>
         <button type="submit" hidden />

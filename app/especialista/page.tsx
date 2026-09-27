@@ -389,7 +389,7 @@ export default function EspecialistaDashboard() {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className={`font-bold ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{t('especialista.cambiarPass')}</h3>
-                <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t('auto.page.minimo6Caracteres')}</p>
+                <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{locale === 'en' ? 'Minimum 8 characters' : 'Mínimo 8 caracteres'}</p>
               </div>
               <button onClick={() => setShowChangePassword(false)}
                 className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors
