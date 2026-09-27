@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import { ToastProvider } from '@/components/Toast'
 import { ThemeProvider } from '@/components/ThemeContext'
 import { CurrencyProvider } from '@/components/CurrencyContext'
@@ -22,17 +22,30 @@ import { SITIO, localeServidor } from '@/lib/seo'
 //  • TÍTULOS / NEGRITAS → Poppins (var --font-display): geométrica y con
 //    presencia; el bold marca elegancia y jerarquía premium.
 // La diferencia clara entre ambas (display bold vs body normal) da el look premium.
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+// Fuentes servidas desde el propio sitio (app/fonts, subconjunto latin de Google Fonts) para que la
+// compilación no dependa de fonts.googleapis.com: sus URLs "/l/font?kit=…&skey=…" rompen
+// next/font/google en Turbopack ("next/font/google queries have exactly one entry").
+const jakarta = localFont({
+  src: [
+    { path: "./fonts/jakarta-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/jakarta-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/jakarta-600.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/jakarta-700.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-sans",
   display: "swap",
+  fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
 });
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
+const poppins = localFont({
+  src: [
+    { path: "./fonts/poppins-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/poppins-600.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/poppins-700.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/poppins-800.woff2", weight: "800", style: "normal" },
+  ],
   variable: "--font-display",
   display: "swap",
+  fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
 });
 
 export const viewport: Viewport = {
