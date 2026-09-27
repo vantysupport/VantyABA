@@ -27,6 +27,14 @@ export function usePushNotifications(userId: string | null): UsePushNotification
       navigator.serviceWorker.ready.then(reg => {
         reg.pushManager.getSubscription().then(sub => {
           setIsSubscribed(!!sub)
+          // Re-registra en el servidor este dispositivo (idempotente): recupera celulares que dieron permiso
+          // pero cuya suscripción no se guardó, y mantiene al día las que el navegador renueva.
+          if (sub) {
+            fetch('/api/push/subscribe', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, subscription: sub.toJSON() }),
+            }).catch(() => {})
+          }
         })
       })
     }
@@ -55,12 +63,16 @@ export function usePushNotifications(userId: string | null): UsePushNotification
         applicationServerKey: raw,
       })
 
-      // Save subscription to our backend
-      await fetch('/api/push/subscribe', {
+      // Guardar en el servidor; si falla, no se da por activado
+      const res = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, subscription: subscription.toJSON() }),
       })
+      if (!res.ok) {
+        console.error('Push subscribe save failed:', res.status)
+        return false
+      }
 
       setIsSubscribed(true)
       return true
