@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { AUDIENCIAS, POSES, destinatarios, enviarCampana } from '@/lib/campanas'
 import { acreditarCompra } from '@/lib/cobros-plataforma'
 import { fasePago } from '@/lib/estado-centro'
 import { tasasCambio } from '@/lib/precios-server'
@@ -132,6 +133,45 @@ export async function POST(req: NextRequest) {
     logAuditEvent({ action: 'update', resource_type: 'config', userId: auth.userId, userEmail: auth.email, userRole: 'programador', description, metadata, req })
 
   switch (action) {
+    // ── Notificaciones manuales (push + campana) ─────────────────────────────
+    case 'campanas_list': {
+      const [{ data: campanas }, { data: centros }] = await Promise.all([
+        supabaseAdmin.from('campanas_notificacion').select('*, centros(name)').order('created_at', { ascending: false }).limit(50),
+        supabaseAdmin.from('centros').select('id, name').order('name'),
+      ])
+      return NextResponse.json({ campanas: campanas ?? [], centros: centros ?? [] })
+    }
+    case 'campana_alcance': {
+      const audiencia = Array.isArray(body.audiencia) ? (body.audiencia as unknown[]).filter((a): a is string => typeof a === 'string') : []
+      const centroId = typeof body.centro_id === 'string' && body.centro_id ? body.centro_id : null
+      const personas = await destinatarios(audiencia, centroId)
+      const conPush = personas.length
+        ? (await supabaseAdmin.from('push_subscriptions').select('user_id').in('user_id', personas.slice(0, 5000).map(p => p.id))).data?.length ?? 0
+        : 0
+      return NextResponse.json({ total: personas.length, conPush })
+    }
+    case 'campana_crear': {
+      const titulo = str(body.titulo, 80)
+      const cuerpo = str(body.cuerpo, 240)
+      const pose = POSES.includes(body.pose as never) ? String(body.pose) : 'saludo'
+      const audiencia = Array.isArray(body.audiencia) ? (body.audiencia as unknown[]).filter((a): a is string => typeof a === 'string' && a in AUDIENCIAS) : []
+      const centroId = typeof body.centro_id === 'string' && body.centro_id ? body.centro_id : null
+      const cuando = typeof body.programada_para === 'string' && !isNaN(Date.parse(body.programada_para)) ? new Date(body.programada_para) : new Date()
+      if (!titulo || !cuerpo || !audiencia.length) return NextResponse.json({ error: 'datos_incompletos' }, { status: 400 })
+      const { data: c, error } = await supabaseAdmin.from('campanas_notificacion').insert({
+        titulo, cuerpo, pose, audiencia, centro_id: centroId, programada_para: cuando.toISOString(), creada_por: auth.userId,
+      }).select('id').single()
+      if (error || !c) return NextResponse.json({ error: 'no_guardada' }, { status: 500 })
+      await audit(`Notificación "${titulo}" para ${audiencia.join(', ')}`, { campana_id: c.id })
+      // Si la hora ya llegó (o es "ahora"), se envía de inmediato
+      const resultado = cuando.getTime() <= Date.now() + 30_000 ? await enviarCampana(c.id) : null
+      return NextResponse.json({ ok: true, id: c.id, enviada: !!resultado, ...(resultado ?? {}) })
+    }
+    case 'campana_cancelar': {
+      const id = typeof body.id === 'string' ? body.id : ''
+      await supabaseAdmin.from('campanas_notificacion').update({ estado: 'cancelada' }).eq('id', id).eq('estado', 'programada')
+      return NextResponse.json({ ok: true })
+    }
     case 'overview': {
       const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0)
       const [{ data: centros }, { count: patients }, { count: users }, { count: openAlerts }, { count: comprasPendientes }, { data: extrasMes }] = await Promise.all([

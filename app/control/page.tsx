@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
-import { LayoutGrid, Building2, Tags, ShieldCheck, SlidersHorizontal, Bug, LogOut, Lock, KeyRound } from 'lucide-react'
+import { LayoutGrid, Building2, Tags, ShieldCheck, SlidersHorizontal, Bug, LogOut, Lock, KeyRound, BellRing } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { VantyLogo } from '@/components/ui/vanty-logo'
@@ -14,11 +14,13 @@ import { PlanesSection } from './sections/planes'
 import { SeguridadSection } from './sections/seguridad'
 import { PlataformaSection } from './sections/plataforma'
 import { ErroresSection } from './sections/errores'
+import { NotificacionesSection } from './sections/notificaciones'
 
 const TABS = [
   { id: 'overview', icon: LayoutGrid },
   { id: 'centros', icon: Building2 },
   { id: 'plans', icon: Tags },
+  { id: 'notifs', icon: BellRing },
   { id: 'security', icon: ShieldCheck },
   { id: 'platform', icon: SlidersHorizontal },
   { id: 'errors', icon: Bug },
@@ -123,6 +125,7 @@ export default function ControlPage() {
           {tab === 'overview' && <OverviewSection onOpenSecurity={() => setTab('security')} onOpenCentros={() => setTab('centros')} onError={handleError} />}
           {tab === 'centros' && <CentrosSection onError={handleError} />}
           {tab === 'plans' && <PlanesSection onError={handleError} />}
+          {tab === 'notifs' && <NotificacionesSection onError={handleError} />}
           {tab === 'security' && <SeguridadSection onError={handleError} />}
           {tab === 'platform' && <PlataformaSection onError={handleError} />}
           {tab === 'errors' && <ErroresSection onError={handleError} />}

@@ -54,6 +54,7 @@ const PUBLIC_API_PATHS = [
   '/api/invitaciones/aceptar',   // la cuenta aún no tiene centro: la ruta valida el token de sesión y la invitación
   '/api/cobros/lemon/webhook',   // la pasarela no tiene sesión: la ruta valida la firma HMAC
   '/api/cron/avisos',            // tarea programada sin sesión: la ruta exige CRON_SECRET
+  '/api/cron/campanas',          // notificaciones programadas desde /control: exige CRON_SECRET
 ]
 
 // Rutas por rol → si user.role === X, puede acceder a estas raíces
