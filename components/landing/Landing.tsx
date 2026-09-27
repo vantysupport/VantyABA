@@ -90,12 +90,12 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
   ]
 
   const funciones = [
-    { img: '/landing/agenda.webp', Icon: CalendarCheck, corto: L('Schedule', 'Agenda'),
+    { img: '/landing/agenda-3.webp', pos: '50% 58%', Icon: CalendarCheck, corto: L('Schedule', 'Agenda'),
       t: L('A schedule that organizes itself', 'Una agenda que se organiza sola'),
       d: L('Individual or group sessions, in person or online with an automatic video link, recurring appointments and an online booking link for families. Syncs with Google Calendar and Outlook.',
            'Sesiones individuales o grupales, presenciales o virtuales con link de videollamada automático, citas recurrentes y un enlace de reservas online para las familias. Se sincroniza con Google Calendar y Outlook.'),
       puntos: [L('Online bookings 24/7', 'Reservas online 24/7'), L('Automatic reminders', 'Recordatorios automáticos'), L('Built-in video calls', 'Videollamadas integradas')] },
-    { img: '/landing/evaluaciones.webp', Icon: ClipboardCheck, corto: L('ABA programs', 'Programas ABA'),
+    { img: '/landing/evaluaciones-3.webp', pos: '50% 64%', Icon: ClipboardCheck, corto: L('ABA programs', 'Programas ABA'),
       t: L('ABA programs and evaluations in one place', 'Programas ABA y evaluaciones en un solo lugar'),
       d: L('Record session data, track goals and mastery criteria, and run evaluations with ready-made templates. The initial evaluation is shared: whoever fills it first, family or team, leaves it on record for everyone.',
            'Registra datos de cada sesión, sigue objetivos y criterios de dominio, y aplica evaluaciones con plantillas listas. La evaluación inicial es compartida: quien la llene primero, familia o equipo, la deja como constancia para todos.'),
