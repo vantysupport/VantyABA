@@ -155,7 +155,7 @@ function CentroCreado({ email, dias }: { email: string; dias: number }) {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 220, damping: 24 }}>
       <div className="relative mx-auto grid size-20 place-items-center">
         <motion.span className="absolute inset-0 rounded-full bg-v-accent-soft" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: [0.6, 1.15, 1], opacity: 1 }} transition={{ duration: 0.7 }} />
-        <motion.span className="absolute inset-0 rounded-full ring-2 ring-v-accent/30" animate={{ scale: [1, 1.35], opacity: [0.6, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }} />
+        <motion.span className="absolute inset-0 rounded-full ring-2 ring-v-accent/30" initial={{ scale: 1, opacity: 0 }} animate={{ scale: [1, 1.07, 1.35], opacity: [0, 0.55, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', times: [0, 0.2, 1] }} />
         <span className="v-brand relative grid size-14 place-items-center rounded-full"><MailCheck className="size-7" strokeWidth={1.75} /></span>
       </div>
 
