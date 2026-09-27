@@ -7,7 +7,8 @@ import Image from 'next/image'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Check, type LucideIcon } from 'lucide-react'
 
-export type Funcion = { img: string; Icon: LucideIcon; t: string; corto: string; d: string; puntos: string[] }
+// pos: encuadre (object-position) para fotos verticales, que se recortan en el recuadro horizontal
+export type Funcion = { img: string; pos?: string; Icon: LucideIcon; t: string; corto: string; d: string; puntos: string[] }
 
 const DURACION = 6500
 
@@ -91,7 +92,7 @@ export function FuncionesShowcase({ funciones }: { funciones: Funcion[] }) {
             <motion.div key={f.img} className="absolute inset-0"
               initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }}
               transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}>
-              <Image src={f.img} alt={f.t} fill quality={90} sizes="(min-width: 1024px) 60vw, 100vw" className="object-cover" />
+              <Image src={f.img} alt={f.t} fill quality={90} sizes="(min-width: 1024px) 60vw, 100vw" className="object-cover" style={f.pos ? { objectPosition: f.pos } : undefined} />
             </motion.div>
           </AnimatePresence>
           <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-transparent" />
