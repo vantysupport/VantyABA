@@ -122,7 +122,8 @@ export function ConexionEnVivo({ en }: { en: boolean }) {
               <motion.span key={k} aria-hidden className="absolute inset-0 rounded-full border-2 border-v-accent/30"
                 style={{ willChange: 'transform, opacity' }}
                 initial={{ scale: 1, opacity: 0 }}
-                animate={{ scale: [1, 1.35], opacity: [0.6, 0] }} transition={{ duration: 2.4, repeat: Infinity, delay: k * 1.2, ease: 'easeOut' }} />
+                animate={{ scale: [1, 1.07, 1.35], opacity: [0, 0.55, 0] }}
+                transition={{ duration: 2.4, repeat: Infinity, delay: k * 1.2, ease: 'easeOut', times: [0, 0.2, 1] }} />
             ))}
 
             {/* Sombra en el piso: se achica cuando ARIA sube (más barata que un drop-shadow animado) */}
