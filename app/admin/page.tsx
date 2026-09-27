@@ -497,7 +497,7 @@ export default function AdminDashboard() {
 
       {/* SIDEBAR */}
       <aside className={`
-        v-scope fixed md:static z-40 h-full w-[232px] flex flex-col sidebar-transition
+        v-scope fixed md:static z-50 h-full w-[232px] flex flex-col sidebar-transition
         border-r border-v-border bg-v-elevated/90 backdrop-blur-xl transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0 shadow-v-lg' : '-translate-x-full md:translate-x-0'}
         ${focusMode ? 'md:-translate-x-full md:w-0 md:overflow-hidden md:border-0' : ''}

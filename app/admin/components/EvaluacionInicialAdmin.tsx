@@ -67,12 +67,12 @@ function EditorFicha({ modo, evaluacion, childId, childName, onClose, onGuardado
   const titulo = modo.tipo === 'intake' ? L('Initial form', 'Ficha inicial')
     : evaluacion?.recomendacion === 'neuropsicologica' ? L('Neuropsychological form', 'Ficha neuropsicológica') : L('Psychological-emotional form', 'Ficha psicológica emocional')
   return (
-    <motion.div className="v-scope fixed inset-0 z-[150] overflow-y-auto bg-v-bg" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.div className="v-scope fixed inset-0 z-[150] overflow-y-auto bg-v-bg text-left" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-v-border bg-v-elevated/90 px-4 py-3 backdrop-blur-xl sm:px-6">
         <span className="grid size-9 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Edit3 size={16} /></span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-v-text">{modo.accion === 'editar' ? L('Editing', 'Editando') : L('Filling in', 'Llenando')} · {titulo}</p>
-          <p className="truncate text-xs text-v-muted">{childName} · {L('Changes are recorded with your name', 'Los cambios quedan registrados con tu nombre')}</p>
+          <p className="text-sm font-semibold text-v-text" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{modo.accion === 'editar' ? L('Editing', 'Editando') : L('Filling in', 'Llenando')} · {titulo}</p>
+          <p className="text-xs text-v-muted" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{childName} · {L('Changes are recorded with your name', 'Los cambios quedan registrados con tu nombre')}</p>
         </div>
         <button onClick={onClose} aria-label={L('Close', 'Cerrar')} className="grid size-9 place-items-center rounded-full text-v-muted hover:bg-v-fill"><X size={17} /></button>
       </div>

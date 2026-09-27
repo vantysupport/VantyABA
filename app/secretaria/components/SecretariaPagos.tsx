@@ -658,9 +658,10 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
       {/* ── HEADER ────────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
-        <span className="v-brand grid size-11 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><Wallet size={20} /></span>
+        <span className="v-brand hidden size-11 shrink-0 place-items-center rounded-[30%] sm:grid" style={{ boxShadow: 'none' }}><Wallet size={20} /></span>
         <div className="min-w-0 flex-[1_1_220px]">
-          <h2 className="v-headline text-xl text-v-text">{t('nav.pagosFacturacion')}</h2>
+          {/* En celular el título ya está en la barra superior */}
+          <h2 className="v-headline hidden text-xl text-v-text sm:block">{t('nav.pagosFacturacion')}</h2>
           <p className="flex flex-wrap items-center gap-2 text-xs text-v-subtle">
             {t('pagos.subtitulo')}
             <span className="inline-flex items-center gap-1.5 rounded-full bg-v-success/15 px-2 py-0.5 text-[11px] font-semibold text-v-success">
@@ -688,12 +689,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       </div>
 
       {/* ── TABS ──────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-1 rounded-v bg-v-fill p-1 sm:flex sm:rounded-full">
+      <div className="flex gap-1 overflow-x-auto rounded-full bg-v-fill p-1" style={{ scrollbarWidth: 'none' }}>
         {pagosTabs.map(tb => {
           const on = activeTab === tb.id
           return (
             <button key={tb.id} onClick={() => setTab(tb.id as any)}
-              className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors sm:text-sm ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
+              className={`relative flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-semibold transition-colors sm:flex-1 sm:text-sm ${on ? 'text-v-accent' : 'text-v-muted hover:text-v-text'}`}>
               {on && <motion.span layoutId="pagos-tab" className="absolute inset-0 rounded-full bg-v-elevated shadow-v" transition={{ type: 'spring', stiffness: 400, damping: 32 }} />}
               <tb.Icon size={15} className="relative" /><span className="relative">{tb.label}</span>
               {tb.id === 'deudas' && deudas.length > 0 && <span className="relative grid min-w-5 place-items-center rounded-full bg-v-warning px-1.5 text-[10px] font-bold tabular-nums text-white">{deudas.length}</span>}
@@ -1192,14 +1193,15 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     className="flex min-w-0 flex-1 items-center gap-3 text-left">
                     <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-sm font-semibold text-v-accent">{g.child.charAt(0).toUpperCase()}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-v-text">{g.child}</span>
+                      <span className="block text-sm font-semibold text-v-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.child}</span>
+                      <span className="block text-sm font-bold tabular-nums text-v-text sm:hidden">{fmt(g.total)}</span>
                       <span className="flex flex-wrap items-center gap-1.5 text-xs text-v-subtle">
                         {g.isPackage && <span className="inline-flex items-center gap-1 rounded-full bg-v-accent-soft px-2 py-0.5 text-[11px] font-semibold text-v-accent"><Package size={11} /> {t('admin.paquete')}</span>}
                         {g.monthLabel} · {t('pagos.sesionesCount', { n: String(g.pays.length) })}
                       </span>
                     </span>
                   </button>
-                  <span className="shrink-0 text-base font-bold tabular-nums text-v-text sm:text-lg">{fmt(g.total)}</span>
+                  <span className="hidden shrink-0 text-lg font-bold tabular-nums text-v-text sm:block">{fmt(g.total)}</span>
                   <button onClick={() => window.open(`/api/pagos/recibo-paquete?ids=${g.pays.map((x: any) => x.id).join(',')}&lang=${locale}`, '_blank')} title={t('admin.reciboPaquete')}
                     className="grid size-8 shrink-0 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
                   <button onClick={() => setConfirmar(conf ? null : { tipo: 'paquete', id: g.key })} title={t('admin.eliminarPaquete')}

@@ -680,9 +680,9 @@ function AccordionSection({ title, icon, badge, defaultOpen, children }: {
   return (
     <div className={`overflow-hidden rounded-v border bg-v-elevated shadow-v transition-colors ${open ? 'border-v-accent/25' : 'border-v-border'}`}>
       <button onClick={() => setOpen(o => !o)} className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-v-fill">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent">{icon}</span>
-          <span className="text-[15px] font-semibold tracking-tight text-v-text">{title}</span>
+          <span className="min-w-0 text-[15px] font-semibold leading-snug tracking-tight text-v-text">{title}</span>
           {badge}
         </div>
         <span className={`grid size-8 shrink-0 place-items-center rounded-full transition-all ${open ? 'rotate-180 bg-v-accent-soft text-v-accent' : 'text-v-subtle'}`}><ChevronDown size={16} /></span>

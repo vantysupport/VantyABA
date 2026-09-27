@@ -247,7 +247,7 @@ export default function EspecialistaDashboard() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSidebarOpen(false)} />
         )}
       </AnimatePresence>
-      <aside className={`v-scope fixed z-40 flex h-full w-[256px] shrink-0 flex-col border-r border-v-border bg-v-elevated shadow-v-lg transition-transform duration-300 lg:static lg:shadow-none
+      <aside className={`v-scope fixed z-50 flex h-full w-[256px] shrink-0 flex-col border-r border-v-border bg-v-elevated shadow-v-lg transition-transform duration-300 lg:static lg:shadow-none
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         {/* Centro */}
         <div className="flex items-center gap-3 px-4 pb-4 pt-5">

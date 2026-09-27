@@ -1226,15 +1226,16 @@ function FormFillView({ form: formProp, children, onBack, toast, initialChildId,
     <div id="form-fill-top" className="v-scope flex min-h-full flex-col bg-v-bg">
       {/* ── Barra superior ── */}
       <div className="sticky top-0 z-20 shrink-0 border-b border-v-border bg-v-elevated/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-          <button onClick={onBack} className="group inline-flex items-center gap-1 rounded-full py-1.5 pl-2 pr-3 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill hover:text-v-text">
-            <ChevronLeft size={17} className="transition-transform group-hover:-translate-x-0.5" /> {locale === 'en' ? 'Back' : 'Volver'}
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+          <button onClick={onBack} aria-label={locale === 'en' ? 'Back' : 'Volver'} className="group inline-flex shrink-0 items-center gap-1 rounded-full py-1.5 pl-1.5 pr-1.5 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill hover:text-v-text sm:pl-2 sm:pr-3">
+            <ChevronLeft size={18} className="transition-transform group-hover:-translate-x-0.5" /> <span className="hidden sm:inline">{locale === 'en' ? 'Back' : 'Volver'}</span>
           </button>
-          <span className="h-6 w-px bg-v-border" />
-          <span className="grid size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent">{createElement(formIcon(form), { size: 17 })}</span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold leading-tight text-v-text">{dTitle(form, locale)}</p>
-            <p className="truncate text-xs text-v-subtle">{dSubtitle(form, locale)}</p>
+          <span className="hidden h-6 w-px bg-v-border sm:block" />
+          <span className="hidden size-9 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent sm:grid">{createElement(formIcon(form), { size: 17 })}</span>
+          {/* En celular la clase truncate no aplica (CSS móvil global): recorte con estilos en línea */}
+          <div className="min-w-0 flex-1" style={{ minWidth: 0 }}>
+            <p className="text-sm font-semibold leading-tight text-v-text" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dTitle(form, locale)}</p>
+            <p className="text-xs text-v-subtle" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dSubtitle(form, locale)}</p>
           </div>
           <ChipModoLlenado modo={modo} onCambiar={setModo} />
           {initialChildId ? (
