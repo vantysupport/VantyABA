@@ -3451,7 +3451,8 @@
         "error": "We couldn't sign you in. Please try again.",
         "network": "No connection to the server. Check your internet.",
         "oauth": "Couldn't connect to that provider.",
-        "sessionTaken": "This account is already open on another device. Only one active session is allowed."
+        "sessionTaken": "Your session was closed because this account was opened on another device. Only one active session is allowed at a time.",
+        "sessionExpired": "Your session ended. Sign in again to continue."
       }
     },
     "mfa": {

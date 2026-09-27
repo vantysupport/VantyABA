@@ -18,6 +18,8 @@ const MAX_BYTES: Record<string, number> = {
   'chat-media': 25 * 1024 * 1024,
 }
 
+const TIPOS_CHAT = /^(image\/(png|jpe?g|gif|webp|heic|heif)|audio\/[\w.+-]+|video\/(mp4|webm|quicktime)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.[\w.]+|vnd\.ms-excel|vnd\.ms-powerpoint)|text\/plain)(;.*)?$/i
+
 export async function POST(req: NextRequest) {
   const caller = await getApiCaller(req)
   if (!caller) return unauthorized()
@@ -30,6 +32,10 @@ export async function POST(req: NextRequest) {
   const size = Number(body.size || 0)
   if (!isPrivateBucket(bucket) || !path) return notFound()
   if (!(await canWriteObject(caller, bucket, path))) return notFound()
+  // Chats: solo imágenes, audio, PDF y documentos de oficina. Nada que el navegador pueda ejecutar (HTML, SVG, JS).
+  if ((bucket === 'chat-media' || bucket === 'chat-files') && !TIPOS_CHAT.test(contentType)) {
+    return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 415 })
+  }
   if (!size || size > MAX_BYTES[bucket]) {
     return NextResponse.json({ error: `El archivo supera el máximo de ${Math.round(MAX_BYTES[bucket] / 1024 / 1024)} MB` }, { status: 413 })
   }

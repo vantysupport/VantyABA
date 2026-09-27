@@ -138,14 +138,14 @@
   width: 45%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
   transform: translateX(-160%) skewX(-18deg);
-  animation: v-sweep var(--v-sweep-duration, 7s) ease-in-out infinite;
-  animation-delay: var(--v-sweep-delay, 0s);
   pointer-events: none;
   z-index: 1;
 }
+/* El brillo ya no corre solo (distraía): pasa una vez al poner el cursor encima */
+.v-sweep:hover::after { animation: v-sweep 0.8s ease-out 1; }
 @keyframes v-sweep {
   0% { transform: translateX(-160%) skewX(-18deg); }
-  45%, 100% { transform: translateX(360%) skewX(-18deg); }
+  100% { transform: translateX(360%) skewX(-18deg); }
 }
 
 .v-shine-text {

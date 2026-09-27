@@ -14,7 +14,7 @@ import { emailRecordado, guardarPreferencia, prefRecordar } from '@/lib/recordar
 import { AuthShell } from '@/components/ui/auth-shell'
 
 interface PageProps {
-  searchParams: Promise<{ mode?: string; session?: string }>
+  searchParams: Promise<{ mode?: string; session?: string; redirect?: string }>
 }
 
 type Tab = 'signin' | 'new'
@@ -47,7 +47,9 @@ export default function LoginPage(props: PageProps) {
 
   useEffect(() => {
     if (searchParams.session === 'taken') setErrorKey('sessionTaken')
-  }, [searchParams.session])
+    // Llegó aquí porque su sesión venció mientras usaba un panel (el proxy agrega ?redirect=)
+    else if (searchParams.redirect) setErrorKey('sessionExpired')
+  }, [searchParams.session, searchParams.redirect])
 
   async function oauth(provider: 'google' | 'azure') {
     setIsLoading(true)

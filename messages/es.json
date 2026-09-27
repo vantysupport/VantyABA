@@ -3463,7 +3463,8 @@
     "error": "No pudimos iniciar sesión. Intenta de nuevo.",
     "network": "Sin conexión con el servidor. Revisa tu internet.",
     "oauth": "No se pudo conectar con ese proveedor.",
-    "sessionTaken": "Esta cuenta ya está abierta en otro dispositivo. Solo se permite una sesión activa."
+    "sessionTaken": "Tu sesión se cerró porque esta cuenta se abrió en otro dispositivo. Solo se permite una sesión activa a la vez.",
+        "sessionExpired": "Tu sesión terminó. Inicia sesión de nuevo para continuar."
    }
   },
   "mfa": {

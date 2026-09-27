@@ -122,7 +122,6 @@ export default function ParentDashboard() {
   const [takenSlots, setTakenSlots] = useState<string[]>([])
   const [bookingLoading, setBookingLoading] = useState(false)
 
-  const [showAddChild, setShowAddChild] = useState(false)
   const [showChangePass, setShowChangePass] = useState(false)
   // Estado de la evaluación inicial del paciente seleccionado.
   // Si está completa (revisado/completado/terapia_seleccionada), ocultamos el menú.
@@ -259,70 +258,6 @@ export default function ParentDashboard() {
     setSolicitudCita({ id: cita.id, modo: isReschedule ? 'reprogramar' : 'cancelar', fecha: cita.appointment_date, hora: cita.appointment_time, servicio: cita.service_type })
   }
 
-  const handleAddChild = async (e: any) => {
-    e.preventDefault()
-    if (padreBloqueado) {
-      alert(t('auto.page.elCentroAlcanzoElNumero'))
-      return
-    }
-
-    const name = e.target.name.value
-    const dob = e.target.dob.value
-    const diagnosis = e.target.diagnosis?.value || 'En evaluación'
-    
-    if(!profile?.id) {
-        alert(t('auto.page.errorNoSeEncontroTu'))
-        return
-    }
-
-    if(!name.trim()) {
-        alert(t('auto.page.elNombreEsObligatorio'))
-        return
-    }
-
-    if(!dob) {
-        alert(t('auto.page.laFechaDeNacimientoEs'))
-        return
-    }
-
-    try {
-        const age = calculateAge(dob)
-
-        const { data, error } = await supabase.from('children').insert([{
-            parent_id: profile.id, 
-            name: name.trim(), 
-            birth_date: dob,
-            age: age,
-            diagnosis: diagnosis || 'En evaluación'
-        }]).select()
-
-        if (error) {
-            // El trigger de base rechaza al padre que excede el límite → mensaje amable.
-            if (/máximo de cuentas|PADRE_LIMIT/i.test(error.message || '')) {
-                setPadreBloqueado(true)
-                alert(t('auto.page.elCentroAlcanzoElNumero2'))
-            } else {
-                alert("Error al guardar: " + error.message)
-            }
-            return
-        }
-
-        if (!data || data.length === 0) {
-            alert(t('auto.page.noSePudoCrearEl'))
-            return
-        }
-
-        setMyChildren([...myChildren, data[0]])
-        if(!selectedChild) setSelectedChild(data[0])
-        setShowAddChild(false)
-        triggerCelebration(L(`${name} was added`, `${name} ya está registrado/a`))
-        setRefreshTrigger(prev => prev + 1)
-
-    } catch (err: any) {
-        alert("Error inesperado: " + err.message)
-    }
-  }
-
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-br from-sky-50 via-cyan-50 to-sky-100 gap-4">
       <div className="relative">
@@ -362,9 +297,9 @@ export default function ParentDashboard() {
   }
 
   // ── ONBOARDING para primer acceso (sin hijos registrados) ─────────────────
-  if (!loading && myChildren.length === 0 && profile && !showAddChild) {
+  if (!loading && myChildren.length === 0 && profile) {
     const nombre = (profile?.full_name?.split(' ')[0] || '').replace(/^./, (c: string) => c.toUpperCase())
-    const pasos = [L('Welcome', 'Bienvenida'), L('Your child', 'Tu hijo/a'), L('First appointment', 'Primera cita')]
+    const pasos = [L('Welcome', 'Bienvenida'), L('Your center links your child', 'El centro vincula a tu hijo/a'), L('First appointment', 'Primera cita')]
     return (
       <div className="v-scope relative flex min-h-dvh items-center justify-center overflow-hidden bg-v-bg px-4 py-8 sm:py-12">
         {/* Fondo suave de marca */}
@@ -412,8 +347,8 @@ export default function ParentDashboard() {
               ))}
             </ol>
 
-            <h2 className="mt-7 text-xl font-semibold tracking-tight text-v-text">{L('Register your child to begin', 'Registra a tu hijo/a para empezar')}</h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-v-muted">{L('With that, your whole portal unlocks:', 'Con eso se activa todo tu portal:')}</p>
+            <h2 className="mt-7 text-xl font-semibold tracking-tight text-v-text">{L('Your center will link your child', 'Tu centro vinculará a tu hijo/a')}</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-v-muted">{L(`As soon as the ${centroNombre} team registers your child and links them to your account, your whole portal unlocks:`, `En cuanto el equipo de ${centroNombre} registre a tu hijo/a y lo vincule a tu cuenta, se activa todo tu portal:`)}</p>
 
             <ul className="mt-5 space-y-2.5">
               {[
@@ -432,12 +367,12 @@ export default function ParentDashboard() {
               ))}
             </ul>
 
-            <button onClick={() => setShowAddChild(true)}
+            <button onClick={() => setRefreshTrigger(prev => prev + 1)}
               className="v-brand mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold shadow-v transition-transform hover:scale-[1.01] active:scale-[.98]">
-              <Baby size={18} /> {L('Register my child', 'Registrar a mi hijo/a')} <ChevronRight size={17} />
+              <RefreshCw size={17} /> {L('They already linked my child', 'Ya vincularon a mi hijo/a')}
             </button>
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-v-muted">
-              <Shield size={13} /> {L('Takes 1 minute · Your data is protected', 'Toma 1 minuto · Tus datos están protegidos')}
+              <Shield size={13} /> {L('Only your center can register patients · Your data is protected', 'Solo tu centro puede registrar pacientes · Tus datos están protegidos')}
             </p>
 
             <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-v-border pt-4 text-xs text-v-muted lg:mt-8">
@@ -454,54 +389,6 @@ export default function ParentDashboard() {
         </motion.div>
 
         {/* El modal de agregar hijo ya existe en el código principal */}
-        {showAddChild && (
-          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-sky-100 to-sky-100 rounded-full blur-3xl opacity-50"></div>
-              <div className="relative z-10">
-                <div className="flex justify-between items-center mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                      <Baby size={24} className="text-white"/>
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-2xl text-slate-800">{t("familias.paso2Hijo")}</h3>
-                      <p className="text-sm text-slate-400 font-medium">{t('ui.enter_basic_data')}</p>
-                    </div>
-                  </div>
-                  <button onClick={()=>setShowAddChild(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
-                    <X size={22}/>
-                  </button>
-                </div>
-                <form onSubmit={handleAddChild} className="space-y-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 mb-2 block">{t('familias.nombreCompletoStar')}</label>
-                    <input name="name" required className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-sky-400 transition-all" placeholder={t('familias.ejNombre')}/>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 mb-2 block">{t('familias.fechaNacStar')}</label>
-                    <input name="dob" type="date" required className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-sky-400 transition-all"/>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 mb-2 block">{t('familias.diagOpcional')}</label>
-                    <input name="diagnosis" className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-sky-400 transition-all" placeholder="Ej: TEA Nivel 2"/>
-                  </div>
-                  <div className="bg-sky-50 border-2 border-sky-100 rounded-2xl p-4">
-                    <p className="text-xs text-sky-700 font-bold flex items-center gap-2">
-                      <Sparkles size={14}/> La edad se calculará automáticamente
-                    </p>
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={()=>setShowAddChild(false)} className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 rounded-2xl transition-all">{t('common.cancelar')}</button>
-                    <button type="submit" className="flex-1 bg-gradient-to-r from-sky-600 to-cyan-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">
-                      <CheckCircle2 size={18}/> {t('familias.guardarContinuar')}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     )
   }
@@ -655,10 +542,6 @@ export default function ParentDashboard() {
                         </button>
                     )
                 }) : <span className="text-xs italic text-v-subtle">{t('ui.no_patients')}</span>}
-                <button onClick={()=>setShowAddChild(true)} title={L('Add child', 'Agregar hijo/a')}
-                    className="grid size-9 shrink-0 place-items-center rounded-full border border-dashed border-v-accent/40 text-v-accent transition-colors hover:bg-v-accent hover:text-white">
-                    <Plus size={17}/>
-                </button>
             </div>
 
             <main className={`flex-1 ${activeView === 'chat' || activeView === 'chat-familias' ? 'overflow-hidden p-0 lg:p-4 lg:p-6 flex flex-col chat-main-mobile' : 'overflow-y-auto overflow-x-hidden p-4 md:p-6 pb-20 lg:pb-6'}`} style={{ minHeight: 0 }}>
@@ -776,91 +659,6 @@ export default function ParentDashboard() {
         </div>
 
         {/* 🎨 MODAL - AGREGAR HIJO MEJORADO */}
-        {showAddChild && (
-            <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fade-in">
-                <div className="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl animate-scale-in relative overflow-hidden">
-                    {/* Decoración de fondo */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-sky-100 to-sky-100 rounded-full blur-3xl opacity-50"></div>
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-rose-100 to-yellow-100 rounded-full blur-3xl opacity-50"></div>
-                    
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg">
-                                    <Baby size={24} className="text-white"/>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-2xl text-slate-800">{t('pacientes.nuevo')}</h3>
-                                    <p className="text-sm text-slate-400 font-medium">{t('familias.agendaInfoNino')}</p>
-                                </div>
-                            </div>
-                            <button onClick={()=>setShowAddChild(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all hover:rotate-90">
-                                <X size={22}/>
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleAddChild} className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 mb-2 block flex items-center gap-2">
-                                    <User size={14}/> {t('auto.page.nombreCompleto')} <span className="text-red-500">*</span>
-                                </label>
-                                <input 
-                                    name="name" 
-                                    required 
-                                    className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-sky-400 transition-all hover:bg-white" 
-                                    placeholder={t('auto.page.ejMariaFernandaLopez')}
-                                />
-                            </div>
-                            
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 mb-2 block flex items-center gap-2">
-                                    <Calendar size={14}/> {t('auto.page.fechaDeNacimiento')} <span className="text-red-500">*</span>
-                                </label>
-                                <input 
-                                    name="dob" 
-                                    type="date" 
-                                    required 
-                                    className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-sky-400 transition-all hover:bg-white"
-                                />
-                            </div>
-                            
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 mb-2 block flex items-center gap-2">
-                                    <Stethoscope size={14}/> Diagnóstico (Opcional)
-                                </label>
-                                <input 
-                                    name="diagnosis" 
-                                    className="w-full p-4 bg-slate-50 rounded-2xl font-semibold outline-none border-2 border-transparent focus:bg-white focus:border-sky-400 transition-all hover:bg-white" 
-                                    placeholder="Ej: TEA Nivel 2"
-                                />
-                            </div>
-
-                            <div className="bg-sky-50 border-2 border-sky-100 rounded-2xl p-4">
-                                <p className="text-xs text-sky-700 font-bold flex items-center gap-2">
-                                    <Sparkles size={14}/> La edad se calculará automáticamente
-                                </p>
-                            </div>
-                            
-                            <div className="flex gap-3 pt-4">
-                                <button 
-                                    type="button" 
-                                    onClick={()=>setShowAddChild(false)} 
-                                    className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 rounded-2xl transition-all hover:scale-105 active:scale-95"
-                                >
-                                    {t('auto.page.cancelar')}
-                                </button>
-                                <button 
-                                    type="submit" 
-                                    className="flex-1 bg-gradient-to-r from-sky-600 to-cyan-600 text-white py-4 rounded-2xl font-bold shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    <CheckCircle2 size={18}/> Guardar
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        )}
 
         <AnimatePresence>
           {showChangePass && <CambiarPassModal key="pass" onClose={()=>setShowChangePass(false)} />}

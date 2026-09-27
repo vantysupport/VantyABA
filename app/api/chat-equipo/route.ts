@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { rateLimit } from '@/lib/rate-limit'
 import { getApiCaller, hasRole, ROLES, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
@@ -71,6 +72,11 @@ export async function POST(req: NextRequest) {
   const content = typeof b.content === 'string' ? b.content.slice(0, 8000) : ''
   if (!UUID.test(recipient) || !content.trim()) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
   if (!(await rowInCentro('profiles', recipient, caller.centroId))) return notFound()
+  // Tope de envíos por persona (evita que un script llene el chat o sature el servidor)
+  const limite = await rateLimit(`chat:${caller.id}`, { name: 'chat-envio', limit: 40, windowMs: 60 * 1000 })
+  if (!limite.allowed) return NextResponse.json({ error: 'Estás enviando mensajes muy rápido. Espera un momento.' }, { status: 429 })
+  // Un adjunto solo puede ser un archivo privado subido por quien envía
+  const adjunto = typeof b.file_url === 'string' && b.file_url.startsWith(`r2:chat-files/chat/${caller.id}/`) ? b.file_url.slice(0, 400) : null
 
   const { data: yo } = await supabaseAdmin.from('profiles').select('full_name').eq('id', caller.id).maybeSingle()
   const tipo = ['text', 'file', 'audio', 'image'].includes(b.message_type) ? b.message_type : 'text'
@@ -81,7 +87,7 @@ export async function POST(req: NextRequest) {
     sender_name: yo?.full_name || 'Usuario',
     recipient_id: recipient,
     message_type: tipo,
-    file_url: typeof b.file_url === 'string' ? b.file_url : null,
+    file_url: tipo === 'text' ? null : adjunto,
     file_name: typeof b.file_name === 'string' ? b.file_name.slice(0, 200) : null,
     file_type: typeof b.file_type === 'string' ? b.file_type.slice(0, 100) : null,
     read_at: null,

@@ -19,6 +19,7 @@ import { releaseSessionNow } from '@/lib/session-lock'
 import { useToast } from '@/components/Toast'
 import { fileUrl } from '@/lib/file-url'
 import { TokensPrediccion } from '@/components/TokensPrediccion'
+import { cambiarClaveConCorreo } from '@/components/ui/cambiar-clave'
 
 type Tab = 'perfil' | 'seguridad' | 'preferencias' | 'centro'
 
@@ -266,7 +267,7 @@ function TabSeguridad() {
     if (!listo) return
     setSaving(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password: form.nueva })
+      const { error } = await cambiarClaveConCorreo(form.nueva)
       if (error) throw error
       toast.success(L('Password updated', 'Contraseña actualizada'))
       setForm({ nueva: '', confirmar: '' })

@@ -15,6 +15,7 @@ import { toBCP47 } from '@/lib/i18n'
 import { useToast } from '@/components/Toast'
 import { useCentroBranding } from '@/components/CentroBrandingContext'
 import { PLATFORM_NAME } from '@/lib/branding'
+import { cambiarClaveConCorreo } from '@/components/ui/cambiar-clave'
 
 function useL() {
   const { locale } = useI18n()
@@ -120,15 +121,15 @@ export function CambiarPassModal({ onClose }: { onClose: () => void }) {
   const [confirm, setConfirm] = useState('')
   const [ver, setVer] = useState(false)
   const [guardando, setGuardando] = useState(false)
-  const largoOk = pass.length >= 6
+  const largoOk = pass.length >= 8
   const coincide = !!confirm && pass === confirm
 
   const guardar = async () => {
-    if (!largoOk) { toast.error(L('The password must have at least 6 characters', 'La contraseña debe tener al menos 6 caracteres')); return }
+    if (!largoOk) { toast.error(L('The password must have at least 8 characters', 'La contraseña debe tener al menos 8 caracteres')); return }
     if (!coincide) { toast.error(L('Passwords do not match', 'Las contraseñas no coinciden')); return }
     setGuardando(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password: pass })
+      const { error } = await cambiarClaveConCorreo(pass)
       if (error) throw error
       toast.success(L('Password updated', 'Contraseña actualizada'))
       onClose()
@@ -150,7 +151,7 @@ export function CambiarPassModal({ onClose }: { onClose: () => void }) {
       <form className="space-y-4" onSubmit={e => { e.preventDefault(); guardar() }}>
         <Campo Icon={KeyRound} label={L('New password', 'Nueva contraseña')}>
           <div className="relative">
-            <input type={ver ? 'text' : 'password'} value={pass} onChange={e => setPass(e.target.value)} autoComplete="new-password" placeholder={L('At least 6 characters', 'Mínimo 6 caracteres')} className={`${inputClass} pr-11`} />
+            <input type={ver ? 'text' : 'password'} value={pass} onChange={e => setPass(e.target.value)} autoComplete="new-password" placeholder={L('At least 8 characters', 'Mínimo 8 caracteres')} className={`${inputClass} pr-11`} />
             <button type="button" onClick={() => setVer(v => !v)} aria-label={ver ? L('Hide', 'Ocultar') : L('Show', 'Mostrar')} className="absolute right-1.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-v-subtle hover:bg-v-fill">{ver ? <EyeOff size={15} /> : <Eye size={15} />}</button>
           </div>
         </Campo>

@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
-import { ShieldCheck, Smartphone, KeyRound, Copy, Check, Loader2, Lock, Fingerprint } from 'lucide-react'
+import { ShieldCheck, Smartphone, KeyRound, Copy, Check, Loader2, Lock, Fingerprint, Mail, ArrowLeft } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { AuthShell } from '@/components/ui/auth-shell'
 import { PLATFORM_NAME } from '@/lib/branding'
 
-type Mode = 'loading' | 'intro' | 'enroll' | 'challenge' | 'done'
+type Mode = 'loading' | 'intro' | 'enroll' | 'challenge' | 'email' | 'done'
 
 const HOME: Record<string, string> = {
   programador: '/control', jefe: '/admin', admin: '/admin', especialista: '/especialista', terapeuta: '/admin', secretaria: '/secretaria',
@@ -72,6 +72,45 @@ export default function MFAPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+
+  // Código por correo (alternativa a la app de autenticación)
+  const [correoMascara, setCorreoMascara] = useState<string | null>(null)
+  const [espera, setEspera] = useState(0)
+  const L = (e: string, es: string) => (locale === 'en' ? e : es)
+
+  useEffect(() => {
+    if (espera <= 0) return
+    const id = setTimeout(() => setEspera(x => x - 1), 1000)
+    return () => clearTimeout(id)
+  }, [espera])
+
+  async function enviarCorreo() {
+    setBusy(true)
+    setError(null)
+    const r = await fetch('/api/session/mfa-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'enviar', locale }) })
+    const j = await r.json().catch(() => ({}))
+    setBusy(false)
+    if (r.status === 429) { setEspera(60); return setError(L('Wait a minute before requesting another code.', 'Espera un minuto antes de pedir otro código.')) }
+    if (!r.ok) return setError(L('We could not send the code. Try again.', 'No pudimos enviar el código. Inténtalo de nuevo.'))
+    setCorreoMascara(j.correo || null)
+    setEspera(60)
+    setAttempt(a => a + 1)
+  }
+
+  async function verificarCorreo(codigo: string) {
+    setBusy(true)
+    setError(null)
+    const r = await fetch('/api/session/mfa-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'verificar', codigo }) })
+    const j = await r.json().catch(() => ({}))
+    setBusy(false)
+    if (r.ok) return setMode('done')
+    setAttempt(a => a + 1)
+    if (j.error === 'vencido') return setError(L('The code expired. Request a new one.', 'El código venció. Pide uno nuevo.'))
+    if (j.error === 'intentos') return setError(L('Too many attempts. Request a new code.', 'Demasiados intentos. Pide un código nuevo.'))
+    setError(typeof j.restantes === 'number'
+      ? L(`Incorrect code. ${j.restantes} attempt(s) left.`, `Código incorrecto. Te quedan ${j.restantes} intento(s).`)
+      : L('Incorrect code.', 'Código incorrecto.'))
+  }
 
   const required = role === 'programador'
   const home = `/${locale}${HOME[role ?? ''] ?? '/padre'}`
@@ -219,12 +258,44 @@ export default function MFAPage() {
             <h1 className="v-headline mt-6 text-[2.1rem] sm:text-4xl">{t('vanty.mfa.challengeTitle')}</h1>
             <p className="mt-2 mb-7 text-v-muted">{t('vanty.mfa.challengeBody')}</p>
             <CodeInput key={attempt} onComplete={verify} disabled={busy} />
+            {!required && (
+              <button onClick={() => { setError(null); setMode('email') }}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-v-border py-3 text-sm font-semibold text-v-text transition-colors hover:bg-v-fill">
+                <Mail className="size-4 text-v-accent" /> {L("Don't have your phone? Get a code by email", '¿No tienes tu celular? Recibir código por correo')}
+              </button>
+            )}
             <button
               onClick={async () => { await supabase.auth.signOut(); window.location.assign(`/${locale}/login`) }}
               className="mt-6 block w-full text-center text-sm text-v-muted hover:text-v-text"
             >
               {t('vanty.mfa.useOtherAccount')}
             </button>
+          </motion.div>
+        )}
+
+        {mode === 'email' && (
+          <motion.div key="email" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
+            <button onClick={() => { setError(null); setMode('challenge') }} className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-v-muted hover:text-v-text">
+              <ArrowLeft className="size-4" /> {L('Use the authenticator app', 'Usar la app de autenticación')}
+            </button>
+            <span className="grid size-14 place-items-center rounded-[28%] bg-v-accent-soft"><Mail className="size-7 text-v-accent" strokeWidth={1.6} /></span>
+            <h1 className="v-headline mt-6 text-[2.1rem] sm:text-4xl">{L('Code by email', 'Código por correo')}</h1>
+            {!correoMascara ? (
+              <>
+                <p className="mt-2 text-v-muted">{L("We'll send a 6-digit code to your account's email. It expires in 10 minutes.", 'Te enviaremos un código de 6 dígitos al correo de tu cuenta. Vence en 10 minutos.')}</p>
+                <button onClick={enviarCorreo} disabled={busy} className="v-brand mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold transition-transform active:scale-[0.98] disabled:opacity-70">
+                  {busy ? <Loader2 className="size-5 animate-spin" /> : <><Mail className="size-4" /> {L('Send code', 'Enviar código')}</>}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 mb-7 text-v-muted">{L('We sent it to', 'Lo enviamos a')} <strong className="text-v-text">{correoMascara}</strong>. {L('Check spam too.', 'Revisa también la carpeta de spam.')}</p>
+                <CodeInput key={`e${attempt}`} onComplete={verificarCorreo} disabled={busy} />
+                <button onClick={enviarCorreo} disabled={busy || espera > 0} className="mt-6 block w-full text-center text-sm font-medium text-v-accent disabled:text-v-subtle">
+                  {espera > 0 ? L(`Resend code in ${espera}s`, `Reenviar código en ${espera} s`) : L('Resend code', 'Reenviar código')}
+                </button>
+              </>
+            )}
           </motion.div>
         )}
 

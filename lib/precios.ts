@@ -1,5 +1,5 @@
-// Precios de Vanty ABA por región. Se cobra en la moneda de la región (USD o EUR) y, como referencia,
-// se muestra el equivalente aproximado en la moneda local del país del visitante.
+// Precios de Vanty ABA por región. Todo se muestra y se cobra en dólares (USD); lo que cambia según la
+// región del visitante es el monto.
 
 export type Region = 'sudamerica' | 'norteamerica' | 'europa'
 export type Ciclo = 'mensual' | 'anual'
@@ -8,7 +8,7 @@ export type PrecioRegion = Partial<Record<Region, number>>
 export const REGIONES: Record<Region, { moneda: 'USD' | 'EUR'; es: string; en: string }> = {
   sudamerica: { moneda: 'USD', es: 'Latinoamérica', en: 'Latin America' },
   norteamerica: { moneda: 'USD', es: 'Norteamérica', en: 'North America' },
-  europa: { moneda: 'EUR', es: 'Europa', en: 'Europe' },
+  europa: { moneda: 'USD', es: 'Europa', en: 'Europe' },
 }
 export const ORDEN_REGIONES: Region[] = ['sudamerica', 'norteamerica', 'europa']
 
@@ -34,9 +34,13 @@ const MONEDA_PAIS: Record<string, string> = {
   IS: 'ISK', UA: 'UAH', RS: 'RSD', BA: 'BAM', AL: 'ALL', MK: 'MKD', MD: 'MDL',
 }
 export function monedaDePais(pais?: string | null): string {
-  const c = (pais || '').toUpperCase()
-  if (MONEDA_PAIS[c]) return MONEDA_PAIS[c]
-  return REGIONES[regionDePais(c)].moneda // zona euro → EUR; resto → USD
+  // Moneda única: los precios se muestran en USD en todos los países (sin equivalente local)
+  void pais
+  return 'USD'
+}
+/** Moneda local real del país (por si se quiere volver a mostrar un equivalente de referencia). */
+export function monedaLocalReal(pais?: string | null): string {
+  return MONEDA_PAIS[(pais || '').toUpperCase()] ?? 'USD'
 }
 
 /** Tasas de cambio con base USD (1 USD = n unidades). Respaldo si la API de tipos de cambio no responde. */
@@ -67,7 +71,9 @@ export function equivalenteLocal(monto: number, monedaRegion: string, monedaLoca
 export function formatoMoneda(monto: number, moneda: string, locale: 'es' | 'en', decimales = 0) {
   try {
     return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'es-PE', {
-      style: 'currency', currency: moneda, maximumFractionDigits: decimales, minimumFractionDigits: 0, currencyDisplay: 'narrowSymbol',
+      style: 'currency', currency: moneda, maximumFractionDigits: decimales, minimumFractionDigits: 0,
+      // En dólares se muestra "US$" para no confundir con pesos u otras monedas con "$"
+      currencyDisplay: moneda === 'USD' ? 'symbol' : 'narrowSymbol',
     }).format(monto)
   } catch {
     return `${moneda} ${Math.round(monto)}`

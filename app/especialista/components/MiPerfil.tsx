@@ -17,6 +17,7 @@ import { useToast } from '@/components/Toast'
 import { useTheme } from '@/components/ThemeContext'
 import { confirmar } from '@/components/ui/confirmar'
 import { useCentroBranding } from '@/components/CentroBrandingContext'
+import { cambiarClaveConCorreo } from '@/components/ui/cambiar-clave'
 
 const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
 const inputClass = 'h-11 w-full rounded-full border border-v-border bg-v-bg px-4 text-sm text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft disabled:opacity-60'
@@ -218,7 +219,7 @@ function TabSeguridad() {
     if (!coincide) { toast.error(L('Passwords do not match', 'Las contraseñas no coinciden')); return }
     setSaving(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password: form.nueva })
+      const { error } = await cambiarClaveConCorreo(form.nueva)
       if (error) throw error
       toast.success(L('Password updated', 'Contraseña actualizada'))
       setForm({ nueva: '', confirmar: '' })

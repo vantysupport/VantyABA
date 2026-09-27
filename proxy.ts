@@ -15,6 +15,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { rateLimit, RATE_LIMITS, getClientIP } from './lib/rate-limit'
 import { motivoBloqueo } from './lib/estado-centro'
 import { isInternalApiCall } from './lib/calendar-integration'
+import { COOKIE_MFA_EMAIL, cookieMfaEmailValida } from './lib/mfa-email'
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 const I18N_LOCALES = ['en', 'es'] as const
@@ -201,6 +202,11 @@ export async function proxy(req: NextRequest) {
   if (user) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     mfaPending = aal?.nextLevel === 'aal2' && aal.currentLevel !== 'aal2'
+    // Alternativa: segundo paso hecho con un código por correo en ESTA sesión (cookie firmada y ligada a la sesión).
+    // La consola /control no cuenta con esto: sus APIs exigen aal2 real de la app de autenticación.
+    if (mfaPending && cookieMfaEmailValida(req.cookies.get(COOKIE_MFA_EMAIL)?.value, user.id, claimsData?.claims?.session_id as string | undefined)) {
+      mfaPending = false
+    }
   }
 
   // 2. Endpoints API

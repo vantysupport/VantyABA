@@ -11,6 +11,7 @@ import RecordarSesionGuard from '@/components/RecordarSesionGuard'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import MaintenanceGate from '@/components/MaintenanceGate'
 import { ConfirmarHost } from '@/components/ui/confirmar'
+import { CambiarClaveHost } from '@/components/ui/cambiar-clave'
 import { PLATFORM_NAME } from '@/lib/branding'
 import "./globals.css";
 
@@ -187,6 +188,7 @@ export default async function RootLayout({
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <ConfirmarHost />
+        <CambiarClaveHost />
         <ErrorBoundary>
           <I18nProvider initialLocale={initialLocale}>
             <ThemeProvider>

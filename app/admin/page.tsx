@@ -50,6 +50,7 @@ import AdminReportesFinancieros from './components/AdminReportesFinancieros'
 import { AriaSaludo } from '@/components/ui/aria-saludo'
 import PushNotificationBanner from '@/components/PushNotificationBanner'
 import { jsonCompartido } from '@/lib/pedido-compartido'
+import { cambiarClaveConCorreo } from '@/components/ui/cambiar-clave'
 
 // ── Features & Roles types (mirrors control/route.ts) ────────────────────────
 type FeaturesConfig = {
@@ -457,11 +458,11 @@ export default function AdminDashboard() {
   }
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) { toast.warning(t('auto.page.minimo6Caracteres2')); return }
+    if (newPassword.length < 8) { toast.warning(locale === 'en' ? 'Minimum 8 characters' : 'Mínimo 8 caracteres'); return }
     if (newPassword !== confirmPassword) { toast.error(t('auto.page.lasContrasenasNoCoinciden2')); return }
     setChangingPassword(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      const { error } = await cambiarClaveConCorreo(newPassword)
       if (error) throw error
       toast.success(t('auto.page.contrasenaActualizada'))
       setShowChangePassword(false)

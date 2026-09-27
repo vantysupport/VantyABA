@@ -16,9 +16,12 @@ export async function POST(req: NextRequest) {
 
     if (!sessionId) return NextResponse.json({ ok: false }, { status: 400 })
 
+    // No se borra el identificador: se marca la sesión como inactiva (fecha antigua). Así otro dispositivo
+    // puede tomarla de inmediato, pero si la persona vuelve a esta misma pestaña (el navegador también
+    // dispara "pagehide" al ocultarla o congelarla) su latido la sigue reconociendo y no la expulsa.
     await supabaseAdmin
       .from('profiles')
-      .update({ active_session_id: null, active_session_at: null })
+      .update({ active_session_at: new Date(0).toISOString() })
       .eq('active_session_id', sessionId)
 
     return NextResponse.json({ ok: true })

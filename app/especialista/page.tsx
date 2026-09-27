@@ -28,6 +28,7 @@ import { AriaGlyph } from '@/components/ui/aria-glyph'
 import InteligenciaHubView from '@/app/admin/components/InteligenciaHubView'
 import { AriaSaludo } from '@/components/ui/aria-saludo'
 import PushNotificationBanner from '@/components/PushNotificationBanner'
+import { cambiarClaveConCorreo } from '@/components/ui/cambiar-clave'
 
 function SidebarLink({ icon: Icon, label, active, onClick, badge, index = 0 }: any) {
   return (
@@ -179,11 +180,11 @@ export default function EspecialistaDashboard() {
   const handleLogout = async () => { await releaseSessionNow(); await supabase.auth.signOut(); router.push('/login') }
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) { toast.warning(t('auto.page.minimo6Caracteres3')); return }
+    if (newPassword.length < 8) { toast.warning(locale === 'en' ? 'Minimum 8 characters' : 'Mínimo 8 caracteres'); return }
     if (newPassword !== confirmPassword) { toast.error(t('auto.page.lasContrasenasNoCoinciden3')); return }
     setChangingPassword(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      const { error } = await cambiarClaveConCorreo(newPassword)
       if (error) throw error
       toast.success(t('auto.page.contrasenaActualizada2'))
       setShowChangePassword(false)

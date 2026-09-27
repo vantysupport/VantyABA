@@ -1,6 +1,7 @@
 // app/api/chat-familias/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { rateLimit } from '@/lib/rate-limit'
 import { getApiCaller, canAccessChild, hasRole, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { avisarEquipo, avisarFamilia } from '@/lib/avisos'
 
@@ -81,33 +82,55 @@ export async function GET(req: NextRequest) {
   }
 }
 
+const MAX_MENSAJE = 4000
+const TIPOS = ['text', 'image', 'audio', 'document']
+const ENVIOS = { name: 'chat-envio', limit: 40, windowMs: 60 * 1000 }
+
 // POST — enviar mensaje
 export async function POST(req: NextRequest) {
   const caller = await getApiCaller(req)
   if (!caller) return unauthorized()
   try {
-    const { child_id, content, sender_id, sender_role, sender_name, message_type, file_url, file_name, file_size } = await req.json()
+    const body = await req.json().catch(() => ({}))
+    const { child_id, sender_id, message_type, file_url, file_name, file_size } = body
+    const content = typeof body.content === 'string' ? body.content.trim().slice(0, MAX_MENSAJE) : ''
 
-    if (!child_id || !content?.trim() || !sender_id || !sender_name) {
+    if (!child_id || !content || !sender_id) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
     if (sender_id !== caller.id) return forbidden()
     if (!(await canAccessChild(caller, child_id))) return notFound()
-    const { data: childRow } = await supabaseAdmin.from('children').select('centro_id, name, parent_id, specialist_id').eq('id', child_id).maybeSingle()
+
+    // Tope de envíos por persona (evita que un script llene el chat o sature el servidor)
+    const limite = await rateLimit(`chat:${caller.id}`, ENVIOS)
+    if (!limite.allowed) return NextResponse.json({ error: 'Estás enviando mensajes muy rápido. Espera un momento.' }, { status: 429 })
+
+    // Solo tipos conocidos; un adjunto solo puede apuntar a la carpeta privada de ESTE niño
+    const tipo = TIPOS.includes(message_type) ? message_type : 'text'
+    const adjunto = tipo !== 'text' && typeof file_url === 'string' && file_url.startsWith(`r2:chat-media/chat-familias/${child_id}/`)
+      ? file_url.slice(0, 400) : null
+    if (tipo !== 'text' && !adjunto) return NextResponse.json({ error: 'Adjunto no válido' }, { status: 400 })
+
+    // Nombre y rol los pone el servidor según la cuenta (nadie puede hacerse pasar por otro)
+    const [{ data: childRow }, { data: perfil }] = await Promise.all([
+      supabaseAdmin.from('children').select('centro_id, name, parent_id, specialist_id').eq('id', child_id).maybeSingle(),
+      supabaseAdmin.from('profiles').select('full_name').eq('id', caller.id).maybeSingle(),
+    ])
+    const sender_name = (perfil?.full_name || caller.email?.split('@')[0] || 'Usuario').slice(0, 120)
 
     const { data, error } = await supabaseAdmin
       .from('chat_familias')
       .insert({
         child_id,
         centro_id:    childRow?.centro_id ?? null,
-        content:      content.trim(),
+        content,
         sender_id,
-        sender_role:  caller.role === 'padre' ? 'padre' : (sender_role || 'padre'),
+        sender_role:  caller.role,
         sender_name,
-        message_type: message_type || 'text',
-        file_url:     file_url  || null,
-        file_name:    file_name || null,
-        file_size:    file_size || null,
+        message_type: tipo,
+        file_url:     adjunto,
+        file_name:    adjunto && typeof file_name === 'string' ? file_name.slice(0, 200) : null,
+        file_size:    adjunto && Number.isFinite(Number(file_size)) ? Number(file_size) : null,
         read_by:      [sender_id],
       })
       .select()
