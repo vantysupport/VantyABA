@@ -43,6 +43,8 @@ export async function enviarPush(userIds: (string | null | undefined)[], p: Push
       title: p.title,
       body: p.body,
       icon: `/push/aria-${p.pose ?? 'saludo'}.png`,
+      // Imagen grande con ARIA al desplegar la notificación (Android/escritorio)
+      image: `/push/banner-${p.pose ?? 'saludo'}.jpg`,
       badge: '/push/badge.png',
       tag: p.tag,
       requireInteraction: !!p.insistente,
