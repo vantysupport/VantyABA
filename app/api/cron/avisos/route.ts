@@ -163,13 +163,13 @@ export async function GET(req: NextRequest) {
         if (r.hoy && HITOS.includes(r.dias)) {
           p = { title: L(`${r.dias}-day streak!`, `¡${r.dias} días seguidos!`), body: L(`${n} practiced ${r.dias} days in a row. That consistency shows.`, `${n} practicó ${r.dias} días seguidos. Esa constancia se nota.`), url: '/padre', pose: 'celebra', tag: 'racha' }
         } else if (!r.hoy && r.dias >= 1) {
-          p = { title: L(`Don't lose your ${r.dias}-day streak`, `¡No pierdas tu racha de ${r.dias} día${r.dias === 1 ? '' : 's'}!`), body: L(`5 minutes with ${n} today keeps it alive.`, `5 minutos con ${n} hoy y la mantienes.`), url: '/padre?vista=programas', pose: 'corre', tag: 'racha' }
+          p = { title: L(`Don't lose your ${r.dias}-day streak`, `¡No pierdas tu racha de ${r.dias} día${r.dias === 1 ? '' : 's'}!`), body: L(`5 minutes with ${n} today keeps it alive.`, `5 minutos con ${n} hoy y la mantienes.`), url: '/padre?vista=engagement', pose: 'corre', tag: 'racha' }
         } else if (!r.hoy) {
           const { count } = await supabaseAdmin.from('tareas_hogar').select('id', { count: 'exact', head: true }).in('child_id', g.ids).eq('completada', false).eq('activa', true)
           if (count) p = {
             title: L(`${n} has a mission waiting`, `${n} tiene una misión pendiente`),
             body: L(`${count} home activit${count === 1 ? 'y' : 'ies'} from the therapist. Start a new streak today.`, `${count} actividad${count === 1 ? '' : 'es'} para casa de su terapeuta. Empieza hoy una racha nueva.`),
-            url: '/padre?vista=programas', pose: 'laptop', tag: 'racha',
+            url: '/padre?vista=engagement', pose: 'laptop', tag: 'racha',
           }
         }
         if (p) cuenta('racha', await enviarPushUnaVez(`racha:${hoy}:${pid}`, pid, p))

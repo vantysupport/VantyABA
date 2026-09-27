@@ -13,12 +13,27 @@ export function TwoFactorCard() {
   const [factorId, setFactorId] = useState<string | null | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Método por correo (sin app): marca en app_metadata de la cuenta
+  const [porCorreo, setPorCorreo] = useState(false)
+  const L = (e: string, s: string) => (locale === 'en' ? e : s)
 
   useEffect(() => {
-    supabase.auth.mfa.listFactors().then(({ data }) => setFactorId(data?.totp.find(f => f.status === 'verified')?.id ?? null))
+    Promise.all([supabase.auth.mfa.listFactors(), supabase.auth.getUser()]).then(([{ data }, { data: u }]) => {
+      setPorCorreo(u?.user?.app_metadata?.mfa_email === true)
+      setFactorId(data?.totp.find(f => f.status === 'verified')?.id ?? null)
+    })
   }, [])
 
   async function disable() {
+    if (!factorId && porCorreo) {
+      if (!await confirmar(t('vanty.twoFactor.disableConfirm'))) return
+      setBusy(true); setError(null)
+      const r = await fetch('/api/session/mfa-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'desactivar' }) })
+      setBusy(false)
+      if (!r.ok) return setError(L('Sign in again with your email code before turning it off.', 'Vuelve a iniciar sesión con tu código por correo antes de desactivarla.'))
+      setPorCorreo(false)
+      return
+    }
     if (!factorId || !await confirmar(t('vanty.twoFactor.disableConfirm'))) return
     setBusy(true)
     setError(null)
@@ -29,7 +44,7 @@ export function TwoFactorCard() {
     setFactorId(null)
   }
 
-  const active = !!factorId
+  const active = !!factorId || porCorreo
 
   return (
     <div className="v-scope rounded-2xl border border-v-border bg-v-elevated p-5">
@@ -47,6 +62,11 @@ export function TwoFactorCard() {
             )}
           </div>
           <p className="mt-1 text-sm text-v-muted">{t(active ? 'vanty.twoFactor.onBody' : 'vanty.twoFactor.offBody')}</p>
+          {active && (
+            <p className="mt-1 text-xs font-medium text-v-subtle">
+              {factorId ? L('Method: authenticator app', 'Método: app de autenticación') : L('Method: code by email', 'Método: código por correo')}
+            </p>
+          )}
           {error && (
             <p className="mt-2 text-sm text-v-danger">
               {error}{' '}

@@ -505,7 +505,7 @@ export default function HomeViewInnovative({ child, onChangeView, refreshTrigger
             </h2>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {racha && (
-                <motion.button whileTap={{ scale: 0.96 }} onClick={() => onChangeView('programas')}
+                <motion.button whileTap={{ scale: 0.96 }} onClick={() => onChangeView('engagement')}
                   title={racha.dias ? L('Days in a row practicing at home', 'Días seguidos practicando en casa') : L('Practice today to start a streak', 'Practica hoy para empezar una racha')}
                   className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${racha.dias ? 'bg-v-warning/15 text-v-warning' : 'bg-v-fill text-v-muted'}`}>
                   <motion.span animate={racha.hoy ? { scale: [1, 1.25, 1] } : {}} transition={{ duration: 0.6, delay: 0.4 }} className="inline-flex">

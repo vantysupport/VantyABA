@@ -381,7 +381,7 @@ export default function EngagementView({ childId, childName }: { childId: string
           fetch('/api/engagement-padres', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': loc() },
             body: JSON.stringify({
-              childId, accion: 'actualizar_completadas', planId: pId,
+              childId, accion: 'actualizar_completadas', hoy: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10), planId: pId,
               actividades: planData.actividades.map((a: Actividad, i: number) => ({ ...a, completada: merged.has(i) })),
               completadas_pct: Math.round(merged.size / (planData.actividades.length || 1) * 100),
             }),
@@ -426,7 +426,7 @@ export default function EngagementView({ childId, childName }: { childId: string
       try {
         const res = await fetch('/api/engagement-padres', {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': loc() },
-          body: JSON.stringify({ childId, accion: 'actualizar_completadas', planId: currentPlanId, actividades: updatedPlan.actividades, completadas_pct }),
+          body: JSON.stringify({ childId, accion: 'actualizar_completadas', hoy: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10), planId: currentPlanId, actividades: updatedPlan.actividades, completadas_pct }),
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
       } catch {

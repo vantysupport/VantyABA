@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
         .eq('id', actividadId)
         .eq('child_id', childId)
       if (error) throw error
+
       return NextResponse.json({ success: true })
     }
 
@@ -60,6 +61,15 @@ export async function POST(req: NextRequest) {
         .eq('id', planId)
         .eq('child_id', childId)
       if (error) throw error
+
+      // Racha de práctica en casa: cada actividad que pasa a "hecha" queda registrada con su día
+      const nuevas = marcadas.filter((a, i) => a.completada && !originales[i]?.completada)
+      if (nuevas.length) {
+        const hoy = typeof body.hoy === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.hoy) ? body.hoy : new Date().toISOString().slice(0, 10)
+        await supabaseAdmin.from('engagement_actividades').insert(nuevas.map(a => ({
+          plan_id: planId, child_id: childId, centro_id: caller.centroId, titulo: String(a.titulo || a.nombre || 'Actividad').slice(0, 200), completada: true, fecha: hoy,
+        })))
+      }
       return NextResponse.json({ success: true })
     }
 

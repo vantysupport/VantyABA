@@ -75,6 +75,9 @@ export default function MFAPage() {
 
   // Código por correo (alternativa a la app de autenticación)
   const [correoMascara, setCorreoMascara] = useState<string | null>(null)
+  // 'activar' = eligiendo el correo como método; 'verificar' = iniciando sesión con él
+  const [emailAccion, setEmailAccion] = useState<'verificar' | 'activar'>('verificar')
+  const [tieneApp, setTieneApp] = useState(false)
   const [espera, setEspera] = useState(0)
   const L = (e: string, es: string) => (locale === 'en' ? e : es)
 
@@ -100,7 +103,7 @@ export default function MFAPage() {
   async function verificarCorreo(codigo: string) {
     setBusy(true)
     setError(null)
-    const r = await fetch('/api/session/mfa-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'verificar', codigo }) })
+    const r = await fetch('/api/session/mfa-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: emailAccion, codigo }) })
     const j = await r.json().catch(() => ({}))
     setBusy(false)
     if (r.ok) return setMode('done')
@@ -129,7 +132,11 @@ export default function MFAPage() {
       const verified = factors?.totp.find(f => f.status === 'verified')
       if (verified) {
         setFactorId(verified.id)
+        setTieneApp(true)
         setMode('challenge')
+      } else if (user.app_metadata?.mfa_email === true) {
+        setEmailAccion('verificar')
+        setMode('email')
       } else {
         setMode('intro')
       }
@@ -205,21 +212,28 @@ export default function MFAPage() {
             </span>
             <p className="mt-4 text-v-muted">{t(required ? 'vanty.mfa.introRequired' : 'vanty.mfa.introOptional')}</p>
 
-            <ol className="mt-7 space-y-4">
-              {(['install', 'scan', 'code'] as const).map((k, i) => (
-                <li key={k} className="flex gap-4">
-                  <span className="v-brand grid size-8 shrink-0 place-items-center rounded-full text-sm font-semibold">{i + 1}</span>
-                  <div>
-                    <p className="font-medium">{t(`vanty.mfa.steps.${k}.title`)}</p>
-                    <p className="text-sm text-v-muted">{t(`vanty.mfa.steps.${k}.body`)}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
 
-            <button onClick={startEnroll} disabled={busy} className="v-brand mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold transition-transform active:scale-[0.98] disabled:opacity-70">
-              {busy ? <Loader2 className="size-5 animate-spin" /> : t('vanty.mfa.start')}
-            </button>
+            <p className="mt-8 text-sm font-semibold text-v-text">{L('Choose how you want to verify', 'Elige cómo quieres verificarte')}</p>
+            <div className="mt-3 grid gap-3">
+              <button onClick={startEnroll} disabled={busy}
+                className="flex items-center gap-3 rounded-v-sm border border-v-border p-4 text-left transition-colors hover:border-v-accent/40 hover:bg-v-accent-soft/40 disabled:opacity-60">
+                <span className="v-brand grid size-10 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}>{busy ? <Loader2 className="size-5 animate-spin" /> : <Smartphone className="size-5" />}</span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-v-text">{L('Authenticator app', 'App de autenticación')} <span className="ml-1 rounded-full bg-v-success/15 px-2 py-0.5 text-[10px] font-semibold text-v-success">{L('Most secure', 'Más segura')}</span></span>
+                  <span className="block text-xs text-v-muted">{L('Google Authenticator, Authy or similar. Works without signal.', 'Google Authenticator, Authy u otra. Funciona sin señal.')}</span>
+                </span>
+              </button>
+              {!required && (
+                <button onClick={() => { setError(null); setCorreoMascara(null); setEmailAccion('activar'); setMode('email') }}
+                  className="flex items-center gap-3 rounded-v-sm border border-v-border p-4 text-left transition-colors hover:border-v-accent/40 hover:bg-v-accent-soft/40">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent"><Mail className="size-5" /></span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-v-text">{L('Code by email', 'Código por correo')}</span>
+                    <span className="block text-xs text-v-muted">{L('Nothing to install: we email you a code each time you sign in.', 'Sin instalar nada: te enviamos un código al correo cada vez que inicies sesión.')}</span>
+                  </span>
+                </button>
+              )}
+            </div>
             {!required && (
               <Link href={home} className="mt-4 block text-center text-sm font-medium text-v-muted hover:text-v-text">{t('vanty.mfa.skip')}</Link>
             )}
@@ -275,9 +289,11 @@ export default function MFAPage() {
 
         {mode === 'email' && (
           <motion.div key="email" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}>
-            <button onClick={() => { setError(null); setMode('challenge') }} className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-v-muted hover:text-v-text">
-              <ArrowLeft className="size-4" /> {L('Use the authenticator app', 'Usar la app de autenticación')}
-            </button>
+            {(emailAccion === 'activar' || tieneApp) && (
+              <button onClick={() => { setError(null); setMode(emailAccion === 'activar' ? 'intro' : 'challenge') }} className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-v-muted hover:text-v-text">
+                <ArrowLeft className="size-4" /> {emailAccion === 'activar' ? L('Back', 'Volver') : L('Use the authenticator app', 'Usar la app de autenticación')}
+              </button>
+            )}
             <span className="grid size-14 place-items-center rounded-[28%] bg-v-accent-soft"><Mail className="size-7 text-v-accent" strokeWidth={1.6} /></span>
             <h1 className="v-headline mt-6 text-[2.1rem] sm:text-4xl">{L('Code by email', 'Código por correo')}</h1>
             {!correoMascara ? (

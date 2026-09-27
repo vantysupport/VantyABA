@@ -1,6 +1,6 @@
 'use client'
 // app/padre/components/ProfileView.tsx
-// Perfil de la familia: datos, cuenta, seguridad, calendarios vinculados y avisos por WhatsApp.
+// Perfil de la familia: datos, cuenta, seguridad, y calendarios vinculados.
 
 import { useCentroBranding } from '@/components/CentroBrandingContext'
 import { TwoFactorCard } from '@/components/ui/two-factor-card'
@@ -117,81 +117,6 @@ function CalBtn({ label, logo, profile, apiBase, paramKey, role = 'padre' }: { l
   )
 }
 
-// ── Avisos por WhatsApp ────────────────────────────────────────────────────────
-function WhatsAppSection({ profile, onUpdated }: { profile: any; onUpdated: (p: string) => void }) {
-  const L = useL()
-  const [phone, setPhone] = useState(profile?.phone || '')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState('')
-  const [editing, setEditing] = useState(!profile?.phone)
-
-  const handleSave = async () => {
-    const clean = phone.replace(/\s/g, '')
-    if (!clean) { setError(L('Enter your number', 'Ingresa tu número')); return }
-    if (!clean.startsWith('+') || clean.length < 10) { setError(L('Include the country code, e.g. +51 XXX XXX XXX', 'Incluye el código de país, ej: +51 XXX XXX XXX')); return }
-    setSaving(true); setError('')
-    try {
-      const { error: err } = await supabase.from('profiles').update({ phone: clean, wsp_notif: true, updated_at: new Date().toISOString() }).eq('id', profile.id)
-      if (err) throw err
-      setSaved(true); setEditing(false); onUpdated(clean)
-      setTimeout(() => setSaved(false), 3000)
-    } catch (e: any) { setError(e.message) }
-    finally { setSaving(false) }
-  }
-
-  const handleRemove = async () => {
-    if (!await confirmar(L('Turn off WhatsApp notifications?', '¿Desactivar las notificaciones por WhatsApp?'))) return
-    setSaving(true)
-    try {
-      await supabase.from('profiles').update({ phone: null, wsp_notif: false }).eq('id', profile.id)
-      setPhone(''); setEditing(true); onUpdated('')
-    } finally { setSaving(false) }
-  }
-
-  const avisos = [
-    { Icon: CalendarDays, t: L('New appointment', 'Nueva cita agendada') },
-    { Icon: CalendarX, t: L('Cancelled appointment', 'Cita cancelada') },
-    { Icon: FileText, t: L('Report available', 'Informe disponible') },
-    { Icon: MessageCircle, t: L('Message from the therapist', 'Mensaje del terapeuta') },
-  ]
-
-  return (
-    <div className="p-5">
-      {profile?.phone && !editing ? (
-        <div className="flex items-center gap-3 rounded-v-sm border border-v-success/30 bg-v-success/10 p-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-[#25D366] text-white"><Smartphone size={18} /></span>
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1 text-sm font-semibold text-v-success"><CheckCircle2 size={13} /> {L('Active', 'Activo')}</p>
-            <p className="truncate text-xs font-medium text-v-text">{profile.phone}</p>
-          </div>
-          <button onClick={() => setEditing(true)} className="h-8 rounded-full bg-v-elevated px-3 text-xs font-semibold text-v-accent shadow-v">{L('Change', 'Cambiar')}</button>
-          <button onClick={handleRemove} disabled={saving} className="h-8 rounded-full px-3 text-xs font-semibold text-v-danger hover:bg-v-danger/10">{L('Remove', 'Quitar')}</button>
-        </div>
-      ) : (
-        <>
-          <p className="mb-3 text-xs leading-relaxed text-v-muted">{L('Enter your number with the country code to receive notices from the center.', 'Ingresa tu número con código de país para recibir avisos del centro.')}</p>
-          <div className="flex gap-2">
-            <input type="tel" value={phone} onChange={e => { setPhone(e.target.value); setError('') }} onKeyDown={e => e.key === 'Enter' && handleSave()} placeholder="+51 XXX XXX XXX"
-              className={`h-11 min-w-0 flex-1 rounded-full border bg-v-bg px-4 text-sm text-v-text outline-none placeholder:text-v-subtle focus:ring-4 focus:ring-v-accent-soft ${error ? 'border-v-danger/60' : 'border-v-border focus:border-v-accent/50'}`} />
-            <button onClick={handleSave} disabled={saving} className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-4 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-60">
-              {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} {L('Activate', 'Activar')}
-            </button>
-          </div>
-          {error && <p className="mt-2 text-xs font-medium text-v-danger">{error}</p>}
-          <p className="mt-2 text-[11px] text-v-subtle">{L('Works with numbers from any country.', 'Funciona con números de cualquier país.')}</p>
-        </>
-      )}
-      {saved && <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-v-success"><CheckCircle2 size={12} /> {L('Done! Notifications are on.', '¡Listo! Notificaciones activadas.')}</p>}
-      <p className="mb-2 mt-4 text-[11px] font-semibold text-v-subtle">{L('You will be notified about', 'Te avisaremos de')}</p>
-      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2">
-        {avisos.map(({ Icon, t }) => (
-          <div key={t} className="flex items-center gap-2 rounded-v-sm bg-v-fill px-3 py-2 text-xs font-medium text-v-text"><Icon size={13} className="shrink-0 text-v-accent" /><span className="leading-tight">{t}</span></div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // ── Vista principal ───────────────────────────────────────────────────────────
 function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy, onHelp, onPhoneUpdated }: any) {
@@ -281,9 +206,6 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
         <Seccion titulo={L('Linked calendars', 'Calendarios vinculados')} delay={0.12}>
           <CalBtn label="Google Calendar" logo={<GoogleLogo />} profile={profile} apiBase="google-calendar" paramKey="gcal" />
           <CalBtn label="Outlook Calendar" logo={<MicrosoftLogo />} profile={profile} apiBase="microsoft-calendar" paramKey="mscal" />
-        </Seccion>
-        <Seccion titulo={L('WhatsApp notifications', 'Notificaciones por WhatsApp')} delay={0.16}>
-          <WhatsAppSection profile={profile} onUpdated={onPhoneUpdated || (() => {})} />
         </Seccion>
       </div>
     </div>

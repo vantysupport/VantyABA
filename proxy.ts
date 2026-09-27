@@ -202,6 +202,9 @@ export async function proxy(req: NextRequest) {
   if (user) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     mfaPending = aal?.nextLevel === 'aal2' && aal.currentLevel !== 'aal2'
+    // Verificación en dos pasos por correo elegida como método (marca en el token de sesión)
+    const appMeta = (claimsData?.claims?.app_metadata ?? {}) as Record<string, unknown>
+    if (appMeta.mfa_email === true && aal?.currentLevel !== 'aal2') mfaPending = true
     // Alternativa: segundo paso hecho con un código por correo en ESTA sesión (cookie firmada y ligada a la sesión).
     // La consola /control no cuenta con esto: sus APIs exigen aal2 real de la app de autenticación.
     if (mfaPending && cookieMfaEmailValida(req.cookies.get(COOKIE_MFA_EMAIL)?.value, user.id, claimsData?.claims?.session_id as string | undefined)) {

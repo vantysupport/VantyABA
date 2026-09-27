@@ -1,6 +1,8 @@
 // Segundo paso por correo (alternativa a la app de autenticación).
 //  POST { accion: 'enviar' }            → manda un código de 6 dígitos al correo de la cuenta (1 por minuto)
 //  POST { accion: 'verificar', codigo }  → si es correcto, marca ESTA sesión como verificada (cookie firmada)
+//  POST { accion: 'activar', codigo }    → elige el correo como método de verificación en dos pasos
+//  POST { accion: 'desactivar' }         → lo quita (solo desde una sesión que ya pasó la verificación)
 // Vive bajo /api/session/ porque el proxy deja pasar esas rutas mientras el segundo paso está pendiente.
 // El programador no puede usarlo: la consola /control exige la app de autenticación (aal2 real).
 
@@ -11,7 +13,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { sendEmail } from '@/lib/email'
 import { emailLayout } from '@/lib/email-layout'
 import { getLocaleFromRequest } from '@/lib/lang'
-import { COOKIE_MFA_EMAIL, cookieMfaEmail, hashCodigo } from '@/lib/mfa-email'
+import { COOKIE_MFA_EMAIL, cookieMfaEmail, cookieMfaEmailValida, hashCodigo } from '@/lib/mfa-email'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, correo: `${usuario.slice(0, 2)}${'•'.repeat(Math.max(1, usuario.length - 2))}@${dominio}` })
   }
 
-  if (body?.accion === 'verificar') {
+  if (body?.accion === 'verificar' || body?.accion === 'activar') {
     const codigo = String(body?.codigo ?? '').replace(/\D/g, '')
     if (codigo.length !== 6) return NextResponse.json({ error: 'codigo' }, { status: 400 })
     const { data: fila } = await supabaseAdmin.from('mfa_codigos_email').select('codigo_hash, expira_en, intentos').eq('user_id', uid).maybeSingle()
@@ -72,10 +74,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'codigo', restantes: MAX_INTENTOS - fila.intentos - 1 }, { status: 400 })
     }
     await supabaseAdmin.from('mfa_codigos_email').delete().eq('user_id', uid)
+    if (body.accion === 'activar') {
+      // Marca en app_metadata (va dentro del token de sesión: el proxy la lee sin consultar la base)
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(uid)
+      await supabaseAdmin.auth.admin.updateUserById(uid, { app_metadata: { ...(u?.user?.app_metadata ?? {}), mfa_email: true } })
+    }
     const res = NextResponse.json({ ok: true })
     res.cookies.set(COOKIE_MFA_EMAIL, cookieMfaEmail(uid, sid), {
       httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30,
     })
+    return res
+  }
+
+  if (body?.accion === 'desactivar') {
+    // Solo una sesión que ya pasó la verificación por correo puede quitarla
+    if (!cookieMfaEmailValida(req.cookies.get(COOKIE_MFA_EMAIL)?.value, uid, sid)) return NextResponse.json({ error: 'verifica_primero' }, { status: 403 })
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(uid)
+    const meta = { ...(u?.user?.app_metadata ?? {}) } as Record<string, unknown>
+    delete meta.mfa_email
+    await supabaseAdmin.auth.admin.updateUserById(uid, { app_metadata: meta })
+    const res = NextResponse.json({ ok: true })
+    res.cookies.delete(COOKIE_MFA_EMAIL)
     return res
   }
 
