@@ -3,6 +3,12 @@
 import type { ReactNode } from 'react'
 import { Drawer } from 'vaul'
 
+// Los diálogos globales (confirmar, cambiar clave) se dibujan fuera de la hoja. Como la hoja es modal,
+// un clic en ellos cuenta como "clic afuera": se ignora para que la hoja no se cierre ni los bloquee.
+const esCapaSuperior = (e: { target: EventTarget | null; preventDefault: () => void }) => {
+  if (e.target instanceof Element && e.target.closest('[data-vanty-overlay]')) e.preventDefault()
+}
+
 type SheetProps = {
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -18,7 +24,7 @@ export function Sheet({ open, onOpenChange, trigger, title, description, childre
       {trigger && <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>}
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-[#081426]/40 backdrop-blur-[2px]" />
-        <Drawer.Content className="v-scope fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] max-w-xl flex-col rounded-t-v-lg border border-v-border bg-v-elevated shadow-v-lg outline-none">
+        <Drawer.Content onPointerDownOutside={esCapaSuperior} onInteractOutside={esCapaSuperior} onFocusOutside={esCapaSuperior} className="v-scope fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[92dvh] max-w-xl flex-col rounded-t-v-lg border border-v-border bg-v-elevated shadow-v-lg outline-none">
           <Drawer.Handle className="mt-3 !w-10 !bg-[var(--v-border-strong)]" />
           <div className="px-6 pt-4 pb-2">
             <Drawer.Title className="text-xl font-semibold tracking-tight">{title}</Drawer.Title>

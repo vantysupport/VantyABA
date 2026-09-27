@@ -59,7 +59,8 @@ export function ConfirmarHost() {
     <AnimatePresence>
       {pedido && (
         <motion.div
-          className="v-scope fixed inset-0 z-[200] flex items-end justify-center bg-[#081426]/50 p-4 backdrop-blur-sm sm:items-center"
+          data-vanty-overlay=""
+          className="v-scope pointer-events-auto fixed inset-0 z-[200] flex items-end justify-center bg-[#081426]/50 p-4 backdrop-blur-sm sm:items-center"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           onClick={() => cerrar(false)}
           role="presentation"

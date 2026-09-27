@@ -8,6 +8,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { createClient } from '@/lib/supabase-server'
 import { requireProgramador } from '@/lib/require-programador'
 import { logAuditEvent } from '@/lib/audit-log'
+import { borrarArchivoGuardado, borrarArchivosDePaciente, borrarArchivosDeUsuario } from '@/lib/borrar-archivos'
 
 // Vanty platform console API.
 //  • GET  → public-safe platform status (maintenance + global module switches). Logged-in consumers only (proxy).
@@ -300,6 +301,47 @@ export async function POST(req: NextRequest) {
       })
       await audit(`Centro ${status === 'suspended' ? 'suspendido' : 'reactivado'}`, { centroId })
       return NextResponse.json({ ok: true })
+    }
+
+    case 'delete_centro': {
+      // Borra el centro con toda su información y las cuentas (correos) de su equipo y sus familias.
+      // Se exige escribir el nombre exacto del centro, como en la confirmación del panel.
+      const centroId = uuid(body.centro_id)
+      if (!centroId) return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
+      const { data: centro } = await supabaseAdmin.from('centros').select('id, name, logo_url').eq('id', centroId).maybeSingle()
+      if (!centro) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+      if (str(body.confirm_name, 200) !== (centro.name ?? '').trim()) return NextResponse.json({ error: 'name_mismatch' }, { status: 400 })
+
+      const [{ data: perfiles }, { data: hijos }] = await Promise.all([
+        supabaseAdmin.from('profiles').select('id, role, avatar_url').eq('centro_id', centroId),
+        supabaseAdmin.from('children').select('id').eq('centro_id', centroId),
+      ])
+      const cuentas = perfiles ?? []
+      // Nunca borrar la cuenta de quien opera la consola ni la de otro programador.
+      if (cuentas.some(c => c.id === auth.userId || c.role === 'programador')) {
+        return NextResponse.json({ error: 'has_programador' }, { status: 409 })
+      }
+
+      const { data: resultado, error } = await supabaseAdmin.rpc('borrar_centro', { p_centro: centroId })
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+      // Cuentas de acceso: libera los correos para que puedan registrarse de nuevo.
+      const fallidas: string[] = []
+      for (const c of cuentas) {
+        await borrarArchivosDeUsuario(c.id, c.avatar_url)
+        const { error: e } = await supabaseAdmin.auth.admin.deleteUser(c.id)
+        if (e && !/not.?found/i.test(e.message)) fallidas.push(c.id)
+      }
+      // Archivos: de cada paciente, el logo y la carpeta del centro en Storage.
+      for (const h of hijos ?? []) await borrarArchivosDePaciente(h.id)
+      await borrarArchivoGuardado(centro.logo_url)
+      try {
+        const { data: objs } = await supabaseAdmin.storage.from('public-images').list(`centros/${centroId}`, { limit: 1000 })
+        if (objs?.length) await supabaseAdmin.storage.from('public-images').remove(objs.map(o => `centros/${centroId}/${o.name}`))
+      } catch { /* noop */ }
+
+      await audit('Centro eliminado', { centroId, name: centro.name, cuentas: cuentas.length, pacientes: hijos?.length ?? 0, resultado, cuentasFallidas: fallidas })
+      return NextResponse.json({ ok: true, cuentas: cuentas.length - fallidas.length, cuentas_fallidas: fallidas.length, pacientes: hijos?.length ?? 0 })
     }
 
     case 'extend_trial': {

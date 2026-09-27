@@ -40,6 +40,8 @@ export function CentroControl({ centro, plans, onChanged, onError }: { centro: C
   const [limites, setLimites] = useState<Record<string, string>>(() => Object.fromEntries(LIMITES.map(l => [l.key, centro.limites?.[l.key] != null ? String(centro.limites[l.key]) : ''])))
   const [features, setFeatures] = useState<Record<string, boolean>>(centro.features ?? {})
   const [compras, setCompras] = useState<Compra[]>([])
+  const [borrar, setBorrar] = useState(false)
+  const [nombreConfirma, setNombreConfirma] = useState('')
 
   const cargarCompras = useCallback(() => {
     callControl<{ compras: Compra[] }>('list_compras_tokens', { centro_id: centro.id }).then(r => setCompras(r.compras)).catch(onError)
@@ -109,6 +111,34 @@ export function CentroControl({ centro, plans, onChanged, onError }: { centro: C
             </Button>
           )}
         </div>
+      </Card>
+
+      {/* Zona de peligro: eliminar el centro con toda su información */}
+      <Card>
+        <h3 className="font-semibold text-v-danger">{L('Danger zone', 'Zona de peligro')}</h3>
+        <p className="mt-1 text-sm text-v-muted">
+          {L('Deletes the center, its patients, sessions, payments, files and the accounts (emails) of its team and families. This cannot be undone.',
+            'Borra el centro, sus pacientes, sesiones, pagos, archivos y las cuentas (correos) de su equipo y sus familias. No se puede deshacer.')}
+        </p>
+        {!borrar ? (
+          <div className="mt-4"><Button variant="danger" onClick={() => { setBorrar(true); setNombreConfirma('') }}>{L('Delete center', 'Eliminar centro')}</Button></div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            <Field value={nombreConfirma} onChange={e => setNombreConfirma(e.target.value)} autoComplete="off"
+              label={L(`Type "${centro.name}" to confirm`, `Escribe "${centro.name}" para confirmar`)} />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="danger" disabled={busy === 'delete' || nombreConfirma.trim() !== centro.name.trim()}
+                onClick={async () => {
+                  if (!(await confirmar(L(`Delete ${centro.name} and all its information permanently?`, `¿Eliminar ${centro.name} y toda su información para siempre?`),
+                    { titulo: L('Delete center', 'Eliminar centro'), confirmar: L('Delete', 'Eliminar'), peligro: true }))) return
+                  run('delete', 'delete_centro', { confirm_name: nombreConfirma.trim() })
+                }}>
+                {busy === 'delete' ? L('Deleting…', 'Eliminando…') : L('Delete permanently', 'Eliminar definitivamente')}
+              </Button>
+              <Button variant="secondary" disabled={busy === 'delete'} onClick={() => setBorrar(false)}>{L('Cancel', 'Cancelar')}</Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Plan */}

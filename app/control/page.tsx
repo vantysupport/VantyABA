@@ -40,6 +40,9 @@ export default function ControlPage() {
       if (e.code === 'no_session') return window.location.assign(`/${locale}/login`)
       if (e.code === 'forbidden') return setPhase('forbidden')
       if (e.code === 'mfa_required') return setPhase('mfa_required')
+      if (e.code === 'has_programador') return setToast(locale === 'en'
+        ? 'This center has a programmer account (maybe yours). Move it out before deleting the center.'
+        : 'Este centro tiene una cuenta de programador (quizá la tuya). Sácala antes de eliminar el centro.')
       setToast(t('vanty.control.errorGeneric', { code: e.code }))
       return
     }
