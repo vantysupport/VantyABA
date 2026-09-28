@@ -16,7 +16,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${SITIO}/${loc}${p.ruta}`,
     lastModified: ahora,
     changeFrequency: p.frecuencia,
-    priority: loc === 'es' ? p.prioridad : Math.max(0.1, p.prioridad - 0.1),
+    // Redondeo a un decimal: restar 0.1 en coma flotante deja valores como 0.7000000000000001
+    priority: loc === 'es' ? p.prioridad : Math.round(Math.max(0.1, p.prioridad - 0.1) * 10) / 10,
     alternates: { languages: { es: `${SITIO}/es${p.ruta}`, en: `${SITIO}/en${p.ruta}` } },
   })))
 }
