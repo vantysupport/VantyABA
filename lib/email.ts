@@ -23,7 +23,7 @@ function getTransporter() {
 }
 
 // ── Envío base ────────────────────────────────────────────────────────────────
-export type EmailAttachment = { filename: string; content: string; contentType: string }
+export type EmailAttachment = { filename: string; content: string | Buffer; contentType: string }
 
 /** `fromName`: display name of the sender — the center's name (getCentroBranding().name). */
 export async function sendEmail(to: string, subject: string, html: string, fromName: string, attachments?: EmailAttachment[]): Promise<boolean> {

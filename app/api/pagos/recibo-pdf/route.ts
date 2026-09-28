@@ -9,6 +9,8 @@ import { getApiCaller, hasRole, ROLES, unauthorized } from '@/lib/api-auth'
 import { esc, fmtFechaLarga, fmtFechaCorta, RECIBO_CSS, RECIBO_FONTS } from '@/lib/recibo-html'
 import { cobradoDe, saldoDe, type Abono } from '@/lib/pagos'
 import { sendEmail } from '@/lib/email'
+import { emailLayout, escHtml } from '@/lib/email-layout'
+import { generarReciboPDF, type PagoRecibo } from '@/lib/recibo-pdf'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -182,7 +184,8 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
 
 
 // ── Armar el recibo (compartido por ver/imprimir y enviar por correo) ────────
-type Armado = { error: NextResponse } | { html: string; reciboNum: string; center: { nombre: string }; parentProfile: { email?: string | null } | null }
+type Tutor = { full_name?: string | null; email?: string | null; phone?: string | null }
+type Armado = { error: NextResponse } | { html: string; reciboNum: string; center: Awaited<ReturnType<typeof getCenterInfo>>; parentProfile: Tutor | null; payment: PagoRecibo; symbol: string }
 
 async function armarRecibo(req: NextRequest, paymentId: string, lang: string, paraCorreo: boolean, soloStaff: boolean): Promise<Armado> {
   const caller = await getApiCaller(req)
@@ -196,7 +199,8 @@ async function armarRecibo(req: NextRequest, paymentId: string, lang: string, pa
       children (
         id, name, parent_id,
         profiles:parent_id ( full_name, email, phone )
-      )
+      ),
+      appointments ( appointment_date, appointment_time, status )
     `)
     .eq('id', paymentId)
     .single()
@@ -226,7 +230,7 @@ async function armarRecibo(req: NextRequest, paymentId: string, lang: string, pa
   const parentProfile = (child as any)?.profiles
 
   const html = generateReceiptHTML(payment, center, child, parentProfile, reciboNum, lang, cur.symbol, paraCorreo)
-  return { html, reciboNum, center, parentProfile: parentProfile ?? null }
+  return { html, reciboNum, center, parentProfile: parentProfile ?? null, payment, symbol: cur.symbol }
 }
 
 const langDe = (req: NextRequest, v: unknown) => (v === 'en' ? 'en' : (req.headers.get('x-locale') === 'en' ? 'en' : 'es'))
@@ -258,8 +262,37 @@ export async function POST(req: NextRequest) {
     if ('error' in r) return r.error
     const destino = String(body.email || r.parentProfile?.email || '').trim().toLowerCase()
     if (!EMAIL_RE.test(destino)) return NextResponse.json({ error: 'sin_correo' }, { status: 400 })
-    const asunto = lang === 'en' ? `Payment receipt N.° ${r.reciboNum} · ${r.center.nombre}` : `Recibo de pago N.° ${r.reciboNum} · ${r.center.nombre}`
-    const ok = await sendEmail(destino, asunto, r.html, r.center.nombre || 'Vanty ABA')
+    const en = lang === 'en'
+    const L = (e: string, s: string) => (en ? e : s)
+    const p = r.payment
+    const paciente = String((p.children as { name?: string } | null)?.name || p.paciente_externo || '—')
+    const sesion = (p.appointments as { appointment_date: string; appointment_time: string | null } | null) ?? null
+    const pdf = await generarReciboPDF({ payment: p, center: r.center, pacienteNombre: paciente, tutor: r.parentProfile, reciboNum: r.reciboNum, lang, symbol: r.symbol, sesion })
+
+    const ESTADO: Record<string, [string, string]> = { paid: ['Paid', 'Pagado'], pending: ['Pending', 'Pendiente'], partial: ['Partially paid', 'Pago parcial'], cancelled: ['Cancelled', 'Anulado'], refunded: ['Refunded', 'Devuelto'] }
+    const est = ESTADO[p.status] ?? [p.status, p.status]
+    const monto = fmtCurrency(Number(p.amount), lang, r.symbol)
+    const saludo = r.parentProfile?.full_name && !body.email ? L(`Hi ${r.parentProfile.full_name.split(' ')[0]},`, `Hola, ${r.parentProfile.full_name.split(' ')[0]}:`) : L('Hello,', 'Hola:')
+    const asunto = L(`Your receipt N.° ${r.reciboNum} from ${r.center.nombre}`, `Tu recibo N.° ${r.reciboNum} de ${r.center.nombre}`)
+    const html = emailLayout({
+      locale: en ? 'en' : 'es', subject: asunto, eyebrow: r.center.nombre,
+      preheader: L(`Your payment receipt is attached (${monto}).`, `Te enviamos tu recibo de pago (${monto}).`),
+      title: L('Your receipt is here', 'Tu recibo está aquí'),
+      intro: `${escHtml(saludo)} ${L(`we're sending you the payment receipt from <b>${escHtml(r.center.nombre)}</b>. You'll find it attached as a PDF.`, `te enviamos el recibo de pago de <b>${escHtml(r.center.nombre)}</b>. Lo encontrarás adjunto en PDF.`)}`,
+      detalles: [
+        { label: L('Receipt', 'Recibo'), value: `N.° ${escHtml(r.reciboNum)}` },
+        { label: L('Patient', 'Paciente'), value: escHtml(paciente) },
+        { label: L('Concept', 'Concepto'), value: escHtml(String(p.concept || '—')) },
+        { label: L('Amount', 'Monto'), value: escHtml(monto) },
+        { label: L('Status', 'Estado'), value: escHtml(en ? est[0] : est[1]) },
+      ],
+      aria: p.status === 'paid' ? 'celebra' : 'laptop',
+      note: L('Internal payment receipt, not valid as a SUNAT tax document. If you have any questions, please contact the center.',
+        'Recibo interno de pago, no válido como comprobante SUNAT. Si tienes alguna duda, comunícate con el centro.'),
+    })
+    const ok = await sendEmail(destino, asunto, html, r.center.nombre || 'Vanty ABA', [
+      { filename: `${L('Receipt', 'Recibo')}-${r.reciboNum}.pdf`, content: pdf, contentType: 'application/pdf' },
+    ])
     if (!ok) return NextResponse.json({ error: 'envio_fallido' }, { status: 502 })
     return NextResponse.json({ ok: true, email: destino })
   } catch (e) {
