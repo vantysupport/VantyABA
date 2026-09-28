@@ -3,6 +3,7 @@
 // Fetched from /api/centro/branding on mount and again on sign-in/sign-out.
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PLATFORM_NAME } from '@/lib/branding'
 
@@ -55,6 +56,15 @@ export function CentroBrandingProvider({ children }: { children: React.ReactNode
     })
     return () => sub.subscription.unsubscribe()
   }, [refresh])
+
+  // El inicio de sesión con correo y clave ocurre en el servidor (cookies) y no emite SIGNED_IN en el
+  // navegador; luego se entra al panel sin recargar. Si aún no hay centro cargado, se vuelve a pedir
+  // al cambiar de página para no quedarse con el nombre de la plataforma en vez del del centro.
+  const pathname = usePathname()
+  useEffect(() => {
+    if (loaded && !branding.id) refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   return (
     <BrandingCtx.Provider value={{ ...branding, loaded, refresh }}>
