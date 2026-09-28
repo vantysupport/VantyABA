@@ -34,13 +34,24 @@ const mesCorto = (m: number, loc: string) => _cap(new Date(2020, m, 1).toLocaleD
 const mesLargo = (m: number, loc: string) => _cap(new Date(2020, m, 1).toLocaleDateString(_bcp(loc), { month: 'long' }))
 const diaCorto = (dow: number, loc: string) => _cap(new Date(2021, 7, 1 + dow).toLocaleDateString(_bcp(loc), { weekday: 'short' }).replace('.', ''))
 
+// Fecha del cobro: la elegida al registrarlo (los cobros anteriores a fecha_cobro usan la de registro).
+// No cambia al pagarlo: cuándo se pagó queda en paid_at.
+function fechaCobroDe(p: any): string {
+  return p.fecha_cobro || p.created_at
+}
+/** true si se pagó otro día que el del cobro (para mostrar "pagado el …") */
+function pagadoOtroDia(p: any): boolean {
+  if (!p.paid_at) return false
+  return new Date(p.paid_at).toDateString() !== new Date(fechaCobroDe(p)).toDateString()
+}
+
 // ─── Group payments by patient + month ───────────────────────────────────────
 // Packages (concept with "(N/M)" pattern) are grouped by their base concept.
 // Individual payments keep separate entries so they don't mix with packages.
 function groupByPatientMonth(pays: any[], loc: string) {
   const g: Record<string, any> = {}
   pays.forEach(p => {
-    const d = new Date(p.paid_at || p.fecha_cobro || p.created_at)
+    const d = new Date(fechaCobroDe(p))
     const year = d.getFullYear()
     const month = d.getMonth()
 
@@ -421,6 +432,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     const { error } = await supabase.from('payments').update({
       amount_paid: completo ? Number(p.amount) : Math.round((pagadoAntes + monto) * 100) / 100,
       abonos, status: completo ? 'paid' : 'partial', paid_at: completo ? ahora : null,
+      fecha_cobro: fechaCobroDe(p), // la fecha original se conserva; paid_at dice cuándo se pagó
       payment_method: sigueParcial ? p.payment_method : metodo,
     }).eq('id', p.id)
     setSavingAbono(false)
@@ -444,6 +456,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                           abonos: p.status === 'partial' && saldoDe(p) > 0 ? [...abonosPrev, { monto: saldoDe(p), fecha: ahora, metodo: p.payment_method }] : (abonosPrev.length ? abonosPrev : [{ monto: Number(p.amount), fecha: ahora, metodo: p.payment_method }]) }
       : k === 'pending' ? { status: k, paid_at: null, amount_paid: 0, abonos: [] }
       : { status: k, paid_at: null }
+    cambios.fecha_cobro = fechaCobroDe(p) // la fecha original del cobro no cambia al pagarlo
     const prevPayments = payments
     const updated = payments.map(x => x.id === p.id ? { ...x, ...cambios } : x)
     setPayments(updated); buildStats(updated)   // cambio optimista
@@ -1029,7 +1042,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-sm font-semibold text-v-accent">{nombre.charAt(0).toUpperCase()}</span>
                         <div className="min-w-0 flex-[1_1_180px]">
                           <p className="truncate text-sm font-semibold text-v-text">{nombre}{!p.child_id && p.paciente_externo && <span className="ml-1.5 rounded-full bg-v-fill px-1.5 py-0.5 text-[10px] font-medium text-v-subtle">{t('pagos.sinInscribir')}</span>}</p>
-                          <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(p.paid_at || p.fecha_cobro || p.created_at))}</p>
+                          <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(fechaCobroDe(p)))}{pagadoOtroDia(p) && ` · ${locale === 'en' ? 'paid' : 'pagado el'} ${fechaCorta(new Date(p.paid_at))}`}</p>
                         </div>
                         <div className="ml-auto flex shrink-0 items-center gap-1.5">
                           <span className="mr-1 text-right">
@@ -1143,7 +1156,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
                           <div className="min-w-0 flex-[1_1_220px]">
                             <p className="truncate text-sm font-medium text-v-text">{p.concept}</p>
-                            <p className="text-xs text-v-subtle">{fechaCorta(new Date(p.fecha_cobro || p.created_at))}{abonos.length > 0 && ` · ${abonos.length} ${abonos.length === 1 ? (locale === 'en' ? 'payment' : 'abono') : (locale === 'en' ? 'payments' : 'abonos')}`}</p>
+                            <p className="text-xs text-v-subtle">{fechaCorta(new Date(fechaCobroDe(p)))}{abonos.length > 0 && ` · ${abonos.length} ${abonos.length === 1 ? (locale === 'en' ? 'payment' : 'abono') : (locale === 'en' ? 'payments' : 'abonos')}`}</p>
                             <div className="mt-2 flex items-center gap-2">
                               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-v-fill">
                                 <motion.div className="h-full rounded-full bg-v-success" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7 }} />
@@ -1222,7 +1235,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                           const tone = STATUS_TONE[p.status] || STATUS_TONE.refunded
                           return (
                             <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
-                              <span className="w-24 shrink-0 text-xs tabular-nums text-v-subtle">{fechaCorta(new Date(p.paid_at || p.fecha_cobro || p.created_at))}</span>
+                              <span className="w-24 shrink-0 text-xs tabular-nums text-v-subtle" title={pagadoOtroDia(p) ? `${locale === 'en' ? 'Paid' : 'Pagado el'} ${fechaCorta(new Date(p.paid_at))}` : undefined}>{fechaCorta(new Date(fechaCobroDe(p)))}</span>
                               <span className="min-w-0 flex-1 truncate text-sm text-v-muted">{p.concept}</span>
                               <span className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(Number(p.amount))}</span>
                               <span className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline ${tone.pill}`}>{t('pagos.status.' + p.status)}</span>
