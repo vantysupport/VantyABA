@@ -138,8 +138,16 @@ function secciones(en: boolean): SeccionLegal[] {
       body: <>
         <p>{L('If you sign in with Google or Microsoft, we only receive your name, email address and profile photo to create and manage your account. We do not access your email, files or other services.',
           'Si inicias sesión con Google o Microsoft, solo recibimos tu nombre, correo electrónico y fotografía de perfil para crear y gestionar tu cuenta. No accedemos a tu correo, archivos ni a otros servicios.')}</p>
-        <p>{L('If you link Google Calendar or Outlook Calendar, access is limited to creating and updating the events of your appointments. You may revoke it at any time from My profile → Linked calendars.',
-          'Si vinculas Google Calendar u Outlook Calendar, el acceso se limita a crear y actualizar los eventos de tus citas. Puedes revocarlo en cualquier momento desde Mi perfil → Calendarios vinculados.')}</p>
+        <p>{L('If you link Google Calendar or Outlook Calendar, access is limited to creating, updating and deleting the events of your appointments. We do not read, store or analyze the other events in your calendar. You may revoke it at any time from My profile → Linked calendars.',
+          'Si vinculas Google Calendar u Outlook Calendar, el acceso se limita a crear, actualizar y eliminar los eventos de tus citas. No leemos, guardamos ni analizamos los demás eventos de tu calendario. Puedes revocarlo en cualquier momento desde Mi perfil → Calendarios vinculados.')}</p>
+        <p>{L("Vanty ABA's use and transfer to any other app of information received from Google APIs will adhere to the ",
+          'El uso que Vanty ABA hace de la información recibida de las APIs de Google, y su transferencia a cualquier otra aplicación, se ajustará a la ')}
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="font-semibold text-v-accent hover:underline">
+            {L('Google API Services User Data Policy', 'Política de Datos de Usuario de los Servicios de API de Google')}
+          </a>
+          {L(', including the Limited Use requirements.', ', incluidos los requisitos de Uso Limitado (Limited Use).')}</p>
+        <p>{L('Data received from Google APIs is not sent to artificial intelligence services and is not used to develop, improve or train generalized AI or machine learning models.',
+          'Los datos recibidos de las APIs de Google no se envían a servicios de inteligencia artificial ni se usan para desarrollar, mejorar o entrenar modelos generales de inteligencia artificial o aprendizaje automático.')}</p>
       </>,
     },
     {
