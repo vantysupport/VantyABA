@@ -113,7 +113,7 @@ export async function createCentro(_prev: CreateCentroState, formData: FormData)
 
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .update({ role: 'jefe', centro_id: centro.id, full_name: fullName })
+    .update({ role: 'jefe', centro_id: centro.id, full_name: fullName, nombre_confirmado: true })
     .eq('id', user.id)
   if (profileError) {
     await rollback(centro.id)

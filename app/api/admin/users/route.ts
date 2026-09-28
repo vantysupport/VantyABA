@@ -225,6 +225,7 @@ export async function POST(request: NextRequest) {
           id: newUser.user.id,
           email,
           full_name: full_name || email.split('@')[0],
+          nombre_confirmado: !!full_name,
           role,
           tokens: 0,
           is_active: true,

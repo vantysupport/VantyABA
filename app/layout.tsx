@@ -8,6 +8,7 @@ import { I18nProvider } from '@/lib/i18n-context'
 import SessionGuard from '@/components/SessionGuard'
 import SuscripcionGuard from '@/components/SuscripcionGuard'
 import RecordarSesionGuard from '@/components/RecordarSesionGuard'
+import NombrePerfilGuard from '@/components/NombrePerfilGuard'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import MaintenanceGate from '@/components/MaintenanceGate'
 import { ConfirmarHost } from '@/components/ui/confirmar'
@@ -211,6 +212,7 @@ export default async function RootLayout({
                     <SessionGuard />
                     <SuscripcionGuard />
                     <RecordarSesionGuard />
+                    <NombrePerfilGuard />
                     <MaintenanceGate>
                       {children}
                     </MaintenanceGate>

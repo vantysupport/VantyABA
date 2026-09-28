@@ -52,7 +52,7 @@ async function procesar(formData: FormData): Promise<AceptarState> {
     return { error: created.error === 'send_failed' ? 'mail' : 'generic' }
   }
 
-  const fallo = await aplicarInvitacion(inv, created.userId, { fullName, email, phone, specialty })
+  const fallo = await aplicarInvitacion(inv, created.userId, { fullName, email, phone, specialty, nombreConfirmado: true })
   if (fallo) {
     await supabaseAdmin.auth.admin.deleteUser(created.userId)
     return { error: fallo }
