@@ -2,6 +2,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { appBaseUrl, authMailConfigured, createUserWithConfirmationEmail } from '@/lib/auth-emails'
+import { liberarCorreoHuerfano } from '@/lib/cuenta-huerfana'
 import { aplicarInvitacion, invitacionPorToken, validarInvitacion, type ErrorInvitacion } from '@/lib/invitaciones'
 
 export type AceptarState = {
@@ -42,6 +43,8 @@ async function procesar(formData: FormData): Promise<AceptarState> {
   const siteUrl = appBaseUrl()
   if (!siteUrl || !authMailConfigured()) return { error: 'mail' }
 
+  // Correo ocupado por una cuenta que se creó sola (Google/Microsoft) sin pertenecer a nada: se libera.
+  await liberarCorreoHuerfano(email)
   // La cuenta queda sin confirmar hasta que la persona abra el correo: así se valida que el email es suyo.
   const created = await createUserWithConfirmationEmail({ email, password, fullName, siteUrl, locale })
   if ('error' in created) {

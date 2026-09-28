@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { appBaseUrl, authMailConfigured, createUserWithConfirmationEmail } from '@/lib/auth-emails'
+import { liberarCorreoHuerfano } from '@/lib/cuenta-huerfana'
 import { detectarPais } from '@/lib/precios-server'
 
 const DEFAULT_TRIAL_DAYS = 14
@@ -56,6 +57,9 @@ export async function createCentro(_prev: CreateCentroState, formData: FormData)
   // With Gmail SMTP configured the app sends its own branded confirmation email; otherwise Supabase's mailer does.
   const siteUrl = appBaseUrl()
   if (!siteUrl) return { error: 'vanty.createCenter.errors.generic' }
+  // Si el correo quedó ocupado por una cuenta que se creó sola al entrar con Google/Microsoft y no
+  // pertenece a nada, se libera. La cuenta nueva igual exige confirmar el correo.
+  await liberarCorreoHuerfano(email)
   let userId: string
   if (authMailConfigured()) {
     const created = await createUserWithConfirmationEmail({ email, password, fullName, siteUrl, locale })

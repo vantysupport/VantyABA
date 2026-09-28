@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, Building2, MailOpen, CalendarCheck, Sparkles, ShieldCheck, Check } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, Building2, MailOpen, CalendarCheck, Sparkles, ShieldCheck, Check, UserX } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { useOAuthProviders } from '@/lib/use-oauth-providers'
@@ -14,7 +14,7 @@ import { emailRecordado, guardarPreferencia, prefRecordar } from '@/lib/recordar
 import { AuthShell } from '@/components/ui/auth-shell'
 
 interface PageProps {
-  searchParams: Promise<{ mode?: string; session?: string; redirect?: string }>
+  searchParams: Promise<{ mode?: string; session?: string; redirect?: string; error?: string }>
 }
 
 type Tab = 'signin' | 'new'
@@ -30,7 +30,9 @@ export default function LoginPage(props: PageProps) {
   const searchParams = use(props.searchParams)
   const router = useRouter()
   const { t, locale } = useI18n()
-  const [tab, setTab] = useState<Tab>(searchParams.mode === 'signup' ? 'new' : 'signin')
+  // Entró con Google/Microsoft sin tener cuenta: /auth/callback borró la cuenta que se creó sola y lo trae aquí
+  const sinCuenta = searchParams.error === 'no_account'
+  const [tab, setTab] = useState<Tab>(searchParams.mode === 'signup' || sinCuenta ? 'new' : 'signin')
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string | null>(null)
   const [lockMinutes, setLockMinutes] = useState(15)
@@ -240,6 +242,19 @@ export default function LoginPage(props: PageProps) {
               </motion.div>
             ) : (
               <motion.div key="new" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="mt-6 flex flex-col gap-3">
+                {sinCuenta && (
+                  <div role="alert" className="flex items-start gap-3 rounded-v-lg border border-v-warning/30 bg-v-warning/10 p-4">
+                    <UserX className="mt-0.5 size-5 shrink-0 text-v-warning" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-v-text">{locale === 'en' ? "We couldn't find an account with that email" : 'No encontramos una cuenta con ese correo'}</p>
+                      <p className="mt-0.5 text-xs text-v-muted">
+                        {locale === 'en'
+                          ? "It doesn't belong to any center yet. Create your center below, or ask your center to send you an invitation."
+                          : 'Aún no pertenece a ningún centro. Crea tu centro aquí abajo o pide a tu centro que te envíe una invitación.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <Link href={`/${locale}/crear-centro`} className="group rounded-v-lg border border-v-border bg-v-elevated p-5 shadow-v transition-all hover:-translate-y-0.5 hover:border-v-accent">
                   <span className="v-brand grid size-11 place-items-center rounded-[28%]"><Building2 className="size-5" /></span>
                   <p className="mt-4 font-semibold">{t('vanty.login.createTitle')}</p>
