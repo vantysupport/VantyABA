@@ -723,15 +723,162 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     </div>
   )
 
+  // Fila de un cobro en Registros (suelto o dentro de un paquete)
+  const filaPago = (p: any, enPaquete = false) => {
+                  const tone = STATUS_TONE[p.status] || STATUS_TONE.refunded
+                  const MI = METHOD_ICON[p.payment_method] || MoreHorizontal
+                  const nombre = p.children?.name || p.paciente_externo || '—'
+                  const menuOpen = statusMenu === p.id
+                  const conf = confirmar?.tipo === 'pago' && confirmar.id === p.id
+                  return (
+                    <div key={p.id}>
+                      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 py-3 pr-4 transition-colors hover:bg-v-bg sm:pr-5 ${enPaquete ? 'pl-8 sm:pl-12' : 'pl-4 sm:pl-5'}`}>
+                        <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-sm font-semibold text-v-accent">{nombre.charAt(0).toUpperCase()}</span>
+                        <div className="min-w-0 flex-[1_1_180px]">
+                          <p className="truncate text-sm font-semibold text-v-text">{nombre}{!p.child_id && p.paciente_externo && <span className="ml-1.5 rounded-full bg-v-fill px-1.5 py-0.5 text-[10px] font-medium text-v-subtle">{t('pagos.sinInscribir')}</span>}</p>
+                          <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(fechaCobroDe(p)))}{pagadoOtroDia(p) && ` · ${locale === 'en' ? 'paid' : 'pagado el'} ${fechaCorta(new Date(p.paid_at))}`}</p>
+                          {p.appointments?.appointment_date && (() => {
+                            const as = asistenciaDe(p.appointments.status, p.appointments.appointment_date, locale === 'en')
+                            return (
+                              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-v-muted">
+                                <Calendar size={11} /> {locale === 'en' ? 'Session' : 'Sesión'} {fechaCorta(new Date(p.appointments.appointment_date + 'T12:00:00'))} · {String(p.appointments.appointment_time ?? '').slice(0, 5)}
+                                <span className={`rounded-full px-1.5 py-0.5 font-semibold ${as.cls}`}>{as.txt}</span>
+                                {p.especialista?.full_name && <span>· {p.especialista.full_name}</span>}
+                              </p>
+                            )
+                          })()}
+                        </div>
+                        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                          <span className="mr-1 text-right">
+                            <span className="block text-sm font-bold tabular-nums text-v-text">{fmt(Number(p.amount))}</span>
+                            {p.status === 'partial' && <span className="block text-[11px] font-medium tabular-nums text-v-warning">{locale === 'en' ? 'owes' : 'debe'} {fmt(saldoDe(p))}</span>}
+                            <span className="flex items-center justify-end gap-1 text-[11px] text-v-subtle"><MI size={11} /> {t('pagos.method.' + p.payment_method)}</span>
+                          </span>
+                          {/* Estado: tocar para cambiar */}
+                          <div className="relative">
+                            <button onClick={() => setStatusMenu(menuOpen ? null : p.id)}
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone.pill}`}>
+                              {t('pagos.status.' + p.status)} <ChevronDown size={12} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            <AnimatePresence>
+                              {menuOpen && (
+                                <>
+                                  <div className="fixed inset-0 z-30" onClick={() => setStatusMenu(null)} />
+                                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
+                                    className="absolute right-0 top-full z-40 mt-1.5 w-40 overflow-hidden rounded-v-sm border border-v-border bg-v-elevated p-1 shadow-v-lg">
+                                    {Object.keys(STATUS_CFG).map(k => (
+                                      <button key={k} onClick={() => cambiarEstado(p, k)}
+                                        className={`flex w-full items-center gap-2 rounded-v-sm px-2.5 py-2 text-left text-xs font-semibold transition-colors ${p.status === k ? 'bg-v-fill text-v-text' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+                                        <span className={`size-2 rounded-full ${STATUS_TONE[k]?.dot}`} /> {t('pagos.status.' + k)}
+                                        {p.status === k && <Check size={13} className="ml-auto" />}
+                                      </button>
+                                    ))}
+                                  </motion.div>
+                                </>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                          <button onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}&lang=${locale}`, '_blank')} title={t('admin.verRecibo')}
+                            className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
+                          <button onClick={() => setEnvio(envio?.id === p.id ? null : { id: p.id, email: '' })} title={locale === 'en' ? 'Email receipt' : 'Enviar recibo por correo'}
+                            className={`grid size-8 place-items-center rounded-full transition-colors ${envio?.id === p.id ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
+                          <button onClick={() => setConfirmar(conf ? null : { tipo: 'pago', id: p.id })} disabled={deletingId === p.id} title={t('admin.eliminarPago')}
+                            className={`grid size-8 place-items-center rounded-full transition-colors disabled:opacity-50 ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}>
+                            {deletingId === p.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                          </button>
+                        </div>
+                      </div>
+                      <AnimatePresence>
+                        {envio?.id === p.id && envioBar(p)}
+                      </AnimatePresence>
+                      <AnimatePresence>
+                        {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => setConfirmar(null)} onYes={() => handleDeletePago(p)} />}
+                        {abonoFor?.id === p.id && abonoBar(p, locale === 'en' ? 'How much was paid as a down payment?' : '¿Cuánto pagó de adelanto?')}
+                      </AnimatePresence>
+                    </div>
+                  )
+  }
+
+  // Registros: los cobros de un mismo paquete (creados juntos, "Concepto (n/m)") se muestran como una sola tarjeta
+  type ItemRegistro = { tipo: 'pago'; p: any } | { tipo: 'paquete'; key: string; pays: any[] }
+  const itemsRegistros: ItemRegistro[] = (() => {
+    const grupos = new Map<string, any[]>()
+    const orden: ItemRegistro[] = []
+    for (const p of filtered) {
+      const m = String(p.concept || '').match(/^(.*)\s\((\d+)\/(\d+)\)\s*$/)
+      if (!m || Number(m[3]) < 2) { orden.push({ tipo: 'pago', p }); continue }
+      const key = `${p.child_id || p.paciente_externo}|${p.created_at}|${m[1]}`
+      if (!grupos.has(key)) { grupos.set(key, []); orden.push({ tipo: 'paquete', key, pays: grupos.get(key)! }) }
+      grupos.get(key)!.push(p)
+    }
+    return orden.map(it => it.tipo === 'paquete' && it.pays.length === 1 ? { tipo: 'pago', p: it.pays[0] } : it)
+  })()
+  const [paqueteAbierto, setPaqueteAbierto] = useState<string | null>(null)
+  const tarjetaPaquete = (g: { key: string; pays: any[] }) => {
+    const pays = [...g.pays].sort((a, b) => String(a.appointments?.appointment_date || fechaCobroDe(a)).localeCompare(String(b.appointments?.appointment_date || fechaCobroDe(b))))
+    const p0 = pays[0]
+    const nombre = p0.children?.name || p0.paciente_externo || '—'
+    const concepto = String(p0.concept || '').replace(/\s*\(\d+\/\d+\)\s*$/, '')
+    const fechaDeP = (p: any) => new Date(p.appointments?.appointment_date ? p.appointments.appointment_date + 'T12:00:00' : fechaCobroDe(p))
+    const vigentes = pays.filter(p => p.status !== 'cancelled' && p.status !== 'refunded')
+    const total = vigentes.reduce((a, p) => a + Number(p.amount || 0), 0)
+    const pagadas = pays.filter(p => p.status === 'paid').length
+    const pendiente = pays.reduce((a, p) => a + saldoDe(p), 0)
+    const abierto = paqueteAbierto === g.key
+    const envioKey = `pkg:${g.key}`
+    return (
+      <div key={g.key}>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-v-bg sm:px-5">
+          <button onClick={() => setPaqueteAbierto(abierto ? null : g.key)} className="flex min-w-0 flex-[1_1_220px] items-center gap-3 text-left">
+            <span className="relative grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent text-white"><Package size={17} /></span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-v-text">{nombre}</span>
+              <span className="block truncate text-xs text-v-subtle">
+                {locale === 'en' ? 'Package' : 'Paquete'} · {concepto} · {pays.length} {locale === 'en' ? 'sessions' : 'sesiones'} · {fechaCorta(fechaDeP(pays[0]))} – {fechaCorta(fechaDeP(pays[pays.length - 1]))}
+              </span>
+              <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className={`rounded-full px-1.5 py-0.5 font-semibold ${pendiente <= 0.001 ? 'bg-v-success/15 text-v-success' : 'bg-v-warning/15 text-v-warning'}`}>
+                  {pagadas}/{pays.length} {locale === 'en' ? 'paid' : 'pagadas'}
+                </span>
+                {p0.especialista?.full_name && <span className="text-v-muted">{p0.especialista.full_name}</span>}
+                <span className="inline-flex items-center gap-0.5 font-semibold text-v-accent">{abierto ? (locale === 'en' ? 'Hide sessions' : 'Ocultar sesiones') : (locale === 'en' ? 'See sessions' : 'Ver sesiones')} <ChevronDown size={12} className={`transition-transform ${abierto ? 'rotate-180' : ''}`} /></span>
+              </span>
+            </span>
+          </button>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <span className="mr-1 text-right">
+              <span className="block text-sm font-bold tabular-nums text-v-text">{fmt(total)}</span>
+              {pendiente > 0.001 && <span className="block text-[11px] font-medium tabular-nums text-v-warning">{locale === 'en' ? 'owes' : 'debe'} {fmt(pendiente)}</span>}
+            </span>
+            <button onClick={() => window.open(`/api/pagos/recibo-paquete?ids=${pays.map(x => x.id).join(',')}&lang=${locale}`, '_blank')} title={t('admin.reciboPaquete')}
+              className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
+            <button onClick={() => setEnvio(envio?.id === envioKey ? null : { id: envioKey, email: '' })} title={locale === 'en' ? 'Email package receipt' : 'Enviar recibo del paquete por correo'}
+              className={`grid size-8 place-items-center rounded-full transition-colors ${envio?.id === envioKey ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
+          </div>
+        </div>
+        <AnimatePresence>
+          {envio?.id === envioKey && envioBar({ id: envioKey, concept: `${locale === 'en' ? 'Package' : 'Paquete'} · ${concepto}`, ids: pays.map(x => x.id) })}
+        </AnimatePresence>
+        <AnimatePresence initial={false}>
+          {abierto && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-v-border bg-v-bg/60">
+              <div className="divide-y divide-v-border">{pays.map(p => filaPago(p, true))}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    )
+  }
+
   // Enviar el recibo por correo: vacío = correo de la familia registrada
   const [envio, setEnvio] = useState<{ id: string; email: string } | null>(null)
   const [enviando, setEnviando] = useState(false)
-  const enviarRecibo = async (p: { id: string }, email: string) => {
+  const enviarRecibo = async (p: { id: string; ids?: string[] }, email: string) => {
     setEnviando(true)
     try {
       const r = await fetch('/api/pagos/recibo-pdf', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: p.id, email: email.trim() || undefined, lang: locale }),
+        body: JSON.stringify({ ...(p.ids ? { ids: p.ids } : { id: p.id }), email: email.trim() || undefined, lang: locale }),
       })
       const j = await r.json().catch(() => ({}))
       if (r.ok) { toast.success(locale === 'en' ? `Receipt sent to ${j.email}` : `Recibo enviado a ${j.email}`); setEnvio(null); return }
@@ -742,7 +889,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       toast.error(locale === 'en' ? 'Could not send the receipt. Try again.' : 'No se pudo enviar el recibo. Inténtalo de nuevo.')
     } finally { setEnviando(false) }
   }
-  const envioBar = (p: { id: string; concept: string }) => {
+  const envioBar = (p: { id: string; concept: string; ids?: string[] }) => {
     const e = envio!
     return (
       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -1278,80 +1425,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
           ) : (
             <div className="rounded-v border border-v-border bg-v-elevated shadow-v">
               <div className="divide-y divide-v-border">
-                {filtered.map(p => {
-                  const tone = STATUS_TONE[p.status] || STATUS_TONE.refunded
-                  const MI = METHOD_ICON[p.payment_method] || MoreHorizontal
-                  const nombre = p.children?.name || p.paciente_externo || '—'
-                  const menuOpen = statusMenu === p.id
-                  const conf = confirmar?.tipo === 'pago' && confirmar.id === p.id
-                  return (
-                    <div key={p.id}>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-v-bg sm:px-5">
-                        <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-sm font-semibold text-v-accent">{nombre.charAt(0).toUpperCase()}</span>
-                        <div className="min-w-0 flex-[1_1_180px]">
-                          <p className="truncate text-sm font-semibold text-v-text">{nombre}{!p.child_id && p.paciente_externo && <span className="ml-1.5 rounded-full bg-v-fill px-1.5 py-0.5 text-[10px] font-medium text-v-subtle">{t('pagos.sinInscribir')}</span>}</p>
-                          <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(fechaCobroDe(p)))}{pagadoOtroDia(p) && ` · ${locale === 'en' ? 'paid' : 'pagado el'} ${fechaCorta(new Date(p.paid_at))}`}</p>
-                          {p.appointments?.appointment_date && (() => {
-                            const as = asistenciaDe(p.appointments.status, p.appointments.appointment_date, locale === 'en')
-                            return (
-                              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-v-muted">
-                                <Calendar size={11} /> {locale === 'en' ? 'Session' : 'Sesión'} {fechaCorta(new Date(p.appointments.appointment_date + 'T12:00:00'))} · {String(p.appointments.appointment_time ?? '').slice(0, 5)}
-                                <span className={`rounded-full px-1.5 py-0.5 font-semibold ${as.cls}`}>{as.txt}</span>
-                                {p.especialista?.full_name && <span>· {p.especialista.full_name}</span>}
-                              </p>
-                            )
-                          })()}
-                        </div>
-                        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                          <span className="mr-1 text-right">
-                            <span className="block text-sm font-bold tabular-nums text-v-text">{fmt(Number(p.amount))}</span>
-                            {p.status === 'partial' && <span className="block text-[11px] font-medium tabular-nums text-v-warning">{locale === 'en' ? 'owes' : 'debe'} {fmt(saldoDe(p))}</span>}
-                            <span className="flex items-center justify-end gap-1 text-[11px] text-v-subtle"><MI size={11} /> {t('pagos.method.' + p.payment_method)}</span>
-                          </span>
-                          {/* Estado: tocar para cambiar */}
-                          <div className="relative">
-                            <button onClick={() => setStatusMenu(menuOpen ? null : p.id)}
-                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone.pill}`}>
-                              {t('pagos.status.' + p.status)} <ChevronDown size={12} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                            <AnimatePresence>
-                              {menuOpen && (
-                                <>
-                                  <div className="fixed inset-0 z-30" onClick={() => setStatusMenu(null)} />
-                                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
-                                    className="absolute right-0 top-full z-40 mt-1.5 w-40 overflow-hidden rounded-v-sm border border-v-border bg-v-elevated p-1 shadow-v-lg">
-                                    {Object.keys(STATUS_CFG).map(k => (
-                                      <button key={k} onClick={() => cambiarEstado(p, k)}
-                                        className={`flex w-full items-center gap-2 rounded-v-sm px-2.5 py-2 text-left text-xs font-semibold transition-colors ${p.status === k ? 'bg-v-fill text-v-text' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
-                                        <span className={`size-2 rounded-full ${STATUS_TONE[k]?.dot}`} /> {t('pagos.status.' + k)}
-                                        {p.status === k && <Check size={13} className="ml-auto" />}
-                                      </button>
-                                    ))}
-                                  </motion.div>
-                                </>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                          <button onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}&lang=${locale}`, '_blank')} title={t('admin.verRecibo')}
-                            className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
-                          <button onClick={() => setEnvio(envio?.id === p.id ? null : { id: p.id, email: '' })} title={locale === 'en' ? 'Email receipt' : 'Enviar recibo por correo'}
-                            className={`grid size-8 place-items-center rounded-full transition-colors ${envio?.id === p.id ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
-                          <button onClick={() => setConfirmar(conf ? null : { tipo: 'pago', id: p.id })} disabled={deletingId === p.id} title={t('admin.eliminarPago')}
-                            className={`grid size-8 place-items-center rounded-full transition-colors disabled:opacity-50 ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}>
-                            {deletingId === p.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                          </button>
-                        </div>
-                      </div>
-                      <AnimatePresence>
-                        {envio?.id === p.id && envioBar(p)}
-                      </AnimatePresence>
-                      <AnimatePresence>
-                        {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => setConfirmar(null)} onYes={() => handleDeletePago(p)} />}
-                        {abonoFor?.id === p.id && abonoBar(p, locale === 'en' ? 'How much was paid as a down payment?' : '¿Cuánto pagó de adelanto?')}
-                      </AnimatePresence>
-                    </div>
-                  )
-                })}
+                {itemsRegistros.map(it => it.tipo === 'pago' ? filaPago(it.p) : tarjetaPaquete(it))}
               </div>
               <div className="flex items-center justify-between rounded-b-v border-t border-v-border bg-v-bg px-5 py-3">
                 <p className="text-xs text-v-subtle">{t('pagos.registros', { n: String(filtered.length) })}</p>

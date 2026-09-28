@@ -226,3 +226,154 @@ export async function generarReciboPDF(d: DatosReciboPDF): Promise<Buffer> {
 
   return Buffer.from(doc.output('arraybuffer'))
 }
+
+// ── Recibo de un paquete de sesiones (un solo PDF con todas las sesiones) ─────
+export type DatosPaquetePDF = {
+  pagos: (PagoRecibo & { id?: string })[]
+  center: DatosReciboPDF['center']
+  pacienteNombre: string
+  tutor: DatosReciboPDF['tutor']
+  reciboNum: string
+  lang: 'es' | 'en'
+  symbol: string
+  concepto: string
+  especialista?: string | null
+}
+
+export async function generarReciboPaquetePDF(d: DatosPaquetePDF): Promise<Buffer> {
+  const { pagos, center, lang, symbol } = d
+  const en = lang === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
+  const dinero = (n: number) => `${symbol} ${Number(n || 0).toLocaleString(en ? 'en-US' : 'es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const METODO: Record<string, string> = en
+    ? { yape: 'Yape', plin: 'Plin', efectivo: 'Cash', transferencia: 'Bank transfer', tarjeta: 'Card', otro: 'Other' }
+    : { yape: 'Yape', plin: 'Plin', efectivo: 'Efectivo', transferencia: 'Transferencia bancaria', tarjeta: 'Tarjeta', otro: 'Otro' }
+
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  const W = doc.internal.pageSize.getWidth()
+  const H = doc.internal.pageSize.getHeight()
+  const M = 48
+  const ancho = W - M * 2
+  let y = 0
+  const txt = (s: string, x: number, yy: number, o: { size?: number; bold?: boolean; color?: [number, number, number]; align?: 'left' | 'right' | 'center' } = {}) => {
+    doc.setFont('helvetica', o.bold ? 'bold' : 'normal'); doc.setFontSize(o.size ?? 10); doc.setTextColor(...(o.color ?? TINTA))
+    doc.text(s, x, yy, { align: o.align ?? 'left' })
+  }
+  const caja = (x: number, yy: number, w: number, h: number, fill: [number, number, number] = [255, 255, 255], borde = true) => {
+    doc.setFillColor(...fill); doc.setDrawColor(...BORDE); doc.setLineWidth(0.8)
+    doc.roundedRect(x, yy, w, h, 8, 8, borde ? 'FD' : 'F')
+  }
+  const pie = () => {
+    doc.setDrawColor(...BORDE); doc.setLineWidth(0.8); doc.line(M, H - 70, W - M, H - 70)
+    txt(center.nombre || 'Vanty ABA', M, H - 52, { size: 8.5, bold: true })
+    txt(L('Internal payment receipt.', 'Recibo interno de pago.'), M, H - 40, { size: 8, color: GRIS })
+    txt(`${L('Receipt', 'Recibo')} N.° ${d.reciboNum}`, W - M, H - 52, { size: 8, color: GRIS, align: 'right' })
+    txt(L('Not valid as a SUNAT tax document', 'No válido como comprobante SUNAT'), W - M, H - 40, { size: 8, color: GRIS, align: 'right' })
+  }
+  const nuevaPagina = () => { pie(); doc.addPage(); doc.setFillColor(...AZUL); doc.rect(0, 0, W, 6, 'F'); y = 40 }
+
+  // Fecha/hora de cada sesión: la de la agenda vinculada o, si no, la del cobro
+  const sesionDe = (p: PagoRecibo) => {
+    const a = p.appointments as { appointment_date?: string; appointment_time?: string | null } | null
+    const iso = a?.appointment_date ? `${a.appointment_date}T12:00:00` : (p.fecha_cobro || p.created_at)
+    const f = new Date(iso)
+    const dia = f.toLocaleDateString(en ? 'en-US' : 'es-PE', { weekday: 'short', timeZone: 'America/Lima' }).replace('.', '')
+    const hora = String(a?.appointment_time ?? '').slice(0, 5)
+    return { iso, texto: `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${fmtFechaCorta(iso, lang)}${hora ? ` · ${hora}` : ''}` }
+  }
+  const ordenados = [...pagos].sort((a, b) => sesionDe(a).iso.localeCompare(sesionDe(b).iso))
+  const vigentes = ordenados.filter(p => p.status !== 'cancelled' && p.status !== 'refunded')
+  const total = vigentes.reduce((s, p) => s + Number(p.amount || 0), 0)
+  const pagado = ordenados.reduce((s, p) => s + cobradoDe(p as never), 0)
+  const pendiente = ordenados.reduce((s, p) => s + saldoDe(p as never), 0)
+  const estadoGlobal = pendiente <= 0.001 ? 'paid' : pagado > 0 ? 'partial' : 'pending'
+
+  // Franja y encabezado
+  doc.setFillColor(...AZUL); doc.rect(0, 0, W, 6, 'F')
+  y = 48
+  const logo = await logoPng(center.logoUrl)
+  let xNombre = M
+  if (logo) { doc.addImage(logo, 'PNG', M, y - 8, 46, 46); xNombre = M + 58 }
+  txt(center.nombre || 'Vanty ABA', xNombre, y + 6, { size: 15, bold: true })
+  const datosCentro = [center.ruc ? `RUC ${center.ruc}` : '', center.direccion, center.telefono, center.email].filter(Boolean) as string[]
+  datosCentro.slice(0, 3).forEach((l, i) => txt(l, xNombre, y + 21 + i * 12, { size: 8.5, color: GRIS }))
+  txt(L('PACKAGE RECEIPT', 'RECIBO DE PAQUETE'), W - M, y - 2, { size: 8, bold: true, color: GRIS, align: 'right' })
+  txt(`N.° ${d.reciboNum}`, W - M, y + 18, { size: 20, bold: true, color: AZUL, align: 'right' })
+  txt(`${L('Issued', 'Emitido')} ${fmtFechaLarga(ordenados[0]?.created_at || new Date().toISOString(), lang)}`, W - M, y + 33, { size: 9, color: GRIS, align: 'right' })
+  y += Math.max(58, 30 + datosCentro.slice(0, 3).length * 12) + 10
+
+  // Resumen: estado + sesiones y rango de fechas
+  const st = ESTADO[estadoGlobal]
+  caja(M, y, ancho, 34, FONDO, false)
+  const etiqueta = en ? st.en : st.es
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9)
+  const anchoPill = doc.getTextWidth(etiqueta) + 20
+  doc.setFillColor(...st.bg); doc.roundedRect(M + 12, y + 8, anchoPill, 18, 9, 9, 'F')
+  txt(etiqueta, M + 12 + anchoPill / 2, y + 20.5, { size: 9, bold: true, color: st.fg, align: 'center' })
+  const primera = ordenados[0] ? fmtFechaCorta(sesionDe(ordenados[0]).iso, lang) : ''
+  const ultima = ordenados.length > 1 ? fmtFechaCorta(sesionDe(ordenados[ordenados.length - 1]).iso, lang) : ''
+  txt(`${ordenados.length} ${ordenados.length === 1 ? L('session', 'sesión') : L('sessions', 'sesiones')} · ${primera}${ultima ? ` – ${ultima}` : ''}`, W - M - 12, y + 21, { size: 9.5, align: 'right' })
+  y += 52
+
+  // Cliente + especialista
+  txt(L('CLIENT', 'CLIENTE'), M, y, { size: 8, bold: true, color: GRIS }); y += 10
+  const tercio = (ancho - 24) / 3
+  const tarjeta = (i: number, etq: string, val: string) => {
+    const x = M + i * (tercio + 12)
+    caja(x, y, tercio, 46)
+    txt(etq, x + 12, y + 16, { size: 8, color: GRIS })
+    txt(doc.splitTextToSize(val || '—', tercio - 24)[0], x + 12, y + 33, { size: 10.5, bold: !!val, color: val ? TINTA : GRIS })
+  }
+  tarjeta(0, L('Patient', 'Paciente'), d.pacienteNombre)
+  tarjeta(1, L('Guardian', 'Responsable / tutor'), d.tutor?.full_name || '')
+  tarjeta(2, L('Specialist in charge', 'Especialista a cargo'), d.especialista || '')
+  y += 62
+
+  // Sesiones
+  txt(`${L('SESSIONS', 'SESIONES')} · ${d.concepto.toUpperCase()}`, M, y, { size: 8, bold: true, color: GRIS }); y += 10
+  const cSes = M + 12, cFecha = M + 90, cEst = M + ancho * 0.66, cImp = W - M - 12
+  const cabecera = () => {
+    doc.setFillColor(...FONDO); doc.setDrawColor(...BORDE); doc.roundedRect(M, y, ancho, 26, 6, 6, 'FD')
+    txt(L('SESSION', 'SESIÓN'), cSes, y + 16, { size: 8, bold: true, color: GRIS })
+    txt(L('DATE AND TIME', 'FECHA Y HORA'), cFecha, y + 16, { size: 8, bold: true, color: GRIS })
+    txt(L('STATUS', 'ESTADO'), cEst, y + 16, { size: 8, bold: true, color: GRIS })
+    txt(L('AMOUNT', 'IMPORTE'), cImp, y + 16, { size: 8, bold: true, color: GRIS, align: 'right' })
+    y += 26
+  }
+  cabecera()
+  ordenados.forEach((p, i) => {
+    if (y > H - 130) { nuevaPagina(); cabecera() }
+    const e = ESTADO[p.status] || { es: p.status, en: p.status, fg: GRIS, bg: FONDO }
+    txt(`${i + 1}/${ordenados.length}`, cSes, y + 17, { size: 10, bold: true })
+    txt(sesionDe(p).texto, cFecha, y + 17, { size: 10 })
+    txt(en ? e.en : e.es, cEst, y + 17, { size: 9.5, bold: true, color: e.fg })
+    const anulado = p.status === 'cancelled' || p.status === 'refunded'
+    txt(dinero(Number(p.amount)), cImp, y + 17, { size: 10, bold: !anulado, color: anulado ? GRIS : TINTA, align: 'right' })
+    doc.setDrawColor(...BORDE); doc.line(M + 8, y + 26, W - M - 8, y + 26)
+    y += 26
+  })
+  y += 16
+
+  // Totales
+  if (y > H - 220) nuevaPagina()
+  caja(M, y, ancho, 58, [232, 242, 255])
+  txt(L('Package total', 'Total del paquete'), M + 16, y + 34, { size: 10.5, color: GRIS })
+  txt(dinero(total), W - M - 16, y + 38, { size: 22, bold: true, align: 'right' })
+  y += 70
+  const mitad = (ancho - 12) / 2
+  caja(M, y, mitad, 46); caja(M + mitad + 12, y, mitad, 46)
+  txt(L('Paid', 'Pagado'), M + 12, y + 16, { size: 8, color: GRIS })
+  txt(dinero(pagado), M + 12, y + 33, { size: 11, bold: true, color: [4, 120, 87] })
+  txt(L('Pending', 'Pendiente'), M + mitad + 24, y + 16, { size: 8, color: GRIS })
+  txt(dinero(pendiente), M + mitad + 24, y + 33, { size: 11, bold: true, color: pendiente > 0 ? [180, 83, 9] : GRIS })
+  y += 58
+  const metodos = [...new Set(ordenados.map(p => METODO[p.payment_method ?? ''] || p.payment_method).filter(Boolean))].join(', ')
+  if (metodos) { txt(`${L('Payment method', 'Método de pago')}: ${metodos}`, M + 4, y + 6, { size: 9.5, color: GRIS }); y += 20 }
+  caja(M, y, ancho, 30, st.bg, false)
+  txt(estadoGlobal === 'paid'
+    ? L(`Package paid in full. Thank you for trusting ${center.nombre}.`, `Paquete pagado en su totalidad. Gracias por confiar en ${center.nombre}.`)
+    : L(`Balance due: ${dinero(pendiente)}.`, `Saldo pendiente: ${dinero(pendiente)}.`), M + 14, y + 19, { size: 9.5, bold: true, color: st.fg })
+
+  pie()
+  return Buffer.from(doc.output('arraybuffer'))
+}

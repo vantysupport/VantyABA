@@ -10,7 +10,7 @@ import { esc, fmtFechaLarga, fmtFechaCorta, RECIBO_CSS, RECIBO_FONTS } from '@/l
 import { cobradoDe, saldoDe, type Abono } from '@/lib/pagos'
 import { sendEmail } from '@/lib/email'
 import { emailLayout, escHtml } from '@/lib/email-layout'
-import { generarReciboPDF, type PagoRecibo } from '@/lib/recibo-pdf'
+import { generarReciboPDF, generarReciboPaquetePDF, type PagoRecibo } from '@/lib/recibo-pdf'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -269,7 +269,8 @@ export async function GET(req: NextRequest) {
 // ── POST: enviar el recibo por correo (solo equipo del centro) ────────────────
 // body: { id, email?, lang? } — sin email se envía al correo de la familia del paciente.
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({})) as { id?: string; email?: string; lang?: string }
+  const body = await req.json().catch(() => ({})) as { id?: string; ids?: unknown; email?: string; lang?: string }
+  if (Array.isArray(body.ids) && body.ids.length) return enviarPaquete(req, body)
   const paymentId = typeof body.id === 'string' ? body.id : ''
   if (!/^[0-9a-f-]{36}$/i.test(paymentId)) return NextResponse.json({ error: 'Falta el ID del pago' }, { status: 400 })
   const lang = langDe(req, body.lang)
@@ -315,6 +316,74 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, email: destino })
   } catch (e) {
     console.error('Error enviando recibo:', e)
+    return NextResponse.json({ error: 'envio_fallido' }, { status: 500 })
+  }
+}
+
+// ── Enviar el recibo de un paquete (varios cobros) en un solo PDF ─────────────
+async function enviarPaquete(req: NextRequest, body: { ids?: unknown; email?: string; lang?: string }) {
+  const ids = (body.ids as unknown[]).filter((x): x is string => typeof x === 'string' && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 60)
+  const lang = langDe(req, body.lang)
+  const en = lang === 'en'
+  const L = (e: string, s: string) => (en ? e : s)
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!hasRole(caller, ROLES.staff) || !ids.length) return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
+  try {
+    const { data } = await supabase.from('payments')
+      .select('*, children(id, name, parent_id, profiles:parent_id(full_name, email, phone)), appointments(appointment_date, appointment_time, status), especialista:especialista_id(full_name)')
+      .in('id', ids).eq('centro_id', caller.centroId!).order('created_at', { ascending: true })
+    const pagos = (data ?? []) as (PagoRecibo & { id: string; centro_id: string; child_id: string | null })[]
+    if (!pagos.length) return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
+    const primero = pagos[0]
+    const child = primero.children as { name?: string; profiles?: Tutor | null } | null
+    const parent = child?.profiles ?? null
+    const destino = String(body.email || parent?.email || '').trim().toLowerCase()
+    if (!EMAIL_RE.test(destino)) return NextResponse.json({ error: 'sin_correo' }, { status: 400 })
+
+    const year = new Date(primero.created_at).getFullYear()
+    const { count } = await supabase.from('payments').select('*', { count: 'exact', head: true })
+      .eq('centro_id', primero.centro_id)
+      .gte('created_at', new Date(Date.UTC(year, 0, 1)).toISOString())
+      .lte('created_at', primero.created_at)
+    const reciboNum = `PKG-${year}-${padRecibo(count || 1)}`
+    const center = await getCenterInfo(primero.centro_id ?? null, primero.child_id ?? null)
+    const cur = await getCentroMoneda(primero.centro_id ?? null)
+    const paciente = String(child?.name || primero.paciente_externo || '—')
+    const responsable = pagos.find(p => p.responsable)?.responsable
+    const tutor = parent?.full_name ? parent : (responsable ? { full_name: responsable } : null)
+    const especialista = pagos.map(p => (p.especialista as { full_name?: string } | null)?.full_name).find(Boolean) || null
+    const concepto = String(primero.concept || '').replace(/\s*\(\d+\/\d+\)\s*$/, '') || L('Sessions', 'Sesiones')
+
+    const pdf = await generarReciboPaquetePDF({ pagos, center, pacienteNombre: paciente, tutor, reciboNum, lang, symbol: cur.symbol, concepto, especialista })
+    const vigentes = pagos.filter(p => p.status !== 'cancelled' && p.status !== 'refunded')
+    const total = vigentes.reduce((a, p) => a + Number(p.amount || 0), 0)
+    const pendiente = pagos.reduce((a, p) => a + saldoDe(p as never), 0)
+    const asunto = L(`Your package receipt N.° ${reciboNum} from ${center.nombre}`, `Tu recibo de paquete N.° ${reciboNum} de ${center.nombre}`)
+    const nombre = !body.email && tutor?.full_name ? tutor.full_name.split(' ')[0] : ''
+    const html = emailLayout({
+      locale: en ? 'en' : 'es', subject: asunto, eyebrow: center.nombre,
+      preheader: L(`Your package receipt is attached (${pagos.length} sessions).`, `Te enviamos el recibo de tu paquete (${pagos.length} sesiones).`),
+      title: L('Your receipt is here', 'Tu recibo está aquí'),
+      intro: `${escHtml(nombre ? L(`Hi ${nombre},`, `Hola, ${nombre}:`) : L('Hello,', 'Hola:'))} ${L(`we're sending you the receipt for the session package from <b>${escHtml(center.nombre)}</b>. You'll find it attached as a PDF with the date and time of each session.`, `te enviamos el recibo del paquete de sesiones de <b>${escHtml(center.nombre)}</b>. Lo encontrarás adjunto en PDF, con la fecha y la hora de cada sesión.`)}`,
+      detalles: [
+        { label: L('Receipt', 'Recibo'), value: `N.° ${escHtml(reciboNum)}` },
+        { label: L('Patient', 'Paciente'), value: escHtml(paciente) },
+        { label: L('Package', 'Paquete'), value: `${escHtml(concepto)} · ${pagos.length} ${pagos.length === 1 ? L('session', 'sesión') : L('sessions', 'sesiones')}` },
+        { label: L('Total', 'Total'), value: escHtml(fmtCurrency(total, lang, cur.symbol)) },
+        { label: L('Pending', 'Pendiente'), value: escHtml(fmtCurrency(pendiente, lang, cur.symbol)) },
+      ],
+      aria: pendiente <= 0.001 ? 'celebra' : 'laptop',
+      note: L('Internal payment receipt, not valid as a SUNAT tax document. If you have any questions, please contact the center.',
+        'Recibo interno de pago, no válido como comprobante SUNAT. Si tienes alguna duda, comunícate con el centro.'),
+    })
+    const ok = await sendEmail(destino, asunto, html, center.nombre || 'Vanty ABA', [
+      { filename: `${L('Package-receipt', 'Recibo-paquete')}-${reciboNum}.pdf`, content: pdf, contentType: 'application/pdf' },
+    ])
+    if (!ok) return NextResponse.json({ error: 'envio_fallido' }, { status: 502 })
+    return NextResponse.json({ ok: true, email: destino })
+  } catch (e) {
+    console.error('Error enviando recibo de paquete:', e)
     return NextResponse.json({ error: 'envio_fallido' }, { status: 500 })
   }
 }
