@@ -7,7 +7,7 @@ import {
   DollarSign, Plus, Search, Download, TrendingUp, CheckCircle2,
   Clock, XCircle, Loader2, Calendar, Save, X, Package, ChevronDown,
   Repeat, Pencil, Trash2, Settings2, Check, FileText,
-  BarChart3, CreditCard, Wallet, Banknote, Smartphone, Landmark, MoreHorizontal, ChevronLeft, ChevronRight, UserPlus, Users, HandCoins, AlertCircle, PartyPopper
+  BarChart3, CreditCard, Wallet, Banknote, Smartphone, Landmark, MoreHorizontal, ChevronLeft, ChevronRight, UserPlus, Users, HandCoins, AlertCircle, PartyPopper, Mail, Send
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts'
@@ -624,6 +624,47 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     </div>
   )
 
+  // Enviar el recibo por correo: vacío = correo de la familia registrada
+  const [envio, setEnvio] = useState<{ id: string; email: string } | null>(null)
+  const [enviando, setEnviando] = useState(false)
+  const enviarRecibo = async (p: { id: string }, email: string) => {
+    setEnviando(true)
+    try {
+      const r = await fetch('/api/pagos/recibo-pdf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: p.id, email: email.trim() || undefined, lang: locale }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok) { toast.success(locale === 'en' ? `Receipt sent to ${j.email}` : `Recibo enviado a ${j.email}`); setEnvio(null); return }
+      toast.error(j.error === 'sin_correo'
+        ? (locale === 'en' ? 'This patient has no family email. Type an email to send it.' : 'Este paciente no tiene correo de familia. Escribe un correo para enviarlo.')
+        : (locale === 'en' ? 'Could not send the receipt. Try again.' : 'No se pudo enviar el recibo. Inténtalo de nuevo.'))
+    } catch {
+      toast.error(locale === 'en' ? 'Could not send the receipt. Try again.' : 'No se pudo enviar el recibo. Inténtalo de nuevo.')
+    } finally { setEnviando(false) }
+  }
+  const envioBar = (p: { id: string; concept: string }) => {
+    const e = envio!
+    return (
+      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+        <div className="space-y-2.5 border-t border-v-border bg-v-accent-soft/50 px-4 py-3.5 sm:px-5">
+          <p className="text-sm font-semibold text-v-text">{locale === 'en' ? `Send receipt · ${p.concept}` : `Enviar recibo · ${p.concept}`}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input autoFocus type="email" value={e.email} onChange={ev => setEnvio({ ...e, email: ev.target.value })}
+              onKeyDown={ev => { if (ev.key === 'Enter') enviarRecibo(p, e.email) }}
+              placeholder={locale === 'en' ? "Family's email (leave empty to use the registered one)" : 'Correo (vacío = el de la familia registrada)'}
+              className={`${inputCls} h-10 min-w-0 flex-1 bg-v-elevated`} />
+            <button onClick={() => setEnvio(null)} className="h-10 rounded-full px-4 text-sm font-semibold text-v-muted hover:bg-v-fill">{t('common.cancelar')}</button>
+            <button onClick={() => enviarRecibo(p, e.email)} disabled={enviando}
+              className="v-brand inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold disabled:opacity-50">
+              {enviando ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} {locale === 'en' ? 'Send' : 'Enviar'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
+
   const abonoBar = (p: any, titulo: string) => {
     const saldo = p.status === 'partial' ? saldoDe(p) : Number(p.amount)
     const a = abonoFor!
@@ -1076,12 +1117,17 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                           </div>
                           <button onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}&lang=${locale}`, '_blank')} title={t('admin.verRecibo')}
                             className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
+                          <button onClick={() => setEnvio(envio?.id === p.id ? null : { id: p.id, email: '' })} title={locale === 'en' ? 'Email receipt' : 'Enviar recibo por correo'}
+                            className={`grid size-8 place-items-center rounded-full transition-colors ${envio?.id === p.id ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
                           <button onClick={() => setConfirmar(conf ? null : { tipo: 'pago', id: p.id })} disabled={deletingId === p.id} title={t('admin.eliminarPago')}
                             className={`grid size-8 place-items-center rounded-full transition-colors disabled:opacity-50 ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}>
                             {deletingId === p.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
                           </button>
                         </div>
                       </div>
+                      <AnimatePresence>
+                        {envio?.id === p.id && envioBar(p)}
+                      </AnimatePresence>
                       <AnimatePresence>
                         {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => setConfirmar(null)} onYes={() => handleDeletePago(p)} />}
                         {abonoFor?.id === p.id && abonoBar(p, locale === 'en' ? 'How much was paid as a down payment?' : '¿Cuánto pagó de adelanto?')}
@@ -1175,10 +1221,13 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                             </button>
                             <button onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}&lang=${locale}`, '_blank')} title={t('admin.verRecibo')}
                               className="grid size-9 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
+                            <button onClick={() => setEnvio(envio?.id === p.id ? null : { id: p.id, email: '' })} title={locale === 'en' ? 'Email receipt' : 'Enviar recibo por correo'}
+                              className={`grid size-9 place-items-center rounded-full transition-colors ${envio?.id === p.id ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
                           </div>
                         </div>
                         <AnimatePresence>
                           {abonoFor?.id === p.id && abonoBar(p, locale === 'en' ? `New payment · ${p.concept}` : `Nuevo abono · ${p.concept}`)}
+                          {envio?.id === p.id && envioBar(p)}
                         </AnimatePresence>
                       </div>
                     )

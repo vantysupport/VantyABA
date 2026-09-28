@@ -8,6 +8,9 @@ import { getCentroBranding } from '@/lib/centro-branding'
 import { getApiCaller, hasRole, ROLES, unauthorized } from '@/lib/api-auth'
 import { esc, fmtFechaLarga, fmtFechaCorta, RECIBO_CSS, RECIBO_FONTS } from '@/lib/recibo-html'
 import { cobradoDe, saldoDe, type Abono } from '@/lib/pagos'
+import { sendEmail } from '@/lib/email'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,7 +41,7 @@ const iniciales = (nombre: string) =>
   nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '·'
 
 // ── Recibo en HTML (el navegador lo imprime / guarda como PDF) ────────────────
-function generateReceiptHTML(payment: any, center: any, child: any, parentProfile: any, reciboNum: string, lang: string = 'es', symbol: string = 'S/') {
+function generateReceiptHTML(payment: any, center: any, child: any, parentProfile: any, reciboNum: string, lang: string = 'es', symbol: string = 'S/', paraCorreo = false) {
   const isEN = lang === 'en'
   const L = (en: string, es: string) => (isEN ? en : es)
   const STATUS: Record<string, { es: string; en: string; fg: string; bg: string }> = {
@@ -168,81 +171,99 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
       </div>
     </div>
 
-    <div class="actions">
+    ${paraCorreo ? '' : `<div class="actions">
       <button class="btn p" onclick="window.print()">${L('Print / Save PDF', 'Imprimir / Guardar PDF')}</button>
       <button class="btn g" onclick="window.close()">${L('Close', 'Cerrar')}</button>
-    </div>
+    </div>`}
   </div>
 </body>
 </html>`
 }
 
 
-// ── Route handler ─────────────────────────────────────────────────────────────
+// ── Armar el recibo (compartido por ver/imprimir y enviar por correo) ────────
+type Armado = { error: NextResponse } | { html: string; reciboNum: string; center: { nombre: string }; parentProfile: { email?: string | null } | null }
+
+async function armarRecibo(req: NextRequest, paymentId: string, lang: string, paraCorreo: boolean, soloStaff: boolean): Promise<Armado> {
+  const caller = await getApiCaller(req)
+  if (!caller) return { error: unauthorized() }
+
+  // 1. Pago con paciente y familia
+  const { data: payment, error } = await supabase
+    .from('payments')
+    .select(`
+      *,
+      children (
+        id, name, parent_id,
+        profiles:parent_id ( full_name, email, phone )
+      )
+    `)
+    .eq('id', paymentId)
+    .single()
+
+  // Same 404 for "not yours" so payment ids can't be probed across centers.
+  const ownsAsStaff = hasRole(caller, ROLES.staff) && payment?.centro_id === caller.centroId
+  const ownsAsParent = !soloStaff && (payment?.children as { parent_id?: string } | null)?.parent_id === caller.id
+  if (error || !payment || !(ownsAsStaff || ownsAsParent)) {
+    return { error: NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 }) }
+  }
+
+  // 2. Número de recibo correlativo por centro y año (antes era por paciente: se repetían entre niños
+  //    y fallaba con pacientes sin inscribir, que no tienen child_id)
+  const year = new Date(payment.created_at).getFullYear()
+  const { count } = await supabase
+    .from('payments')
+    .select('*', { count: 'exact', head: true })
+    .eq('centro_id', payment.centro_id)
+    .gte('created_at', new Date(Date.UTC(year, 0, 1)).toISOString())
+    .lte('created_at', payment.created_at)
+  const reciboNum = `${year}-${padRecibo(count || 1)}`
+
+  // 3. Centro, moneda, paciente y familia
+  const center = await getCenterInfo(payment.centro_id ?? null, payment.child_id ?? null)
+  const cur = await getCentroMoneda(payment.centro_id ?? null)
+  const child         = payment.children
+  const parentProfile = (child as any)?.profiles
+
+  const html = generateReceiptHTML(payment, center, child, parentProfile, reciboNum, lang, cur.symbol, paraCorreo)
+  return { html, reciboNum, center, parentProfile: parentProfile ?? null }
+}
+
+const langDe = (req: NextRequest, v: unknown) => (v === 'en' ? 'en' : (req.headers.get('x-locale') === 'en' ? 'en' : 'es'))
+
+// ── GET: ver / imprimir el recibo ─────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const paymentId = searchParams.get('id')
-  const lang = (searchParams.get('lang') === 'en' ? 'en' : (req.headers.get('x-locale') === 'en' ? 'en' : 'es'))
-
-  if (!paymentId) {
-    return NextResponse.json({ error: 'Falta el ID del pago' }, { status: 400 })
-  }
-
-  const caller = await getApiCaller(req)
-  if (!caller) return unauthorized()
-
+  if (!paymentId) return NextResponse.json({ error: 'Falta el ID del pago' }, { status: 400 })
   try {
-    // 1. Fetch payment with child and parent profile
-    const { data: payment, error } = await supabase
-      .from('payments')
-      .select(`
-        *,
-        children (
-          id, name, parent_id,
-          profiles:parent_id ( full_name, email, phone )
-        )
-      `)
-      .eq('id', paymentId)
-      .single()
-
-    // Same 404 for "not yours" so payment ids can't be probed across centers.
-    const ownsAsStaff = hasRole(caller, ROLES.staff) && payment?.centro_id === caller.centroId
-    const ownsAsParent = (payment?.children as { parent_id?: string } | null)?.parent_id === caller.id
-    if (error || !payment || !(ownsAsStaff || ownsAsParent)) {
-      return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 })
-    }
-
-    // 2. Número de recibo correlativo por centro y año (antes era por paciente: se repetían entre niños
-    //    y fallaba con pacientes sin inscribir, que no tienen child_id)
-    const year = new Date(payment.created_at).getFullYear()
-    const { count } = await supabase
-      .from('payments')
-      .select('*', { count: 'exact', head: true })
-      .eq('centro_id', payment.centro_id)
-      .gte('created_at', new Date(Date.UTC(year, 0, 1)).toISOString())
-      .lte('created_at', payment.created_at)
-
-    const reciboNum = `${year}-${padRecibo(count || 1)}`
-
-    // 3. Get center info
-    const center = await getCenterInfo(payment.centro_id ?? null, payment.child_id ?? null)
-    const cur = await getCentroMoneda(payment.centro_id ?? null)
-
-    // 4. Get child and parent info
-    const child         = payment.children
-    const parentProfile = (child as any)?.profiles
-
-    // 5. Generate HTML receipt
-    const html = generateReceiptHTML(payment, center, child, parentProfile, reciboNum, lang, cur.symbol)
-
-    return new NextResponse(html, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-cache',
-      },
-    })
+    const r = await armarRecibo(req, paymentId, langDe(req, searchParams.get('lang')), false, false)
+    if ('error' in r) return r.error
+    return new NextResponse(r.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' } })
   } catch (e: any) {
     console.error('Error generando recibo:', e)
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : e.message }, { status: 500 })
+  }
+}
+
+// ── POST: enviar el recibo por correo (solo equipo del centro) ────────────────
+// body: { id, email?, lang? } — sin email se envía al correo de la familia del paciente.
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({})) as { id?: string; email?: string; lang?: string }
+  const paymentId = typeof body.id === 'string' ? body.id : ''
+  if (!/^[0-9a-f-]{36}$/i.test(paymentId)) return NextResponse.json({ error: 'Falta el ID del pago' }, { status: 400 })
+  const lang = langDe(req, body.lang)
+  try {
+    const r = await armarRecibo(req, paymentId, lang, true, true)
+    if ('error' in r) return r.error
+    const destino = String(body.email || r.parentProfile?.email || '').trim().toLowerCase()
+    if (!EMAIL_RE.test(destino)) return NextResponse.json({ error: 'sin_correo' }, { status: 400 })
+    const asunto = lang === 'en' ? `Payment receipt N.° ${r.reciboNum} · ${r.center.nombre}` : `Recibo de pago N.° ${r.reciboNum} · ${r.center.nombre}`
+    const ok = await sendEmail(destino, asunto, r.html, r.center.nombre || 'Vanty ABA')
+    if (!ok) return NextResponse.json({ error: 'envio_fallido' }, { status: 502 })
+    return NextResponse.json({ ok: true, email: destino })
+  } catch (e) {
+    console.error('Error enviando recibo:', e)
+    return NextResponse.json({ error: 'envio_fallido' }, { status: 500 })
   }
 }
