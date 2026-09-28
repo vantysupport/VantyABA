@@ -423,6 +423,22 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   }
   const [pkg, setPkg] = useState(emptyPkg)
   const [pkgDates, setPkgDates] = useState<string[]>([]) // manually selected dates
+  // Opcional: agendar cada sesión del paquete (o vincular la que ya exista ese día)
+  const [pkgAgenda, setPkgAgenda] = useState({ activo: false, hora: '09:00' })
+  const [pkgCitas, setPkgCitas] = useState<Record<string, string>>({}) // fecha → id de la sesión existente
+  useEffect(() => {
+    if (!pkgAgenda.activo || pkg.modo !== 'registrado' || !pkg.child_id) { setPkgCitas({}); return }
+    const [y, m] = pkg.calMonth.split('-').map(Number)
+    const desde = `${pkg.calMonth}-01`
+    const hasta = `${pkg.calMonth}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+    supabase.from('appointments').select('id, appointment_date').eq('child_id', pkg.child_id).neq('status', 'cancelled')
+      .gte('appointment_date', desde).lte('appointment_date', hasta)
+      .then(({ data }) => setPkgCitas(prev => {
+        const sig = { ...prev }
+        for (const c of (data ?? []) as { id: string; appointment_date: string }[]) if (!sig[c.appointment_date]) sig[c.appointment_date] = c.id
+        return sig
+      }))
+  }, [pkgAgenda.activo, pkg.modo, pkg.child_id, pkg.calMonth])
   const [savingPkg, setSavingPkg] = useState(false)
 
   const handleSavePkg = async () => {
@@ -437,7 +453,27 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     if (pkgDates.length === 0) { toast.error(t('pagos.errSelDia')); return }
     setSavingPkg(true)
     try {
+      // Sesiones de la agenda (opcional): se usa la que ya exista ese día o se agenda una nueva
+      const sesionDe: Record<string, string> = {}
+      if (pkgAgenda.activo && !esExterno) {
+        if (!pkgAgenda.hora) { toast.error(locale === 'en' ? 'Enter the time of the sessions.' : 'Indica la hora de las sesiones.'); setSavingPkg(false); return }
+        const { data: existentes } = await supabase.from('appointments').select('id, appointment_date')
+          .eq('child_id', pkg.child_id).neq('status', 'cancelled').in('appointment_date', pkgDates)
+        for (const c of (existentes ?? []) as { id: string; appointment_date: string }[]) if (!sesionDe[c.appointment_date]) sesionDe[c.appointment_date] = c.id
+        const nuevas = pkgDates.filter(d => !sesionDe[d])
+        if (nuevas.length) {
+          const r = await fetch('/api/admin/appointments?sincronizar=1', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+            body: JSON.stringify(nuevas.map(d => ({ child_id: pkg.child_id, appointment_date: d, appointment_time: `${pkgAgenda.hora}:00`,
+              service_type: pkg.concept.trim(), is_group: false, status: 'confirmed', modalidad: 'presencial', created_by: profile?.id }))),
+          })
+          const j = await r.json().catch(() => ({}))
+          if (!r.ok || !Array.isArray(j?.data)) throw new Error(locale === 'en' ? 'Could not add the sessions to the schedule.' : 'No se pudieron agendar las sesiones.')
+          for (const c of j.data as { id: string; appointment_date: string }[]) sesionDe[c.appointment_date] = c.id
+        }
+      }
       const inserts = pkgDates.map((date, i) => ({
+        appointment_id: sesionDe[date] ?? null,
         child_id: esExterno ? null : pkg.child_id,
         paciente_externo: esExterno ? pkg.external_name.trim() : null,
         amount: Number(pkg.amount),
@@ -451,7 +487,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       const { error } = await supabase.from('payments').insert(inserts)
       if (error) throw error
       toast.success(t('pagos.pagosCreados', { n: String(pkgDates.length), total: (Number(pkg.amount) * pkgDates.length).toFixed(2) }))
-      setShowPkg(false); setPkg(emptyPkg); setPkgDates([])
+      setShowPkg(false); setPkg(emptyPkg); setPkgDates([]); setPkgAgenda({ activo: false, hora: '09:00' })
       await cargar()   // ← refrescar tabla para que los nuevos pagos aparezcan de inmediato
     } catch (e: any) { toast.error(e.message) }
     finally { setSavingPkg(false) }
@@ -1068,6 +1104,34 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                 <div className="hidden md:block" />
                 <div className="md:col-span-2"><Field label={t('pagos.metodoPago')}><ChipGroup options={metodoOpts} value={pkg.method} onChange={v => setPkg(pp => ({ ...pp, method: v }))} /></Field></div>
                 <div className="md:col-span-2"><Field label={t('pagos.estadoPagos')}><ChipGroup options={estadoOptsPkg} value={pkg.status} onChange={v => setPkg(pp => ({ ...pp, status: v }))} /></Field></div>
+                {pkg.modo === 'registrado' && (
+                  <div className="md:col-span-2 rounded-v-sm border border-v-border bg-v-bg p-3.5">
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <Calendar size={16} className="shrink-0 text-v-accent" />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-v-text">{locale === 'en' ? 'Schedule each session' : 'Agendar cada sesión'}</span>
+                          <span className="block text-xs text-v-muted">{locale === 'en' ? 'Optional: each chosen day is added to the schedule and linked to its charge.' : 'Opcional: cada día elegido se agrega a la agenda y queda unido a su cobro.'}</span>
+                        </span>
+                      </span>
+                      <input type="checkbox" checked={pkgAgenda.activo} onChange={e => setPkgAgenda(a => ({ ...a, activo: e.target.checked }))} className="size-5 shrink-0 accent-[var(--v-accent)]" />
+                    </label>
+                    <AnimatePresence initial={false}>
+                      {pkgAgenda.activo && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="mt-3 grid gap-3 border-t border-v-border pt-3 sm:grid-cols-[160px_1fr] sm:items-end">
+                            <Field label={locale === 'en' ? 'Time of the sessions' : 'Hora de las sesiones'}>
+                              <input type="time" value={pkgAgenda.hora} onChange={e => setPkgAgenda(a => ({ ...a, hora: e.target.value }))} className={inputCls} />
+                            </Field>
+                            <p className="pb-2 text-xs text-v-muted">{locale === 'en'
+                              ? 'Days that already have a session (marked with a dot) are linked to it instead of creating another. New sessions sync with the connected calendars.'
+                              : 'Los días que ya tienen sesión (marcados con un punto) se vinculan a ella en vez de crear otra. Las nuevas se sincronizan con los calendarios conectados.'}</p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
 
               {/* Calendario para elegir las fechas de las sesiones */}
@@ -1104,8 +1168,10 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                             return (
                               <button key={di} type="button"
                                 onClick={() => setPkgDates(prev => prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr].sort())}
-                                className={`grid h-9 place-items-center rounded-full text-sm font-semibold tabular-nums transition-all active:scale-95 ${on ? 'bg-v-accent text-white shadow-v' : isToday ? 'text-v-accent ring-1 ring-v-accent' : 'text-v-text hover:bg-v-fill'}`}>
+                                title={pkgCitas[dateStr] ? (locale === 'en' ? 'Already has a session' : 'Ya tiene una sesión') : undefined}
+                                className={`relative grid h-9 place-items-center rounded-full text-sm font-semibold tabular-nums transition-all active:scale-95 ${on ? 'bg-v-accent text-white shadow-v' : isToday ? 'text-v-accent ring-1 ring-v-accent' : 'text-v-text hover:bg-v-fill'}`}>
                                 {day}
+                                {pkgCitas[dateStr] && <span aria-hidden className={`absolute bottom-1 size-1 rounded-full ${on ? 'bg-white' : 'bg-v-success'}`} />}
                               </button>
                             )
                           })}
