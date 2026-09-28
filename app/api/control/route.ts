@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase-server'
 import { requireProgramador } from '@/lib/require-programador'
 import { logAuditEvent } from '@/lib/audit-log'
 import { borrarArchivoGuardado, borrarArchivosDePaciente, borrarArchivosDeUsuario } from '@/lib/borrar-archivos'
+import { borrarSiHuerfana } from '@/lib/cuenta-huerfana'
 
 // Vanty platform console API.
 //  • GET  → public-safe platform status (maintenance + global module switches). Logged-in consumers only (proxy).
@@ -312,11 +313,17 @@ export async function POST(req: NextRequest) {
       if (!centro) return NextResponse.json({ error: 'not_found' }, { status: 404 })
       if (str(body.confirm_name, 200) !== (centro.name ?? '').trim()) return NextResponse.json({ error: 'name_mismatch' }, { status: 400 })
 
-      const [{ data: perfiles }, { data: hijos }] = await Promise.all([
+      const [{ data: perfiles }, { data: hijos }, { data: familias }] = await Promise.all([
         supabaseAdmin.from('profiles').select('id, role, avatar_url').eq('centro_id', centroId),
-        supabaseAdmin.from('children').select('id').eq('centro_id', centroId),
+        supabaseAdmin.from('children').select('id, parent_id').eq('centro_id', centroId),
+        supabaseAdmin.from('parent_accounts').select('user_id').eq('centro_id', centroId),
       ])
       const cuentas = perfiles ?? []
+      // Padres vinculados a este centro (por sus hijos o su cuenta de familia) cuyo perfil no tiene el
+      // centro asignado: tras el borrado, su cuenta se elimina solo si ya no pertenece a nada más.
+      const propias = new Set(cuentas.map(c => c.id))
+      const padresExtra = [...new Set([...(hijos ?? []).map(h => h.parent_id), ...(familias ?? []).map(f => f.user_id)])]
+        .filter((id): id is string => typeof id === 'string' && !propias.has(id))
       // Nunca borrar la cuenta de quien opera la consola ni la de otro programador.
       if (cuentas.some(c => c.id === auth.userId || c.role === 'programador')) {
         return NextResponse.json({ error: 'has_programador' }, { status: 409 })
@@ -332,6 +339,11 @@ export async function POST(req: NextRequest) {
         const { error: e } = await supabaseAdmin.auth.admin.deleteUser(c.id)
         if (e && !/not.?found/i.test(e.message)) fallidas.push(c.id)
       }
+      let padresExtraBorrados = 0
+      for (const id of padresExtra) {
+        const { data: perfil } = await supabaseAdmin.from('profiles').select('avatar_url').eq('id', id).maybeSingle()
+        if (await borrarSiHuerfana(id)) { padresExtraBorrados++; await borrarArchivosDeUsuario(id, perfil?.avatar_url) }
+      }
       // Archivos: de cada paciente, el logo y la carpeta del centro en Storage.
       for (const h of hijos ?? []) await borrarArchivosDePaciente(h.id)
       await borrarArchivoGuardado(centro.logo_url)
@@ -340,8 +352,8 @@ export async function POST(req: NextRequest) {
         if (objs?.length) await supabaseAdmin.storage.from('public-images').remove(objs.map(o => `centros/${centroId}/${o.name}`))
       } catch { /* noop */ }
 
-      await audit('Centro eliminado', { centroId, name: centro.name, cuentas: cuentas.length, pacientes: hijos?.length ?? 0, resultado, cuentasFallidas: fallidas })
-      return NextResponse.json({ ok: true, cuentas: cuentas.length - fallidas.length, cuentas_fallidas: fallidas.length, pacientes: hijos?.length ?? 0 })
+      await audit('Centro eliminado', { centroId, name: centro.name, cuentas: cuentas.length, padresExtraBorrados, pacientes: hijos?.length ?? 0, resultado, cuentasFallidas: fallidas })
+      return NextResponse.json({ ok: true, cuentas: cuentas.length - fallidas.length + padresExtraBorrados, cuentas_fallidas: fallidas.length, pacientes: hijos?.length ?? 0 })
     }
 
     case 'extend_trial': {
