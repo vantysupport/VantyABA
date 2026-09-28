@@ -256,6 +256,13 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   const activeTab: PagosTab = pagosTabs.find(t => t.id === tab) ? tab : (pagosTabs[0]?.id ?? 'dashboard')
   const [payments, setPayments] = useState<any[]>([])
   const [children, setChildren] = useState<any[]>([])
+  const [especialistas, setEspecialistas] = useState<{ id: string; full_name: string; specialty: string | null }[]>([])
+  useEffect(() => {
+    supabase.from('profiles').select('id, full_name, specialty').in('role', ['especialista', 'terapeuta', 'admin', 'jefe'])
+      .eq('is_active', true).order('full_name').then(({ data }) => setEspecialistas((data ?? []) as typeof especialistas))
+  }, [])
+  /** Nombre del padre/madre con cuenta vinculado al paciente (si lo hay). */
+  const tutorDe = (childId: string): string => (children.find(c => c.id === childId)?.tutor?.full_name as string | undefined) ?? ''
   const [rates, setRates]       = useState<any[]>([])
   const [loading, setLoading]   = useState(true)
   const [periodo, setPeriodo]   = useState<'semana'|'mes'|'anio'>('mes')
@@ -290,7 +297,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   // Deudas: todo lo pendiente o parcial, sin importar el período elegido
   const [deudas, setDeudas] = useState<any[]>([])
   const cargarDeudas = useCallback(async () => {
-    const { data } = await supabase.from('payments').select('*, children(name)').in('status', ['pending', 'partial']).order('created_at', { ascending: true }).limit(1000)
+    const { data } = await supabase.from('payments').select('*, children(name), appointments(appointment_date, appointment_time, status), especialista:especialista_id(full_name)').in('status', ['pending', 'partial']).order('created_at', { ascending: true }).limit(1000)
     setDeudas(data || [])
   }, [])
   useEffect(() => { cargarDeudas() }, [cargarDeudas])
@@ -305,8 +312,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       else desde = new Date(now.getFullYear(), 0, 1)
 
       const [{ data: pays }, { data: kids }, { data: svcRates }] = await Promise.all([
-        supabase.from('payments').select('*, children(name)').gte('created_at', desde.toISOString()).order('created_at', { ascending: false }).limit(500),
-        supabase.from('children').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('payments').select('*, children(name), appointments(appointment_date, appointment_time, status), especialista:especialista_id(full_name)').gte('created_at', desde.toISOString()).order('created_at', { ascending: false }).limit(500),
+        supabase.from('children').select('id, name, tutor:profiles!fk_children_parent(full_name)').eq('is_active', true).order('name'),
         supabase.from('service_rates').select('*').order('amount', { ascending: true }),
       ])
       const p = pays || []
@@ -336,7 +343,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
   // ─── Payment form ───────────────────────────────────────────────────────────
   // modo: 'registrado' (paciente del sistema) | 'externo' (nombre libre, ej. evaluación inicial)
-  const emptyForm = { child_id: '', external_name: '', modo: 'registrado' as 'registrado' | 'externo', amount: '', adelanto: '', concept: '', method: 'efectivo', status: 'paid', notes: '', date: new Date().toISOString().split('T')[0] }
+  const emptyForm = { child_id: '', external_name: '', modo: 'registrado' as 'registrado' | 'externo', amount: '', adelanto: '', concept: '', method: 'efectivo', status: 'paid', notes: '', date: new Date().toISOString().split('T')[0], responsable: '', especialista_id: '' }
   const [form, setForm] = useState(emptyForm)
   // Opcional: vincular el cobro con una sesión de la agenda (una ya agendada o una nueva)
   const agendaVacia = { activo: false, modo: 'existente' as 'existente' | 'nueva', citaId: '', hora: '09:00' }
@@ -387,7 +394,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
           const r = await fetch('/api/admin/appointments?sincronizar=1', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': locale },
             body: JSON.stringify({ child_id: form.child_id, appointment_date: form.date, appointment_time: `${agenda.hora}:00`,
-              service_type: form.concept.trim(), is_group: false, status: 'confirmed', modalidad: 'presencial', created_by: profile?.id }),
+              service_type: form.concept.trim(), is_group: false, status: 'confirmed', modalidad: 'presencial', created_by: profile?.id,
+              ...(form.especialista_id ? { specialist_id: form.especialista_id } : {}) }),
           })
           const j = await r.json().catch(() => ({}))
           appointmentId = j?.data?.[0]?.id ?? null
@@ -398,6 +406,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       const pagado = form.status === 'paid' ? monto : form.status === 'partial' ? adelanto : 0
       const { error } = await supabase.from('payments').insert({
         appointment_id: appointmentId,
+        responsable: form.responsable.trim() || (esExterno ? null : tutorDe(form.child_id)) || null,
+        especialista_id: form.especialista_id || null,
         child_id: esExterno ? null : form.child_id,
         paciente_externo: esExterno ? form.external_name.trim() : null,
         amount: monto, concept: form.concept.trim(),
@@ -418,13 +428,15 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   // ─── Package form ───────────────────────────────────────────────────────────
   const emptyPkg = {
     child_id: '', external_name: '', modo: 'registrado' as 'registrado' | 'externo',
-    amount: '', concept: '', method: 'efectivo', status: 'paid',
+    amount: '', concept: '', method: 'efectivo', status: 'paid', responsable: '', especialista_id: '',
     calMonth: new Date().toISOString().slice(0, 7), // YYYY-MM
   }
   const [pkg, setPkg] = useState(emptyPkg)
   const [pkgDates, setPkgDates] = useState<string[]>([]) // manually selected dates
   // Opcional: agendar cada sesión del paquete (o vincular la que ya exista ese día)
   const [pkgAgenda, setPkgAgenda] = useState({ activo: false, hora: '09:00' })
+  const [pkgHoras, setPkgHoras] = useState<Record<string, string>>({}) // fecha → hora propia (si difiere de la general)
+  const horaDe = (fecha: string) => pkgHoras[fecha] || pkgAgenda.hora
   const [pkgCitas, setPkgCitas] = useState<Record<string, string>>({}) // fecha → id de la sesión existente
   useEffect(() => {
     if (!pkgAgenda.activo || pkg.modo !== 'registrado' || !pkg.child_id) { setPkgCitas({}); return }
@@ -464,8 +476,9 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         if (nuevas.length) {
           const r = await fetch('/api/admin/appointments?sincronizar=1', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': locale },
-            body: JSON.stringify(nuevas.map(d => ({ child_id: pkg.child_id, appointment_date: d, appointment_time: `${pkgAgenda.hora}:00`,
-              service_type: pkg.concept.trim(), is_group: false, status: 'confirmed', modalidad: 'presencial', created_by: profile?.id }))),
+            body: JSON.stringify(nuevas.map(d => ({ child_id: pkg.child_id, appointment_date: d, appointment_time: `${horaDe(d)}:00`,
+              service_type: pkg.concept.trim(), is_group: false, status: 'confirmed', modalidad: 'presencial', created_by: profile?.id,
+              ...(pkg.especialista_id ? { specialist_id: pkg.especialista_id } : {}) }))),
           })
           const j = await r.json().catch(() => ({}))
           if (!r.ok || !Array.isArray(j?.data)) throw new Error(locale === 'en' ? 'Could not add the sessions to the schedule.' : 'No se pudieron agendar las sesiones.')
@@ -474,6 +487,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       }
       const inserts = pkgDates.map((date, i) => ({
         appointment_id: sesionDe[date] ?? null,
+        responsable: pkg.responsable.trim() || (esExterno ? null : tutorDe(pkg.child_id)) || null,
+        especialista_id: pkg.especialista_id || null,
         child_id: esExterno ? null : pkg.child_id,
         paciente_externo: esExterno ? pkg.external_name.trim() : null,
         amount: Number(pkg.amount),
@@ -487,7 +502,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       const { error } = await supabase.from('payments').insert(inserts)
       if (error) throw error
       toast.success(t('pagos.pagosCreados', { n: String(pkgDates.length), total: (Number(pkg.amount) * pkgDates.length).toFixed(2) }))
-      setShowPkg(false); setPkg(emptyPkg); setPkgDates([]); setPkgAgenda({ activo: false, hora: '09:00' })
+      setShowPkg(false); setPkg(emptyPkg); setPkgDates([]); setPkgAgenda({ activo: false, hora: '09:00' }); setPkgHoras({})
       await cargar()   // ← refrescar tabla para que los nuevos pagos aparezcan de inmediato
     } catch (e: any) { toast.error(e.message) }
     finally { setSavingPkg(false) }
@@ -990,6 +1005,16 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     <input type="number" inputMode="decimal" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" className={`${inputCls} pl-10 font-semibold tabular-nums`} />
                   </div>
                 </Field>
+                <Field label={locale === 'en' ? 'Specialist in charge' : 'Especialista a cargo'}>
+                  <select value={form.especialista_id} onChange={e => setForm(f => ({ ...f, especialista_id: e.target.value }))} className={inputCls}>
+                    <option value="">{locale === 'en' ? 'No specialist' : 'Sin especialista'}</option>
+                    {especialistas.map(e => <option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
+                  </select>
+                </Field>
+                <Field label={locale === 'en' ? 'Guardian' : 'Responsable / tutor'}>
+                  <input value={form.responsable} onChange={e => setForm(f => ({ ...f, responsable: e.target.value }))}
+                    placeholder={(form.modo === 'registrado' && tutorDe(form.child_id)) || (locale === 'en' ? 'Name of the parent or guardian' : 'Nombre del padre, madre o tutor')} className={inputCls} />
+                </Field>
                 <Field label={agenda.activo && form.modo === 'registrado' && agenda.modo === 'nueva' ? (locale === 'en' ? 'Session date' : 'Fecha de la sesión') : t('pagos.fechaPago')}>
                   <input type="date" value={agenda.activo && form.modo === 'registrado' && agenda.modo === 'existente' ? (citasPaciente.find(c => c.id === agenda.citaId)?.appointment_date ?? form.date) : form.date}
                     disabled={agenda.activo && form.modo === 'registrado' && agenda.modo === 'existente'}
@@ -1102,6 +1127,16 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                   </div>
                 </Field>
                 <div className="hidden md:block" />
+                <Field label={locale === 'en' ? 'Specialist in charge' : 'Especialista a cargo'}>
+                  <select value={pkg.especialista_id} onChange={e => setPkg(f => ({ ...f, especialista_id: e.target.value }))} className={inputCls}>
+                    <option value="">{locale === 'en' ? 'No specialist' : 'Sin especialista'}</option>
+                    {especialistas.map(e => <option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
+                  </select>
+                </Field>
+                <Field label={locale === 'en' ? 'Guardian' : 'Responsable / tutor'}>
+                  <input value={pkg.responsable} onChange={e => setPkg(f => ({ ...f, responsable: e.target.value }))}
+                    placeholder={(pkg.modo === 'registrado' && tutorDe(pkg.child_id)) || (locale === 'en' ? 'Name of the parent or guardian' : 'Nombre del padre, madre o tutor')} className={inputCls} />
+                </Field>
                 <div className="md:col-span-2"><Field label={t('pagos.metodoPago')}><ChipGroup options={metodoOpts} value={pkg.method} onChange={v => setPkg(pp => ({ ...pp, method: v }))} /></Field></div>
                 <div className="md:col-span-2"><Field label={t('pagos.estadoPagos')}><ChipGroup options={estadoOptsPkg} value={pkg.status} onChange={v => setPkg(pp => ({ ...pp, status: v }))} /></Field></div>
                 {pkg.modo === 'registrado' && (
@@ -1120,12 +1155,12 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       {pkgAgenda.activo && (
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                           <div className="mt-3 grid gap-3 border-t border-v-border pt-3 sm:grid-cols-[160px_1fr] sm:items-end">
-                            <Field label={locale === 'en' ? 'Time of the sessions' : 'Hora de las sesiones'}>
-                              <input type="time" value={pkgAgenda.hora} onChange={e => setPkgAgenda(a => ({ ...a, hora: e.target.value }))} className={inputCls} />
+                            <Field label={locale === 'en' ? 'Time (all sessions)' : 'Hora (todas las sesiones)'}>
+                              <input type="time" value={pkgAgenda.hora} onChange={e => { setPkgAgenda(a => ({ ...a, hora: e.target.value })); setPkgHoras({}) }} className={inputCls} />
                             </Field>
                             <p className="pb-2 text-xs text-v-muted">{locale === 'en'
-                              ? 'Days that already have a session (marked with a dot) are linked to it instead of creating another. New sessions sync with the connected calendars.'
-                              : 'Los días que ya tienen sesión (marcados con un punto) se vinculan a ella en vez de crear otra. Las nuevas se sincronizan con los calendarios conectados.'}</p>
+                              ? 'You can change the time of each day in the list of chosen dates. Days that already have a session (marked with a dot) are linked to it. New sessions sync with the connected calendars.'
+                              : 'Puedes cambiar la hora de cada día en la lista de fechas elegidas. Los días que ya tienen sesión (marcados con un punto) se vinculan a ella. Las nuevas se sincronizan con los calendarios conectados.'}</p>
                           </div>
                         </motion.div>
                       )}
@@ -1203,6 +1238,11 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                             <div key={date} className="flex items-center gap-3 px-4 py-2">
                               <span className="w-10 shrink-0 rounded-full bg-v-accent-soft py-0.5 text-center text-[11px] font-semibold text-v-accent">{diaCorto(d.getDay(), locale)}</span>
                               <span className="min-w-0 flex-1 truncate text-sm text-v-text">{fechaCorta(d)}</span>
+                              {pkgAgenda.activo && pkg.modo === 'registrado' && (pkgCitas[date]
+                                ? <span className="shrink-0 rounded-full bg-v-success/15 px-2 py-0.5 text-[11px] font-semibold text-v-success">{locale === 'en' ? 'Existing session' : 'Sesión existente'}</span>
+                                : <input type="time" value={horaDe(date)} aria-label={locale === 'en' ? 'Session time' : 'Hora de la sesión'}
+                                    onChange={e => setPkgHoras(h => ({ ...h, [date]: e.target.value }))}
+                                    className="h-8 w-[92px] shrink-0 rounded-full border border-v-border bg-v-elevated px-2 text-xs tabular-nums outline-none focus:border-v-accent" />)}
                               <span className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(Number(pkg.amount || 0))}</span>
                               <button onClick={() => setPkgDates(prev => prev.filter(x => x !== date))} className="grid size-7 shrink-0 place-items-center rounded-full text-v-subtle hover:bg-v-danger/10 hover:text-v-danger"><X size={13} /></button>
                             </div>
@@ -1257,6 +1297,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                               <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-v-muted">
                                 <Calendar size={11} /> {locale === 'en' ? 'Session' : 'Sesión'} {fechaCorta(new Date(p.appointments.appointment_date + 'T12:00:00'))} · {String(p.appointments.appointment_time ?? '').slice(0, 5)}
                                 <span className={`rounded-full px-1.5 py-0.5 font-semibold ${as.cls}`}>{as.txt}</span>
+                                {p.especialista?.full_name && <span>· {p.especialista.full_name}</span>}
                               </p>
                             )
                           })()}

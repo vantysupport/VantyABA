@@ -80,6 +80,15 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
   const abonos: Abono[] = Array.isArray(payment.abonos) ? payment.abonos : []
   const esParcial = payment.status === 'partial'
   const logoUrl: string | null = center.logoUrl || null
+  // Sesión de la agenda vinculada y especialista a cargo
+  const ses = payment.appointments as { appointment_date?: string; appointment_time?: string | null } | null
+  const sesionFecha = ses?.appointment_date ? (() => {
+    const f = new Date(ses.appointment_date + 'T12:00:00')
+    const dia = f.toLocaleDateString(isEN ? 'en-US' : 'es-PE', { weekday: 'long', timeZone: 'America/Lima' })
+    const hora = String(ses.appointment_time ?? '').slice(0, 5)
+    return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${fmtFechaLarga(ses.appointment_date + 'T12:00:00', lang)}${hora ? ` · ${hora}` : ''}`
+  })() : ''
+  const especialistaNombre: string = (payment.especialista as { full_name?: string } | null)?.full_name || ''
 
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -128,7 +137,7 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
           </div>
           <div class="card">
             <label>${L('Guardian', 'Responsable / tutor')}</label>
-            <p>${esc(parentProfile?.full_name || '—')}</p>
+            <p>${esc(parentProfile?.full_name || payment.responsable || '—')}</p>
             ${parentProfile?.phone || parentProfile?.email ? `<p class="m">${esc([parentProfile?.phone, parentProfile?.email].filter(Boolean).join(' · '))}</p>` : ''}
           </div>
         </div>
@@ -138,6 +147,12 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
           <div class="row h"><span>${L('Description', 'Descripción')}</span><span class="c hide">${L('Qty', 'Cant.')}</span><span class="r hide">${L('Unit price', 'P. unit.')}</span><span class="r">${L('Amount', 'Importe')}</span></div>
           <div class="row b"><span class="concept">${esc(payment.concept || '—')}</span><span class="c hide">1</span><span class="r hide">${monto}</span><span class="r">${monto}</span></div>
         </div>
+
+        ${sesionFecha || especialistaNombre ? `
+        <div class="grid" style="margin-top:14px">
+          <div class="card"><label>${L('Session date and time', 'Fecha y hora de la sesión')}</label><p${sesionFecha ? '' : ' style="color:#8a98ad;font-weight:500"'}>${sesionFecha ? esc(sesionFecha) : L('Not scheduled', 'Sin sesión agendada')}</p></div>
+          <div class="card"><label>${L('Specialist in charge', 'Especialista a cargo')}</label><p${especialistaNombre ? '' : ' style="color:#8a98ad;font-weight:500"'}>${esc(especialistaNombre || '—')}</p></div>
+        </div>` : ''}
 
         ${nota ? `
         <div class="note">
@@ -200,7 +215,8 @@ async function armarRecibo(req: NextRequest, paymentId: string, lang: string, pa
         id, name, parent_id,
         profiles:parent_id ( full_name, email, phone )
       ),
-      appointments ( appointment_date, appointment_time, status )
+      appointments ( appointment_date, appointment_time, status ),
+      especialista:especialista_id ( full_name )
     `)
     .eq('id', paymentId)
     .single()
@@ -267,7 +283,9 @@ export async function POST(req: NextRequest) {
     const p = r.payment
     const paciente = String((p.children as { name?: string } | null)?.name || p.paciente_externo || '—')
     const sesion = (p.appointments as { appointment_date: string; appointment_time: string | null } | null) ?? null
-    const pdf = await generarReciboPDF({ payment: p, center: r.center, pacienteNombre: paciente, tutor: r.parentProfile, reciboNum: r.reciboNum, lang, symbol: r.symbol, sesion })
+    const especialista = (p.especialista as { full_name?: string } | null)?.full_name || null
+    const tutor = r.parentProfile?.full_name ? r.parentProfile : (p.responsable ? { full_name: String(p.responsable) } : null)
+    const pdf = await generarReciboPDF({ payment: p, center: r.center, pacienteNombre: paciente, tutor, reciboNum: r.reciboNum, lang, symbol: r.symbol, sesion, especialista })
 
     const ESTADO: Record<string, [string, string]> = { paid: ['Paid', 'Pagado'], pending: ['Pending', 'Pendiente'], partial: ['Partially paid', 'Pago parcial'], cancelled: ['Cancelled', 'Anulado'], refunded: ['Refunded', 'Devuelto'] }
     const est = ESTADO[p.status] ?? [p.status, p.status]

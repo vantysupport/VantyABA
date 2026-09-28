@@ -10,7 +10,7 @@ import { cobradoDe, saldoDe, type Abono } from '@/lib/pagos'
 export type PagoRecibo = {
   status: string; amount: number | string; concept?: string | null; notes?: string | null; payment_method?: string | null
   created_at: string; fecha_cobro?: string | null; paid_at?: string | null; abonos?: unknown; amount_paid?: number | string | null
-  paciente_externo?: string | null; children?: unknown; appointments?: unknown
+  paciente_externo?: string | null; children?: unknown; appointments?: unknown; especialista?: unknown; responsable?: string | null
 }
 
 export type DatosReciboPDF = {
@@ -22,6 +22,7 @@ export type DatosReciboPDF = {
   lang: 'es' | 'en'
   symbol: string
   sesion?: { appointment_date: string; appointment_time: string | null } | null
+  especialista?: string | null
 }
 
 const AZUL: [number, number, number] = [0, 99, 216]
@@ -135,11 +136,21 @@ export async function generarReciboPDF(d: DatosReciboPDF): Promise<Buffer> {
   txt(monto, colImp, y + 44, { size: 10.5, bold: true, align: 'right' })
   y += 26 + altoFila + 12
 
-  // Sesión de la agenda vinculada
-  if (d.sesion?.appointment_date) {
-    const hora = String(d.sesion.appointment_time ?? '').slice(0, 5)
-    txt(`${L('Session', 'Sesión')}: ${fmtFechaLarga(d.sesion.appointment_date + 'T12:00:00', lang)}${hora ? ` · ${hora}` : ''}`, M + 12, y + 4, { size: 9, color: GRIS })
-    y += 18
+  // Sesión de la agenda vinculada y especialista a cargo
+  if (d.sesion?.appointment_date || d.especialista) {
+    const mitadS = (ancho - 12) / 2
+    caja(M, y, mitadS, 46); caja(M + mitadS + 12, y, mitadS, 46)
+    txt(L('Session date and time', 'Fecha y hora de la sesión'), M + 12, y + 16, { size: 8, color: GRIS })
+    if (d.sesion?.appointment_date) {
+      const f = new Date(d.sesion.appointment_date + 'T12:00:00')
+      const dia = f.toLocaleDateString(en ? 'en-US' : 'es-PE', { weekday: 'long', timeZone: 'America/Lima' })
+      const hora = String(d.sesion.appointment_time ?? '').slice(0, 5)
+      const linea = `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${fmtFechaCorta(d.sesion.appointment_date + 'T12:00:00', lang)}${hora ? ` · ${hora}` : ''}`
+      txt(doc.splitTextToSize(linea, mitadS - 24)[0], M + 12, y + 33, { size: 11, bold: true })
+    } else txt(L('Not scheduled', 'Sin sesión agendada'), M + 12, y + 33, { size: 11, color: GRIS })
+    txt(L('Specialist in charge', 'Especialista a cargo'), M + mitadS + 24, y + 16, { size: 8, color: GRIS })
+    txt(doc.splitTextToSize(d.especialista || '—', mitadS - 24)[0], M + mitadS + 24, y + 33, { size: 11, bold: !!d.especialista, color: d.especialista ? TINTA : GRIS })
+    y += 60
   }
 
   // Nota
