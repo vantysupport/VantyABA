@@ -118,7 +118,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
 
   useEffect(() => { cargar() }, [cargar])
 
-  const nombre = (profile?.full_name || '').split(' ')[0] || L('Specialist', 'Especialista')
+  const nombre = (profile?.full_name || '').trim().split(/\s+/)[0] || ''
   const hora = ahora?.getHours() ?? 12
   const saludo = hora < 12 ? L('Good morning', 'Buenos días') : hora < 19 ? L('Good afternoon', 'Buenas tardes') : L('Good evening', 'Buenas noches')
   const fecha = ahora ? ahora.toLocaleDateString(bcp, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : ''
@@ -152,7 +152,7 @@ export default function EspecialistaHome({ userId, profile, setActiveView }: Pro
               <p className="min-w-0 truncate text-sm text-v-muted first-letter:uppercase">{fecha}</p>
               <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-v-elevated px-2.5 py-1 text-xs font-semibold tabular-nums text-v-accent shadow-v lg:hidden"><Clock size={12} /> {ahora ? ahora.toLocaleTimeString(bcp, { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
             </div>
-            <h2 className="v-headline mt-1 text-[1.75rem] leading-tight text-v-text sm:text-[2rem]">{saludo}, <span className="v-brand-text">{nombre}</span></h2>
+            <h2 className="v-headline mt-1 text-[1.75rem] leading-tight text-v-text sm:text-[2rem]">{saludo}{nombre && <>, <span className="v-brand-text">{nombre}</span></>}</h2>
             <div className="mt-3 flex flex-wrap gap-1.5">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-v-accent-soft px-3 py-1 text-xs font-semibold text-v-accent"><Calendar size={12} /> {stats.citasHoy} {stats.citasHoy === 1 ? L('session today', 'sesión hoy') : L('sessions today', 'sesiones hoy')}</span>
               {stats.pendientes > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-v-warning/15 px-3 py-1 text-xs font-semibold text-v-warning"><Clock size={12} /> {stats.pendientes} {L('under review', 'en revisión')}</span>}
