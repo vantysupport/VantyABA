@@ -1602,7 +1602,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                   <span className="hidden shrink-0 text-lg font-bold tabular-nums text-v-text sm:block">{fmt(g.total)}</span>
                   <button onClick={() => window.open(`/api/pagos/recibo-paquete?ids=${g.pays.map((x: any) => x.id).join(',')}&lang=${locale}`, '_blank')} title={t('admin.reciboPaquete')}
                     className="grid size-8 shrink-0 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
-                  <button onClick={() => setConfirmar(conf ? null : { tipo: 'paquete', id: g.key })} title={t('admin.eliminarPaquete')}
+                  <button onClick={() => { setBorrarSesiones(false); setConfirmar(conf ? null : { tipo: 'paquete', id: g.key }) }} title={t('admin.eliminarPaquete')}
                     className={`grid size-8 shrink-0 place-items-center rounded-full transition-colors ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}><Trash2 size={15} /></button>
                   <button onClick={() => setExpanded(st => { const n = new Set(st); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n })}
                     className={`grid size-8 shrink-0 place-items-center rounded-full transition-all ${isOpen ? 'rotate-180 bg-v-accent-soft text-v-accent' : 'text-v-subtle hover:bg-v-fill'}`}><ChevronDown size={16} /></button>
@@ -1616,16 +1616,22 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       <div className="divide-y divide-v-border border-t border-v-border bg-v-bg">
                         {g.pays.map((p: any) => {
                           const tone = STATUS_TONE[p.status] || STATUS_TONE.refunded
+                          const confP = confirmar?.tipo === 'pago' && confirmar.id === p.id
                           return (
-                            <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+                            <div key={p.id}>
+                            <div className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
                               <span className="w-24 shrink-0 text-xs tabular-nums text-v-subtle" title={pagadoOtroDia(p) ? `${locale === 'en' ? 'Paid' : 'Pagado el'} ${fechaCorta(new Date(p.paid_at))}` : undefined}>{fechaCorta(new Date(fechaCobroDe(p)))}</span>
                               <span className="min-w-0 flex-1 truncate text-sm text-v-muted">{p.concept}</span>
                               <span className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(Number(p.amount))}</span>
                               <span className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline ${tone.pill}`}>{t('pagos.status.' + p.status)}</span>
-                              <button onClick={() => handleDeletePago(p)} disabled={deletingId === p.id} title={t('admin.eliminarEstePago')}
-                                className="grid size-7 shrink-0 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-danger/10 hover:text-v-danger disabled:opacity-50">
+                              <button onClick={() => { setBorrarSesiones(false); setConfirmar(confP ? null : { tipo: 'pago', id: p.id }) }} disabled={deletingId === p.id} title={t('admin.eliminarEstePago')}
+                                className={`grid size-7 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-50 ${confP ? 'bg-v-danger/10 text-v-danger' : 'text-v-subtle hover:bg-v-danger/10 hover:text-v-danger'}`}>
                                 {deletingId === p.id ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
                               </button>
+                            </div>
+                            <AnimatePresence>
+                              {confP && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre: g.child, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => { setConfirmar(null); setBorrarSesiones(false) }} onYes={() => handleDeletePago(p)} opcion={opcionSesiones(p.appointment_id ? 1 : 0)} />}
+                            </AnimatePresence>
                             </div>
                           )
                         })}
