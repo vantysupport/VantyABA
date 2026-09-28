@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { logServerError } from '@/lib/log-server-error'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { especialistasInvitados } from '@/lib/cita-invitados'
 import { authorizeCalendarGet, authorizeCalendarPost, internalApiHeaders, signOAuthState } from '@/lib/calendar-integration'
 
 const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CALENDAR_CLIENT_ID     || ''
@@ -199,6 +200,10 @@ export async function POST(req: NextRequest) {
       if (parentEmail) {
         attendees.push({ email: parentEmail, displayName: `Familia — ${patientName}` })
       }
+      // Especialista(s) asignado(s): reciben la cita en su calendario personal como invitación
+      for (const esp of await especialistasInvitados(appointmentId, userId, appointment.specialistId)) {
+        if (!attendees.some(a => a.email.toLowerCase() === esp.email.toLowerCase())) attendees.push({ email: esp.email, displayName: esp.nombre })
+      }
 
       const event: any = {
         summary:     tituloEvento,
@@ -220,7 +225,8 @@ export async function POST(req: NextRequest) {
         },
         colorId: '9', // blueberry
         ...(attendees.length > 0 ? { attendees, guestsCanSeeOtherGuests: false } : {}),
-        sendUpdates: attendees.some(a => a.displayName?.startsWith('Familia')) ? 'all' : 'none',
+        // Invitación por correo a familia y especialistas (no hace falta avisar al dueño del calendario)
+        sendUpdates: attendees.some(a => a.email !== profile.google_calendar_email) ? 'all' : 'none',
       }
 
       const gcalRes = await fetch(
