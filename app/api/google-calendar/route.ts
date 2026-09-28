@@ -38,6 +38,8 @@ export async function GET(req: NextRequest) {
       scope:         scopes,
       access_type:   'offline',
       prompt:        'consent',
+      // Pantalla de permisos de Google en el mismo idioma que la persona usa en Vanty
+      hl:            req.cookies.get('vanty_locale')?.value === 'en' ? 'en' : 'es',
       state:         signOAuthState(userId, role), // pass userId + role through OAuth flow
     })
 
