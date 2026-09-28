@@ -214,11 +214,23 @@ function FormShell({ Icon, title, sub, onClose, children: body }: { Icon: any; t
   )
 }
 
-function ConfirmBar({ texto, onYes, onNo, cancelLabel, deleteLabel }: { texto: string; onYes: () => void; onNo: () => void; cancelLabel: string; deleteLabel: string }) {
+function ConfirmBar({ texto, onYes, onNo, cancelLabel, deleteLabel, opcion }: {
+  texto: string; onYes: () => void; onNo: () => void; cancelLabel: string; deleteLabel: string
+  /** Casilla opcional, p. ej. "Eliminar también las sesiones de la agenda" */
+  opcion?: { label: string; checked: boolean; onChange: (v: boolean) => void }
+}) {
   return (
     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 bg-v-danger/10 px-4 py-2.5">
-        <p className="min-w-0 flex-[1_1_200px] text-xs text-v-danger">{texto}</p>
+        <div className="min-w-0 flex-[1_1_200px]">
+          <p className="text-xs text-v-danger">{texto}</p>
+          {opcion && (
+            <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-xs font-semibold text-v-text">
+              <input type="checkbox" checked={opcion.checked} onChange={e => opcion.onChange(e.target.checked)} className="size-4 accent-[var(--v-danger)]" />
+              {opcion.label}
+            </label>
+          )}
+        </div>
         <button onClick={onNo} className="h-8 rounded-full px-3 text-xs font-semibold text-v-muted hover:bg-v-fill">{cancelLabel}</button>
         <button onClick={onYes} className="h-8 rounded-full bg-v-danger px-3.5 text-xs font-semibold text-white">{deleteLabel}</button>
       </div>
@@ -566,6 +578,24 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
   // ─── Eliminar pago ──────────────────────────────────────────────────────────
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  // Al eliminar un cobro con sesión en la agenda se puede eliminar también esa sesión
+  const [borrarSesiones, setBorrarSesiones] = useState(false)
+  const eliminarSesiones = async (ids: string[]) => {
+    const unicos = [...new Set(ids.filter(Boolean))]
+    const res = await Promise.all(unicos.map(id => fetch('/api/admin/appointments', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-locale': locale }, body: JSON.stringify({ id }),
+    }).then(r => r.ok).catch(() => false)))
+    const fallidas = res.filter(ok => !ok).length
+    if (unicos.length && !fallidas) toast.success(locale === 'en' ? `${unicos.length} session(s) removed from the schedule` : `${unicos.length} sesión(es) eliminada(s) de la agenda`)
+    if (fallidas) toast.error(locale === 'en' ? `${fallidas} session(s) could not be removed from the schedule` : `No se pudieron eliminar ${fallidas} sesión(es) de la agenda`)
+  }
+  const opcionSesiones = (n: number) => n > 0 ? {
+    label: locale === 'en'
+      ? (n === 1 ? 'Also delete the scheduled session (schedule and calendars)' : `Also delete the ${n} scheduled sessions (schedule and calendars)`)
+      : (n === 1 ? 'Eliminar también la sesión agendada (agenda y calendarios)' : `Eliminar también las ${n} sesiones agendadas (agenda y calendarios)`),
+    checked: borrarSesiones, onChange: setBorrarSesiones,
+  } : undefined
+
   const handleDeletePago = async (p: any) => {
     const monto = fmt(Number(p.amount))
     const nombre = p.children?.name || p.paciente_externo || t('pagos.pacienteGenerico')
@@ -580,6 +610,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       const { error } = await supabase.from('payments').delete().eq('id', p.id)
       if (error) throw error
       toast.success(t('pagos.pagoEliminado'))
+      if (borrarSesiones && p.appointment_id) await eliminarSesiones([p.appointment_id])
+      setBorrarSesiones(false)
     } catch (e: any) {
       // Rollback si falla
       setPayments(prev); buildStats(prev)
@@ -603,6 +635,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       const { error } = await supabase.from('payments').delete().in('id', ids)
       if (error) throw error
       toast.success(t('pagos.paqueteEliminado', { n: String(cantidad) }))
+      if (borrarSesiones) await eliminarSesiones(g.pays.map((p: any) => p.appointment_id))
+      setBorrarSesiones(false)
     } catch (e: any) {
       setPayments(prev); buildStats(prev)
       toast.error(t('pagos.noSePudoEliminar') + e.message)
@@ -782,7 +816,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                             className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
                           <button onClick={() => setEnvio(envio?.id === p.id ? null : { id: p.id, email: '' })} title={locale === 'en' ? 'Email receipt' : 'Enviar recibo por correo'}
                             className={`grid size-8 place-items-center rounded-full transition-colors ${envio?.id === p.id ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
-                          <button onClick={() => setConfirmar(conf ? null : { tipo: 'pago', id: p.id })} disabled={deletingId === p.id} title={t('admin.eliminarPago')}
+                          <button onClick={() => { setBorrarSesiones(false); setConfirmar(conf ? null : { tipo: 'pago', id: p.id }) }} disabled={deletingId === p.id} title={t('admin.eliminarPago')}
                             className={`grid size-8 place-items-center rounded-full transition-colors disabled:opacity-50 ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}>
                             {deletingId === p.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
                           </button>
@@ -792,7 +826,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         {envio?.id === p.id && envioBar(p)}
                       </AnimatePresence>
                       <AnimatePresence>
-                        {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => setConfirmar(null)} onYes={() => handleDeletePago(p)} />}
+                        {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => { setConfirmar(null); setBorrarSesiones(false) }} onYes={() => handleDeletePago(p)} opcion={opcionSesiones(p.appointment_id ? 1 : 0)} />}
                         {abonoFor?.id === p.id && abonoBar(p, locale === 'en' ? 'How much was paid as a down payment?' : '¿Cuánto pagó de adelanto?')}
                       </AnimatePresence>
                     </div>
@@ -826,6 +860,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     const pendiente = pays.reduce((a, p) => a + saldoDe(p), 0)
     const abierto = paqueteAbierto === g.key
     const envioKey = `pkg:${g.key}`
+    const confPkg = confirmar?.tipo === 'paquete' && confirmar.id === g.key
     return (
       <div key={g.key}>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-v-bg sm:px-5">
@@ -854,8 +889,16 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
               className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
             <button onClick={() => setEnvio(envio?.id === envioKey ? null : { id: envioKey, email: '' })} title={locale === 'en' ? 'Email package receipt' : 'Enviar recibo del paquete por correo'}
               className={`grid size-8 place-items-center rounded-full transition-colors ${envio?.id === envioKey ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
+            <button onClick={() => { setBorrarSesiones(false); setConfirmar(confPkg ? null : { tipo: 'paquete', id: g.key }) }} title={locale === 'en' ? 'Delete package' : 'Eliminar paquete'}
+              className={`grid size-8 place-items-center rounded-full transition-colors ${confPkg ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}><Trash2 size={15} /></button>
           </div>
         </div>
+        <AnimatePresence>
+          {confPkg && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'}
+            texto={t('pagos.confirmEliminarPaquete', { child: nombre, cantidad: String(pays.length), total: fmt(total) })}
+            onNo={() => { setConfirmar(null); setBorrarSesiones(false) }} onYes={() => handleDeletePaquete({ pays, total })}
+            opcion={opcionSesiones(new Set(pays.map(x => x.appointment_id).filter(Boolean)).size)} />}
+        </AnimatePresence>
         <AnimatePresence>
           {envio?.id === envioKey && envioBar({ id: envioKey, concept: `${locale === 'en' ? 'Package' : 'Paquete'} · ${concepto}`, ids: pays.map(x => x.id) })}
         </AnimatePresence>
@@ -1565,7 +1608,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     className={`grid size-8 shrink-0 place-items-center rounded-full transition-all ${isOpen ? 'rotate-180 bg-v-accent-soft text-v-accent' : 'text-v-subtle hover:bg-v-fill'}`}><ChevronDown size={16} /></button>
                 </div>
                 <AnimatePresence>
-                  {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPaquete', { child: g.child, cantidad: String(g.pays.length), total: fmt(g.total) })} onNo={() => setConfirmar(null)} onYes={() => handleDeletePaquete(g)} />}
+                  {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPaquete', { child: g.child, cantidad: String(g.pays.length), total: fmt(g.total) })} onNo={() => { setConfirmar(null); setBorrarSesiones(false) }} onYes={() => handleDeletePaquete(g)} opcion={opcionSesiones(new Set(g.pays.map((x: any) => x.appointment_id).filter(Boolean)).size)} />}
                 </AnimatePresence>
                 <AnimatePresence initial={false}>
                   {isOpen && (
