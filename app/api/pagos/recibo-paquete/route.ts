@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
     const METHOD: Record<string, string> = isEN
       ? { yape: 'Yape', plin: 'Plin', efectivo: 'Cash', transferencia: 'Transfer', tarjeta: 'Card', otro: 'Other' }
       : { yape: 'Yape', plin: 'Plin', efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' }
-    const fechaDe = (p: any) => p.paid_at || p.created_at
+    const fechaDe = (p: any) => p.paid_at || p.fecha_cobro || p.created_at
     const firstDate = fechaDe(payments[0])
     const lastDate  = fechaDe(payments[payments.length - 1])
     const todoPagado = pending.length === 0 && paid.length > 0

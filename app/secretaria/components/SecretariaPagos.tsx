@@ -40,7 +40,7 @@ const diaCorto = (dow: number, loc: string) => _cap(new Date(2021, 7, 1 + dow).t
 function groupByPatientMonth(pays: any[], loc: string) {
   const g: Record<string, any> = {}
   pays.forEach(p => {
-    const d = new Date(p.paid_at || p.created_at)
+    const d = new Date(p.paid_at || p.fecha_cobro || p.created_at)
     const year = d.getFullYear()
     const month = d.getMonth()
 
@@ -259,7 +259,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     const porMes = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(); d.setMonth(d.getMonth() - (5 - i))
       const m = d.getMonth(); const y = d.getFullYear()
-      const mp = conCobro.filter(p => { const pd = new Date(p.paid_at || p.created_at); return pd.getMonth() === m && pd.getFullYear() === y })
+      const mp = conCobro.filter(p => { const pd = new Date(p.paid_at || p.fecha_cobro || p.created_at); return pd.getMonth() === m && pd.getFullYear() === y })
       return { mes: mesCorto(m, locale), total: cob(mp) }
     })
     const porMetodo = METHODS.map((m, i) => ({ name: t('pagos.method.' + m), value: cob(conCobro.filter(p => p.payment_method === m)), color: COLORS[i] })).filter(m => m.value > 0)
@@ -344,6 +344,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         amount: monto, concept: form.concept.trim(),
         payment_method: form.method, status: form.status, notes: form.notes || null,
         paid_at: form.status === 'paid' ? fecha : null,
+        fecha_cobro: fecha,
         amount_paid: pagado,
         abonos: pagado > 0 ? [{ monto: pagado, fecha, metodo: form.method } satisfies Abono] : [],
         created_by: profile?.id,
@@ -384,6 +385,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         concept: `${pkg.concept.trim()} (${i+1}/${pkgDates.length})`,
         payment_method: pkg.method, status: pkg.status,
         paid_at: pkg.status === 'paid' ? new Date(date + 'T12:00:00').toISOString() : null,
+        fecha_cobro: new Date(date + 'T12:00:00').toISOString(),
         notes: t('pagos.notaPaquete', { n: String(pkgDates.length) }),
         created_by: profile?.id,
       }))
@@ -1027,7 +1029,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-sm font-semibold text-v-accent">{nombre.charAt(0).toUpperCase()}</span>
                         <div className="min-w-0 flex-[1_1_180px]">
                           <p className="truncate text-sm font-semibold text-v-text">{nombre}{!p.child_id && p.paciente_externo && <span className="ml-1.5 rounded-full bg-v-fill px-1.5 py-0.5 text-[10px] font-medium text-v-subtle">{t('pagos.sinInscribir')}</span>}</p>
-                          <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(p.paid_at || p.created_at))}</p>
+                          <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(p.paid_at || p.fecha_cobro || p.created_at))}</p>
                         </div>
                         <div className="ml-auto flex shrink-0 items-center gap-1.5">
                           <span className="mr-1 text-right">
@@ -1141,7 +1143,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
                           <div className="min-w-0 flex-[1_1_220px]">
                             <p className="truncate text-sm font-medium text-v-text">{p.concept}</p>
-                            <p className="text-xs text-v-subtle">{fechaCorta(new Date(p.created_at))}{abonos.length > 0 && ` · ${abonos.length} ${abonos.length === 1 ? (locale === 'en' ? 'payment' : 'abono') : (locale === 'en' ? 'payments' : 'abonos')}`}</p>
+                            <p className="text-xs text-v-subtle">{fechaCorta(new Date(p.fecha_cobro || p.created_at))}{abonos.length > 0 && ` · ${abonos.length} ${abonos.length === 1 ? (locale === 'en' ? 'payment' : 'abono') : (locale === 'en' ? 'payments' : 'abonos')}`}</p>
                             <div className="mt-2 flex items-center gap-2">
                               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-v-fill">
                                 <motion.div className="h-full rounded-full bg-v-success" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7 }} />
@@ -1220,7 +1222,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                           const tone = STATUS_TONE[p.status] || STATUS_TONE.refunded
                           return (
                             <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
-                              <span className="w-24 shrink-0 text-xs tabular-nums text-v-subtle">{fechaCorta(new Date(p.paid_at || p.created_at))}</span>
+                              <span className="w-24 shrink-0 text-xs tabular-nums text-v-subtle">{fechaCorta(new Date(p.paid_at || p.fecha_cobro || p.created_at))}</span>
                               <span className="min-w-0 flex-1 truncate text-sm text-v-muted">{p.concept}</span>
                               <span className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(Number(p.amount))}</span>
                               <span className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline ${tone.pill}`}>{t('pagos.status.' + p.status)}</span>

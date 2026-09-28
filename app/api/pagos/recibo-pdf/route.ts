@@ -63,7 +63,8 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
     cancelled: L('This charge was cancelled and has no value.', 'Este cobro fue anulado y no tiene valor.'),
     refunded: L('This amount was refunded to the family.', 'Este monto fue devuelto a la familia.'),
   }
-  const emitDate = fmtFechaLarga(payment.created_at, lang)
+  // Fecha elegida al registrar el cobro (antes solo existía la de registro en el sistema)
+  const emitDate = fmtFechaLarga(payment.fecha_cobro || payment.created_at, lang)
   const METHOD: Record<string, string> = isEN
     ? { yape: 'Yape', plin: 'Plin', efectivo: 'Cash', transferencia: 'Bank transfer', tarjeta: 'Card', otro: 'Other' }
     : { yape: 'Yape', plin: 'Plin', efectivo: 'Efectivo', transferencia: 'Transferencia bancaria', tarjeta: 'Tarjeta', otro: 'Otro' }
@@ -110,7 +111,7 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
 
       <div class="bar">
         <span class="pill" style="background:${st.bg};color:${st.fg}"><i></i>${isEN ? st.en : st.es}</span>
-        <span class="d">${paidDate ? `${L('Payment date', 'Fecha de pago')}: <b>${paidDate}</b>` : `${L('Registered', 'Registrado')}: <b>${emitDate}</b>`}</span>
+        <span class="d">${paidDate ? `${L('Payment date', 'Fecha de pago')}: <b>${paidDate}</b>` : `${L('Charge date', 'Fecha del cobro')}: <b>${emitDate}</b>`}</span>
       </div>
 
       <div class="body">
