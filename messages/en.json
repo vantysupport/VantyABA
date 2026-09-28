@@ -355,6 +355,7 @@
     "saludoTarde": "Good afternoon",
     "saludoNoche": "Good evening",
     "directora": "Director",
+    "direccion": "Director",
     "citasHoyMsg": "{n} appointments today",
     "sinSesionReciente": "{n} patient{s} with no recent session",
     "nuevasAlertas": "{n} new",

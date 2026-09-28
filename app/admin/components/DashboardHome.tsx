@@ -288,7 +288,9 @@ function CitaRow({ cita, index }: any) {
 }
 
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
-export default function DashboardHome({ navigateTo, navigateToPatient }: { navigateTo: (view: string) => void; navigateToPatient?: (childId: string, tab?: string) => void }) {
+export default function DashboardHome({ navigateTo, navigateToPatient, nombre = '' }: { navigateTo: (view: string) => void; navigateToPatient?: (childId: string, tab?: string) => void; nombre?: string }) {
+  // Saludo por el nombre de pila: no suponemos el género de nadie ("Directora" no aplica a todos).
+  const primerNombre = nombre.trim().split(/\s+/)[0] ?? ''
   const { t, locale } = useI18n()
 
   // State
@@ -591,7 +593,7 @@ export default function DashboardHome({ navigateTo, navigateToPatient }: { navig
               <p className="v-brand-text shrink-0 text-lg font-extrabold tabular-nums tracking-tight sm:hidden">{horaStr}</p>
             </div>
             <h2 className="v-headline mt-1 text-[1.6rem] leading-tight text-v-text sm:text-[1.9rem]">
-              {saludo}, <span className="v-brand-text">{t('dashboard.directora')}</span>{' '}
+              {saludo}, <span className="v-brand-text">{primerNombre || t('dashboard.direccion')}</span>{' '}
               <motion.span className="inline-block origin-[70%_70%]"
                 animate={{ rotate: [0, 14, -8, 14, 0] }} transition={{ delay: 0.6, duration: 1.4 }}>👋</motion.span>
             </h2>
