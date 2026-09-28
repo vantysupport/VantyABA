@@ -45,6 +45,16 @@ function pagadoOtroDia(p: any): boolean {
   return new Date(p.paid_at).toDateString() !== new Date(fechaCobroDe(p)).toDateString()
 }
 
+type CitaAgenda = { id: string; appointment_date: string; appointment_time: string | null; service_type: string | null; status: string | null }
+
+/** Estado de asistencia de la sesión vinculada a un cobro. */
+function asistenciaDe(status: string | null | undefined, fecha: string, en: boolean): { txt: string; cls: string } {
+  if (status === 'completed') return { txt: en ? 'Attended' : 'Realizada', cls: 'bg-v-success/15 text-v-success' }
+  if (status === 'cancelled') return { txt: en ? 'Cancelled' : 'Cancelada', cls: 'bg-v-danger/10 text-v-danger' }
+  if (fecha < new Date().toISOString().slice(0, 10)) return { txt: en ? 'Attendance not marked' : 'Asistencia sin marcar', cls: 'bg-v-warning/15 text-v-warning' }
+  return { txt: en ? 'Scheduled' : 'Programada', cls: 'bg-v-accent-soft text-v-accent' }
+}
+
 // ─── Group payments by patient + month ───────────────────────────────────────
 // Packages (concept with "(N/M)" pattern) are grouped by their base concept.
 // Individual payments keep separate entries so they don't mix with packages.
@@ -328,6 +338,22 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   // modo: 'registrado' (paciente del sistema) | 'externo' (nombre libre, ej. evaluación inicial)
   const emptyForm = { child_id: '', external_name: '', modo: 'registrado' as 'registrado' | 'externo', amount: '', adelanto: '', concept: '', method: 'efectivo', status: 'paid', notes: '', date: new Date().toISOString().split('T')[0] }
   const [form, setForm] = useState(emptyForm)
+  // Opcional: vincular el cobro con una sesión de la agenda (una ya agendada o una nueva)
+  const agendaVacia = { activo: false, modo: 'existente' as 'existente' | 'nueva', citaId: '', hora: '09:00' }
+  const [agenda, setAgenda] = useState(agendaVacia)
+  const [citasPaciente, setCitasPaciente] = useState<CitaAgenda[]>([])
+  useEffect(() => {
+    if (!agenda.activo || form.modo !== 'registrado' || !form.child_id) { setCitasPaciente([]); return }
+    const desde = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10)
+    supabase.from('appointments').select('id, appointment_date, appointment_time, service_type, status')
+      .eq('child_id', form.child_id).neq('status', 'cancelled').gte('appointment_date', desde)
+      .order('appointment_date', { ascending: false }).order('appointment_time', { ascending: false }).limit(60)
+      .then(({ data }) => {
+        const citas = (data ?? []) as CitaAgenda[]
+        setCitasPaciente(citas)
+        setAgenda(a => (a.modo === 'existente' && !citas.length ? { ...a, modo: 'nueva', citaId: '' } : a))
+      })
+  }, [agenda.activo, form.modo, form.child_id])
   const [saving, setSaving] = useState(false)
   const rateNames = rates.map(r => r.name)
 
@@ -347,9 +373,31 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     }
     setSaving(true)
     try {
-      const fecha = new Date(form.date + 'T12:00:00').toISOString() // mediodía: en UTC-5 no cambia de día
+      // Sesión de la agenda (opcional): la elegida o una nueva que se agenda ahora y va a los calendarios
+      let appointmentId: string | null = null
+      let fechaSesion = form.date
+      if (agenda.activo && !esExterno) {
+        if (agenda.modo === 'existente') {
+          const cita = citasPaciente.find(c => c.id === agenda.citaId)
+          if (!cita) { toast.error(locale === 'en' ? 'Choose the session from the schedule.' : 'Elige la sesión de la agenda.'); setSaving(false); return }
+          appointmentId = cita.id
+          fechaSesion = cita.appointment_date
+        } else {
+          if (!form.date || !agenda.hora) { toast.error(locale === 'en' ? 'Enter the session date and time.' : 'Indica la fecha y la hora de la sesión.'); setSaving(false); return }
+          const r = await fetch('/api/admin/appointments?sincronizar=1', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+            body: JSON.stringify({ child_id: form.child_id, appointment_date: form.date, appointment_time: `${agenda.hora}:00`,
+              service_type: form.concept.trim(), is_group: false, status: 'confirmed', modalidad: 'presencial', created_by: profile?.id }),
+          })
+          const j = await r.json().catch(() => ({}))
+          appointmentId = j?.data?.[0]?.id ?? null
+          if (!r.ok || !appointmentId) throw new Error(locale === 'en' ? 'Could not add the session to the schedule.' : 'No se pudo agendar la sesión.')
+        }
+      }
+      const fecha = new Date(fechaSesion + 'T12:00:00').toISOString() // mediodía: en UTC-5 no cambia de día
       const pagado = form.status === 'paid' ? monto : form.status === 'partial' ? adelanto : 0
       const { error } = await supabase.from('payments').insert({
+        appointment_id: appointmentId,
         child_id: esExterno ? null : form.child_id,
         paciente_externo: esExterno ? form.external_name.trim() : null,
         amount: monto, concept: form.concept.trim(),
@@ -361,7 +409,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         created_by: profile?.id,
       })
       if (error) throw error
-      toast.success(t('pagos.pagoRegistrado')); setShowNew(false); setForm(emptyForm)
+      toast.success(t('pagos.pagoRegistrado')); setShowNew(false); setForm(emptyForm); setAgenda(agendaVacia)
       await Promise.all([cargar(), cargarDeudas()])   // ← refrescar tabla para que el nuevo pago aparezca de inmediato
     } catch (e: any) { toast.error(e.message) }
     finally { setSaving(false) }
@@ -906,9 +954,62 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     <input type="number" inputMode="decimal" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" className={`${inputCls} pl-10 font-semibold tabular-nums`} />
                   </div>
                 </Field>
-                <Field label={t('pagos.fechaPago')}>
-                  <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls} />
+                <Field label={agenda.activo && form.modo === 'registrado' && agenda.modo === 'nueva' ? (locale === 'en' ? 'Session date' : 'Fecha de la sesión') : t('pagos.fechaPago')}>
+                  <input type="date" value={agenda.activo && form.modo === 'registrado' && agenda.modo === 'existente' ? (citasPaciente.find(c => c.id === agenda.citaId)?.appointment_date ?? form.date) : form.date}
+                    disabled={agenda.activo && form.modo === 'registrado' && agenda.modo === 'existente'}
+                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={`${inputCls} disabled:opacity-60`} />
                 </Field>
+                {form.modo === 'registrado' && (
+                  <div className="md:col-span-2 rounded-v-sm border border-v-border bg-v-bg p-3.5">
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <Calendar size={16} className="shrink-0 text-v-accent" />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-v-text">{locale === 'en' ? 'Link to the schedule' : 'Vincular con la agenda'}</span>
+                          <span className="block text-xs text-v-muted">{locale === 'en' ? 'Optional: attach this charge to a session and see its attendance.' : 'Opcional: une este cobro a una sesión y verás su asistencia.'}</span>
+                        </span>
+                      </span>
+                      <input type="checkbox" checked={agenda.activo} onChange={e => setAgenda(a => ({ ...a, activo: e.target.checked }))} className="size-5 shrink-0 accent-[var(--v-accent)]" />
+                    </label>
+                    <AnimatePresence initial={false}>
+                      {agenda.activo && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="mt-3 space-y-3 border-t border-v-border pt-3">
+                            {!form.child_id ? (
+                              <p className="text-sm text-v-muted">{locale === 'en' ? 'Choose the patient first.' : 'Primero elige el paciente.'}</p>
+                            ) : (<>
+                              <ChipGroup options={[
+                                { v: 'existente', label: locale === 'en' ? 'Scheduled session' : 'Sesión ya agendada' },
+                                { v: 'nueva', label: locale === 'en' ? 'Schedule new session' : 'Agendar sesión nueva' },
+                              ]} value={agenda.modo} onChange={v => setAgenda(a => ({ ...a, modo: v as 'existente' | 'nueva' }))} />
+                              {agenda.modo === 'existente' ? (
+                                citasPaciente.length ? (
+                                  <select value={agenda.citaId} onChange={e => setAgenda(a => ({ ...a, citaId: e.target.value }))} className={inputCls}>
+                                    <option value="">{locale === 'en' ? 'Choose the session…' : 'Elige la sesión…'}</option>
+                                    {citasPaciente.map(c => (
+                                      <option key={c.id} value={c.id}>
+                                        {fechaCorta(new Date(c.appointment_date + 'T12:00:00'))} · {String(c.appointment_time ?? '').slice(0, 5)} · {c.service_type || '—'} · {asistenciaDe(c.status, c.appointment_date, locale === 'en').txt}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : <p className="text-sm text-v-muted">{locale === 'en' ? 'This patient has no sessions in the schedule. Schedule a new one.' : 'Este paciente no tiene sesiones en la agenda. Agenda una nueva.'}</p>
+                              ) : (
+                                <div className="grid gap-3 sm:grid-cols-[160px_1fr] sm:items-end">
+                                  <Field label={locale === 'en' ? 'Time' : 'Hora'}>
+                                    <input type="time" value={agenda.hora} onChange={e => setAgenda(a => ({ ...a, hora: e.target.value }))} className={inputCls} />
+                                  </Field>
+                                  <p className="pb-2 text-xs text-v-muted">{locale === 'en'
+                                    ? 'It will be added to the schedule with the date above and the concept as the service, and synced to the connected calendars.'
+                                    : 'Se agregará a la agenda con la fecha de arriba y el concepto como servicio, y se sincronizará con los calendarios conectados.'}</p>
+                                </div>
+                              )}
+                            </>)}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
                 <div className="md:col-span-2"><Field label={t('pagos.metodoPago')}><ChipGroup options={metodoOpts} value={form.method} onChange={v => setForm(f => ({ ...f, method: v }))} /></Field></div>
                 <div className="md:col-span-2"><Field label={t('pagos.estado')}><ChipGroup options={estadoOpts} value={form.status} onChange={v => setForm(f => ({ ...f, status: v }))} /></Field></div>
                 <AnimatePresence initial={false}>
@@ -1084,6 +1185,15 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         <div className="min-w-0 flex-[1_1_180px]">
                           <p className="truncate text-sm font-semibold text-v-text">{nombre}{!p.child_id && p.paciente_externo && <span className="ml-1.5 rounded-full bg-v-fill px-1.5 py-0.5 text-[10px] font-medium text-v-subtle">{t('pagos.sinInscribir')}</span>}</p>
                           <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(fechaCobroDe(p)))}{pagadoOtroDia(p) && ` · ${locale === 'en' ? 'paid' : 'pagado el'} ${fechaCorta(new Date(p.paid_at))}`}</p>
+                          {p.appointments?.appointment_date && (() => {
+                            const as = asistenciaDe(p.appointments.status, p.appointments.appointment_date, locale === 'en')
+                            return (
+                              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-v-muted">
+                                <Calendar size={11} /> {locale === 'en' ? 'Session' : 'Sesión'} {fechaCorta(new Date(p.appointments.appointment_date + 'T12:00:00'))} · {String(p.appointments.appointment_time ?? '').slice(0, 5)}
+                                <span className={`rounded-full px-1.5 py-0.5 font-semibold ${as.cls}`}>{as.txt}</span>
+                              </p>
+                            )
+                          })()}
                         </div>
                         <div className="ml-auto flex shrink-0 items-center gap-1.5">
                           <span className="mr-1 text-right">

@@ -84,6 +84,12 @@ export async function POST(request: NextRequest) {
     // Aviso en el portal y en el celular de cada familia
     after(() => Promise.all((data || []).flatMap((apt: any) => [avisarCitaFamilia(apt, 'nueva'), enviarCorreoCitaFamilia(apt, 'nueva', getLocaleFromRequest(request) === 'en'), avisarEspecialistaCita(apt, 'nueva', caller.id)])))
 
+    // ?sincronizar=1 (p. ej. al agendar la sesión desde Pagos): llevar la cita a Google/Outlook desde el
+    // servidor. La Agenda no lo usa porque sincroniza por su cuenta.
+    if (request.nextUrl.searchParams.get('sincronizar') === '1') {
+      after(() => Promise.all((data || []).map((apt: { id: string }) => sincronizarCalendarios(apt.id, 'actualizar'))))
+    }
+
     // Responder inmediatamente — las notificaciones corren en background
     return NextResponse.json({ data })
   } catch (error: any) {
