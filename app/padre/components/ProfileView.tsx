@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { confirmar } from '@/components/ui/confirmar'
+import { TarjetaIA } from '@/components/ui/tarjeta-ia'
 
 const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
 
@@ -206,6 +207,9 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
         <Seccion titulo={L('Linked calendars', 'Calendarios vinculados')} delay={0.12}>
           <CalBtn label="Google Calendar" logo={<GoogleLogo />} profile={profile} apiBase="google-calendar" paramKey="gcal" />
           <CalBtn label="Outlook Calendar" logo={<MicrosoftLogo />} profile={profile} apiBase="microsoft-calendar" paramKey="mscal" />
+        </Seccion>
+        <Seccion titulo={L('Artificial intelligence', 'Inteligencia artificial')} delay={0.16}>
+          <TarjetaIA ambito="propio" className="px-5 py-3.5" />
         </Seccion>
       </div>
     </div>
