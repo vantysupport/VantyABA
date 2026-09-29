@@ -9,7 +9,7 @@ import {
   AlignmentType, BorderStyle, WidthType, ShadingType, Footer, PageNumber,
 } from 'docx'
 import {
-  selloQRVerificacionAsync, piePaginaOficial,
+  selloQRVerificacionAsync, piePaginaOficial, creditoVantyParrafo,
   generarCodigoDocumento, generarIniciales, DOC_PAGE_PROPS,
 } from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
                 new TextRun({ text: `${centro.name} · Vanty ABA  ·  ${nombrePlantilla} — ${nombrePaciente}  ·  `, size: 16, font: 'Arial', color: '9CA3AF' }),
                 new TextRun({ children: [PageNumber.CURRENT], size: 16, font: 'Arial', color: '9CA3AF' }),
               ],
-            })],
+            }), creditoVantyParrafo()],
           }),
         },
         children: [

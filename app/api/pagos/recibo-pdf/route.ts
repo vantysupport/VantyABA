@@ -7,6 +7,7 @@ import { getCentroMoneda } from '@/lib/centro-moneda'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { getApiCaller, hasRole, ROLES, unauthorized } from '@/lib/api-auth'
 import { esc, fmtFechaLarga, fmtFechaCorta, RECIBO_CSS, RECIBO_FONTS } from '@/lib/recibo-html'
+import { creditoVanty } from '@/lib/branding'
 import { cobradoDe, saldoDe, type Abono } from '@/lib/pagos'
 import { sendEmail } from '@/lib/email'
 import { emailLayout, escHtml } from '@/lib/email-layout'
@@ -186,6 +187,7 @@ function generateReceiptHTML(payment: any, center: any, child: any, parentProfil
         <div><b>${esc(center.nombre)}</b><br/>${L('Internal payment receipt.', 'Recibo interno de pago.')}</div>
         <div class="r">${L('Receipt', 'Recibo')} N.° ${esc(reciboNum)}<br/>${L('Not valid as a SUNAT tax document', 'No válido como comprobante SUNAT')}</div>
       </div>
+      <p style="margin:14px 0 0;text-align:center;font-size:11px;font-weight:700;color:#0063d8">${creditoVanty(lang === 'en')}</p>
     </div>
 
     ${paraCorreo ? '' : `<div class="actions">

@@ -5,3 +5,6 @@
 // y en componentes cliente con useCentroBranding() (components/CentroBrandingContext.tsx).
 
 export const PLATFORM_NAME = 'Vanty'
+
+/** Leyenda que llevan todos los informes y recibos que genera la plataforma. */
+export const creditoVanty = (en: boolean) => (en ? 'Generated with Vanty ABA technology' : 'Generado con tecnología de Vanty ABA')

@@ -5,6 +5,7 @@ import 'server-only'
 import { jsPDF } from 'jspdf'
 import sharp from 'sharp'
 import { fmtFechaCorta, fmtFechaLarga } from '@/lib/recibo-html'
+import { creditoVanty } from '@/lib/branding'
 import { cobradoDe, saldoDe, type Abono } from '@/lib/pagos'
 
 export type PagoRecibo = {
@@ -222,7 +223,7 @@ export async function generarReciboPDF(d: DatosReciboPDF): Promise<Buffer> {
   txt(L('Internal payment receipt.', 'Recibo interno de pago.'), M, H - 40, { size: 8, color: GRIS })
   txt(`${L('Receipt', 'Recibo')} N.° ${d.reciboNum}`, W - M, H - 52, { size: 8, color: GRIS, align: 'right' })
   txt(L('Not valid as a SUNAT tax document', 'No válido como comprobante SUNAT'), W - M, H - 40, { size: 8, color: GRIS, align: 'right' })
-  txt('Vanty ABA', W / 2, H - 22, { size: 7.5, color: [160, 172, 190], align: 'center' })
+  txt(creditoVanty(lang === 'en'), W / 2, H - 22, { size: 7.5, bold: true, color: [0, 99, 216], align: 'center' })
 
   return Buffer.from(doc.output('arraybuffer'))
 }
@@ -269,6 +270,7 @@ export async function generarReciboPaquetePDF(d: DatosPaquetePDF): Promise<Buffe
     txt(L('Internal payment receipt.', 'Recibo interno de pago.'), M, H - 40, { size: 8, color: GRIS })
     txt(`${L('Receipt', 'Recibo')} N.° ${d.reciboNum}`, W - M, H - 52, { size: 8, color: GRIS, align: 'right' })
     txt(L('Not valid as a SUNAT tax document', 'No válido como comprobante SUNAT'), W - M, H - 40, { size: 8, color: GRIS, align: 'right' })
+    txt(creditoVanty(d.lang === 'en'), W / 2, H - 22, { size: 7.5, bold: true, color: [0, 99, 216], align: 'center' })
   }
   const nuevaPagina = () => { pie(); doc.addPage(); doc.setFillColor(...AZUL); doc.rect(0, 0, W, 6, 'F'); y = 40 }
 
