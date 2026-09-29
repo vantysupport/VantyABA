@@ -5,4 +5,4 @@ alter table public.profiles add column if not exists terminos_version text;
 
 -- Quién confirmó (y cuándo) que cuenta con la autorización del padre/tutor para registrar los datos del paciente.
 alter table public.children add column if not exists consentimiento_at timestamptz;
-alter table public.children add column if not exists consentimiento_por uuid references public.profiles(id) on delete set null;
+alter table public.children add column if not exists consentimiento_por uuid; -- sin FK, para no sumar otra relación children↔profiles
