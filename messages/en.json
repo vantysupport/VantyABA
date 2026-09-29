@@ -3167,6 +3167,7 @@
         "required": "Enter the center's name, address and phone, and your name.",
         "email": "Enter a valid email.",
         "password": "Password must be at least 8 characters.",
+        "terms": "You must accept the Terms of Service and the Privacy Policy.",
         "plan": "The selected plan is not available.",
         "emailTaken": "That email already has an account. Sign in instead.",
         "generic": "We couldn't create the center. Please try again.",

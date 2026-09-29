@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const token = typeof body.token === 'string' ? body.token : ''
+  // La persona marcó la casilla de Términos en la invitación antes de ir a Google/Microsoft.
+  const terminosAceptados = body.terminos === true
   const email = user.email.toLowerCase()
 
   const { data: profile } = await supabaseAdmin.from('profiles').select('centro_id, created_at').eq('id', user.id).maybeSingle()
@@ -46,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: invalida ?? 'invalid' }, { status: 400 })
   }
 
-  const fallo = await aplicarInvitacion(inv, user.id, { fullName: nombreDe(user) || email, email })
+  const fallo = await aplicarInvitacion(inv, user.id, { fullName: nombreDe(user) || email, email, terminosAceptados })
   if (fallo) {
     await limpiar()
     return NextResponse.json({ error: fallo }, { status: 400 })

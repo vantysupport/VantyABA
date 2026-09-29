@@ -3179,6 +3179,7 @@
     "required": "Completa nombre, dirección y teléfono del centro, y tu nombre.",
     "email": "Ingresa un correo válido.",
     "password": "La contraseña debe tener al menos 8 caracteres.",
+    "terms": "Debes aceptar los Términos y condiciones y la Política de privacidad.",
     "plan": "El plan elegido no está disponible.",
     "emailTaken": "Ese correo ya tiene una cuenta. Inicia sesión.",
     "generic": "No pudimos crear el centro. Inténtalo de nuevo.",

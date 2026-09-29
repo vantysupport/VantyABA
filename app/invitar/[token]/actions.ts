@@ -6,7 +6,7 @@ import { liberarCorreoHuerfano } from '@/lib/cuenta-huerfana'
 import { aplicarInvitacion, invitacionPorToken, validarInvitacion, type ErrorInvitacion } from '@/lib/invitaciones'
 
 export type AceptarState = {
-  error?: ErrorInvitacion | 'required' | 'email' | 'password' | 'mismatch' | 'emailTaken' | 'mail'
+  error?: ErrorInvitacion | 'required' | 'email' | 'password' | 'mismatch' | 'terms' | 'emailTaken' | 'mail'
   ok?: boolean
   email?: string
   /** Lo que la persona escribió, para no vaciar el formulario cuando hay un error. */
@@ -37,6 +37,7 @@ async function procesar(formData: FormData): Promise<AceptarState> {
   if (!EMAIL_RE.test(email)) return { error: 'email' }
   if (password.length < 8) return { error: 'password' }
   if (password !== confirm) return { error: 'mismatch' }
+  if (formData.get('terminos') !== '1') return { error: 'terms' }
   const invalida = await validarInvitacion(inv, email)
   if (invalida || !inv) return { error: invalida ?? 'invalid' }
 
@@ -52,7 +53,7 @@ async function procesar(formData: FormData): Promise<AceptarState> {
     return { error: created.error === 'send_failed' ? 'mail' : 'generic' }
   }
 
-  const fallo = await aplicarInvitacion(inv, created.userId, { fullName, email, phone, specialty, nombreConfirmado: true })
+  const fallo = await aplicarInvitacion(inv, created.userId, { fullName, email, phone, specialty, nombreConfirmado: true, terminosAceptados: true })
   if (fallo) {
     await supabaseAdmin.auth.admin.deleteUser(created.userId)
     return { error: fallo }

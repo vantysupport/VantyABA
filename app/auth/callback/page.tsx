@@ -41,7 +41,7 @@ export default function AuthCallbackPage() {
           const r = await fetch('/api/invitaciones/aceptar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-            body: JSON.stringify({ token: invite }),
+            body: JSON.stringify({ token: invite, terminos: new URLSearchParams(window.location.search).get('terminos') === '1' }),
           })
           if (!r.ok) {
             const j = await r.json().catch(() => ({}))

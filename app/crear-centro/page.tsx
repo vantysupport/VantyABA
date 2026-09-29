@@ -8,6 +8,7 @@ import { MailCheck, ImagePlus, ArrowLeft, Gift, Users, FileBadge, Mail, MousePoi
 import { useI18n } from '@/lib/i18n-context'
 import { FlipButton, FlipButtonBack, FlipButtonFront } from '@/components/ui/flip-button'
 import { AuthShell } from '@/components/ui/auth-shell'
+import { AceptarTerminos } from '@/components/ui/aceptar-terminos'
 import { createCentro, type CreateCentroState } from './actions'
 
 const inputClass =
@@ -67,6 +68,7 @@ function CreateCentroForm() {
   const ciclo = params.get('ciclo') === 'anual' ? 'anual' : 'mensual'
   const [state, action, pending] = useActionState<CreateCentroState, FormData>(createCentro, {})
   const [step, setStep] = useState<1 | 2>(1)
+  const [acepta, setAcepta] = useState(false)
   const stepOneRef = useRef<HTMLDivElement>(null)
 
   const next = () => {
@@ -120,6 +122,7 @@ function CreateCentroForm() {
         <Input name="fullName" required minLength={2} autoComplete="name" label={t('vanty.createCenter.fields.fullName')} />
         <Input name="email" type="email" required autoComplete="email" label={t('vanty.createCenter.fields.email')} />
         <Input name="password" type="password" required minLength={8} autoComplete="new-password" label={t('vanty.createCenter.fields.password')} />
+        <AceptarTerminos name="terminos" checked={acepta} onChange={setAcepta} className="mt-1" />
         <AnimatePresence>
           {state.error && (
             <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-sm text-v-danger">
@@ -127,7 +130,7 @@ function CreateCentroForm() {
             </motion.p>
           )}
         </AnimatePresence>
-        <FlipButton type="submit" disabled={pending} className="mt-3 w-full">
+        <FlipButton type="submit" disabled={pending || !acepta} className="mt-3 w-full disabled:opacity-60">
           <FlipButtonFront>{pending ? t('vanty.createCenter.creating') : t('vanty.createCenter.submit')}</FlipButtonFront>
           <FlipButtonBack>{t('vanty.createCenter.submitHover')}</FlipButtonBack>
         </FlipButton>
