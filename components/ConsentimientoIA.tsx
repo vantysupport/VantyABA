@@ -130,12 +130,13 @@ export default function ConsentimientoIA() {
     [ServerCog, L(`Only the context needed for each request is sent to our AI provider, ${PROVEEDOR_IA.nombre} (${pais}). It may include clinical data of your patients.`,
       `A nuestro proveedor de IA, ${PROVEEDOR_IA.nombre} (${pais}), solo se envía el contexto necesario para cada consulta. Puede incluir datos clínicos de tus pacientes.`)],
     [Lock, L('It is not used to train AI models or for any other purpose.', 'No se usa para entrenar modelos de IA ni para ningún otro fin.')],
-    [Trash2, L('The provider only keeps it for a limited time, for security, and then deletes it.', 'El proveedor solo lo conserva por un tiempo limitado, por seguridad, y luego lo elimina.')],
+    [Trash2, L('The provider does not store it: zero data retention is enabled.', 'El proveedor no lo guarda: tenemos activada la retención cero de datos.')],
     [Ban, L('You can turn it off at any time in Settings → Center. Without AI, the rest of Vanty works the same.', 'Puedes desactivarla cuando quieras en Configuración → Centro. Sin IA, el resto de Vanty funciona igual.')],
   ] : [
     [ServerCog, L(`To answer you, ARIA sends your question and the context needed about your child's progress to our AI provider, ${PROVEEDOR_IA.nombre} (${pais}).`,
       `Para responderte, ARIA envía tu pregunta y el contexto necesario sobre el progreso de tu hijo o hija a nuestro proveedor de IA, ${PROVEEDOR_IA.nombre} (${pais}).`)],
     [Lock, L('It is not used to train AI models or for any other purpose.', 'No se usa para entrenar modelos de IA ni para ningún otro fin.')],
+    [Trash2, L('The provider does not store it: zero data retention is enabled.', 'El proveedor no lo guarda: tenemos activada la retención cero de datos.')],
     [Ban, L('You can turn it off at any time from your Profile.', 'Puedes desactivarlo cuando quieras desde tu Perfil.')],
   ]
 
