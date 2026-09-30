@@ -102,8 +102,8 @@ function secciones(en: boolean): SeccionLegal[] {
           [L('Role-based access', 'Acceso por roles'), L('(director, administrator, specialist, therapist, secretary, family), following the principle of least privilege.', '(dirección, administración, especialista, terapeuta, secretaría, familia), bajo el principio de mínimo privilegio.')],
           [L('Optional two-step verification', 'Verificación en dos pasos opcional'), L('for every account.', 'para todas las cuentas.')],
         ]} />
-        <p className="mt-3">{L('Security incidents: if we detect a breach that affects data processed on behalf of a center, we will notify the center without undue delay, with the available information on what happened, the data affected and the measures taken, so that it can meet its obligations towards patients, families and the authority.',
-          'Incidentes de seguridad: si detectamos una brecha que afecte datos tratados por cuenta de un centro, lo notificaremos al centro sin demora indebida, con la información disponible sobre lo ocurrido, los datos afectados y las medidas adoptadas, para que pueda cumplir sus obligaciones frente a pacientes, familias y la autoridad.')}</p>
+        <p className="mt-3">{L('Security incidents: if we detect a breach that affects data processed on behalf of a center, we will notify the center immediately and without undue delay, with the available information on what happened, the data affected and the measures taken, so that it can meet its obligations towards patients, families and the authority.',
+          'Incidentes de seguridad: si detectamos una brecha que afecte datos tratados por cuenta de un centro, lo notificaremos al centro de forma inmediata y sin dilación indebida, con la información disponible sobre lo ocurrido, los datos afectados y las medidas adoptadas, para que pueda cumplir sus obligaciones frente a pacientes, familias y la autoridad.')}</p>
       </>,
     },
     {

@@ -76,8 +76,8 @@ function secciones(en: boolean): SeccionLegal[] {
           ['Groq, Inc. · DeepInfra, Inc.', L('artificial intelligence, only if the Center turns on AI features; DeepInfra only as a backup (United States).', 'inteligencia artificial, solo si el Centro activa las funciones de IA; DeepInfra solo como respaldo (Estados Unidos).')],
           ['Tavily · OpenAlex', L('internet and academic search for ARIA; they only receive the general question, without patient data (United States).', 'búsqueda en internet y académica para ARIA; solo reciben la pregunta general, sin datos de pacientes (Estados Unidos).')],
         ]} />
-        <p className="mt-3">{L('Vanty will inform the Center of any change of sub-processor through the platform or by email at least 15 days in advance. If the Center objects on reasonable grounds, it may terminate the service without penalty.',
-          'Vanty informará al Centro de cualquier cambio de subencargado a través de la plataforma o por correo con al menos 15 días de anticipación. Si el Centro se opone por motivos razonables, podrá terminar el servicio sin penalidad.')}</p>
+        <p className="mt-3">{L('As an additional contractual commitment of Vanty (not a period required by Law No. 29733), Vanty will inform the Center of any change of sub-processor through the platform or by email at least 15 days in advance. If the Center objects on reasonable grounds, it may terminate the service without penalty.',
+          'Como compromiso contractual adicional de Vanty (no como un plazo exigido por la Ley N.º 29733), Vanty informará al Centro de cualquier cambio de subencargado a través de la plataforma o por correo con al menos 15 días de anticipación. Si el Centro se opone por motivos razonables, podrá terminar el servicio sin penalidad.')}</p>
       </>,
     },
     {
@@ -98,10 +98,10 @@ function secciones(en: boolean): SeccionLegal[] {
     {
       id: 'incidentes', Icon: Siren, title: L('Security incidents', 'Incidentes de seguridad'),
       body: <>
-        <p>{L('If Vanty becomes aware of a security breach that affects the Center\'s data, it will notify the Center without undue delay and, whenever possible, within 72 hours, by email to the account that created the center. The notice will include, as far as known: what happened, the categories and approximate number of people and records affected, the likely consequences and the measures taken or proposed.',
-          'Si Vanty toma conocimiento de una brecha de seguridad que afecte datos del Centro, lo notificará sin demora indebida y, siempre que sea posible, dentro de las 72 horas, por correo a la cuenta que creó el centro. El aviso incluirá, en la medida en que se conozca: qué ocurrió, las categorías y el número aproximado de personas y registros afectados, las consecuencias probables y las medidas adoptadas o propuestas.')}</p>
-        <p>{L('Vanty will cooperate with the Center so it can inform the affected people and the National Authority for Personal Data Protection when appropriate.',
-          'Vanty colaborará con el Centro para que pueda informar a las personas afectadas y a la Autoridad Nacional de Protección de Datos Personales cuando corresponda.')}</p>
+        <p>{L('Vanty will notify the Center immediately and without undue delay from the moment it becomes aware of a security incident that affects personal data processed on behalf of the Center, by email to the account that created the center. The notice will include, as far as the information is available, the nature of the incident, the categories of data and data subjects affected, the possible consequences and the measures taken or proposed; Vanty will not wait to complete the investigation before giving the first notice.',
+          'Vanty notificará al Centro de forma inmediata y sin dilación indebida desde que tome conocimiento de un incidente de seguridad que afecte datos personales tratados por cuenta del Centro, por correo a la cuenta que creó el centro. La notificación incluirá, en la medida en que la información esté disponible, la naturaleza del incidente, las categorías de datos y titulares afectados, las posibles consecuencias y las medidas adoptadas o propuestas; Vanty no esperará a completar la investigación para dar el primer aviso.')}</p>
+        <p>{L('Vanty will cooperate with the Center so it can meet in time the notification obligations that correspond to it under the applicable regulations, including those towards the National Authority for Personal Data Protection and the data subjects, and will keep an internal record of incidents with the facts, their effects and the measures taken.',
+          'Vanty colaborará con el Centro para que este pueda cumplir oportunamente las obligaciones de notificación que le correspondan conforme a la normativa aplicable, incluidas las que tenga frente a la Autoridad Nacional de Protección de Datos Personales y a los titulares, y mantendrá un registro interno de incidentes con los hechos, sus efectos y las medidas adoptadas.')}</p>
       </>,
     },
     {
@@ -121,8 +121,8 @@ function secciones(en: boolean): SeccionLegal[] {
     {
       id: 'fin', Icon: Trash2, title: L('Return and deletion', 'Devolución y eliminación'),
       body: <>
-        <p>{L('While the service is active, the Center can export its information from the platform. When the Center deletes its account, Vanty deletes the Center\'s data, its files and the accounts linked only to that center, except what the law requires it to keep. Backups are overwritten in their ordinary cycle, within a maximum of 30 days.',
-          'Mientras el servicio esté activo, el Centro puede exportar su información desde la plataforma. Cuando el Centro elimina su cuenta, Vanty borra los datos del Centro, sus archivos y las cuentas vinculadas solo a ese centro, salvo lo que la ley le obligue a conservar. Las copias de respaldo se sobrescriben en su ciclo ordinario, en un plazo máximo de 30 días.')}</p>
+        <p>{L('While the service is active, the Center can export its information from the platform. When the Center deletes its account, Vanty deletes the Center\'s data, its files and the accounts linked only to that center, except what the law requires it to keep. Backups are deleted according to the backup retention cycle of our infrastructure provider (currently, no more than 30 days).',
+          'Mientras el servicio esté activo, el Centro puede exportar su información desde la plataforma. Cuando el Centro elimina su cuenta, Vanty borra los datos del Centro, sus archivos y las cuentas vinculadas solo a ese centro, salvo lo que la ley le obligue a conservar. Las copias de respaldo se eliminan según el ciclo de retención de respaldos de nuestro proveedor de infraestructura (actualmente, no más de 30 días).')}</p>
         <p>{L('Clinical-record retention periods are the Center\'s responsibility: before deleting its account, the Center must keep, outside the platform, the information it is legally required to preserve.',
           'Los plazos de conservación de las historias clínicas son responsabilidad del Centro: antes de eliminar su cuenta, el Centro debe conservar, fuera de la plataforma, la información que la ley le obliga a mantener.')}</p>
       </>,
@@ -157,7 +157,7 @@ export default async function AcuerdoEncargoPage() {
         items: [
           [Building2, L('The center decides', 'El centro decide'), L('It is the controller; Vanty processes on its behalf.', 'Es el responsable; Vanty trata por su cuenta.')],
           [Lock, L('Only for the service', 'Solo para el servicio'), L('No own use, no sale, no AI training.', 'Sin uso propio, sin venta, sin entrenar IA.')],
-          [Bell, L('Incidents notified', 'Incidentes avisados'), L('Without undue delay, within 72 h when possible.', 'Sin demora indebida, en 72 h si es posible.')],
+          [Bell, L('Incidents notified', 'Incidentes avisados'), L('Immediately, without undue delay.', 'De forma inmediata, sin dilación indebida.')],
           [Clock, L('Deletion on exit', 'Borrado al salir'), L('Data and files deleted when the account closes.', 'Datos y archivos borrados al cerrar la cuenta.')],
         ],
       }}
