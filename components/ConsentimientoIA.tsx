@@ -125,18 +125,19 @@ export default function ConsentimientoIA() {
   const esCentro = pedido.motivo === 'centro'
   const decide = esCentro ? ADMINS.includes(pedido.rol ?? '') : true
   const pais = en ? PROVEEDOR_IA.pais.en : PROVEEDOR_IA.pais.es
+  const proveedor = en ? PROVEEDOR_IA.nombre.en : PROVEEDOR_IA.nombre.es
 
   const puntos: [typeof Lock, string][] = esCentro ? [
-    [ServerCog, L(`Only the context needed for each request is sent to our AI provider, ${PROVEEDOR_IA.nombre} (${pais}). It may include clinical data of your patients.`,
-      `A nuestro proveedor de IA, ${PROVEEDOR_IA.nombre} (${pais}), solo se envía el contexto necesario para cada consulta. Puede incluir datos clínicos de tus pacientes.`)],
+    [ServerCog, L(`Only the context needed for each request is sent to our AI providers, ${proveedor} (${pais}). It may include clinical data of your patients.`,
+      `A nuestros proveedores de IA, ${proveedor} (${pais}), solo se envía el contexto necesario para cada consulta. Puede incluir datos clínicos de tus pacientes.`)],
     [Lock, L('It is not used to train AI models or for any other purpose.', 'No se usa para entrenar modelos de IA ni para ningún otro fin.')],
-    [Trash2, L('The provider does not store it: zero data retention is enabled.', 'El proveedor no lo guarda: tenemos activada la retención cero de datos.')],
+    [Trash2, L('The providers do not store it (zero data retention).', 'Los proveedores no lo guardan (retención cero de datos).')],
     [Ban, L('You can turn it off at any time in Settings → Center. Without AI, the rest of Vanty works the same.', 'Puedes desactivarla cuando quieras en Configuración → Centro. Sin IA, el resto de Vanty funciona igual.')],
   ] : [
-    [ServerCog, L(`To answer you, ARIA sends your question and the context needed about your child's progress to our AI provider, ${PROVEEDOR_IA.nombre} (${pais}).`,
-      `Para responderte, ARIA envía tu pregunta y el contexto necesario sobre el progreso de tu hijo o hija a nuestro proveedor de IA, ${PROVEEDOR_IA.nombre} (${pais}).`)],
+    [ServerCog, L(`To answer you, ARIA sends your question and the context needed about your child's progress to our AI providers, ${proveedor} (${pais}).`,
+      `Para responderte, ARIA envía tu pregunta y el contexto necesario sobre el progreso de tu hijo o hija a nuestros proveedores de IA, ${proveedor} (${pais}).`)],
     [Lock, L('It is not used to train AI models or for any other purpose.', 'No se usa para entrenar modelos de IA ni para ningún otro fin.')],
-    [Trash2, L('The provider does not store it: zero data retention is enabled.', 'El proveedor no lo guarda: tenemos activada la retención cero de datos.')],
+    [Trash2, L('The providers do not store it (zero data retention).', 'Los proveedores no lo guardan (retención cero de datos).')],
     [Ban, L('You can turn it off at any time from your Profile.', 'Puedes desactivarlo cuando quieras desde tu Perfil.')],
   ]
 
@@ -187,9 +188,9 @@ export default function ConsentimientoIA() {
                 </span>
                 <span className="text-[13px] leading-snug text-v-text">
                   {esCentro
-                    ? L("On behalf of the center, I authorize sending this data to the AI provider, and I confirm we have the families' consent to do so.",
-                      'En nombre del centro, autorizo el envío de estos datos al proveedor de IA y confirmo que contamos con el consentimiento de las familias para ello.')
-                    : L('I authorize sending my questions and this context to the AI provider.', 'Autorizo el envío de mis preguntas y de este contexto al proveedor de IA.')}
+                    ? L("On behalf of the center, I authorize sending this data to the AI providers, and I confirm we have the families' consent to do so.",
+                      'En nombre del centro, autorizo el envío de estos datos a los proveedores de IA y confirmo que contamos con el consentimiento de las familias para ello.')
+                    : L('I authorize sending my questions and this context to the AI providers.', 'Autorizo el envío de mis preguntas y de este contexto a los proveedores de IA.')}
                 </span>
               </label>
 

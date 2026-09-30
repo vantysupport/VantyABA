@@ -4,8 +4,11 @@
 export type EstadoIA = 'aceptada' | 'rechazada' | null
 export type MotivoIA = 'centro' | 'propio'
 
-/** Proveedor que recibe los datos. Se muestra en el aviso y en la Política de privacidad. */
-export const PROVEEDOR_IA = { nombre: 'Groq, Inc.', pais: { es: 'Estados Unidos', en: 'United States' } }
+/** Proveedores que reciben los datos (Groq; DeepInfra solo como respaldo). Se muestran en el aviso y en la Política de privacidad. */
+export const PROVEEDOR_IA = {
+  nombre: { es: 'Groq, Inc. (y DeepInfra, Inc. como respaldo)', en: 'Groq, Inc. (and DeepInfra, Inc. as backup)' },
+  pais: { es: 'Estados Unidos', en: 'United States' },
+}
 
 // Rutas que envían datos a la IA (chats de ARIA, análisis, OCR y traducciones). Los informes Word
 // (reporte-word, reporte-sesion-aba, generate-report, evaluacion-inicial/generar-informe-word,

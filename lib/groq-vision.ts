@@ -1,12 +1,13 @@
 // lib/groq-vision.ts
-// OCR / lectura de imágenes con el modelo de visión de Groq (misma clave GROQ_API_KEY que el resto de la IA).
+// OCR / lectura de imágenes con el modelo de visión de Groq (misma clave GROQ_API_KEY que el resto de la IA),
+// con DeepInfra como respaldo si Groq falla o no está configurado (lib/proveedores-ia.ts).
 // Groq acepta hasta 3 imágenes por request; cada imagen cuenta como ~2k tokens de entrada.
 
 import sharp from 'sharp'
 import { logServerError } from '@/lib/log-server-error'
 import { iaDesactivadaAhora } from '@/lib/ia-contexto'
+import { modeloVisionDeepInfra, proveedoresIA, type ProveedorIA } from '@/lib/proveedores-ia'
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // Configurable por si Groq rota el modelo de visión (ver console.groq.com/docs/vision).
 export const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || 'qwen/qwen3.8-27b'
 const MAX_IMAGES_PER_REQUEST = 3
@@ -30,9 +31,9 @@ async function toJpegDataUrl(img: VisionImage): Promise<string> {
   }
 }
 
-async function callVision(apiKey: string, prompt: string, dataUrls: string[], maxTokens: number): Promise<string> {
+async function callVision(proveedor: ProveedorIA, prompt: string, dataUrls: string[], maxTokens: number): Promise<string> {
   const body = JSON.stringify({
-    model: GROQ_VISION_MODEL,
+    model: proveedor.id === 'groq' ? GROQ_VISION_MODEL : modeloVisionDeepInfra(),
     temperature: 0.1,
     max_tokens: maxTokens,
     messages: [{
@@ -45,9 +46,9 @@ async function callVision(apiKey: string, prompt: string, dataUrls: string[], ma
   })
 
   for (let intento = 1; intento <= 3; intento++) {
-    const res = await fetch(GROQ_API_URL, {
+    const res = await fetch(proveedor.url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${proveedor.key}`, 'Content-Type': 'application/json' },
       body,
     })
     if (res.ok) {
@@ -64,8 +65,8 @@ async function callVision(apiKey: string, prompt: string, dataUrls: string[], ma
       await new Promise(r => setTimeout(r, wait * 1000))
       continue
     }
-    await logServerError(`Groq vision error ${res.status}`, msg, 'groq')
-    throw new Error(res.status === 429 ? 'Se agotó la cuota de IA por hoy. Intentá mañana.' : `Groq vision ${res.status}: ${msg}`)
+    await logServerError(`IA visión error ${proveedor.id} ${res.status}`, msg, 'groq')
+    throw new Error(res.status === 429 ? 'Se agotó la cuota de IA por hoy. Intentá mañana.' : `${proveedor.id} vision ${res.status}: ${msg}`)
   }
   return ''
 }
@@ -80,16 +81,24 @@ export async function groqVision(
   opts: { maxTokens?: number } = {},
 ): Promise<string> {
   if (iaDesactivadaAhora()) return ''
-  const apiKey = process.env.GROQ_API_KEY
-  if (!apiKey) {
-    await logServerError('GROQ_API_KEY no configurada', 'Falta la variable de entorno GROQ_API_KEY (visión)', 'groq')
+  const proveedores = proveedoresIA()
+  if (proveedores.length === 0) {
+    await logServerError('IA sin configurar', 'Faltan GROQ_API_KEY y DEEPINFRA_API_KEY (visión)', 'groq')
     throw new Error('GROQ_API_KEY no configurada')
+  }
+  // Primer proveedor que responda; si Groq falla (cupo, error, red), se prueba el respaldo.
+  const leer = async (prompt: string, urls: string[]) => {
+    for (const [n, p] of proveedores.entries()) {
+      try { return await callVision(p, prompt, urls, opts.maxTokens ?? 4000) }
+      catch (e) { if (n === proveedores.length - 1) throw e }
+    }
+    return ''
   }
   const partes: string[] = []
   for (let i = 0; i < images.length; i += MAX_IMAGES_PER_REQUEST) {
     const lote = images.slice(i, i + MAX_IMAGES_PER_REQUEST)
     const urls = await Promise.all(lote.map(toJpegDataUrl))
-    const texto = await callVision(apiKey, promptFor(i, lote.length), urls, opts.maxTokens ?? 4000)
+    const texto = await leer(promptFor(i, lote.length), urls)
     if (texto) partes.push(texto)
   }
   return partes.join('\n\n')

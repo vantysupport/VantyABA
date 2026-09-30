@@ -2,7 +2,7 @@
 
 Guía para llenar la sección de privacidad cuando Vanty ABA se publique como app en iOS o Android.
 Apple exige declarar también los datos que reciben los servicios de terceros integrados
-(Supabase, Groq, Gmail, Lemon Squeezy, calendarios).
+(Supabase, Groq, DeepInfra, Gmail, Lemon Squeezy, calendarios).
 
 ## App Store Connect → App Privacy
 
@@ -30,7 +30,7 @@ Purchases (el cobro de la suscripción lo hace Lemon Squeezy en la web, fuera de
 ## Reglas de Apple que ya cumple Vanty
 
 - **5.1.2(i) — datos personales enviados a IA de terceros.** La app debe decir con quién comparte los datos y pedir permiso
-  explícito antes. Vanty muestra la ventana de consentimiento (proveedor Groq, Inc., EE. UU.) y no envía nada sin él:
+  explícito antes. Vanty muestra la ventana de consentimiento (proveedores Groq, Inc. y DeepInfra, Inc. como respaldo, EE. UU.) y no envía nada sin él:
   la dirección lo autoriza para el centro y cada familia para ARIA. Se puede desactivar en Configuración → Centro y en el Perfil.
 - **Política de privacidad accesible** dentro de la app y en la ficha de la tienda.
 - **Sin tracking**, así que no hace falta el aviso de App Tracking Transparency.
