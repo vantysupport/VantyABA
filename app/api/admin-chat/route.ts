@@ -7,6 +7,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 import { buildAdminChatContext } from '@/lib/ai-context-builder';
 import { getApiCaller, hasRole, ROLES, canAccessChild, unauthorized, forbidden, notFound } from '@/lib/api-auth';
 import { reglaIdiomaRespuesta } from '@/lib/idioma-ia'
+import { buscarEnInternet, busquedaWebConfigurada, fuentesComoContexto } from '@/lib/busqueda-web'
 
 // FIX: calcular edad correctamente desde birth_date cuando age es null
 function calcularEdad(birthDate: string | null | undefined, ageFallback: number | null | undefined): string {
@@ -653,17 +654,28 @@ Mi sugerencia concreta sería pedirle a la terapeuta una nota técnica de qué s
 
 ¿Querés que armemos juntas el formato de esa nota técnica para que la terapeuta lo complete en la próxima sesión, o preferís que primero revise yo el resto del programa para chequear consistencia interna del set?"`
 
-    // Si la pregunta necesita búsqueda web → usar modelo Compound de Groq
-    // (incluye web search + ejecución de código integrados)
-    const modeloElegido = usarWeb ? GROQ_MODELS.WEB : GROQ_MODELS.SMART
-    const promptFinal = usarWeb
-      ? systemPromptVADI + `\n\n═══ MODO BÚSQUEDA WEB ACTIVO ═══\nTenés acceso a búsqueda en internet en tiempo real. Cuando uses información de la web, citá con 🌐 "Fuente web:" y un resumen breve del origen. Verificá la veracidad — preferí fuentes oficiales (NIH, CDC, AAP, BACB, publicaciones revisadas).`
-      : systemPromptVADI
+    // Búsqueda en internet: Tavily (web) + OpenAlex (artículos), independiente del proveedor de IA.
+    // Al buscador solo va la pregunta, sin el contexto del paciente y sin su nombre (lib/busqueda-web.ts).
+    // Sin TAVILY_API_KEY ni resultados, se mantiene el modelo Compound de Groq (búsqueda integrada).
+    let modeloElegido = GROQ_MODELS.SMART
+    let bloqueWeb = ''
+    let promptWeb = ''
+    if (usarWeb) {
+      const { fuentes } = await buscarEnInternet(question || '', [child?.name])
+      if (fuentes.length) {
+        bloqueWeb = `\n\n═══ RESULTADOS DE BÚSQUEDA EN INTERNET (fuentes externas) ═══\n${fuentesComoContexto(fuentes)}`
+        promptWeb = `\n\n═══ MODO BÚSQUEDA WEB ACTIVO ═══\nRecibís resultados recientes de internet y de artículos académicos al final del contexto. Usalos solo si son pertinentes y confiables (preferí NIH, CDC, AAP, BACB y publicaciones revisadas por pares). Citá en el texto con [n] y cerrá con una sección "Fuentes" con el título y la URL de las que usaste. Si no alcanzan para responder, decilo.`
+      } else if (!busquedaWebConfigurada()) {
+        modeloElegido = GROQ_MODELS.WEB
+        promptWeb = `\n\n═══ MODO BÚSQUEDA WEB ACTIVO ═══\nTenés acceso a búsqueda en internet en tiempo real. Cuando uses información de la web, citá con 🌐 "Fuente web:" y un resumen breve del origen. Verificá la veracidad — preferí fuentes oficiales (NIH, CDC, AAP, BACB, publicaciones revisadas).`
+      }
+    }
+    const promptFinal = systemPromptVADI + promptWeb
 
     const reglaIdioma = reglaIdiomaRespuesta(userLocale)
     const response = await callGroqSimple(
         `${promptFinal}\n\n${reglaIdioma}`,
-        `${contextConCerebro}\n\n${reglaIdioma}`,
+        `${contextConCerebro}${bloqueWeb}\n\n${reglaIdioma}`,
         { model: modeloElegido, temperature: 0.7, maxTokens: 2400 }
       );
     
