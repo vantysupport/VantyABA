@@ -56,6 +56,7 @@ const PUBLIC_API_PATHS = [
   '/api/cobros/lemon/webhook',   // la pasarela no tiene sesión: la ruta valida la firma HMAC
   '/api/cron/avisos',            // tarea programada sin sesión: la ruta exige CRON_SECRET
   '/api/cron/campanas',          // notificaciones programadas desde /control: exige CRON_SECRET
+  '/api/libro-reclamaciones',    // Libro de Reclamaciones: lo usa cualquier consumidor, sin cuenta (límite estricto de envíos)
 ]
 
 // Rutas por rol → si user.role === X, puede acceder a estas raíces
@@ -87,6 +88,7 @@ function isPublicApiPath(pathname: string): boolean {
 function pickRateLimit(pathname: string): typeof RATE_LIMITS[keyof typeof RATE_LIMITS] | null {
   if (pathname === '/api/auth/signin' || pathname.startsWith('/api/auth/v1/token')) return RATE_LIMITS.LOGIN
   if (pathname === '/api/invitaciones/aceptar') return RATE_LIMITS.LOGIN
+  if (pathname === '/api/libro-reclamaciones') return RATE_LIMITS.LOGIN
   if (pathname.startsWith('/api/parent-chat')) return RATE_LIMITS.AI_CHAT
   if (pathname.startsWith('/api/admin-chat')) return RATE_LIMITS.AI_CHAT
   if (pathname.startsWith('/api/vanty-agent')) return RATE_LIMITS.AI_CHAT

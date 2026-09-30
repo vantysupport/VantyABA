@@ -6,6 +6,7 @@
 import Link from 'next/link'
 import { ArrowRight, ArrowUp, ChevronDown, ListOrdered } from 'lucide-react'
 import { VantyLogo } from '@/components/ui/vanty-logo'
+import { lineaLegal } from '@/lib/empresa'
 
 export type SeccionLegal = { id: string; Icon: any; title: string; body: React.ReactNode }
 
@@ -125,7 +126,10 @@ export default function LegalPage({ en, EyebrowIcon, titleA, titleB, intro, sell
           ))}
 
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-v-border pt-6 text-xs text-v-subtle">
-            <p>© {new Date().getFullYear()} {P} · {L('All rights reserved', 'Todos los derechos reservados')}</p>
+            <div className="space-y-1">
+              <p>© {new Date().getFullYear()} {P} · {L('All rights reserved', 'Todos los derechos reservados')}</p>
+              <p>{lineaLegal(en)}</p>
+            </div>
             <div className="flex items-center gap-4">
               <Link href={otro.href} className="font-semibold text-v-accent hover:underline">{otro.label}</Link>
               <a href="#top" className="inline-flex items-center gap-1 font-semibold text-v-muted hover:text-v-text"><ArrowUp size={13} /> {L('Back to top', 'Volver arriba')}</a>

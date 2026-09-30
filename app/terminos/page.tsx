@@ -8,6 +8,7 @@ import {
   Copyright, Scale, PauseCircle, RefreshCw, Landmark, Mail, Stethoscope, KeyRound, HeartHandshake,
 } from 'lucide-react'
 import { PLATFORM_NAME } from '@/lib/branding'
+import { EMPRESA } from '@/lib/empresa'
 import { localeServidor, metadatosPagina } from '@/lib/seo'
 import LegalPage, { Lista, Destacado, type SeccionLegal } from '@/components/legal/LegalPage'
 
@@ -26,8 +27,9 @@ function secciones(en: boolean): SeccionLegal[] {
   return [
     {
       id: 'aceptacion', Icon: FileCheck2, title: L('Acceptance of the terms', 'Aceptación de los términos'),
-      body: <p>{L(`These Terms of Service govern access to and use of the ${P} platform. By creating an account or using the platform, you declare that you have read, understood and accepted these terms, as well as the Privacy Policy. If you do not agree, you must refrain from using the platform.`,
-        `Estos Términos de Servicio regulan el acceso y uso de la plataforma ${P}. Al crear una cuenta o utilizar la plataforma, declaras haber leído, comprendido y aceptado estos términos, así como la Política de Privacidad. Si no estás de acuerdo, debes abstenerte de utilizar la plataforma.`)}</p>,
+      body: <><p>{L(`${P} is provided by ${EMPRESA.titular}, with Peruvian taxpayer number (RUC) ${EMPRESA.ruc}, under the trade name "${EMPRESA.nombreComercial}"${EMPRESA.direccion ? `, with address at ${EMPRESA.direccion}` : ''}. Contact: ${EMPRESA.email}.`,
+        `${P} es prestado por ${EMPRESA.titular}, con RUC ${EMPRESA.ruc}, bajo el nombre comercial "${EMPRESA.nombreComercial}"${EMPRESA.direccion ? `, con domicilio en ${EMPRESA.direccion}` : ''}. Contacto: ${EMPRESA.email}.`)}</p><p>{L(`These Terms of Service govern access to and use of the ${P} platform. By creating an account or using the platform, you declare that you have read, understood and accepted these terms, as well as the Privacy Policy. If you do not agree, you must refrain from using the platform.`,
+        `Estos Términos de Servicio regulan el acceso y uso de la plataforma ${P}. Al crear una cuenta o utilizar la plataforma, declaras haber leído, comprendido y aceptado estos términos, así como la Política de Privacidad. Si no estás de acuerdo, debes abstenerte de utilizar la plataforma.`)}</p></>,
     },
     {
       id: 'servicio', Icon: LayoutGrid, title: L('Description of the service', 'Descripción del servicio'),
@@ -114,8 +116,8 @@ function secciones(en: boolean): SeccionLegal[] {
     },
     {
       id: 'contacto', Icon: Mail, title: L('Contact', 'Contacto'),
-      body: <p>{L(`For questions about your account or the care you receive, contact your center through the channels available in the platform. For matters related to the ${P} platform, you may write to us through the support section.`,
-        `Para consultas sobre tu cuenta o la atención que recibes, comunícate con tu centro a través de los canales disponibles en la plataforma. Para asuntos relacionados con la plataforma ${P}, puedes escribirnos desde la sección de soporte.`)}</p>,
+      body: <p>{L(`For questions about your account or the care you receive, contact your center through the channels available in the platform. For matters related to the ${P} platform, you may write to us through the support section or at ${EMPRESA.email}. To file a claim or complaint, use our virtual Complaints Book at vanty.xyz/libro-de-reclamaciones.`,
+        `Para consultas sobre tu cuenta o la atención que recibes, comunícate con tu centro a través de los canales disponibles en la plataforma. Para asuntos relacionados con la plataforma ${P}, puedes escribirnos desde la sección de soporte o a ${EMPRESA.email}. Si deseas presentar un reclamo o una queja, usa nuestro Libro de Reclamaciones virtual en vanty.xyz/libro-de-reclamaciones.`)}</p>,
     },
   ]
 }

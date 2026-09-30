@@ -9,6 +9,7 @@ import {
   RefreshCw, Mail, KeyRound, Lock, ServerCog, BadgeCheck, Ban, Trash2,
 } from 'lucide-react'
 import { PLATFORM_NAME } from '@/lib/branding'
+import { EMPRESA } from '@/lib/empresa'
 import { localeServidor, metadatosPagina } from '@/lib/seo'
 
 export async function generateMetadata() {
@@ -31,6 +32,8 @@ function secciones(en: boolean): SeccionLegal[] {
           `${P} es una plataforma de gestión clínica para centros de desarrollo infantil y terapia (ABA, TEA, TDAH y áreas afines). Permite a cada centro gestionar la información clínica de sus pacientes y comunicarse de forma segura con las familias.`)}</p>
         <p>{L(`Each center that uses ${P} acts as the data controller for the information of its patients and families. ${P} acts as the data processor: it processes that information on the center's behalf, following its instructions and solely to provide the service.`,
           `Cada centro que utiliza ${P} actúa como responsable del tratamiento de los datos de sus pacientes y familias. ${P} actúa como encargado del tratamiento: procesa dicha información por cuenta del centro, siguiendo sus instrucciones y únicamente para prestar el servicio.`)}</p>
+        <p>{L(`${P} is operated by ${EMPRESA.titular}, RUC ${EMPRESA.ruc} (trade name "${EMPRESA.nombreComercial}")${EMPRESA.direccion ? `, ${EMPRESA.direccion}` : ''}, Peru. Contact: ${EMPRESA.email}.`,
+          `${P} es operado por ${EMPRESA.titular}, RUC ${EMPRESA.ruc} (nombre comercial "${EMPRESA.nombreComercial}")${EMPRESA.direccion ? `, ${EMPRESA.direccion}` : ''}, Perú. Contacto: ${EMPRESA.email}.`)}</p>
       </>,
     },
     {

@@ -8,10 +8,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  ArrowRight, CalendarCheck, ClipboardCheck, Sparkles, Users, CreditCard, TrendingUp, MessageCircle, Building2, Menu, X, ChevronDown, Mail, LayoutDashboard,
+  ArrowRight, CalendarCheck, ClipboardCheck, Sparkles, Users, CreditCard, TrendingUp, MessageCircle, Building2, Menu, X, ChevronDown, Mail, LayoutDashboard, BookOpen,
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/components/Toast'
+import { lineaLegal } from '@/lib/empresa'
 import { supabase } from '@/lib/supabase'
 import { VantyLogo } from '@/components/ui/vanty-logo'
 import LocaleSelector from '@/app/components/LocaleSelector'
@@ -368,10 +369,14 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
               <li><a href={`mailto:${EMAIL}`} className="hover:text-v-text">{EMAIL}</a></li>
               <li><Link href={href('/privacidad')} className="hover:text-v-text">{L('Privacy', 'Privacidad')}</Link></li>
               <li><Link href={href('/terminos')} className="hover:text-v-text">{L('Terms', 'Términos')}</Link></li>
+              <li><Link href={href('/libro-de-reclamaciones')} className="inline-flex items-center gap-1.5 hover:text-v-text"><BookOpen className="size-3.5" /> {L('Complaints Book', 'Libro de Reclamaciones')}</Link></li>
             </ul>
           </nav>
         </div>
-        <p className="mx-auto mt-10 max-w-6xl border-t border-v-border pt-6 text-xs text-v-subtle">© {new Date().getFullYear()} Vanty ABA · {L('All rights reserved.', 'Todos los derechos reservados.')}</p>
+        <div className="mx-auto mt-10 max-w-6xl space-y-1 border-t border-v-border pt-6 text-xs text-v-subtle">
+          <p>© {new Date().getFullYear()} Vanty ABA · {L('All rights reserved.', 'Todos los derechos reservados.')}</p>
+          <p>{lineaLegal(en)}</p>
+        </div>
       </footer>
     </div>
   )
