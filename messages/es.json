@@ -2464,7 +2464,7 @@
    "fisico": "📦 Físico"
   },
   "userManagementView": {
-   "noPodesCambiarElRol": "No podés cambiar el rol de un Director.",
+   "noPodesCambiarElRol": "Solo el administrador principal (quien creó el centro) puede cambiar el rol de un director.",
    "noPodesCambiarteElRol": "No podés cambiarte el rol a ti mismo.",
    "limiteDeAlcanzadoSoloEl": "Límite de \"{v1}\" alcanzado ({v2}/{v3}). Solo el programador puede ampliarlo.",
    "rolActualizado": "Rol actualizado → {v1}",

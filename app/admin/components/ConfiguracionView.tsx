@@ -21,6 +21,7 @@ import { fileUrl } from '@/lib/file-url'
 import { TokensPrediccion } from '@/components/TokensPrediccion'
 import { cambiarClaveConCorreo } from '@/components/ui/cambiar-clave'
 import { TarjetaIA } from '@/components/ui/tarjeta-ia'
+import { BotonEliminarCuenta, SalidaCentro } from '@/components/cuenta/SalidaCuenta'
 
 type Tab = 'perfil' | 'seguridad' | 'preferencias' | 'centro'
 
@@ -347,6 +348,7 @@ function TabSeguridad() {
           )}
         </AnimatePresence>
       </Seccion>
+      <BotonEliminarCuenta />
     </div>
   )
 }
@@ -527,6 +529,7 @@ function TabCentro() {
           })()
         ) : null}
       </Seccion>
+      <SalidaCentro />
     </div>
   )
 }

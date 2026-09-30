@@ -15,6 +15,7 @@ import {
 import { motion } from 'motion/react'
 import { confirmar } from '@/components/ui/confirmar'
 import { TarjetaIA } from '@/components/ui/tarjeta-ia'
+import { BotonEliminarCuenta } from '@/components/cuenta/SalidaCuenta'
 
 const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
 
@@ -199,6 +200,7 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
           <span className="grid size-10 place-items-center rounded-[30%] bg-v-danger/10 text-v-danger"><LogOut size={18} /></span>
           <span className="text-sm font-semibold text-v-danger">{L('Sign out', 'Cerrar sesión')}</span>
         </motion.button>
+        <BotonEliminarCuenta esFamilia />
       </div>
 
       {/* Columna derecha: seguridad, calendarios y avisos */}

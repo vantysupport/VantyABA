@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { TwoFactorCard } from '@/components/ui/two-factor-card'
+import { BotonEliminarCuenta } from '@/components/cuenta/SalidaCuenta'
 import { useI18n } from '@/lib/i18n-context'
 import {
   User, Mail, Phone, Lock, LogOut, Shield, Eye, EyeOff, Save, Loader2, Camera, Check, CheckCircle2,
@@ -258,6 +259,7 @@ function TabSeguridad() {
           </button>
         </div>
       </Seccion>
+      <BotonEliminarCuenta />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import {
   ArrowRight, CalendarCheck, ClipboardCheck, Sparkles, Users, CreditCard, TrendingUp, MessageCircle, Building2, Menu, X, ChevronDown, Mail, LayoutDashboard,
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
+import { useToast } from '@/components/Toast'
 import { supabase } from '@/lib/supabase'
 import { VantyLogo } from '@/components/ui/vanty-logo'
 import LocaleSelector from '@/app/components/LocaleSelector'
@@ -64,6 +65,15 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
   const router = useRouter()
   const [menu, setMenu] = useState(false)
   const [panel, setPanel] = useState<string | null>(null)
+  const toast = useToast()
+  // Vuelta tras eliminar la cuenta o el centro
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('cuenta') !== 'eliminada') return
+    toast.success(en ? 'Your account was deleted. Thank you for using Vanty ABA.' : 'Tu cuenta fue eliminada. Gracias por usar Vanty ABA.')
+    q.delete('cuenta')
+    window.history.replaceState(null, '', window.location.pathname + (q.toString() ? `?${q}` : ''))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [scrolled, setScrolled] = useState(false)
   const [faq, setFaq] = useState<number | null>(0)
   const href = (p: string) => `/${locale}${p}`
