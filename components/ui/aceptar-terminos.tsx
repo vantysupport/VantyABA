@@ -12,9 +12,11 @@ type Props = {
   tipo?: 'cuenta' | 'paciente'
   name?: string
   className?: string
+  /** Dirección del centro: acepta además el Acuerdo de Encargo de Tratamiento en nombre del centro */
+  acuerdo?: boolean
 }
 
-export function AceptarTerminos({ checked, onChange, tipo = 'cuenta', name, className = '' }: Props) {
+export function AceptarTerminos({ checked, onChange, tipo = 'cuenta', name, className = '', acuerdo = false }: Props) {
   const { locale } = useI18n()
   const en = locale === 'en'
   const link = (href: string, texto: string) => (
@@ -23,6 +25,7 @@ export function AceptarTerminos({ checked, onChange, tipo = 'cuenta', name, clas
   )
   const terminos = link('/terminos', en ? 'Terms of Service' : 'Términos y condiciones')
   const privacidad = link('/privacidad', en ? 'Privacy Policy' : 'Política de privacidad')
+  const dpa = link('/acuerdo-encargo', en ? 'Data Processing Agreement' : 'Acuerdo de Encargo de Tratamiento')
 
   return (
     <label className={`flex cursor-pointer items-start gap-3 rounded-v-sm border p-3 text-left transition-colors ${checked ? 'border-v-accent/40 bg-v-accent-soft/60' : 'border-v-border bg-v-elevated hover:bg-v-fill'} ${className}`}>
@@ -32,7 +35,9 @@ export function AceptarTerminos({ checked, onChange, tipo = 'cuenta', name, clas
       </span>
       <span className="text-[13px] leading-snug text-v-muted">
         {tipo === 'cuenta'
-          ? <>{en ? 'I have read and accept the ' : 'He leído y acepto los '}{terminos}{en ? ' and the ' : ' y la '}{privacidad}.</>
+          ? acuerdo
+            ? <>{en ? 'I have read and accept the ' : 'He leído y acepto los '}{terminos}{en ? ', the ' : ', la '}{privacidad}{en ? ' and, on behalf of the center, the ' : ' y, en nombre del centro, el '}{dpa}.</>
+            : <>{en ? 'I have read and accept the ' : 'He leído y acepto los '}{terminos}{en ? ' and the ' : ' y la '}{privacidad}.</>
           : <>{en
               ? 'I confirm that the center has the parent or legal guardian\'s authorization to register and process this patient\'s data, as described in the '
               : 'Confirmo que el centro cuenta con la autorización del padre, madre o tutor legal para registrar y tratar los datos de este paciente, según la '}{privacidad}.</>}

@@ -9,6 +9,7 @@ const PAGINAS: { ruta: string; prioridad: number; frecuencia: 'weekly' | 'monthl
   { ruta: '/crear-centro', prioridad: 0.8, frecuencia: 'monthly' },
   { ruta: '/privacidad', prioridad: 0.3, frecuencia: 'yearly' },
   { ruta: '/terminos', prioridad: 0.3, frecuencia: 'yearly' },
+  { ruta: '/acuerdo-encargo', prioridad: 0.3, frecuencia: 'yearly' },
   { ruta: '/libro-de-reclamaciones', prioridad: 0.2, frecuencia: 'yearly' },
 ]
 

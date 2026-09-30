@@ -131,13 +131,13 @@ export default function ConsentimientoIA() {
     [ServerCog, L(`Only the context needed for each request is sent to our AI providers, ${proveedor} (${pais}). It may include clinical data of your patients.`,
       `A nuestros proveedores de IA, ${proveedor} (${pais}), solo se envía el contexto necesario para cada consulta. Puede incluir datos clínicos de tus pacientes.`)],
     [Lock, L('It is not used to train AI models or for any other purpose.', 'No se usa para entrenar modelos de IA ni para ningún otro fin.')],
-    [Trash2, L('The providers do not store it (zero data retention).', 'Los proveedores no lo guardan (retención cero de datos).')],
+    [Trash2, L('The main provider does not store it (zero data retention); the backup one works without retention or with limited retention, according to its conditions.', 'El proveedor principal no lo guarda (retención cero); el de respaldo trabaja sin retención o con retención limitada, según sus condiciones.')],
     [Ban, L('You can turn it off at any time in Settings → Center. Without AI, the rest of Vanty works the same.', 'Puedes desactivarla cuando quieras en Configuración → Centro. Sin IA, el resto de Vanty funciona igual.')],
   ] : [
     [ServerCog, L(`To answer you, ARIA sends your question and the context needed about your child's progress to our AI providers, ${proveedor} (${pais}).`,
       `Para responderte, ARIA envía tu pregunta y el contexto necesario sobre el progreso de tu hijo o hija a nuestros proveedores de IA, ${proveedor} (${pais}).`)],
     [Lock, L('It is not used to train AI models or for any other purpose.', 'No se usa para entrenar modelos de IA ni para ningún otro fin.')],
-    [Trash2, L('The providers do not store it (zero data retention).', 'Los proveedores no lo guardan (retención cero de datos).')],
+    [Trash2, L('The main provider does not store it (zero data retention); the backup one works without retention or with limited retention, according to its conditions.', 'El proveedor principal no lo guarda (retención cero); el de respaldo trabaja sin retención o con retención limitada, según sus condiciones.')],
     [Ban, L('You can turn it off at any time from your Profile.', 'Puedes desactivarlo cuando quieras desde tu Perfil.')],
   ]
 

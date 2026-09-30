@@ -20,7 +20,7 @@ export default function NombrePerfilGuard() {
   const { locale } = useI18n()
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const [userId, setUserId] = useState<string | null>(null)
-  const [pide, setPide] = useState({ nombre: false, terminos: false })
+  const [pide, setPide] = useState({ nombre: false, terminos: false, direccion: false })
   const [acepta, setAcepta] = useState(false)
   const [nombre, setNombre] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -34,9 +34,9 @@ export default function NombrePerfilGuard() {
       const { data: { session } } = await supabase.auth.getSession()
       const id = session?.user?.id
       if (!id) return
-      const { data } = await supabase.from('profiles').select('nombre_confirmado, terminos_version').eq('id', id).maybeSingle()
+      const { data } = await supabase.from('profiles').select('nombre_confirmado, terminos_version, role').eq('id', id).maybeSingle()
       if (!vivo || !data) return
-      const falta = { nombre: data.nombre_confirmado === false, terminos: data.terminos_version !== TERMINOS_VERSION }
+      const falta = { nombre: data.nombre_confirmado === false, terminos: data.terminos_version !== TERMINOS_VERSION, direccion: data.role === 'jefe' || data.role === 'admin' }
       if (falta.nombre || falta.terminos) { setPide(falta); setUserId(id) }
       else confirmado.current = true
     })().catch(() => {})
@@ -86,7 +86,7 @@ export default function NombrePerfilGuard() {
             {pide.nombre && <input value={nombre} onChange={e => setNombre(e.target.value)} autoFocus autoComplete="name" maxLength={120}
               placeholder={L('e.g. Mary Smith', 'Ej.: María López')} aria-label={L('Full name', 'Nombre y apellido')}
               className="mt-4 h-11 w-full rounded-v-sm border border-v-border bg-v-bg px-3 text-[15px] outline-none transition-shadow focus:border-v-accent focus:ring-4 focus:ring-v-accent-soft" />}
-            {pide.terminos && <AceptarTerminos checked={acepta} onChange={setAcepta} className="mt-4" />}
+            {pide.terminos && <AceptarTerminos checked={acepta} onChange={setAcepta} acuerdo={pide.direccion} className="mt-4" />}
             {error && <p className="mt-2 text-xs text-v-danger">{L('Could not save. Try again.', 'No se pudo guardar. Inténtalo de nuevo.')}</p>}
             <button type="submit" disabled={!valido || guardando}
               className="v-brand mt-4 h-11 w-full rounded-full text-[15px] font-semibold disabled:opacity-50">

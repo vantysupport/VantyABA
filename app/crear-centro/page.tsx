@@ -122,7 +122,7 @@ function CreateCentroForm() {
         <Input name="fullName" required minLength={2} autoComplete="name" label={t('vanty.createCenter.fields.fullName')} />
         <Input name="email" type="email" required autoComplete="email" label={t('vanty.createCenter.fields.email')} />
         <Input name="password" type="password" required minLength={8} autoComplete="new-password" label={t('vanty.createCenter.fields.password')} />
-        <AceptarTerminos name="terminos" checked={acepta} onChange={setAcepta} className="mt-1" />
+        <AceptarTerminos name="terminos" checked={acepta} onChange={setAcepta} acuerdo className="mt-1" />
         <AnimatePresence>
           {state.error && (
             <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-sm text-v-danger">

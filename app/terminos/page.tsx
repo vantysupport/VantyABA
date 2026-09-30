@@ -63,8 +63,8 @@ function secciones(en: boolean): SeccionLegal[] {
     },
     {
       id: 'datos', Icon: FolderLock, title: L('Clinical information and personal data', 'Información clínica y datos personales'),
-      body: <p>{L(`The information recorded by each center belongs to that center and to the data subjects. ${P} processes it on the center's behalf and solely to provide the service, in accordance with the Privacy Policy and Peru's Personal Data Protection Law (Law No. 29733).`,
-        `La información registrada por cada centro pertenece a dicho centro y a los titulares de los datos. ${P} la trata por cuenta del centro y únicamente para prestar el servicio, conforme a la Política de Privacidad y a la Ley de Protección de Datos Personales (Ley N.º 29733).`)}</p>,
+      body: <p>{L(`Each center is the data controller of the clinical information it records, and patients or their representatives keep the rights that the law grants them over their personal data. ${P} processes that information as a data processor, on the center's behalf and solely to provide the service, in accordance with the Privacy Policy, the Data Processing Agreement (vanty.xyz/acuerdo-encargo) and Peru's Personal Data Protection Law (Law No. 29733).`,
+        `Cada centro es responsable del tratamiento de la información clínica que registra, y los pacientes o sus representantes mantienen los derechos que la legislación les reconoce sobre sus datos personales. ${P} trata esa información como encargado del tratamiento, por cuenta del centro y únicamente para prestar el servicio, conforme a la Política de Privacidad, al Acuerdo de Encargo de Tratamiento (vanty.xyz/acuerdo-encargo) y a la Ley de Protección de Datos Personales (Ley N.º 29733).`)}</p>,
     },
     {
       id: 'ia', Icon: Sparkles, title: L('Artificial intelligence', 'Inteligencia artificial'),
