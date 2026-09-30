@@ -27,4 +27,4 @@ export function modeloDeepInfra(modeloGroq: string): string {
 }
 
 /** Modelo de visión (lectura de documentos) en DeepInfra. */
-export const modeloVisionDeepInfra = () => process.env.DEEPINFRA_VISION_MODEL || 'Qwen/Qwen2.5-VL-32B-Instruct'
+export const modeloVisionDeepInfra = () => process.env.DEEPINFRA_VISION_MODEL || 'google/gemma-4-26B-A4B-it'
