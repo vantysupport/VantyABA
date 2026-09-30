@@ -1,4 +1,5 @@
-// sitemap.xml: páginas públicas en español e inglés, cada una enlazada con su versión en el otro idioma.
+// sitemap.xml: páginas públicas en español e inglés. Los enlaces entre idiomas (hreflang) van en el <head> de
+// cada página (lib/seo.ts); aquí no se repiten para que el sitemap sea un XML simple.
 import type { MetadataRoute } from 'next'
 import { SITIO } from '@/lib/seo'
 
@@ -18,6 +19,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: p.frecuencia,
     // Redondeo a un decimal: restar 0.1 en coma flotante deja valores como 0.7000000000000001
     priority: loc === 'es' ? p.prioridad : Math.round(Math.max(0.1, p.prioridad - 0.1) * 10) / 10,
-    alternates: { languages: { es: `${SITIO}/es${p.ruta}`, en: `${SITIO}/en${p.ruta}` } },
   })))
 }
