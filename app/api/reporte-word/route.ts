@@ -25,6 +25,7 @@ import {
 import type { HabilidadFila, RecomendacionesBloque } from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
 import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { conIAOpcional } from '@/lib/ia-contexto'
 
 // ÔöÇÔöÇ FIX: Helper universal para parsear nivel_logro_objetivos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // Maneja: n├║mero, "75", "75%", "51-75%", "mayormente logrado", "alto", etc.
@@ -3591,7 +3592,12 @@ async function generarReporteGeneral(childId: string, userLocale = 'es'): Promis
   return { doc, fileName }
 }
 
+// Se genera también sin IA: si el centro no la activó, las secciones redactadas llevan una nota (lib/ia-contexto.ts)
 export async function POST(req: NextRequest) {
+  return conIAOpcional(req, () => generarInforme(req))
+}
+
+async function generarInforme(req: NextRequest) {
   const caller = await getApiCaller(req)
   if (!caller) return unauthorized()
   try {

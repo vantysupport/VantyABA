@@ -7,17 +7,19 @@ export type MotivoIA = 'centro' | 'propio'
 /** Proveedor que recibe los datos. Se muestra en el aviso y en la Política de privacidad. */
 export const PROVEEDOR_IA = { nombre: 'Groq, Inc.', pais: { es: 'Estados Unidos', en: 'United States' } }
 
-// Rutas que envían datos a la IA (chats de ARIA, informes, análisis, OCR y traducciones).
+// Rutas que envían datos a la IA (chats de ARIA, análisis, OCR y traducciones). Los informes Word
+// (reporte-word, reporte-sesion-aba, generate-report, evaluacion-inicial/generar-informe-word,
+// reporte-comparativo, reporte-padres, reporte-seguro) NO se bloquean: sin IA se generan con sus datos y una
+// nota en las secciones redactadas (lib/ia-contexto.ts).
 const RUTAS_IA = [
   '/api/admin-chat', '/api/parent-chat', '/api/agente/chat',
   '/api/agente-conocimiento', '/api/agente-objetivos', '/api/agente-patrones', '/api/agente-prediccion', '/api/agente-sugerencias',
   '/api/alertas-automaticas', '/api/engagement-padres', '/api/benchmark',
   '/api/analyze-neurodivergent-form', '/api/analyze-parent-form-submission', '/api/analyze-professional-evaluation', '/api/analyze-progress',
-  '/api/evaluacion-inicial/analizar', '/api/evaluacion-inicial/generar-informe-word', '/api/evaluacion-inicial/recomendar-terapias',
-  '/api/generate-home-environment-report', '/api/generate-report', '/api/generate-session-report',
+  '/api/evaluacion-inicial/analizar', '/api/evaluacion-inicial/recomendar-terapias',
+  '/api/generate-home-environment-report', '/api/generate-session-report',
   '/api/knowledge/aprender', '/api/knowledge/ocr-image', '/api/patient-documents/extract',
   '/api/patient-ai-summary', '/api/patient-summary', '/api/progreso-paciente',
-  '/api/reporte-comparativo', '/api/reporte-padres', '/api/reporte-seguro', '/api/reporte-sesion-aba', '/api/reporte-word',
   '/api/tareas-hogar', '/api/traducir', '/api/translate-form',
 ]
 

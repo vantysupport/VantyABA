@@ -2,6 +2,7 @@
 // Cliente Groq — con fallback automático entre modelos cuando se agota el límite diario
 
 import { logServerError } from '@/lib/log-server-error'
+import { iaDesactivadaAhora, notaSinIA } from '@/lib/ia-contexto'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
@@ -147,6 +148,8 @@ export async function callGroq(
     maxRetries?: number
   } = {}
 ): Promise<string> {
+  // IA no autorizada por el centro: no se envía nada al proveedor (ver lib/ia-contexto.ts)
+  if (iaDesactivadaAhora()) return notaSinIA()
   const {
     model = GROQ_MODELS.SMART,
     temperature = 0.5,

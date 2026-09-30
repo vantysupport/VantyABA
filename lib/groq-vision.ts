@@ -4,6 +4,7 @@
 
 import sharp from 'sharp'
 import { logServerError } from '@/lib/log-server-error'
+import { iaDesactivadaAhora } from '@/lib/ia-contexto'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
 // Configurable por si Groq rota el modelo de visión (ver console.groq.com/docs/vision).
@@ -78,6 +79,7 @@ export async function groqVision(
   promptFor: (loteInicio: number, loteCantidad: number) => string,
   opts: { maxTokens?: number } = {},
 ): Promise<string> {
+  if (iaDesactivadaAhora()) return ''
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
     await logServerError('GROQ_API_KEY no configurada', 'Falta la variable de entorno GROQ_API_KEY (visión)', 'groq')
