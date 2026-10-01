@@ -27,8 +27,8 @@ function secciones(en: boolean): SeccionLegal[] {
   return [
     {
       id: 'aceptacion', Icon: FileCheck2, title: L('Acceptance of the terms', 'Aceptación de los términos'),
-      body: <><p>{L(`${P} is provided by ${EMPRESA.titular}, with Peruvian taxpayer number (RUC) ${EMPRESA.ruc}, under the trade name "${EMPRESA.nombreComercial}"${EMPRESA.direccion ? `, with address at ${EMPRESA.direccion}` : ''}. Contact: ${EMPRESA.email}.`,
-        `${P} es prestado por ${EMPRESA.titular}, con RUC ${EMPRESA.ruc}, bajo el nombre comercial "${EMPRESA.nombreComercial}"${EMPRESA.direccion ? `, con domicilio en ${EMPRESA.direccion}` : ''}. Contacto: ${EMPRESA.email}.`)}</p><p>{L(`These Terms of Service govern access to and use of the ${P} platform. By creating an account or using the platform, you declare that you have read, understood and accepted these terms, as well as the Privacy Policy. If you do not agree, you must refrain from using the platform.`,
+      body: <><p>{L(`${P} is provided under the trade name "${EMPRESA.nombreComercial}", with Peruvian taxpayer number (RUC) ${EMPRESA.ruc}. Contact: ${EMPRESA.email}.`,
+        `${P} es prestado bajo el nombre comercial "${EMPRESA.nombreComercial}", con RUC ${EMPRESA.ruc}. Contacto: ${EMPRESA.email}.`)}</p><p>{L(`These Terms of Service govern access to and use of the ${P} platform. By creating an account or using the platform, you declare that you have read, understood and accepted these terms, as well as the Privacy Policy. If you do not agree, you must refrain from using the platform.`,
         `Estos Términos de Servicio regulan el acceso y uso de la plataforma ${P}. Al crear una cuenta o utilizar la plataforma, declaras haber leído, comprendido y aceptado estos términos, así como la Política de Privacidad. Si no estás de acuerdo, debes abstenerte de utilizar la plataforma.`)}</p></>,
     },
     {

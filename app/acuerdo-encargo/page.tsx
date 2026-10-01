@@ -23,7 +23,7 @@ export async function generateMetadata() {
 
 function secciones(en: boolean): SeccionLegal[] {
   const L = (e: string, s: string) => (en ? e : s)
-  const encargado = `${EMPRESA.titular}, RUC ${EMPRESA.ruc}, ${L('trade name', 'nombre comercial')} "${EMPRESA.nombreComercial}"${EMPRESA.direccion ? `, ${EMPRESA.direccion}` : ''}`
+  const encargado = `${EMPRESA.nombreComercial} (RUC ${EMPRESA.ruc})`
   return [
     {
       id: 'partes', Icon: Handshake, title: L('Parties and purpose', 'Partes y objeto'),

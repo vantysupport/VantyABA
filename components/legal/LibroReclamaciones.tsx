@@ -70,10 +70,8 @@ export default function LibroReclamaciones() {
     <div className="rounded-v border border-v-border bg-v-elevated p-5 shadow-v">
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-v-subtle"><Building2 className="size-3.5" /> {L('Provider', 'Proveedor')}</p>
       <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
-        <div><dt className="text-xs text-v-subtle">{L('Name', 'Razón social')}</dt><dd className="font-semibold text-v-text">{EMPRESA.titular}</dd></div>
         <div><dt className="text-xs text-v-subtle">RUC</dt><dd className="font-semibold text-v-text">{EMPRESA.ruc}</dd></div>
         <div><dt className="text-xs text-v-subtle">{L('Trade name', 'Nombre comercial')}</dt><dd className="font-semibold text-v-text">{EMPRESA.nombreComercial}</dd></div>
-        {EMPRESA.direccion && <div><dt className="text-xs text-v-subtle">{L('Address', 'Domicilio')}</dt><dd className="font-semibold text-v-text">{EMPRESA.direccion}</dd></div>}
         <div><dt className="text-xs text-v-subtle">{L('Email', 'Correo')}</dt><dd className="font-semibold text-v-text">{EMPRESA.email}</dd></div>
       </dl>
     </div>

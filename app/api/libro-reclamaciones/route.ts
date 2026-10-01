@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     { label: en ? 'Detail' : 'Detalle', value: escHtml(datos.detalle).replace(/\n/g, '<br/>') },
     { label: en ? 'Request' : 'Pedido', value: escHtml(datos.pedido).replace(/\n/g, '<br/>') },
   ]
-  const proveedor = `${EMPRESA.titular} · RUC ${EMPRESA.ruc}${EMPRESA.direccion ? ` · ${EMPRESA.direccion}` : ''}`
+  const proveedor = `${EMPRESA.nombreComercial} · RUC ${EMPRESA.ruc}`
 
   // Constancia para el consumidor (copia de su hoja)
   const asunto = en ? `Your ${tipoTxt.toLowerCase()} was registered · ${h.codigo}` : `Tu ${tipoTxt.toLowerCase()} fue registrado · ${h.codigo}`
