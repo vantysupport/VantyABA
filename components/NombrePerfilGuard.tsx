@@ -50,14 +50,16 @@ export default function NombrePerfilGuard() {
     e.preventDefault()
     if (!userId || !valido) return
     setGuardando(true); setError(false)
-    const { error: err } = await supabase.from('profiles')
+    const { data: filas, error: err } = await supabase.from('profiles')
       .update({
         ...(pide.nombre ? { full_name: limpio.slice(0, 120), nombre_confirmado: true } : {}),
         ...(pide.terminos ? aceptacionTerminos() : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
-    if (err) { setError(true); setGuardando(false); return }
+      .select('id')
+    // Sin filas actualizadas no quedó guardado: se avisa en vez de cerrar (si no, volvería a aparecer al entrar).
+    if (err || !filas?.length) { setError(true); setGuardando(false); return }
     confirmado.current = true
     // Los paneles ya cargaron el nombre anterior: se recarga para mostrar el nuevo en todos lados.
     if (pide.nombre) window.location.reload()
