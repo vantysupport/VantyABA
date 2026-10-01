@@ -81,8 +81,8 @@ function secciones(en: boolean): SeccionLegal[] {
     },
     {
       id: 'planes', Icon: CreditCard, title: L('Plans and payments', 'Planes y pagos'),
-      body: <p>{L('Centers access the platform under the plan they contract, which defines the available features and usage limits. Commercial conditions are agreed with each center. Family access to the portal is managed by the center, and any purchase made in a center\'s store is governed by that center\'s conditions.',
-        'Los centros acceden a la plataforma según el plan contratado, que define las funcionalidades disponibles y los límites de uso. Las condiciones comerciales se acuerdan con cada centro. El acceso de las familias al portal lo gestiona el centro, y cualquier compra realizada en la tienda de un centro se rige por las condiciones de dicho centro.')}</p>,
+      body: <p>{L('Centers access the platform under the plan they contract, which defines the available features and usage limits. Commercial conditions are agreed with each center. Family access to the portal is managed by the center, and any purchase made in a center\'s store is governed by that center\'s conditions. Prices do not include IGV (VAT), which is added when applicable.',
+        'Los centros acceden a la plataforma según el plan contratado, que define las funcionalidades disponibles y los límites de uso. Las condiciones comerciales se acuerdan con cada centro. El acceso de las familias al portal lo gestiona el centro, y cualquier compra realizada en la tienda de un centro se rige por las condiciones de dicho centro. Los precios no incluyen IGV, que se agrega cuando corresponde.')}</p>,
     },
     {
       id: 'disponibilidad', Icon: Activity, title: L('Service availability', 'Disponibilidad del servicio'),

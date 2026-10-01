@@ -247,7 +247,7 @@ function SubscriptionStatus() {
                         <p className="text-right text-v-text">
                           {p.precio != null ? (<>
                             <span className="text-xl font-bold tabular-nums">{formatoMoneda(precioCiclo(p.precio, ciclo), estado!.moneda, en ? 'en' : 'es')}</span>
-                            <span className="text-xs text-v-muted"> {estado!.moneda} / {ciclo === 'anual' ? L('year', 'año') : L('month', 'mes')}</span>
+                            <span className="text-xs text-v-muted"> {estado!.moneda} / {ciclo === 'anual' ? L('year', 'año') : L('month', 'mes')} + IGV</span>
                             {p.local != null && <span className="block text-[11px] text-v-subtle">≈ {formatoMoneda(precioCiclo(p.local, ciclo), estado!.monedaLocal, en ? 'en' : 'es')} {estado!.monedaLocal}</span>}
                           </>) : <span className="text-sm font-semibold">{L('Contact us', 'Consúltanos')}</span>}
                         </p>
@@ -261,6 +261,7 @@ function SubscriptionStatus() {
               )
             })}
           </div>
+          <p className="mt-2 text-center text-[11px] text-v-subtle">{L('Prices do not include IGV (VAT).', 'Los precios no incluyen IGV.')}</p>
 
           {confirmando ? (
             <div className="mt-5 flex items-center gap-2.5 rounded-v-sm bg-v-accent-soft/60 p-3.5 text-sm text-v-text">

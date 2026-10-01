@@ -168,7 +168,7 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
                     <p className="flex items-end gap-2">
                       <motion.span key={`${ciclo}-${principal}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                         className={`v-headline text-4xl leading-none tabular-nums sm:text-5xl ${tx}`}>{formatoMoneda(principal, monedaPrincipal, lc)}</motion.span>
-                      <span className={`pb-1 text-sm ${txSuave}`}>/ {L('month', 'mes')}</span>
+                      <span className={`pb-1 text-sm ${txSuave}`}>/ {L('month', 'mes')} + IGV</span>
                     </p>
                     <p className={`mt-2 text-xs ${txSuave}`}>
                       {ciclo === 'anual'
@@ -213,9 +213,9 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
 
       <p className="mx-auto mt-6 max-w-2xl text-center text-[11px] text-v-subtle md:mt-8">
         {conLocal
-          ? L(`Charged in ${moneda}; ${monedaLocal} amounts are approximate, based on the day's exchange rate.`,
-              `Se cobra en ${moneda}; los montos en ${monedaLocal} son referenciales según el tipo de cambio del día.`)
-          : L(`Prices in ${moneda}. Taxes may apply.`, `Precios en ${moneda}. Pueden aplicar impuestos.`)}
+          ? L(`Prices do not include IGV (VAT). Charged in ${moneda}; ${monedaLocal} amounts are approximate, based on the day's exchange rate.`,
+              `Los precios no incluyen IGV. Se cobra en ${moneda}; los montos en ${monedaLocal} son referenciales según el tipo de cambio del día.`)
+          : L(`Prices in ${moneda}. Prices do not include IGV (VAT).`, `Precios en ${moneda}. Los precios no incluyen IGV.`)}
       </p>
     </div>
   )
