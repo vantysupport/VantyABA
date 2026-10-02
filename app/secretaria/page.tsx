@@ -170,7 +170,7 @@ export default function SecretariaDashboard() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSidebarOpen(false)} />
         )}
       </AnimatePresence>
-      <aside className={`v-scope fixed z-50 flex h-full w-[256px] shrink-0 flex-col border-r border-v-border bg-v-elevated shadow-v-lg transition-transform duration-300 lg:static lg:shadow-none
+      <aside data-app-chrome className={`v-scope fixed z-50 flex h-full w-[256px] shrink-0 flex-col border-r border-v-border bg-v-elevated shadow-v-lg transition-transform duration-300 lg:static lg:shadow-none
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex items-center gap-3 px-4 pb-4 pt-5">
           <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-[30%] shadow-v ring-1 ring-v-border" style={{ backgroundColor: '#ffffff' }}>
@@ -213,7 +213,7 @@ export default function SecretariaDashboard() {
 
       {/* ── MAIN ── */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="v-scope relative z-40 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-v-border bg-v-elevated/90 px-3 backdrop-blur-xl sm:px-6">
+        <header data-app-chrome className="v-scope relative z-40 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-v-border bg-v-elevated/90 px-3 backdrop-blur-xl sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <button onClick={() => setSidebarOpen(true)} aria-label={L('Open menu', 'Abrir menú')} className="grid size-9 shrink-0 place-items-center rounded-full text-v-muted hover:bg-v-fill lg:hidden"><Menu size={18} /></button>
             <div className="min-w-0">

@@ -134,6 +134,7 @@ export function AriaSaludo() {
     <AnimatePresence>
       {visible && saludo && (
         <motion.div
+          data-app-chrome
           role="status"
           initial={{ opacity: 0, y: 40, scale: 0.94 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}

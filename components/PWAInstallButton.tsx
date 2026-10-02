@@ -94,7 +94,7 @@ export default function PWAInstallButton() {
     <AnimatePresence>
       {/* ── Aviso de instalación ── */}
       {bannerVisible && (
-        <motion.div key="banner" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
+        <motion.div data-app-chrome key="banner" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
           transition={{ type: 'spring', stiffness: 260, damping: 24 }}
           className="v-scope fixed bottom-24 left-3 right-3 z-50">
           <div className="relative flex items-center gap-3 overflow-hidden rounded-v border border-v-border bg-v-elevated p-3 pr-2 shadow-v">
@@ -115,7 +115,7 @@ export default function PWAInstallButton() {
 
       {/* ── Guía paso a paso ── */}
       {showInstructions && (
-        <motion.div key="guia" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        <motion.div data-app-chrome key="guia" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="v-scope fixed inset-0 z-[120] flex items-end justify-center bg-black/45 p-3 backdrop-blur-sm sm:items-center" onClick={dismiss}>
           <motion.div initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 280, damping: 28 }}

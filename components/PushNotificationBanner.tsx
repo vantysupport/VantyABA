@@ -67,7 +67,7 @@ export default function PushNotificationBanner({ userId, rol = 'padre' }: Props)
   return (
     <AnimatePresence>
       {visible && (
-        <motion.div key={justEnabled ? 'ok' : 'ask'} role="dialog" aria-live="polite"
+        <motion.div data-app-chrome key={justEnabled ? 'ok' : 'ask'} role="dialog" aria-live="polite"
           initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.97 }}
           transition={{ type: 'spring', stiffness: 260, damping: 24 }}
           className="v-scope fixed bottom-24 left-3 right-3 z-50 md:bottom-6 md:left-auto md:right-6 md:w-[360px]">

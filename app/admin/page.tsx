@@ -496,7 +496,7 @@ export default function AdminDashboard() {
     <div className="v-root flex h-screen font-sans overflow-hidden transition-colors duration-200">
 
       {/* SIDEBAR */}
-      <aside className={`
+      <aside data-app-chrome className={`
         v-scope fixed md:static z-50 h-full w-[232px] flex flex-col sidebar-transition
         border-r border-v-border bg-v-elevated/90 backdrop-blur-xl transition-transform duration-300
         ${sidebarOpen ? 'translate-x-0 shadow-v-lg' : '-translate-x-full md:translate-x-0'}
@@ -613,7 +613,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Topbar */}
-        <header className={`v-scope relative z-40 h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 border-b border-v-border bg-v-elevated/80 backdrop-blur-xl transition-all duration-300
+        <header data-app-chrome className={`v-scope relative z-40 h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 border-b border-v-border bg-v-elevated/80 backdrop-blur-xl transition-all duration-300
           ${focusMode ? 'hidden' : ''}`}>
           <div className="flex items-center gap-2 md:gap-3">
             <button
