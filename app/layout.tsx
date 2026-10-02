@@ -9,6 +9,7 @@ import SessionGuard from '@/components/SessionGuard'
 import SuscripcionGuard from '@/components/SuscripcionGuard'
 import RecordarSesionGuard from '@/components/RecordarSesionGuard'
 import NombrePerfilGuard from '@/components/NombrePerfilGuard'
+import DetectorAppAndroid from '@/components/DetectorAppAndroid'
 import ConsentimientoIA from '@/components/ConsentimientoIA'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import MaintenanceGate from '@/components/MaintenanceGate'
@@ -214,6 +215,7 @@ export default async function RootLayout({
                     <SuscripcionGuard />
                     <RecordarSesionGuard />
                     <NombrePerfilGuard />
+                    <DetectorAppAndroid />
                     <ConsentimientoIA />
                     <MaintenanceGate>
                       {children}

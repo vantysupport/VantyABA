@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Coins, Loader2, ShoppingCart, Check, Clock, X } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { adminFetch } from '@/lib/admin-fetch'
+import { useEsAppAndroid } from '@/lib/app-android'
 
 type Estado = { limit: number | null; used: number; extra: number; disponible: number | null }
 type Pack = { tokens: number; usd: number }
@@ -36,6 +37,7 @@ export function TokensPrediccion({ agotado = false, className = '' }: { agotado?
   const [abierto, setAbierto] = useState(agotado)
   const [comprando, setComprando] = useState<number | null>(null)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const enApp = useEsAppAndroid() // en la app de Android no se ofrecen compras
 
   const [sinSaldo, setSinSaldo] = useState(agotado)
   useEffect(() => { if (agotado) { setAbierto(true); setSinSaldo(true); cargar() } }, [agotado, cargar])
@@ -91,7 +93,7 @@ export function TokensPrediccion({ agotado = false, className = '' }: { agotado?
             {pendientes.length > 0 && <span className="text-v-warning"> · {L(`${pendientes.length} purchase(s) pending payment`, `${pendientes.length} compra(s) pendiente(s) de pago`)}</span>}
           </p>
         </div>
-        {packs.length > 0 && (
+        {packs.length > 0 && !enApp && (
           <button onClick={() => setAbierto(a => !a)} className="v-brand inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
             {abierto ? <X size={14} /> : <ShoppingCart size={14} />} {abierto ? L('Close', 'Cerrar') : L('Buy tokens', 'Comprar tokens')}
           </button>
@@ -99,7 +101,7 @@ export function TokensPrediccion({ agotado = false, className = '' }: { agotado?
       </div>
 
       <AnimatePresence initial={false}>
-        {abierto && (
+        {abierto && !enApp && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="border-t border-v-border px-4 py-4">
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))]">
