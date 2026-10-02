@@ -172,7 +172,7 @@ function SubscriptionStatus() {
         <div className="relative mx-auto grid size-44 place-items-center">
           <motion.span aria-hidden className="absolute inset-4 rounded-full" style={{ background: 'radial-gradient(circle, rgba(1,171,252,0.35), transparent 70%)' }}
             animate={{ scale: [1, 1.15, 1] }} transition={{ duration: 2.4, repeat: Infinity }} />
-          <motion.img src={activado ? '/aria/pose-2.webp' : '/aria/pose-8.webp'} alt="ARIA" width={150} height={150}
+          <motion.img src={activado ? '/aria/poses/festeja.webp' : '/aria/poses/cafe.webp'} alt="ARIA" width={150} height={150}
             key={activado ? 'ok' : 'espera'}
             initial={{ scale: 0.7, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: [0, -8, 0] }}
             transition={{ scale: { type: 'spring', stiffness: 220, damping: 14 }, opacity: { duration: 0.3 }, y: { duration: 2.6, repeat: Infinity, ease: 'easeInOut' } }}

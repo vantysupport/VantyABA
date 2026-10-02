@@ -328,7 +328,7 @@ export default function ParentDashboard() {
                  `Te damos la bienvenida a ${centroNombre}. Soy ARIA y te acompañaré a seguir el progreso de tu hijo/a cada día.`)}
             </p>
             <div className="relative mt-4 flex flex-1 items-end justify-end lg:mt-6">
-              <motion.img src="/aria/pose-1.webp" alt="ARIA" width={220} height={220}
+              <motion.img src="/aria/poses/bienvenida.webp" alt="ARIA" width={220} height={220}
                 initial={{ opacity: 0, y: 24, rotate: -4 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ delay: 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 className="h-auto w-36 drop-shadow-[0_18px_30px_rgba(0,30,90,0.35)] sm:w-44 lg:w-56" />
             </div>

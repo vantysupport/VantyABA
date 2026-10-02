@@ -137,7 +137,7 @@ function Idiomas() {
         ))}
       </div>
       <div className="flex items-center gap-2">
-        <Image src="/aria/pose-1.webp" alt="" width={34} height={34} style={{ width: 34, height: 34 }} className="rounded-full bg-v-accent-soft object-contain p-0.5" />
+        <Image src="/aria/poses/hola.webp" alt="" width={34} height={34} style={{ width: 34, height: 34 }} className="rounded-full bg-v-accent-soft object-contain p-0.5" />
         <AnimatePresence mode="wait">
           <motion.span key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
             className="rounded-[14px] rounded-tl-sm border border-v-border bg-v-elevated px-3 py-1.5 text-[13px] font-semibold shadow-v">{saludos[i].t}</motion.span>

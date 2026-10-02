@@ -131,7 +131,7 @@ export default function PWAInstallButton() {
                 <h2 id="pwa-guia-titulo" className="mt-2 text-xl font-bold leading-tight">{L(`Install ${PLATFORM_NAME} ABA on your phone`, `Instala ${PLATFORM_NAME} ABA en tu celular`)}</h2>
                 <p className="mt-1 text-[13px] text-white/85">{L('3 steps, less than a minute.', '3 pasos, menos de un minuto.')}</p>
               </div>
-              <img src="/aria/pose-8.webp" alt="" className="h-auto w-24 shrink-0 drop-shadow-[0_10px_18px_rgba(0,30,90,0.35)]" />
+              <img src="/aria/poses/celular.webp" alt="" className="h-auto w-24 shrink-0 drop-shadow-[0_10px_18px_rgba(0,30,90,0.35)]" />
               <button onClick={dismiss} aria-label={L('Close', 'Cerrar')} className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-white/15 text-white hover:bg-white/25"><X size={15} /></button>
             </div>
 

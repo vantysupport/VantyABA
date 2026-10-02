@@ -343,7 +343,7 @@ function WelcomeScreen({ childName, onQuickSend }: { childName: string; onQuickS
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 200, damping: 20 }} className="relative">
         <span aria-hidden className="absolute inset-x-2 bottom-1 h-4 rounded-full bg-v-accent/20 blur-md" />
         <motion.span animate={{ y: [0, -6, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }} className="relative block h-32 w-28">
-          <img src="/aria/pose-1.webp?v=2" alt="" draggable={false} className="absolute inset-0 size-full select-none object-contain" style={{ height: '100%' }} />
+          <img src="/aria/poses/saluda.webp" alt="" draggable={false} className="absolute inset-0 size-full select-none object-contain" style={{ height: '100%' }} />
         </motion.span>
       </motion.div>
       <motion.h3 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="v-headline mt-2 text-[1.6rem] leading-tight text-v-text">

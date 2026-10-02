@@ -332,7 +332,7 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
                 <Link href={href('/login')} className="inline-flex h-12 items-center justify-center rounded-full border border-white/40 px-7 text-[15px] font-semibold text-white hover:bg-white/10">{L('I already have an account', 'Ya tengo cuenta')}</Link>
               </div>
             </div>
-            <Image src="/aria/pose-10.webp" alt="" width={260} height={260} className="pointer-events-none absolute -bottom-4 right-4 hidden h-auto w-56 drop-shadow-[0_20px_40px_rgba(0,30,90,0.4)] md:block lg:right-16 lg:w-64" />
+            <Image src="/aria/poses/corre.webp" alt="" width={260} height={260} className="pointer-events-none absolute -bottom-4 right-4 hidden h-auto w-56 drop-shadow-[0_20px_40px_rgba(0,30,90,0.4)] md:block lg:right-16 lg:w-64" />
           </Aparece>
         </section>
       </main>

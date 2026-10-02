@@ -22,7 +22,7 @@ export default function NoEncontrado() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="relative shrink-0">
           <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}>
-            <Image src="/aria/pose-4.webp" alt="ARIA" width={220} height={220} priority className="size-40 object-contain sm:size-52" />
+            <Image src="/aria/poses/espalda.webp" alt="ARIA" width={220} height={220} priority className="size-40 object-contain sm:size-52" />
           </motion.div>
           <motion.span aria-hidden className="absolute -bottom-1 left-1/2 h-3 w-24 -translate-x-1/2 rounded-full bg-[#0b3d91]/20 blur-[3px]"
             animate={{ scaleX: [1, 0.8, 1], opacity: [0.9, 0.55, 0.9] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }} />

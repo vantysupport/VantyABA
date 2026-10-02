@@ -248,7 +248,7 @@ function WellbeingSurvey({ childName, childId, parentId, onClose, onAria }: { ch
           <div className="flex items-end gap-4 pr-10">
             <motion.span initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1, type: 'spring', stiffness: 260, damping: 18 }}
               className="relative block h-24 w-20 shrink-0">
-              <img src="/aria/pose-5.webp?v=2" alt="" draggable={false} className="absolute inset-0 size-full select-none object-contain" style={{ height: '100%' }} />
+              <img src="/aria/poses/contenta.webp" alt="" draggable={false} className="absolute inset-0 size-full select-none object-contain" style={{ height: '100%' }} />
             </motion.span>
             <div className="min-w-0 pb-1">
               <p className="inline-flex items-center gap-1.5 rounded-full bg-v-accent-soft px-2.5 py-0.5 text-[11px] font-semibold text-v-accent"><Heart size={11} /> {en ? 'Monthly check-in' : 'Chequeo mensual'}</p>

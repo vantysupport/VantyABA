@@ -121,7 +121,7 @@ export default function AuthCallbackPage() {
         <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-v-accent/15" />
         <span className="relative grid size-24 place-items-center rounded-full bg-v-elevated shadow-v">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/aria/pose-1.webp" alt="" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+          <img src="/aria/poses/saluda.webp" alt="" style={{ width: 72, height: 72, objectFit: 'contain' }} />
         </span>
       </div>
       <div className="relative space-y-1.5">
