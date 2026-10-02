@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { X, Coins, Loader2, Check, Sparkles, Heart, Clock, ShieldCheck } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
-import { useEsAppAndroid } from '@/lib/app-android'
 
 type Tipo = 'practica' | 'aria'
 type Pack = { tokens: number; usd: number }
@@ -25,7 +24,6 @@ export default function ComprarTokensPadre({ abierto, tipoInicial = 'aria', onCl
   const [enviando, setEnviando] = useState(false)
   const [listo, setListo] = useState(false)
   const [error, setError] = useState('')
-  const enApp = useEsAppAndroid() // en la app de Android no se ofrecen compras
 
   const cargar = () => {
     setCargando(true)
@@ -88,13 +86,7 @@ export default function ComprarTokensPadre({ abierto, tipoInicial = 'aria', onCl
             </div>
 
             <div className="flex-1 overflow-y-auto p-5">
-              {enApp ? (
-                <div className="py-6 text-center">
-                  <span className="mx-auto grid size-14 place-items-center rounded-full bg-v-fill text-v-muted"><Coins size={24} /></span>
-                  <p className="mx-auto mt-3 max-w-xs text-sm text-v-muted">{L('Purchases are not available in the app.', 'Las compras no están disponibles en la app.')}</p>
-                  <button onClick={onClose} className="v-brand mt-5 inline-flex h-11 items-center rounded-full px-6 text-sm font-semibold">{L('Close', 'Cerrar')}</button>
-                </div>
-              ) : cargando ? (
+              {cargando ? (
                 <div className="grid place-items-center py-10"><Loader2 className="animate-spin text-v-accent" size={24} /></div>
               ) : listo ? (
                 <div className="py-4 text-center">
@@ -145,7 +137,7 @@ export default function ComprarTokensPadre({ abierto, tipoInicial = 'aria', onCl
               )}
             </div>
 
-            {!enApp && !cargando && !listo && (
+            {!cargando && !listo && (
               <div className="shrink-0 space-y-2 border-t border-v-border p-4">
                 <button onClick={pedir} disabled={enviando || !packs.length} className="v-brand inline-flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold disabled:opacity-60">
                   {enviando ? <Loader2 size={16} className="animate-spin" /> : <Coins size={16} />}

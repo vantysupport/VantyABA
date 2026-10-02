@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="theme">#0069DB</color>
-    <color name="background">#F3F8FE</color>
-    <color name="background_dark">#081426</color>
-    <color name="icon_start">#01ABFC</color>
-    <color name="icon_end">#0063D8</color>
-</resources>

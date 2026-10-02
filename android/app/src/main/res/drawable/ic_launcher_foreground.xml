@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Marca blanca centrada dentro de la zona segura (66dp) del ícono adaptable de 108dp -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:width="52dp" android:height="38dp" android:gravity="center" android:drawable="@drawable/vanty_mark" />
-</layer-list>

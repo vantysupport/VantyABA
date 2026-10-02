@@ -14,7 +14,6 @@ import { supabase } from '@/lib/supabase'
 import { AuthShell } from '@/components/ui/auth-shell'
 import { formatoMoneda, precioCiclo, type Ciclo } from '@/lib/precios'
 import { EliminarCentroDialog, EliminarCuentaDialog } from '@/components/cuenta/SalidaCuenta'
-import { useEsAppAndroid } from '@/lib/app-android'
 
 // 'elegir': el dueño entra por su cuenta (p. ej. durante la prueba) para pagar un plan
 const REASONS = { elegir: Sparkles, trial_expired: Clock, pending_payment: Hourglass, past_due: Clock, suspended: PauseCircle, no_centro: Building2 } as const
@@ -42,8 +41,6 @@ function SubscriptionStatus() {
   const [error, setError] = useState('')
   const [salida, setSalida] = useState<'centro' | 'cuenta' | null>(null)
   const contact = process.env.NEXT_PUBLIC_SUPPORT_EMAIL
-  // En la app de Android no se contratan planes (Google Play exige su propio cobro): solo se informa el estado
-  const enApp = useEsAppAndroid()
 
   useEffect(() => {
     fetch('/api/suscripcion', { cache: 'no-store' })
@@ -143,11 +140,6 @@ function SubscriptionStatus() {
       cuerpo: L(`The center's management is resolving the ${centro} subscription. Your information and your patients' records are safe; you will regain access as soon as it is reactivated.`,
         `La dirección del centro está resolviendo la suscripción de ${centro}. Tu información y la de tus pacientes están seguras; recuperarás el acceso apenas se reactive.`),
     }
-    if (enApp && (reason === 'elegir' || reason === 'past_due')) return {
-      titulo: reason === 'past_due' ? L('Your plan has expired', 'Tu plan venció') : L('Your subscription', 'Tu suscripción'),
-      cuerpo: L(`Plans for ${centro} cannot be purchased or renewed in the app. Your data is safe.`,
-        `Los planes de ${centro} no se pueden contratar ni renovar desde la app. Tus datos están a salvo.`),
-    }
     if (reason === 'elegir') return {
       titulo: L('Choose your plan', 'Elige tu plan'),
       cuerpo: L(`Pick the plan for ${centro} and pay securely by card. If you are still on your free trial, you keep all its days.`,
@@ -218,7 +210,7 @@ function SubscriptionStatus() {
 
       {cargando ? (
         <div className="mt-8 grid place-items-center py-6"><Loader2 className="size-6 animate-spin text-v-accent" /></div>
-      ) : puedeElegir && !enApp ? (
+      ) : puedeElegir ? (
         <div className="mt-6">
           <p className="mb-2.5 text-sm font-semibold text-v-text">{reason === 'pending_payment' ? L('Your plan', 'Tu plan') : reason === 'past_due' ? L('Renew or change your plan', 'Renueva o cambia de plan') : L('Choose how to continue', 'Elige con qué plan seguir')}</p>
           {reason !== 'pending_payment' && (
@@ -296,7 +288,7 @@ function SubscriptionStatus() {
       ) : null}
 
       <div className="mt-6 flex flex-col items-stretch gap-3">
-        {!puedeElegir && !enApp && !esPadre && !esEquipo && reason !== 'no_centro' && (
+        {!puedeElegir && !esPadre && !esEquipo && reason !== 'no_centro' && (
           <Link href={`/${locale}/precios`} className="v-brand grid h-11 place-items-center rounded-full px-6 text-[15px] font-semibold transition-transform active:scale-95">
             {t('vanty.subscription.seePlans')}
           </Link>
