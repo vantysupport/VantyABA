@@ -12,6 +12,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { rateLimit, RATE_LIMITS, getClientIP } from './lib/rate-limit'
 import { motivoBloqueo } from './lib/estado-centro'
 import { esRutaIA, motivoSinIA, type EstadoIA } from './lib/ia-consentimiento'
@@ -198,12 +199,40 @@ export async function proxy(req: NextRequest) {
 
   // getClaims verifica la firma del token localmente (claves ES256 del proyecto, en caché) en vez de
   // consultar el servidor de Auth en cada petición; también renueva la sesión si el token venció.
-  const { data: claimsData } = await supabase.auth.getClaims()
-  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
+  let { data: claimsData } = await supabase.auth.getClaims()
+  let user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
+
+  // App móvil: llama a /api/* sin cookies, con el token de sesión en "Authorization: Bearer".
+  // Se verifica igual (firma del JWT) y la consulta de admisión se hace con ese token, respetando RLS.
+  let db = supabase
+  let bearer: string | null = null
+  if (!user && pathname.startsWith('/api/')) {
+    const t = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
+    if (t) {
+      // Un token mal formado lanza excepción: se trata igual que "sin sesión" (401)
+      const { data } = await supabase.auth.getClaims(t).catch(() => ({ data: null }))
+      if (data?.claims?.sub) {
+        claimsData = data
+        user = { id: data.claims.sub as string }
+        bearer = t
+        db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+          global: { headers: { Authorization: `Bearer ${t}` } },
+          auth: { persistSession: false, autoRefreshToken: false },
+        }) as unknown as typeof supabase
+      }
+    }
+  }
 
   // An account with a verified second factor must pass it before using the app (optional for centers, mandatory for the console).
   let mfaPending = false
-  if (user) {
+  if (user && bearer) {
+    // Con token: nivel (aal) del propio JWT y factores verificados del usuario
+    const { data: u } = await supabase.auth.getUser(bearer)
+    const tieneFactor = (u?.user?.factors ?? []).some(f => f.status === 'verified')
+    mfaPending = tieneFactor && claimsData?.claims?.aal !== 'aal2'
+    const appMeta = (claimsData?.claims?.app_metadata ?? {}) as Record<string, unknown>
+    if (appMeta.mfa_email === true && claimsData?.claims?.aal !== 'aal2') mfaPending = true
+  } else if (user) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     mfaPending = aal?.nextLevel === 'aal2' && aal.currentLevel !== 'aal2'
     // Verificación en dos pasos por correo elegida como método (marca en el token de sesión)
@@ -232,7 +261,7 @@ export async function proxy(req: NextRequest) {
     // /api/suscripcion and /api/cobros stay open: an expired center needs them to pick a plan and pay.
     if (!pathname.startsWith('/api/session/') && !pathname.startsWith('/api/suscripcion') && !pathname.startsWith('/api/cobros/')) {
       const ia = esRutaIA(pathname)
-      const { data: p } = await supabase.from('profiles')
+      const { data: p } = await db.from('profiles')
         .select(ia ? 'role, ia_consentimiento, centros(status, trial_ends_at, paid_until, ia_estado)' : 'role, centros(status, trial_ends_at, paid_until)')
         .eq('id', user.id).maybeSingle()
       const perfil = p as unknown as { role?: string; ia_consentimiento?: EstadoIA; centros?: (CentroStanding & { ia_estado?: EstadoIA }) | null } | null

@@ -78,13 +78,23 @@ const PLAN_GATES: Record<string, string[]> = {
 // curada que comparten todas las clínicas. Los planes públicos solo consultan la CIE-11.
 const SOLO_FUNDADOR = ['cerebro_aprender', 'cerebro_biblioteca']
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { data } = await supabaseAdmin.from('platform_settings').select('maintenance, maintenance_msg, features').eq('id', 1).maybeSingle()
   const features: FeaturesConfig = { ...((data?.features as FeaturesConfig) ?? {}) }
 
-  const supabase = await createClient()
-  const { data: claimsData } = await supabase.auth.getClaims() // firma verificada localmente
-  const user = claimsData?.claims?.sub ? { id: claimsData.claims.sub as string } : null
+  // App móvil: token en "Authorization: Bearer"; la web: cookie de sesión. En ambos casos la firma se verifica.
+  let userId: string | null = null
+  const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
+  if (token) {
+    const { data: c } = await supabaseAdmin.auth.getClaims(token)
+    userId = (c?.claims?.sub as string | undefined) ?? null
+  }
+  if (!userId) {
+    const supabase = await createClient()
+    const { data: claimsData } = await supabase.auth.getClaims() // firma verificada localmente
+    userId = (claimsData?.claims?.sub as string | undefined) ?? null
+  }
+  const user = userId ? { id: userId } : null
   if (user) {
     const { data: profile } = await supabaseAdmin
       .from('profiles')
