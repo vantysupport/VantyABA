@@ -4,9 +4,14 @@ import 'server-only'
 //   práctica → planes de "Practicar en casa" generados por mes calendario (max_parent_plans_month)
 //   aria     → mensajes a ARIA por día, ventana de 24 h (max_aria_msgs_parent_day; lo cobra lib/aria-rate-limit)
 // Además, tokens COMPRADOS (tokens_padre_extra): no vencen y se usan cuando se acaba la cuota.
-// El consumo de la cuota vive en aria_usage. Sin tope (null/0) → ilimitado. Ante errores, falla abierto.
+// El consumo de la cuota vive en aria_usage. Sin tope en el centro ni en el plan → el mínimo por defecto
+// (nadie tiene IA ilimitada). Ante errores, falla abierto.
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { ARIA_TOPE_POR_DEFECTO } from '@/lib/aria-rate-limit'
+
+/** Planes de práctica por mes si el centro y su plan no fijan uno. */
+const PRACTICA_TOPE_POR_DEFECTO = 5
 
 type Topes = { practica: number | null; aria: number | null }
 export type EstadoToken = { usados: number; max: number | null; extra: number; reinicia: string | null }
@@ -17,15 +22,15 @@ const clavePractica = (userId: string) => `practica:${userId}:${mesActual()}`
 const primeroDelMesSiguiente = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString() }
 
 export async function topesPadre(centroId: string | null): Promise<Topes> {
-  if (!centroId) return { practica: null, aria: null }
+  if (!centroId) return { practica: PRACTICA_TOPE_POR_DEFECTO, aria: ARIA_TOPE_POR_DEFECTO.padres }
   const { data } = await supabaseAdmin.from('centros').select('limites, plans(max_parent_plans_month, max_aria_msgs_parent_day)').eq('id', centroId).maybeSingle()
   const raw = (data as { plans?: any } | null)?.plans
   const p = Array.isArray(raw) ? raw[0] : raw
   // Límite propio del centro (fijado en /control, centros.limites) y, si no hay, el del plan
   const propios = ((data as { limites?: Record<string, unknown> } | null)?.limites || {}) as Record<string, unknown>
   const valor = (k: string) => (typeof propios[k] === 'number' ? propios[k] : p?.[k])
-  const n = (x: unknown) => { const v = Math.floor(Number(x) || 0); return v > 0 ? v : null }
-  return { practica: n(valor('max_parent_plans_month')), aria: n(valor('max_aria_msgs_parent_day')) }
+  const n = (x: unknown, defecto: number) => { const v = Math.floor(Number(x) || 0); return v > 0 ? v : defecto }
+  return { practica: n(valor('max_parent_plans_month'), PRACTICA_TOPE_POR_DEFECTO), aria: n(valor('max_aria_msgs_parent_day'), ARIA_TOPE_POR_DEFECTO.padres) }
 }
 
 async function leer(rlKey: string) {

@@ -4,6 +4,7 @@ import React from 'react'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Brain, X, Send, Loader2, User, BookOpen, Minus, Maximize2, Minimize2, HelpCircle, Stethoscope, Map, Trash2, Volume2, VolumeX } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
+import { useCuotaAria, ChipCuotaAria, textoAriaAgotada } from '@/components/ui/cuota-aria'
 import { toBCP47 } from '@/lib/i18n'
 import { confirmar } from '@/components/ui/confirmar'
 
@@ -161,6 +162,8 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
   const { t, locale } = useI18n()
   const [open, setOpen]           = useState(false)
   const [minimized, setMinimized] = useState(false)
+  // Mensajes a ARIA que quedan hoy según el plan del centro (se consulta al abrir el chat)
+  const { cuota: cuotaAria, agotado: ariaAgotada, cargar: recargarCuota } = useCuotaAria(open)
   const [expanded, setExpanded]   = useState(false)
   const [mode, setMode]           = useState<'clinico' | 'soporte'>(() => {
     if (typeof window === 'undefined') return 'clinico'
@@ -463,7 +466,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
 
   const sendMessage = useCallback(async (text?: string) => {
     const msg = (text || input).trim()
-    if (!msg || loading) return
+    if (!msg || loading || ariaAgotada) return
     setInput('')
     setLoading(true)
 
@@ -507,8 +510,9 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
       }])
     } finally {
       setLoading(false)
+      recargarCuota()
     }
-  }, [input, loading, userId, conversacionId, locale, open, minimized, mode, childId, speak])
+  }, [input, loading, ariaAgotada, userId, conversacionId, locale, open, minimized, mode, childId, speak, recargarCuota])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
@@ -569,7 +573,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                 : <Brain size={14} className="text-white" />}
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
-              <p className="font-bold text-white text-sm leading-tight truncate">ARIA</p>
+              <p className="flex items-center gap-1.5 font-bold text-white text-sm leading-tight truncate">ARIA <ChipCuotaAria cuota={cuotaAria} en={locale === 'en'} claro /></p>
               <p className="text-white/70 text-[10px] truncate">
                 {mode === 'soporte' ? 'Guía de Plataforma · VANTY' : 'Asistente Clínico IA'}
               </p>
@@ -733,6 +737,9 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                 </div>
               </div>
               <div className="p-3 pt-2 flex-shrink-0" style={{ background: 'var(--card)' }}>
+                {ariaAgotada && cuotaAria && (
+                  <p role="status" className="mb-2 rounded-xl bg-amber-500/10 px-3 py-2 text-[11px]" style={{ color: 'var(--text-primary)' }}>{textoAriaAgotada(cuotaAria, locale === 'en')}</p>
+                )}
                 <div className="flex gap-2 items-end">
                   <textarea
                     ref={inputRef}
@@ -740,6 +747,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     rows={1}
+                    disabled={ariaAgotada}
                     placeholder={mode === 'soporte' ? '¿En qué sección necesitas ayuda?' : 'Pregúntale a ARIA sobre el caso, protocolos ABA, DSM-5...'}
                     className="flex-1 p-2.5 rounded-2xl text-xs resize-none outline-none transition-all leading-relaxed max-h-24 focus:ring-2 focus:ring-sky-400"
                     style={{
@@ -749,7 +757,7 @@ export default function ARIAFloatingChat({ userId, childId, childName }: { userI
                       minHeight: '38px',
                     }}
                   />
-                  <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
+                  <button onClick={() => sendMessage()} disabled={!input.trim() || loading || ariaAgotada}
                     className={`w-9 h-9 text-white rounded-xl flex items-center justify-center disabled:opacity-40 transition-all shrink-0 ${
                       mode === 'soporte' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-sky-600 hover:bg-sky-700'
                     }`}>

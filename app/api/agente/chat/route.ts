@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { vantyAgent } from '@/lib/vanty-agent'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { checkAriaRateLimit } from '@/lib/aria-rate-limit'
+import { checkAriaRateLimit, estadoAria } from '@/lib/aria-rate-limit'
 import { getApiCaller, hasRole, ROLES, canAccessChild, rowInCentro, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 
 export async function POST(req: NextRequest) {
@@ -48,6 +48,9 @@ export async function GET(req: NextRequest) {
   const userId = searchParams.get('user_id') ? caller.id : null
 
   try {
+    // Mensajes a ARIA usados hoy y tope del plan (para mostrarlo en el chat)
+    if (action === 'cuota') return NextResponse.json(await estadoAria(caller.id, 'staff', caller.centroId))
+
     if (childId && !(await canAccessChild(caller, childId))) return notFound()
 
     if (action === 'analisis_proactivo' && childId) {

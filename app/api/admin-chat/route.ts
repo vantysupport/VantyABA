@@ -5,6 +5,7 @@ import { getCentroBranding } from '@/lib/centro-branding'
 import { callGroqSimple, GROQ_MODELS, GroqExhaustedError } from '@/lib/groq-client'
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin';
 import { buildAdminChatContext } from '@/lib/ai-context-builder';
+import { checkAriaRateLimit } from '@/lib/aria-rate-limit';
 import { getApiCaller, hasRole, ROLES, canAccessChild, unauthorized, forbidden, notFound } from '@/lib/api-auth';
 import { reglaIdiomaRespuesta } from '@/lib/idioma-ia'
 import { buscarEnInternet, busquedaWebConfigurada, fuentesComoContexto } from '@/lib/busqueda-web'
@@ -61,6 +62,9 @@ export async function POST(req: Request) {
     // Validaciones iniciales
     if (!childId) return NextResponse.json({ text: "⚠️ Selecciona un paciente primero." });
     if (!(await canAccessChild(caller, childId))) return notFound()
+    // Cuenta como mensaje a ARIA del personal (mismo tope diario del plan que el chat de ARIA)
+    const rl = await checkAriaRateLimit(caller.id, 'staff', caller.centroId)
+    if (!rl.allowed) return NextResponse.json({ text: rl.message, rateLimited: true })
     const centro = await getCentroBranding({ childId })
 
 

@@ -2,6 +2,7 @@
 import React from 'react'
 
 import { useI18n } from '@/lib/i18n-context'
+import { useCuotaAria, ChipCuotaAria, textoAriaAgotada } from '@/components/ui/cuota-aria'
 import { toBCP47 } from '@/lib/i18n'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
@@ -54,6 +55,8 @@ export default function ARIAAgentChat({
   userId, childId, childName, contexto = 'general', compact = false
 }: ARIAAgentChatProps) {
   const { t, locale } = useI18n()
+  // Mensajes a ARIA que quedan hoy según el plan del centro
+  const { cuota: cuotaAria, agotado: ariaAgotada, cargar: recargarCuota } = useCuotaAria(true)
 
   // Keys por usuario + paciente — persisten entre cierres/aperturas
   const STORAGE_KEY = useMemo(
@@ -274,7 +277,7 @@ export default function ARIAAgentChat({
 
   const sendMessage = useCallback(async (text?: string) => {
     const msg = (text || input).trim()
-    if (!msg || loading) return
+    if (!msg || loading || ariaAgotada) return
 
     setInput('')
     setLoading(true)
@@ -311,9 +314,10 @@ export default function ARIAAgentChat({
       }])
     } finally {
       setLoading(false)
+      recargarCuota()
       inputRef.current?.focus()
     }
-  }, [input, loading, childId, userId, conversacionId, contexto, locale, speak])
+  }, [input, loading, ariaAgotada, childId, userId, conversacionId, contexto, locale, speak, recargarCuota])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
@@ -391,7 +395,8 @@ export default function ARIAAgentChat({
       {/* Composer */}
       <div className="shrink-0 border-t border-v-border bg-v-elevated px-4 pb-4 pt-2.5">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[11px] text-v-subtle">
+          <span className="flex items-center gap-2 text-[11px] text-v-subtle">
+            <ChipCuotaAria cuota={cuotaAria} en={locale === 'en'} />
             {messages.length > 1
               ? (locale === 'en'
                   ? `${messages.length - 1} saved message${messages.length > 2 ? 's' : ''}`
@@ -417,6 +422,9 @@ export default function ARIAAgentChat({
             </button>
           </div>
         </div>
+        {ariaAgotada && cuotaAria && (
+          <p role="status" className="mb-2 rounded-v-sm bg-v-warning/10 px-3 py-2 text-xs text-v-text">{textoAriaAgotada(cuotaAria, locale === 'en')}</p>
+        )}
         <div className="flex items-end gap-2 rounded-[22px] border border-v-border bg-v-bg p-1.5 pl-4 transition-shadow focus-within:border-v-accent/50 focus-within:ring-4 focus-within:ring-v-accent-soft">
           <textarea
             ref={inputRef}
@@ -424,13 +432,14 @@ export default function ARIAAgentChat({
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
+            disabled={ariaAgotada}
             {...{placeholder: t('ui.ask_aria')}}
             className="max-h-28 min-h-[36px] flex-1 resize-none bg-transparent py-2 text-sm leading-relaxed text-v-text outline-none placeholder:text-v-subtle"
           />
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => sendMessage()}
-            disabled={!input.trim() || loading}
+            disabled={!input.trim() || loading || ariaAgotada}
             aria-label={locale === 'en' ? 'Send' : 'Enviar'}
             className="v-brand grid size-9 shrink-0 place-items-center rounded-full transition-opacity disabled:opacity-35 disabled:shadow-none"
           >

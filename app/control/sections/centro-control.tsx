@@ -28,6 +28,7 @@ const LIMITES: { key: keyof CentroRow['limites']; es: string; en: string; unidad
   { key: 'max_ai_reports', es: 'Reportes IA / mes', en: 'AI reports / month' },
   { key: 'max_parent_plans_month', es: 'Planes de práctica / padre / mes', en: 'Practice plans / parent / month' },
   { key: 'max_aria_msgs_parent_day', es: 'ARIA / padre / día', en: 'ARIA / parent / day' },
+  { key: 'max_aria_msgs_staff_day', es: 'ARIA / equipo / día', en: 'ARIA / team member / day' },
 ]
 
 export function CentroControl({ centro, plans, onChanged, onError }: { centro: CentroRow; plans: Plan[]; onChanged: () => void; onError: (e: unknown) => void }) {
@@ -69,6 +70,7 @@ export function CentroControl({ centro, plans, onChanged, onError }: { centro: C
     max_ai_reports: String(centro.ai.report.used),
     max_parent_plans_month: L('per family', 'por familia'),
     max_aria_msgs_parent_day: L('per family', 'por familia'),
+    max_aria_msgs_staff_day: L('per person', 'por persona'),
   }
   const planGate: Record<string, boolean | undefined> = {
     chat_especialistas: plan?.has_team_chat,

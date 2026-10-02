@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
     case 'list_centros': {
       const period = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
       const [{ data: centros, error }, { data: profiles }, { data: children }, { data: usage }, { data: balance }] = await Promise.all([
-        supabaseAdmin.from('centros').select('id, name, slug, email, logo_url, status, trial_ends_at, paid_until, extra_parents, created_at, plan_id, limites, features, uso_datos_bytes, uso_calculado_at, plans(code, name_es, price_pen, max_professionals, max_parents, max_patients, max_ai_reports, max_predictive_tokens, max_storage_mb, max_db_mb, max_parent_plans_month, max_aria_msgs_parent_day, has_team_chat, has_catalog, has_financial_reports)').order('created_at', { ascending: false }),
+        supabaseAdmin.from('centros').select('id, name, slug, email, logo_url, status, trial_ends_at, paid_until, extra_parents, created_at, plan_id, limites, features, uso_datos_bytes, uso_calculado_at, plans(code, name_es, price_pen, max_professionals, max_parents, max_patients, max_ai_reports, max_predictive_tokens, max_storage_mb, max_db_mb, max_parent_plans_month, max_aria_msgs_parent_day, max_aria_msgs_staff_day, has_team_chat, has_catalog, has_financial_reports)').order('created_at', { ascending: false }),
         supabaseAdmin.from('profiles').select('centro_id, role'),
         supabaseAdmin.from('children').select('centro_id'),
         supabaseAdmin.from('ai_usage').select('centro_id, kind, used').eq('period_start', period),
@@ -364,7 +364,7 @@ export async function POST(req: NextRequest) {
       if (!centroId) return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
       const src = (body.limites && typeof body.limites === 'object' ? body.limites : {}) as Record<string, unknown>
       const limites: Record<string, number> = {}
-      for (const k of ['max_patients', 'max_professionals', 'max_parents', 'max_storage_mb', 'max_db_mb', 'max_predictive_tokens', 'max_ai_reports', 'max_parent_plans_month', 'max_aria_msgs_parent_day']) {
+      for (const k of ['max_patients', 'max_professionals', 'max_parents', 'max_storage_mb', 'max_db_mb', 'max_predictive_tokens', 'max_ai_reports', 'max_parent_plans_month', 'max_aria_msgs_parent_day', 'max_aria_msgs_staff_day']) {
         const v = src[k]
         if (v === '' || v == null) continue
         const n = Math.floor(Number(v))

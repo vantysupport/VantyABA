@@ -70,7 +70,7 @@ export type CentroRow = {
   created_at: string
   plan_id: string | null
   plans: Pick<Plan, 'code' | 'name_es' | 'price_pen' | 'max_professionals' | 'max_parents' | 'max_patients' | 'max_ai_reports' | 'max_predictive_tokens' | 'max_storage_mb' | 'max_db_mb' | 'has_team_chat' | 'has_catalog' | 'has_financial_reports'> | null
-  limites: Partial<Record<'max_patients' | 'max_professionals' | 'max_parents' | 'max_storage_mb' | 'max_db_mb' | 'max_predictive_tokens' | 'max_ai_reports' | 'max_parent_plans_month' | 'max_aria_msgs_parent_day', number>>
+  limites: Partial<Record<'max_patients' | 'max_professionals' | 'max_parents' | 'max_storage_mb' | 'max_db_mb' | 'max_predictive_tokens' | 'max_ai_reports' | 'max_parent_plans_month' | 'max_aria_msgs_parent_day' | 'max_aria_msgs_staff_day', number>>
   comprasPendientes: number
   features: Record<string, boolean>
   uso: { archivos: number; datos: number; datosCalculadoAt: string | null }
