@@ -5,10 +5,12 @@ import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { debeCerrarSesion, marcarSesionViva } from '@/lib/recordar-sesion'
 import { releaseViaBeacon } from '@/lib/session-lock'
+import { esModoApp } from '@/lib/modo-app'
 
 export default function RecordarSesionGuard() {
   useEffect(() => {
-    if (!debeCerrarSesion()) { marcarSesionViva(); return }
+    // En la app móvil la sesión la decide el teléfono
+    if (esModoApp() || !debeCerrarSesion()) { marcarSesionViva(); return }
     supabase.auth.getSession().then(async ({ data }) => {
       marcarSesionViva()
       if (!data.session) return

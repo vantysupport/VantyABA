@@ -10,6 +10,7 @@ import { useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { claimSession, heartbeatSession, releaseViaBeacon } from '@/lib/session-lock'
+import { esModoApp } from '@/lib/modo-app'
 
 const HEARTBEAT_MS = 20000
 
@@ -19,6 +20,8 @@ export default function SessionGuard() {
   const kicked = useRef(false)
 
   useEffect(() => {
+    // En la app móvil no hay sesión única (el teléfono y la PC pueden estar abiertos a la vez) ni liberación
+    if (esModoApp()) return
     const isAuthPage = pathname === '/' || pathname === '/login'
     let interval: ReturnType<typeof setInterval> | undefined
     let cancelled = false
