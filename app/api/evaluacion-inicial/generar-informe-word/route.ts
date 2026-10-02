@@ -24,6 +24,7 @@ import {
 } from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
 import { sinTokens, descontarToken } from '@/lib/tokens-ia'
+import { conIAOpcional } from '@/lib/ia-contexto'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -200,7 +201,12 @@ function fmtRespuesta(v: any): string {
 }
 
 // ─── Endpoint ────────────────────────────────────────────────────────────
+// Se genera también sin IA: si el centro no la activó, las secciones redactadas llevan una nota (lib/ia-contexto.ts)
 export async function POST(req: NextRequest) {
+  return conIAOpcional(req, () => generarInforme(req))
+}
+
+async function generarInforme(req: NextRequest) {
   const caller = await getApiCaller(req)
   if (!caller) return unauthorized()
   try {

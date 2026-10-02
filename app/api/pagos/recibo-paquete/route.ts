@@ -7,6 +7,7 @@ import { getCentroMoneda } from '@/lib/centro-moneda'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { getApiCaller, hasRole, ROLES, unauthorized } from '@/lib/api-auth'
 import { esc, fmtFechaLarga, fmtFechaCorta, fmtDiaSemana, RECIBO_CSS, RECIBO_FONTS } from '@/lib/recibo-html'
+import { creditoVanty } from '@/lib/branding'
 import { cobradoDe, saldoDe } from '@/lib/pagos'
 
 const supabase = createClient(
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
   try {
     let query = supabase
       .from('payments')
-      .select('*, children(id, name, parent_id, profiles:parent_id(full_name, email, phone))')
+      .select('*, children(id, name, parent_id, profiles:parent_id(full_name, email, phone)), appointments(appointment_date, appointment_time), especialista:especialista_id(full_name)')
       .order('paid_at', { ascending: true })
       .order('created_at', { ascending: true })
 
@@ -107,7 +108,15 @@ export async function GET(req: NextRequest) {
     const METHOD: Record<string, string> = isEN
       ? { yape: 'Yape', plin: 'Plin', efectivo: 'Cash', transferencia: 'Transfer', tarjeta: 'Card', otro: 'Other' }
       : { yape: 'Yape', plin: 'Plin', efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' }
-    const fechaDe = (p: any) => p.paid_at || p.created_at
+    const fechaDe = (p: any) => p.paid_at || p.fecha_cobro || p.created_at
+    // Fecha y hora de la sesión agendada vinculada (si la hay); si no, la del cobro
+    type FilaSesion = { paid_at?: string | null; fecha_cobro?: string | null; created_at: string; responsable?: string | null
+      appointments?: { appointment_date?: string; appointment_time?: string | null } | null; especialista?: { full_name?: string } | null }
+    const fechaSesion = (p: FilaSesion) => (p.appointments?.appointment_date ? `${p.appointments.appointment_date}T12:00:00` : (p.fecha_cobro || fechaDe(p)))
+    const horaSesion = (p: FilaSesion) => String(p.appointments?.appointment_time ?? '').slice(0, 5)
+    const filas = payments as FilaSesion[]
+    const especialistaPkg: string = filas.find(x => x.especialista?.full_name)?.especialista?.full_name || ''
+    const responsablePkg: string = filas.find(x => x.responsable)?.responsable || ''
     const firstDate = fechaDe(payments[0])
     const lastDate  = fechaDe(payments[payments.length - 1])
     const todoPagado = pending.length === 0 && paid.length > 0
@@ -172,20 +181,20 @@ export async function GET(req: NextRequest) {
           </div>
           <div class="card">
             <label>${L('Guardian', 'Responsable / tutor')}</label>
-            <p>${esc(parentProfile?.full_name || '—')}</p>
+            <p>${esc(parentProfile?.full_name || responsablePkg || '—')}</p>
             ${parentProfile?.phone || parentProfile?.email ? `<p class="m">${esc([parentProfile?.phone, parentProfile?.email].filter(Boolean).join(' · '))}</p>` : ''}
           </div>
         </div>
 
-        <p class="sec">${L('Sessions', 'Sesiones')} · ${esc(concepto)}</p>
+        <p class="sec">${L('Sessions', 'Sesiones')} · ${esc(concepto)}${especialistaPkg ? ` · ${L('Specialist', 'Especialista')}: ${esc(especialistaPkg)}` : ''}</p>
         <div class="items">
           <div class="ses h"><span>${L('Day', 'Día')}</span><span>${L('Date', 'Fecha')}</span><span class="hide">${L('Method', 'Método')}</span><span class="hide">${L('Status', 'Estado')}</span><span class="r">${L('Amount', 'Importe')}</span></div>
           ${payments.map(p => {
             const st = STATUS[p.status] || { label: p.status, fg: '#475569', bg: '#eef2f6' }
             const anulado = p.status === 'cancelled' || p.status === 'refunded'
             return `<div class="ses">
-              <span><span class="dia">${fmtDiaSemana(fechaDe(p), lang)}</span></span>
-              <span>${fmtFechaCorta(fechaDe(p), lang)}</span>
+              <span><span class="dia">${fmtDiaSemana(fechaSesion(p), lang)}</span></span>
+              <span>${fmtFechaCorta(fechaSesion(p), lang)}${horaSesion(p) ? ` · ${horaSesion(p)}` : ''}</span>
               <span class="hide muted">${esc(METHOD[p.payment_method] || p.payment_method || '—')}</span>
               <span class="hide"><span class="mini" style="background:${st.bg};color:${st.fg}"><i></i>${st.label}</span></span>
               <span class="r"${anulado ? ' style="text-decoration:line-through;color:#8a98ad"' : ''}>${fmtMoney(Number(p.amount), lang, cur.symbol)}</span>
@@ -213,6 +222,7 @@ export async function GET(req: NextRequest) {
         <div><b>${esc(center.nombre)}</b><br/>${L('Internal payment receipt.', 'Recibo interno de pago.')}</div>
         <div class="r">${L('Receipt', 'Recibo')} N.° ${esc(reciboNum)}<br/>${L('Not valid as a SUNAT tax document', 'No válido como comprobante SUNAT')}</div>
       </div>
+      <p style="margin:14px 0 0;text-align:center;font-size:11px;font-weight:700;color:#0063d8">${creditoVanty(lang === 'en')}</p>
     </div>
 
     <div class="actions">

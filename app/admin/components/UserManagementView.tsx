@@ -125,6 +125,8 @@ interface UserData {
   email_confirmed: boolean
   providers?: string[]
   phone_alt?: string | null
+  /** Administrador principal del centro (quien lo creó) */
+  principal?: boolean
   profile: {
     avatar_url?: string | null
     full_name?: string
@@ -170,6 +172,7 @@ export default function UserManagementView({ rolesConfig }: {
   const L = (en: string, es: string) => (locale === 'en' ? en : es)
   const toast = useToast()
   const [users, setUsers] = useState<UserData[]>([])
+  const [soyPrincipal, setSoyPrincipal] = useState(false)
 
   // ── Roles habilitados según configuración del programador ────────────────
   const enabledRoles = {
@@ -237,6 +240,7 @@ export default function UserManagementView({ rolesConfig }: {
       const json = await resUsers.json()
       if (json.error) throw new Error(json.error)
       setUsers(json.data || [])
+      setSoyPrincipal(!!json.soyPrincipal)
 
       // Cargar niños usando API admin (bypassa RLS)
       try {
@@ -270,12 +274,13 @@ export default function UserManagementView({ rolesConfig }: {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  // Protección: director no puede cambiar rol de otro director
-  // Solo un "super director" (el primero registrado / admin) puede hacerlo
+  // Protección: el rol de un director solo lo cambia el administrador principal (quien creó el centro),
+  // y el del principal no lo cambia nadie. El servidor y la base de datos aplican la misma regla.
   const canChangeRole = (targetUser: UserData) => {
     const targetRole = targetUser.profile?.role || ''
     const isTargetDirector = targetRole === 'jefe' || targetRole === 'admin'
-    if (isTargetDirector) return false
+    if (targetUser.principal) return false
+    if (isTargetDirector && !soyPrincipal) return false
     // Don't block if currentUserId not loaded yet — let the server handle self-change protection
     if (currentUserId && targetUser.id === currentUserId) return false
     return true
@@ -777,6 +782,8 @@ export default function UserManagementView({ rolesConfig }: {
                     <span className="flex flex-wrap items-center gap-1.5">
                       <span className="truncate text-sm font-semibold text-v-text">{nombre}</span>
                       {isSelf && <span className="rounded-full bg-v-accent px-1.5 py-px text-[10px] font-bold text-white">{L('YOU', 'TÚ')}</span>}
+                      {user.principal && <span title={L('Created the center. Only this person can change or remove other administrators.', 'Creó el centro. Solo esta persona puede cambiar o quitar a otros administradores.')}
+                        className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-px text-[10px] font-bold text-amber-700 dark:text-amber-400"><Crown size={10} /> {L('Main admin', 'Admin principal')}</span>}
                       {!isActive && <span className="rounded-full bg-v-danger/10 px-1.5 py-px text-[10px] font-semibold text-v-danger">{t('usuarios.inactivo2')}</span>}
                       {!user.email_confirmed && <span className="rounded-full bg-v-warning/15 px-1.5 py-px text-[10px] font-semibold text-v-warning">{L('Unconfirmed', 'Sin confirmar')}</span>}
                     </span>

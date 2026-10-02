@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { useOAuthProviders } from '@/lib/use-oauth-providers'
 import { AuthShell } from '@/components/ui/auth-shell'
+import { AceptarTerminos } from '@/components/ui/aceptar-terminos'
 import { aceptarInvitacion, type AceptarState } from './actions'
 
 export type InvitacionInfo = {
@@ -38,6 +39,7 @@ const ERRORES: Record<NonNullable<AceptarState['error']> | 'alreadyMember' | 'oa
   emailMismatch: ['This invitation is for a different email.', 'Esta invitación es para otro correo.'],
   password: ['The password must have at least 8 characters.', 'La contraseña debe tener al menos 8 caracteres.'],
   mismatch: ['The passwords do not match.', 'Las contraseñas no coinciden.'],
+  terms: ['You must accept the Terms of Service and the Privacy Policy.', 'Debes aceptar los Términos y condiciones y la Política de privacidad.'],
   seats: ['The center has no seats available. Let them know so they can free one.', 'El centro no tiene cupos disponibles. Avísales para que liberen uno.'],
   emailTaken: ['That email already has an account. Sign in, or use another email.', 'Ese correo ya tiene una cuenta. Inicia sesión o usa otro correo.'],
   mail: ['We could not send the confirmation email. Try again in a few minutes.', 'No pudimos enviar el correo de confirmación. Intenta de nuevo en unos minutos.'],
@@ -92,18 +94,19 @@ export function InvitacionForm({ info, errorOAuth }: { info: InvitacionInfo | nu
   const L = (e: string, s: string) => (en ? e : s)
   const [state, action, pending] = useActionState<AceptarState, FormData>(aceptarInvitacion, {})
   const [showPwd, setShowPwd] = useState(false)
+  const [acepta, setAcepta] = useState(false)
   const proveedores = useOAuthProviders()
   const [conectando, setConectando] = useState<'google' | 'azure' | null>(null)
   const [errorProveedor, setErrorProveedor] = useState(errorOAuth && errorOAuth in ERRORES ? errorOAuth as keyof typeof ERRORES : errorOAuth ? 'generic' : null)
 
   // Google/Microsoft: al volver, /auth/callback une la cuenta al centro con este token.
   const conProveedor = async (provider: 'google' | 'azure') => {
-    if (!info) return
+    if (!info || !acepta) return
     setConectando(provider); setErrorProveedor(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?invite=${encodeURIComponent(info.token)}`,
+        redirectTo: `${window.location.origin}/auth/callback?invite=${encodeURIComponent(info.token)}&terminos=1`,
         ...(provider === 'azure' ? { scopes: 'email profile openid offline_access' } : {}),
       },
     })
@@ -145,6 +148,7 @@ export function InvitacionForm({ info, errorOAuth }: { info: InvitacionInfo | nu
     const vence = new Date(info.expiresAt).toLocaleDateString(en ? 'en-US' : 'es-PE', { day: 'numeric', month: 'long' })
     cuerpo = (
       <div>
+      <AceptarTerminos checked={acepta} onChange={setAcepta} className="mb-5" />
       {(() => {
         const activos = ([['google', 'Google', GoogleIcon], ['azure', 'Microsoft', MicrosoftIcon]] as const).filter(([p]) => proveedores?.[p])
         if (!activos.length) return errorProveedor ? <p role="alert" className="mb-4 text-sm text-v-danger">{ERRORES[errorProveedor][en ? 0 : 1]}</p> : null
@@ -153,7 +157,7 @@ export function InvitacionForm({ info, errorOAuth }: { info: InvitacionInfo | nu
       <p className="mb-2.5 text-sm font-medium text-v-muted">{L('Sign up in one step', 'Regístrate en un paso')}</p>
       <div className={`grid gap-3 ${activos.length > 1 ? 'grid-cols-2' : ''}`}>
         {activos.map(([p, nombre, Icono]) => (
-          <button key={p} type="button" onClick={() => conProveedor(p)} disabled={!!conectando || pending}
+          <button key={p} type="button" onClick={() => conProveedor(p)} disabled={!!conectando || pending || !acepta}
             className="flex h-12 items-center justify-center gap-2 rounded-full border border-v-border bg-v-elevated text-sm font-medium transition-colors hover:bg-v-fill disabled:opacity-60">
             {conectando === p ? <Loader2 className="size-4 animate-spin" /> : <Icono />} {nombre}
           </button>
@@ -178,6 +182,7 @@ export function InvitacionForm({ info, errorOAuth }: { info: InvitacionInfo | nu
       <form key={JSON.stringify(state.values ?? {})} action={action} className="flex flex-col gap-3">
         <input type="hidden" name="token" value={info.token} />
         <input type="hidden" name="locale" value={locale} />
+        <input type="hidden" name="terminos" value={acepta ? '1' : ''} />
         {info.role === 'padre' && info.paciente && (
           <p className="rounded-v-sm bg-rose-500/10 px-3.5 py-3 text-sm text-rose-700 dark:text-rose-300">
             {L(`You will be linked to ${info.paciente}.`, `Quedarás vinculado a ${info.paciente}.`)}
@@ -206,7 +211,7 @@ export function InvitacionForm({ info, errorOAuth }: { info: InvitacionInfo | nu
             </motion.p>
           )}
         </AnimatePresence>
-        <button type="submit" disabled={pending} className="v-brand mt-3 h-12 rounded-full text-[15px] font-semibold transition-transform active:scale-95 disabled:opacity-60">
+        <button type="submit" disabled={pending || !acepta} className="v-brand mt-3 h-12 rounded-full text-[15px] font-semibold transition-transform active:scale-95 disabled:opacity-60">
           {pending ? L('Creating account…', 'Creando cuenta…') : L('Create my account', 'Crear mi cuenta')}
         </button>
         <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-v-subtle">

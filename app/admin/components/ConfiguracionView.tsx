@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import {
   User, Lock, Palette, Eye, EyeOff, Save, Loader2, Check, Camera, Mail, Phone,
   LogOut, AlertTriangle, HardDrive, Database, RefreshCw, Crown, ArrowUpRight, Coins,
-  Sun, Moon, Languages, Building2, Shield, Stethoscope, ClipboardList, Heart, KeyRound, Trash2, CalendarDays, Clock, LogIn,
+  Sun, Moon, Languages, Building2, Shield, Stethoscope, ClipboardList, Heart, KeyRound, Trash2, CalendarDays, Clock, LogIn, Sparkles,
 } from 'lucide-react'
 import { TwoFactorCard } from '@/components/ui/two-factor-card'
 import { useI18n } from '@/lib/i18n-context'
@@ -20,6 +20,8 @@ import { useToast } from '@/components/Toast'
 import { fileUrl } from '@/lib/file-url'
 import { TokensPrediccion } from '@/components/TokensPrediccion'
 import { cambiarClaveConCorreo } from '@/components/ui/cambiar-clave'
+import { TarjetaIA } from '@/components/ui/tarjeta-ia'
+import { BotonEliminarCuenta, SalidaCentro } from '@/components/cuenta/SalidaCuenta'
 
 type Tab = 'perfil' | 'seguridad' | 'preferencias' | 'centro'
 
@@ -346,6 +348,7 @@ function TabSeguridad() {
           )}
         </AnimatePresence>
       </Seccion>
+      <BotonEliminarCuenta />
     </div>
   )
 }
@@ -421,6 +424,13 @@ function TabCentro() {
   return (
     <div className="space-y-4">
       <TokensPrediccion />
+      <Seccion icon={Sparkles} title={L('Artificial intelligence', 'Inteligencia artificial')} sub={L('ARIA, reports, analyses and translations', 'ARIA, informes, análisis y traducciones')}>
+        <TarjetaIA ambito="centro" />
+        <p className="mt-3 text-[11px] text-v-subtle">
+          {L('When on, only the context needed for each request is sent to our AI provider. It is not used to train models. ', 'Si está activada, solo se envía al proveedor de IA el contexto necesario para cada consulta. No se usa para entrenar modelos. ')}
+          <a href={`/${locale}/privacidad#ia`} target="_blank" rel="noopener noreferrer" className="font-semibold text-v-accent hover:underline">{L('Learn more', 'Más información')}</a>
+        </p>
+      </Seccion>
       <Seccion icon={Coins} tone="bg-v-success/15 text-v-success" title={L('Center currency', 'Moneda del centro')} sub={L('Prices, payments, reports and receipts', 'Precios, pagos, reportes y recibos')}>
         <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 sm:grid-cols-[repeat(3,minmax(0,1fr))] xl:grid-cols-[repeat(5,minmax(0,1fr))]">
           {Object.values(CURRENCIES).map(cur => {
@@ -519,6 +529,7 @@ function TabCentro() {
           })()
         ) : null}
       </Seccion>
+      <SalidaCentro />
     </div>
   )
 }

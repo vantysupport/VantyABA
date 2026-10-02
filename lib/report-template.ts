@@ -1,4 +1,4 @@
-import { PLATFORM_NAME } from '@/lib/branding'
+import { PLATFORM_NAME, creditoVanty } from '@/lib/branding'
 import type { CentroBranding } from '@/lib/centro-branding'
 // lib/report-template.ts
 //
@@ -708,6 +708,15 @@ export function headerInstitucional(tipoInforme: string, branding: CentroBrandin
   })
 }
 
+// ─── Leyenda "Generado con tecnología de Vanty ABA" ─────────────────────────
+export function creditoVantyParrafo(en = _reportLocale === 'en'): Paragraph {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 20 },
+    children: [new TextRun({ text: creditoVanty(en), size: 14, font: FONT, color: '0063D8', bold: true })],
+  })
+}
+
 // ─── Pie de página oficial ───────────────────────────────────────────────────
 export function piePaginaOficial(branding: CentroBranding): Footer {
   return new Footer({
@@ -723,6 +732,7 @@ export function piePaginaOficial(branding: CentroBranding): Footer {
           new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 15, font: FONT, color: '94A3B8' }),
         ],
       }),
+      creditoVantyParrafo(),
     ],
   })
 }

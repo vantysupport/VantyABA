@@ -2464,7 +2464,7 @@
    "fisico": "📦 Físico"
   },
   "userManagementView": {
-   "noPodesCambiarElRol": "No podés cambiar el rol de un Director.",
+   "noPodesCambiarElRol": "Solo el administrador principal (quien creó el centro) puede cambiar el rol de un director.",
    "noPodesCambiarteElRol": "No podés cambiarte el rol a ti mismo.",
    "limiteDeAlcanzadoSoloEl": "Límite de \"{v1}\" alcanzado ({v2}/{v3}). Solo el programador puede ampliarlo.",
    "rolActualizado": "Rol actualizado → {v1}",
@@ -3179,6 +3179,7 @@
     "required": "Completa nombre, dirección y teléfono del centro, y tu nombre.",
     "email": "Ingresa un correo válido.",
     "password": "La contraseña debe tener al menos 8 caracteres.",
+    "terms": "Debes aceptar los Términos y condiciones y la Política de privacidad.",
     "plan": "El plan elegido no está disponible.",
     "emailTaken": "Ese correo ya tiene una cuenta. Inicia sesión.",
     "generic": "No pudimos crear el centro. Inténtalo de nuevo.",

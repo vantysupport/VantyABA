@@ -9,16 +9,26 @@ import { Building2, Users } from 'lucide-react'
 
 const ease = [0.22, 1, 0.36, 1] as const
 
-// Haz de luz que sale de ARIA hacia un lado
+// Ritmo compartido: cada PULSO segundos ARIA emite un anillo y un destello hacia cada lado
+const PULSO = 1.2
+
+// Haz de luz que sale de ARIA hacia un lado. Los extremos se desvanecen con una máscara (sin cortes
+// bruscos) y el destello nace y muere con opacidad, sincronizado con los anillos.
 function Haz({ hacia }: { hacia: 'izq' | 'der' }) {
   const quieto = useReducedMotion()
+  // Posiciones en % del ancho del destello (la pista mide 2.5 veces el destello); la izquierda es el espejo
+  const ida = [-100, -28, 170, 260]
+  const desdeAria = (hacia === 'der' ? ida : ida.map(v => 150 - v)).map(v => `${v}%`)
+  const mascara = 'linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent)'
   return (
-    <div className="relative h-[3px] w-full overflow-hidden rounded-full bg-v-accent-soft">
+    <div className="relative h-[3px] w-full" style={{ maskImage: mascara, WebkitMaskImage: mascara }}>
+      <span className="absolute inset-0 rounded-full bg-v-accent-soft" />
       {!quieto && (
-        <motion.span className="absolute inset-y-0 w-20 rounded-full"
-          style={{ background: 'linear-gradient(90deg, transparent, #01abfc, #0063d8, transparent)', boxShadow: '0 0 14px 2px rgba(1,171,252,0.6)' }}
-          animate={{ left: hacia === 'der' ? ['-30%', '110%'] : ['110%', '-30%'] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.3 }} />
+        <motion.span className="absolute inset-y-0 left-0 w-[40%] rounded-full"
+          style={{ background: 'linear-gradient(90deg, transparent, #01abfc, #0063d8, transparent)', boxShadow: '0 0 10px 1px rgba(1,171,252,0.55)', willChange: 'transform, opacity' }}
+          initial={{ x: desdeAria[0], opacity: 0 }}
+          animate={{ x: desdeAria, opacity: [0, 1, 1, 0] }}
+          transition={{ duration: PULSO, repeat: Infinity, ease: 'easeOut', times: [0, 0.2, 0.75, 1] }} />
       )}
     </div>
   )
@@ -92,7 +102,7 @@ export function ConexionEnVivo({ en }: { en: boolean }) {
 
   return (
     <div>
-      <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_220px_minmax(0,1fr)] lg:gap-0">
+      <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_240px_minmax(0,1fr)] lg:gap-0">
         {lados.map((lado, i) => (
           <motion.div key={lado.titulo} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.7, delay: i * 0.15, ease }} className={i === 1 ? 'lg:order-3' : 'lg:order-1'}>
@@ -108,22 +118,36 @@ export function ConexionEnVivo({ en }: { en: boolean }) {
           </motion.div>
         ))}
 
-        {/* ARIA al centro, conectando ambos lados */}
-        <div className="relative order-first flex items-center justify-center py-1 lg:order-2 lg:py-2 lg:pt-10">
-          <div className="absolute inset-x-0 top-1/2 hidden -translate-y-1/2 items-center justify-between lg:flex lg:pt-10">
-            <div className="w-[34%]"><Haz hacia="izq" /></div>
-            <div className="w-[34%]"><Haz hacia="der" /></div>
-          </div>
-          <div className="relative grid place-items-center" style={{ width: 'clamp(112px, 26vw, 160px)', height: 'clamp(112px, 26vw, 160px)' }}>
+        {/* ARIA al centro, conectando ambos lados. En escritorio el pt-12 compensa el título de cada foto
+            (size-9 + mb-3) para que ARIA y los haces queden a la altura del centro de las fotos. */}
+        <div className="relative order-first flex items-center justify-center pb-8 pt-1 lg:order-2 lg:pb-0 lg:pt-12">
+          <div className="relative grid size-[132px] place-items-center lg:size-[150px]">
+            {/* Haces: del borde de cada foto al anillo de ARIA */}
+            <div aria-hidden className="absolute right-full top-1/2 hidden w-[45px] -translate-y-1/2 lg:block"><Haz hacia="izq" /></div>
+            <div aria-hidden className="absolute left-full top-1/2 hidden w-[45px] -translate-y-1/2 lg:block"><Haz hacia="der" /></div>
+
+            <span aria-hidden className="absolute inset-0 rounded-full border border-v-accent/20 bg-white/60 shadow-v backdrop-blur-sm" />
+            <span aria-hidden className="absolute inset-3 rounded-full" style={{ background: 'radial-gradient(circle, rgba(1,171,252,0.28), transparent 70%)' }} />
             {!quieto && [0, 1].map(k => (
-              <motion.span key={k} aria-hidden className="absolute inset-4 rounded-full border-2 border-v-accent/35"
-                animate={{ scale: [1, 1.45], opacity: [0.7, 0] }} transition={{ duration: 2.4, repeat: Infinity, delay: k * 1.2 }} />
+              <motion.span key={k} aria-hidden className="absolute inset-0 rounded-full border-2 border-v-accent/30"
+                style={{ willChange: 'transform, opacity' }}
+                initial={{ scale: 1, opacity: 0 }}
+                animate={{ scale: [1, 1.07, 1.35], opacity: [0, 0.55, 0] }}
+                transition={{ duration: PULSO * 2, repeat: Infinity, delay: k * PULSO, ease: 'easeOut', times: [0, 0.2, 1] }} />
             ))}
-            <span aria-hidden className="absolute inset-6 rounded-full" style={{ background: 'radial-gradient(circle, rgba(1,171,252,0.35), transparent 70%)', filter: 'blur(8px)' }} />
-            <motion.div animate={quieto ? undefined : { y: [0, -10, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }} className="relative">
-              <Image src="/aria/pose-2.webp" alt="ARIA" width={150} height={150} style={{ width: 'clamp(84px, 20vw, 128px)', height: 'auto' }} className="drop-shadow-[0_18px_30px_rgba(0,50,140,0.35)]" />
+
+            {/* Sombra en el piso: se achica cuando ARIA sube (más barata que un drop-shadow animado) */}
+            <motion.span aria-hidden className="absolute bottom-[14px] h-2.5 w-16 rounded-full bg-[#0b3d91]/25 blur-[3px]"
+              animate={quieto ? undefined : { scaleX: [1, 0.78, 1], opacity: [0.9, 0.55, 0.9] }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }} />
+            <motion.div className="relative -mt-2" style={{ willChange: 'transform' }}
+              animate={quieto ? undefined : { y: [0, -8, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}>
+              <Image src="/aria/aria-conecta.webp" alt="ARIA" width={180} height={180} priority={false}
+                className="size-[108px] object-contain lg:size-[126px]" />
             </motion.div>
-            <span className="v-brand absolute -bottom-2 rounded-full px-3.5 py-1 text-xs font-bold" style={{ boxShadow: 'none' }}>ARIA</span>
+
+            {/* Etiqueta debajo del círculo, sin tapar a ARIA */}
+            <span className="v-brand absolute left-1/2 top-full mt-2 -translate-x-1/2 rounded-full px-3.5 py-1 text-xs font-bold tracking-wide" style={{ boxShadow: 'none' }}>ARIA</span>
           </div>
         </div>
       </div>

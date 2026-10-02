@@ -8,6 +8,7 @@ import {
   Copyright, Scale, PauseCircle, RefreshCw, Landmark, Mail, Stethoscope, KeyRound, HeartHandshake,
 } from 'lucide-react'
 import { PLATFORM_NAME } from '@/lib/branding'
+import { EMPRESA } from '@/lib/empresa'
 import { localeServidor, metadatosPagina } from '@/lib/seo'
 import LegalPage, { Lista, Destacado, type SeccionLegal } from '@/components/legal/LegalPage'
 
@@ -26,8 +27,9 @@ function secciones(en: boolean): SeccionLegal[] {
   return [
     {
       id: 'aceptacion', Icon: FileCheck2, title: L('Acceptance of the terms', 'Aceptación de los términos'),
-      body: <p>{L(`These Terms of Service govern access to and use of the ${P} platform. By creating an account or using the platform, you declare that you have read, understood and accepted these terms, as well as the Privacy Policy. If you do not agree, you must refrain from using the platform.`,
-        `Estos Términos de Servicio regulan el acceso y uso de la plataforma ${P}. Al crear una cuenta o utilizar la plataforma, declaras haber leído, comprendido y aceptado estos términos, así como la Política de Privacidad. Si no estás de acuerdo, debes abstenerte de utilizar la plataforma.`)}</p>,
+      body: <><p>{L(`${P} is provided under the trade name "${EMPRESA.nombreComercial}", with Peruvian taxpayer number (RUC) ${EMPRESA.ruc}. Contact: ${EMPRESA.email}.`,
+        `${P} es prestado bajo el nombre comercial "${EMPRESA.nombreComercial}", con RUC ${EMPRESA.ruc}. Contacto: ${EMPRESA.email}.`)}</p><p>{L(`These Terms of Service govern access to and use of the ${P} platform. By creating an account or using the platform, you declare that you have read, understood and accepted these terms, as well as the Privacy Policy. If you do not agree, you must refrain from using the platform.`,
+        `Estos Términos de Servicio regulan el acceso y uso de la plataforma ${P}. Al crear una cuenta o utilizar la plataforma, declaras haber leído, comprendido y aceptado estos términos, así como la Política de Privacidad. Si no estás de acuerdo, debes abstenerte de utilizar la plataforma.`)}</p></>,
     },
     {
       id: 'servicio', Icon: LayoutGrid, title: L('Description of the service', 'Descripción del servicio'),
@@ -61,8 +63,8 @@ function secciones(en: boolean): SeccionLegal[] {
     },
     {
       id: 'datos', Icon: FolderLock, title: L('Clinical information and personal data', 'Información clínica y datos personales'),
-      body: <p>{L(`The information recorded by each center belongs to that center and to the data subjects. ${P} processes it on the center's behalf and solely to provide the service, in accordance with the Privacy Policy and Peru's Personal Data Protection Law (Law No. 29733).`,
-        `La información registrada por cada centro pertenece a dicho centro y a los titulares de los datos. ${P} la trata por cuenta del centro y únicamente para prestar el servicio, conforme a la Política de Privacidad y a la Ley de Protección de Datos Personales (Ley N.º 29733).`)}</p>,
+      body: <p>{L(`Each center is the data controller of the clinical information it records, and patients or their representatives keep the rights that the law grants them over their personal data. ${P} processes that information as a data processor, on the center's behalf and solely to provide the service, in accordance with the Privacy Policy, the Data Processing Agreement (vanty.xyz/acuerdo-encargo) and Peru's Personal Data Protection Law (Law No. 29733).`,
+        `Cada centro es responsable del tratamiento de la información clínica que registra, y los pacientes o sus representantes mantienen los derechos que la legislación les reconoce sobre sus datos personales. ${P} trata esa información como encargado del tratamiento, por cuenta del centro y únicamente para prestar el servicio, conforme a la Política de Privacidad, al Acuerdo de Encargo de Tratamiento (vanty.xyz/acuerdo-encargo) y a la Ley de Protección de Datos Personales (Ley N.º 29733).`)}</p>,
     },
     {
       id: 'ia', Icon: Sparkles, title: L('Artificial intelligence', 'Inteligencia artificial'),
@@ -79,8 +81,8 @@ function secciones(en: boolean): SeccionLegal[] {
     },
     {
       id: 'planes', Icon: CreditCard, title: L('Plans and payments', 'Planes y pagos'),
-      body: <p>{L('Centers access the platform under the plan they contract, which defines the available features and usage limits. Commercial conditions are agreed with each center. Family access to the portal is managed by the center, and any purchase made in a center\'s store is governed by that center\'s conditions.',
-        'Los centros acceden a la plataforma según el plan contratado, que define las funcionalidades disponibles y los límites de uso. Las condiciones comerciales se acuerdan con cada centro. El acceso de las familias al portal lo gestiona el centro, y cualquier compra realizada en la tienda de un centro se rige por las condiciones de dicho centro.')}</p>,
+      body: <p>{L('Centers access the platform under the plan they contract, which defines the available features and usage limits. Commercial conditions are agreed with each center. Family access to the portal is managed by the center, and any purchase made in a center\'s store is governed by that center\'s conditions. Prices do not include taxes; any applicable tax for the customer\'s country is calculated and shown at checkout.',
+        'Los centros acceden a la plataforma según el plan contratado, que define las funcionalidades disponibles y los límites de uso. Las condiciones comerciales se acuerdan con cada centro. El acceso de las familias al portal lo gestiona el centro, y cualquier compra realizada en la tienda de un centro se rige por las condiciones de dicho centro. Los precios no incluyen impuestos; los que correspondan según el país del cliente se calculan y muestran al momento del pago.')}</p>,
     },
     {
       id: 'disponibilidad', Icon: Activity, title: L('Service availability', 'Disponibilidad del servicio'),
@@ -114,8 +116,8 @@ function secciones(en: boolean): SeccionLegal[] {
     },
     {
       id: 'contacto', Icon: Mail, title: L('Contact', 'Contacto'),
-      body: <p>{L(`For questions about your account or the care you receive, contact your center through the channels available in the platform. For matters related to the ${P} platform, you may write to us through the support section.`,
-        `Para consultas sobre tu cuenta o la atención que recibes, comunícate con tu centro a través de los canales disponibles en la plataforma. Para asuntos relacionados con la plataforma ${P}, puedes escribirnos desde la sección de soporte.`)}</p>,
+      body: <p>{L(`For questions about your account or the care you receive, contact your center through the channels available in the platform. For matters related to the ${P} platform, you may write to us through the support section or at ${EMPRESA.email}. To file a claim or complaint, use our virtual Complaints Book at vanty.xyz/libro-de-reclamaciones.`,
+        `Para consultas sobre tu cuenta o la atención que recibes, comunícate con tu centro a través de los canales disponibles en la plataforma. Para asuntos relacionados con la plataforma ${P}, puedes escribirnos desde la sección de soporte o a ${EMPRESA.email}. Si deseas presentar un reclamo o una queja, usa nuestro Libro de Reclamaciones virtual en vanty.xyz/libro-de-reclamaciones.`)}</p>,
     },
   ]
 }

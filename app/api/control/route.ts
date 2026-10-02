@@ -8,6 +8,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { createClient } from '@/lib/supabase-server'
 import { requireProgramador } from '@/lib/require-programador'
 import { logAuditEvent } from '@/lib/audit-log'
+import { eliminarCentro } from '@/lib/eliminar-centro'
+import { lemonConfigurado, variantesDeLaTienda, type VarianteLemon } from '@/lib/lemon'
 
 // Vanty platform console API.
 //  • GET  → public-safe platform status (maintenance + global module switches). Logged-in consumers only (proxy).
@@ -302,6 +304,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    case 'delete_centro': {
+      // Borra el centro con toda su información y las cuentas (correos) de su equipo y sus familias.
+      // Se exige escribir el nombre exacto del centro, como en la confirmación del panel.
+      const centroId = uuid(body.centro_id)
+      if (!centroId) return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
+      const { data: centro } = await supabaseAdmin.from('centros').select('id, name, logo_url').eq('id', centroId).maybeSingle()
+      if (!centro) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+      if (str(body.confirm_name, 200) !== (centro.name ?? '').trim()) return NextResponse.json({ error: 'name_mismatch' }, { status: 400 })
+
+      const r = await eliminarCentro(centroId, { operador: auth.userId })
+      if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.error === 'has_programador' ? 409 : 500 })
+      await audit('Centro eliminado', { centroId, name: centro.name, cuentas: r.cuentas, pacientes: r.pacientes, resultado: r.resultado, cuentasFallidas: r.cuentasFallidas })
+      return NextResponse.json({ ok: true, cuentas: r.cuentas, cuentas_fallidas: r.cuentasFallidas, pacientes: r.pacientes })
+    }
+
     case 'extend_trial': {
       const centroId = uuid(body.centro_id)
       const days = int(body.days, 1, 90)
@@ -484,6 +501,50 @@ export async function POST(req: NextRequest) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       await audit('Configuración de plataforma', { patch })
       return NextResponse.json({ ok: true })
+    }
+
+    case 'lemon_sync_variantes': {
+      // Trae los IDs de variante desde Lemon Squeezy y los asocia por nombre:
+      // producto (Starter / Professional / Clinic / Créditos de IA) y variante (región × ciclo).
+      if (!lemonConfigurado()) return NextResponse.json({ error: 'lemon_no_configurado' }, { status: 400 })
+      let variantes: VarianteLemon[]
+      try { variantes = await variantesDeLaTienda() } catch (e) {
+        return NextResponse.json({ error: e instanceof Error ? e.message : 'lemon_error' }, { status: 502 })
+      }
+      const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+      const REGION_CICLO: Record<string, [string, 'mensual' | 'anual']> = {
+        'plan mensual': ['sudamerica', 'mensual'], 'plan anual': ['sudamerica', 'anual'],
+        'monthly plan': ['norteamerica', 'mensual'], 'annual plan': ['norteamerica', 'anual'],
+        'cuota mensual': ['europa', 'mensual'], 'cuota anual': ['europa', 'anual'],
+      }
+      const publicadas = variantes.filter(v => v.estado !== 'draft')
+      const { data: planes } = await supabaseAdmin.from('plans').select('id, code')
+      const resumen: Record<string, Record<string, Record<string, string>>> = {}
+      const faltan: string[] = []
+      for (const plan of planes ?? []) {
+        const delPlan = publicadas.filter(v => norm(v.producto).includes(plan.code))
+        if (!delPlan.length) continue
+        const regiones: Record<string, Record<string, string>> = {}
+        for (const v of delPlan) {
+          const rc = REGION_CICLO[norm(v.nombre)]
+          if (rc) (regiones[rc[0]] ??= {})[rc[1]] = v.id
+        }
+        for (const [nombre, [r, c]] of Object.entries(REGION_CICLO)) if (!regiones[r]?.[c]) faltan.push(`${plan.code}: ${nombre}`)
+        const base = regiones.sudamerica ?? {}
+        const { error } = await supabaseAdmin.from('plans').update({
+          lemon_variantes: regiones,
+          ...(base.mensual ? { lemon_variant_mensual: base.mensual } : {}),
+          ...(base.anual ? { lemon_variant_anual: base.anual } : {}),
+        }).eq('id', plan.id)
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        resumen[plan.code] = regiones
+      }
+      const deTokens = publicadas.filter(v => /credito|token/.test(norm(v.producto)))
+      const tokens = deTokens.find(v => v.estado === 'published') ?? deTokens[0]
+      if (tokens) await supabaseAdmin.from('platform_settings').update({ lemon_variant_tokens: tokens.id, updated_at: new Date().toISOString(), updated_by: auth.userId }).eq('id', 1)
+      else faltan.push('créditos de IA')
+      await audit('Variantes de Lemon Squeezy sincronizadas', { resumen, tokens: tokens?.id ?? null, faltan })
+      return NextResponse.json({ ok: true, resumen, tokens: tokens?.id ?? null, faltan, total: variantes.length })
     }
 
     case 'security_events': {

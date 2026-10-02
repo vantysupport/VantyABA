@@ -5,6 +5,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { toBCP47 } from '@/lib/i18n'
 import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/components/ThemeContext'
+import { datosConsentimiento } from '@/lib/consentimiento'
 import {
   ArrowLeft, Baby, BarChart3, Brain, Calendar, Check, ChevronRight,
   ClipboardList, Edit, Link, Link2Off, Loader2, Mail, Plus, Save,
@@ -27,6 +28,7 @@ import { ScrollRow } from '@/components/ui/scroll-row'
 import { RellenarFicha, GestorPlantillas } from './PlantillasClinicas'
 import EvaluacionInicialAdmin from './EvaluacionInicialAdmin'
 import { confirmar } from '@/components/ui/confirmar'
+import { AceptarTerminos } from '@/components/ui/aceptar-terminos'
 
 // ── Color badge por diagnóstico ────────────────────────────────────────────
 const DX_BORDER: Record<string, string> = {
@@ -1181,6 +1183,7 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
   // Nuevo paciente
   const [showNew, setShowNew] = useState(false)
   const [newForm, setNewForm] = useState({ name:'', birth_date:'', diagnosis:'' })
+  const [consentimiento, setConsentimiento] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // ── Edición inline del nombre en el header ────────────────────────────────
@@ -1259,6 +1262,7 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
   // ── Crear nuevo ───────────────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!newForm.name.trim()) { toast.error(t('pacientes.nombreRequerido')); return }
+    if (!consentimiento) return
     // Bloqueo de límite de pacientes (lo define el programador en /control).
     try {
       const st = await getControlStatus()
@@ -1278,10 +1282,12 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
         birth_date: newForm.birth_date || null,
         diagnosis: newForm.diagnosis.trim() || null,
         age: newForm.birth_date ? calcularEdadNumerica(newForm.birth_date) : null,
+        ...(await datosConsentimiento()),
       }).select().single()
       if (error) throw error
       toast.success(t('pacientes.creado'))
       setNewForm({ name:'', birth_date:'', diagnosis:'' })
+      setConsentimiento(false)
       setShowNew(false)
       await cargar()
       if (data) selectPatient(data)
@@ -1561,12 +1567,13 @@ export default function PatientsView({ onPatientSelect, initialChildId, initialT
             </div>
           ))}
         </div>
+        <AceptarTerminos tipo="paciente" checked={consentimiento} onChange={setConsentimiento} />
         <div className="flex gap-3 pt-1">
           <button onClick={()=>setShowNew(false)}
             className="flex-1 rounded-full border border-v-border py-3 text-sm font-semibold text-v-muted transition-colors hover:bg-v-fill">
             {t('common.cancelar')}
           </button>
-          <button onClick={handleCreate} disabled={saving||!newForm.name.trim()}
+          <button onClick={handleCreate} disabled={saving||!newForm.name.trim()||!consentimiento}
             className="v-brand flex flex-1 items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold disabled:opacity-50">
             {saving ? <Loader2 size={14} className="animate-spin"/> : <Plus size={14}/>}
             {t('pacientes.crear')}

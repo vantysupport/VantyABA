@@ -4,10 +4,11 @@ import { Suspense, useActionState, useRef, useState, type InputHTMLAttributes } 
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { MailCheck, ImagePlus, ArrowLeft, Gift, Users, FileBadge, Mail, MousePointerClick, LogIn, ExternalLink, Inbox, CheckCircle2 } from 'lucide-react'
+import { MailCheck, ImagePlus, ArrowLeft, Gift, Users, FileBadge, Mail, MousePointerClick, LogIn, ExternalLink, Inbox, CheckCircle2, ShieldAlert } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { FlipButton, FlipButtonBack, FlipButtonFront } from '@/components/ui/flip-button'
 import { AuthShell } from '@/components/ui/auth-shell'
+import { AceptarTerminos } from '@/components/ui/aceptar-terminos'
 import { createCentro, type CreateCentroState } from './actions'
 
 const inputClass =
@@ -67,6 +68,7 @@ function CreateCentroForm() {
   const ciclo = params.get('ciclo') === 'anual' ? 'anual' : 'mensual'
   const [state, action, pending] = useActionState<CreateCentroState, FormData>(createCentro, {})
   const [step, setStep] = useState<1 | 2>(1)
+  const [acepta, setAcepta] = useState(false)
   const stepOneRef = useRef<HTMLDivElement>(null)
 
   const next = () => {
@@ -120,6 +122,7 @@ function CreateCentroForm() {
         <Input name="fullName" required minLength={2} autoComplete="name" label={t('vanty.createCenter.fields.fullName')} />
         <Input name="email" type="email" required autoComplete="email" label={t('vanty.createCenter.fields.email')} />
         <Input name="password" type="password" required minLength={8} autoComplete="new-password" label={t('vanty.createCenter.fields.password')} />
+        <AceptarTerminos name="terminos" checked={acepta} onChange={setAcepta} acuerdo className="mt-1" />
         <AnimatePresence>
           {state.error && (
             <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-sm text-v-danger">
@@ -127,7 +130,7 @@ function CreateCentroForm() {
             </motion.p>
           )}
         </AnimatePresence>
-        <FlipButton type="submit" disabled={pending} className="mt-3 w-full">
+        <FlipButton type="submit" disabled={pending || !acepta} className="mt-3 w-full disabled:opacity-60">
           <FlipButtonFront>{pending ? t('vanty.createCenter.creating') : t('vanty.createCenter.submit')}</FlipButtonFront>
           <FlipButtonBack>{t('vanty.createCenter.submitHover')}</FlipButtonBack>
         </FlipButton>
@@ -143,11 +146,11 @@ function CentroCreado({ email, dias }: { email: string; dias: number }) {
   const { locale } = useI18n()
   const L = (e: string, s: string) => (locale === 'en' ? e : s)
   const dominio = email.split('@')[1]?.toLowerCase() || ''
-  const buzon = /gmail|googlemail/.test(dominio) ? { url: 'https://mail.google.com/mail/u/0/#inbox', nombre: 'Gmail' }
-    : /outlook|hotmail|live|msn/.test(dominio) ? { url: 'https://outlook.live.com/mail/0/inbox', nombre: 'Outlook' }
-    : /yahoo/.test(dominio) ? { url: 'https://mail.yahoo.com', nombre: 'Yahoo Mail' } : null
+  const buzon = /gmail|googlemail/.test(dominio) ? { url: 'https://mail.google.com/mail/u/0/#inbox', spam: 'https://mail.google.com/mail/u/0/#spam', nombre: 'Gmail' }
+    : /outlook|hotmail|live|msn/.test(dominio) ? { url: 'https://outlook.live.com/mail/0/inbox', spam: 'https://outlook.live.com/mail/0/junkemail', nombre: 'Outlook' }
+    : /yahoo/.test(dominio) ? { url: 'https://mail.yahoo.com', spam: 'https://mail.yahoo.com/d/folders/6', nombre: 'Yahoo Mail' } : null
   const pasos = [
-    { Icon: Inbox, t: L('Open your inbox', 'Abre tu bandeja de entrada'), d: L('Look for the email from Vanty ABA.', 'Busca el correo de Vanty ABA.') },
+    { Icon: Inbox, t: L('Open your inbox', 'Abre tu bandeja de entrada'), d: L('Look for the email from Vanty ABA. Not there? Check Spam or Promotions.', 'Busca el correo de Vanty ABA. ¿No está? Revisa Spam o Promociones.') },
     { Icon: MousePointerClick, t: L('Confirm your account', 'Confirma tu cuenta'), d: L('Click the button in the email.', 'Haz clic en el botón del correo.') },
     { Icon: LogIn, t: L('Sign in to your center', 'Entra a tu centro'), d: L(`Your ${dias}-day free trial starts right away.`, `Tu prueba gratis de ${dias} días empieza de inmediato.`) },
   ]
@@ -155,7 +158,7 @@ function CentroCreado({ email, dias }: { email: string; dias: number }) {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 220, damping: 24 }}>
       <div className="relative mx-auto grid size-20 place-items-center">
         <motion.span className="absolute inset-0 rounded-full bg-v-accent-soft" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: [0.6, 1.15, 1], opacity: 1 }} transition={{ duration: 0.7 }} />
-        <motion.span className="absolute inset-0 rounded-full ring-2 ring-v-accent/30" animate={{ scale: [1, 1.35], opacity: [0.6, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }} />
+        <motion.span className="absolute inset-0 rounded-full ring-2 ring-v-accent/30" initial={{ scale: 1, opacity: 0 }} animate={{ scale: [1, 1.07, 1.35], opacity: [0, 0.55, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', times: [0, 0.2, 1] }} />
         <span className="v-brand relative grid size-14 place-items-center rounded-full"><MailCheck className="size-7" strokeWidth={1.75} /></span>
       </div>
 
@@ -186,15 +189,30 @@ function CentroCreado({ email, dias }: { email: string; dias: number }) {
 
       <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
         {buzon && (
-          <a href={buzon.url} target="_blank" rel="noopener noreferrer" className="v-brand inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[15px] font-semibold">
+          <a href={buzon.url} target="_blank" rel="noopener noreferrer" className="v-brand inline-flex h-11 shrink-0 items-center sm:flex-1 justify-center gap-2 rounded-full text-[15px] font-semibold">
             {L(`Open ${buzon.nombre}`, `Abrir ${buzon.nombre}`)} <ExternalLink className="size-4" />
           </a>
         )}
-        <Link href={`/${locale}/login`} className={`inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-[15px] font-semibold ${buzon ? 'border border-v-border bg-v-elevated text-v-text hover:bg-v-fill' : 'v-brand'}`}>
+        <Link href={`/${locale}/login`} className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full text-[15px] font-semibold sm:flex-1 ${buzon ? 'border border-v-border bg-v-elevated text-v-text hover:bg-v-fill' : 'v-brand'}`}>
           <LogIn className="size-4" /> {L('Go to sign in', 'Ir a iniciar sesión')}
         </Link>
       </div>
-      <p className="mt-4 text-center text-xs text-v-subtle">{L("Didn't get it? Check your spam or promotions folder; it can take a couple of minutes.", '¿No te llegó? Revisa spam o promociones; puede tardar un par de minutos.')}</p>
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+        className="mt-4 flex items-start gap-3 rounded-v-sm border border-v-warning/30 bg-v-warning/10 p-3">
+        <ShieldAlert className="mt-0.5 size-5 shrink-0 text-v-warning" />
+        <div className="min-w-0 text-left">
+          <p className="text-sm font-semibold text-v-text">{L('Check your spam folder', 'Verifica tu bandeja de spam')}</p>
+          <p className="mt-0.5 text-xs text-v-muted">
+            {L("If the email isn't in your inbox, look in Spam or Promotions (it can take a couple of minutes). Mark it as \"Not spam\" so you get our emails.",
+              'Si el correo no está en tu bandeja de entrada, búscalo en Spam o Promociones (puede tardar un par de minutos). Márcalo como "No es spam" para recibir nuestros correos.')}
+          </p>
+          {buzon && (
+            <a href={buzon.spam} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-v-accent hover:underline">
+              {L(`Open spam in ${buzon.nombre}`, `Abrir spam en ${buzon.nombre}`)} <ExternalLink className="size-3" />
+            </a>
+          )}
+        </div>
+      </motion.div>
     </motion.div>
   )
 }

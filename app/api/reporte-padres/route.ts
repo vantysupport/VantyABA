@@ -10,6 +10,7 @@ import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { buildAIContext } from '@/lib/ai-context-builder'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { getApiCaller, canAccessChild, unauthorized, notFound } from '@/lib/api-auth'
+import { conIAOpcional } from '@/lib/ia-contexto'
 
 function parseLogro(val: any): number | null {
   if (val == null || val === "") return null
@@ -41,7 +42,12 @@ function getLangInstruction(locale: string): string {
   return lang + src
 }
 
+// Se genera también sin IA: si el centro no la activó, las secciones redactadas llevan una nota (lib/ia-contexto.ts)
 export async function POST(req: NextRequest) {
+  return conIAOpcional(req, () => generarInforme(req))
+}
+
+async function generarInforme(req: NextRequest) {
   const caller = await getApiCaller(req)
   if (!caller) return unauthorized()
   try {

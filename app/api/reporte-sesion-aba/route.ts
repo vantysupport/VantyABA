@@ -18,6 +18,7 @@ import {
 } from '@/lib/report-template'
 import { registrarDocumentoEmitido } from '@/lib/registrar-documento'
 import { getApiCaller, hasRole, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
+import { conIAOpcional } from '@/lib/ia-contexto'
 
 // ── Helpers de formato ────────────────────────────────────────────────────────
 const BD = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' }
@@ -298,7 +299,12 @@ async function buildDoc(d: any, childName: string, childAge: string, analisisIA:
 }
 
 // ── Handler principal ─────────────────────────────────────────────────────────
+// Se genera también sin IA: si el centro no la activó, las secciones redactadas llevan una nota (lib/ia-contexto.ts)
 export async function POST(req: NextRequest) {
+  return conIAOpcional(req, () => generarInforme(req))
+}
+
+async function generarInforme(req: NextRequest) {
   const caller = await getApiCaller(req)
   if (!caller) return unauthorized()
   if (!hasRole(caller, ROLES.staff)) return forbidden()

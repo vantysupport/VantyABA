@@ -21,6 +21,8 @@ import AIReportView from '@/app/admin/components/AIReportView'
 import DocumentosView from '@/app/admin/components/DocumentosView'
 import { RellenarFicha, GestorPlantillas } from '@/app/admin/components/PlantillasClinicas'
 import { useTheme } from '@/components/ThemeContext'
+import { AceptarTerminos } from '@/components/ui/aceptar-terminos'
+import { datosConsentimiento } from '@/lib/consentimiento'
 
 function calcularEdad(fecha: string) {
   if (!fecha) return 'N/D'
@@ -871,6 +873,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
   const [showCrear, setShowCrear] = useState(false)
   const [saving, setSaving] = useState(false)
   const [newForm, setNewForm] = useState({ name: '', birth_date: '', diagnosis: '' })
+  const [consentimiento, setConsentimiento] = useState(false)
 
   // ── Vincular cuenta padre ──
   const [showVincular, setShowVincular] = useState(false)
@@ -894,6 +897,7 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
 
   const handleCrear = async () => {
     if (!newForm.name.trim()) { toast.error(t('auto.misPacientes.elNombreEsRequerido')); return }
+    if (!consentimiento) return
     setSaving(true)
     try {
       const { data, error } = await supabase.from('children').insert({
@@ -901,10 +905,12 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
         birth_date: newForm.birth_date || null,
         diagnosis: newForm.diagnosis.trim() || null,
         is_active: true,
+        ...(await datosConsentimiento()),
       }).select().single()
       if (error) throw error
       toast.success(t('auto.misPacientes.pacienteCreadoCorrectamente'))
       setNewForm({ name: '', birth_date: '', diagnosis: '' })
+      setConsentimiento(false)
       setShowCrear(false)
       await cargar()
       verPaciente(data)
@@ -1235,12 +1241,13 @@ export default function MisPacientes({ onPatientSelect }: { onPatientSelect?: (i
                 </div>
               ))}
             </div>
+            <div className="v-scope"><AceptarTerminos tipo="paciente" checked={consentimiento} onChange={setConsentimiento} /></div>
             <div className="flex gap-3 pt-1">
               <button onClick={() => setShowCrear(false)}
                 className="flex-1 py-3 rounded-xl font-bold text-sm border border-slate-200 dark:border-[#30363d] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1c2128]">
                 {t('auto.misPacientes.cancelar2')}
               </button>
-              <button onClick={handleCrear} disabled={saving || !newForm.name.trim()}
+              <button onClick={handleCrear} disabled={saving || !newForm.name.trim() || !consentimiento}
                 className="flex-1 py-3 rounded-xl font-bold text-sm bg-sky-600 text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-sky-700">
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 {t('auto.misPacientes.crearPaciente')}

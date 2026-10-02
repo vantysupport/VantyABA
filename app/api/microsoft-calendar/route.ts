@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCentroBranding } from '@/lib/centro-branding'
 import { logServerError } from '@/lib/log-server-error'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { especialistasInvitados } from '@/lib/cita-invitados'
 import { authorizeCalendarGet, authorizeCalendarPost, internalApiHeaders, signOAuthState } from '@/lib/calendar-integration'
 
 const MS_CLIENT_ID     = process.env.MICROSOFT_CALENDAR_CLIENT_ID     || ''
@@ -180,12 +181,18 @@ export async function POST(req: NextRequest) {
         `<br/>🏫 Centro ${centro.name}`,
       ].filter(Boolean).join('<br/>')
 
-      const attendees = []
+      const attendees: { emailAddress: { address: string; name: string }; type: string }[] = []
       if (parentEmail) {
         attendees.push({
           emailAddress: { address: parentEmail, name: `Familia — ${patientName}` },
           type: 'required',
         })
+      }
+      // Especialista(s) asignado(s): reciben la cita en su calendario personal como invitación
+      for (const esp of await especialistasInvitados(appointmentId, userId, appointment.specialistId)) {
+        if (!attendees.some(a => a.emailAddress.address.toLowerCase() === esp.email.toLowerCase())) {
+          attendees.push({ emailAddress: { address: esp.email, name: esp.nombre }, type: 'required' })
+        }
       }
 
       const event: any = {

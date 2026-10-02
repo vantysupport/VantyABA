@@ -725,7 +725,7 @@ export default function AdminDashboard() {
           <AvisoPago />
           {currentView !== 'usuarios' && (
             <div className={`flex-1 ${currentView === 'ninos' || currentView === 'agenda' || currentView === 'chat-especialistas' ? 'min-h-0 h-full flex flex-col overflow-hidden' : ''}`}>
-              {currentView === 'inicio'       && <DashboardHome navigateTo={navigateTo} navigateToPatient={navigateToPatient} />}
+              {currentView === 'inicio'       && <DashboardHome navigateTo={navigateTo} navigateToPatient={navigateToPatient} nombre={userProfile?.full_name ?? ''} />}
               {currentView === 'agenda'       && feat('agenda') && <CalendarView />}
               {currentView === 'ninos'        && feat('ninos') && (
                 <PatientsView

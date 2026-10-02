@@ -113,7 +113,9 @@ function Escudo({ en }: { en: boolean }) {
   return (
     <div className="relative grid place-items-center">
       {!quieto && [0, 1].map(k => (
-        <motion.span key={k} aria-hidden className="absolute size-20 rounded-full border-2 border-v-accent/30" animate={{ scale: [1, 1.6], opacity: [0.7, 0] }} transition={{ duration: 2.4, repeat: Infinity, delay: k * 1.2 }} />
+        <motion.span key={k} aria-hidden className="absolute size-20 rounded-full border-2 border-v-accent/30" style={{ willChange: 'transform, opacity' }}
+          initial={{ scale: 1, opacity: 0 }} animate={{ scale: [1, 1.12, 1.6], opacity: [0, 0.6, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, delay: k * 1.2, ease: 'easeOut', times: [0, 0.2, 1] }} />
       ))}
       <span className="v-brand relative grid size-16 place-items-center rounded-[22px]" style={{ boxShadow: '0 12px 30px -10px rgba(10,132,255,0.6)' }}><ShieldCheck size={30} /></span>
       <span className="absolute -bottom-7 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-v-success/15 px-2.5 py-1 text-[11px] font-semibold text-v-success"><Lock size={11} /> {L2(en, '2FA enabled', '2FA activado')}</span>

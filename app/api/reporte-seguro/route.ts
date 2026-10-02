@@ -9,6 +9,7 @@ import { getCentroBranding } from '@/lib/centro-branding'
 import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
+import { conIAOpcional } from '@/lib/ia-contexto'
 
 // Mapeo diagnóstico → código CIE-10
 const CIE10_MAP: Record<string, { codigo: string; descripcion: string }> = {
@@ -61,7 +62,12 @@ function getLangInstruction(locale: string): string {
   return lang + src
 }
 
+// Se genera también sin IA: si el centro no la activó, las secciones redactadas llevan una nota (lib/ia-contexto.ts)
 export async function POST(req: NextRequest) {
+  return conIAOpcional(req, () => generarInforme(req))
+}
+
+async function generarInforme(req: NextRequest) {
   const caller = await getApiCaller(req)
   if (!caller) return unauthorized()
   if (!hasRole(caller, ROLES.staff)) return forbidden()

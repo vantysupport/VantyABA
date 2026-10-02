@@ -8,11 +8,12 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
-import { Clock, PauseCircle, Building2, LogOut, Check, Loader2, CreditCard, Crown, Sparkles, Users, UserRound, Baby, FileText, MessagesSquare, BookOpen, BarChart3, Hourglass, ShieldCheck } from 'lucide-react'
+import { Clock, PauseCircle, Building2, LogOut, Check, Loader2, CreditCard, Crown, Sparkles, Users, UserRound, Baby, FileText, MessagesSquare, BookOpen, BarChart3, Hourglass, ShieldCheck, UserX } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { supabase } from '@/lib/supabase'
 import { AuthShell } from '@/components/ui/auth-shell'
 import { formatoMoneda, precioCiclo, type Ciclo } from '@/lib/precios'
+import { EliminarCentroDialog, EliminarCuentaDialog } from '@/components/cuenta/SalidaCuenta'
 
 // 'elegir': el dueño entra por su cuenta (p. ej. durante la prueba) para pagar un plan
 const REASONS = { elegir: Sparkles, trial_expired: Clock, pending_payment: Hourglass, past_due: Clock, suspended: PauseCircle, no_centro: Building2 } as const
@@ -23,7 +24,7 @@ type Plan = {
   max_patients: number | null; max_professionals: number | null; max_parents: number | null; max_ai_reports: number | null
   has_team_chat: boolean; has_catalog: boolean; has_financial_reports: boolean
 }
-type Estado = { centro: string; status: string; trialEndsAt: string | null; paidUntil: string | null; planId: string | null; rol: string; esDueno: boolean; bloqueo: string | null; planes: Plan[]; moneda: string; monedaLocal: string; ciclo: Ciclo }
+type Estado = { centro: string; status: string; trialEndsAt: string | null; paidUntil: string | null; planId: string | null; rol: string; esDueno: boolean; esEncargado?: boolean; suscripcion?: { estado: string | null } | null; bloqueo: string | null; planes: Plan[]; moneda: string; monedaLocal: string; ciclo: Ciclo }
 
 function SubscriptionStatus() {
   const { t, locale } = useI18n()
@@ -38,6 +39,7 @@ function SubscriptionStatus() {
   const [ciclo, setCiclo] = useState<Ciclo>('mensual')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
+  const [salida, setSalida] = useState<'centro' | 'cuenta' | null>(null)
   const contact = process.env.NEXT_PUBLIC_SUPPORT_EMAIL
 
   useEffect(() => {
@@ -259,6 +261,7 @@ function SubscriptionStatus() {
               )
             })}
           </div>
+          <p className="mt-2 text-center text-[11px] text-v-subtle">{L('Applicable taxes for your country are calculated at checkout.', 'Los impuestos aplicables según tu país se calculan al pagar.')}</p>
 
           {confirmando ? (
             <div className="mt-5 flex items-center gap-2.5 rounded-v-sm bg-v-accent-soft/60 p-3.5 text-sm text-v-text">
@@ -294,7 +297,25 @@ function SubscriptionStatus() {
         <button onClick={signOut} className="mx-auto mt-1 inline-flex items-center gap-2 text-sm text-v-muted hover:text-v-text">
           <LogOut className="size-4" /> {t('vanty.subscription.signOut')}
         </button>
+        {estado && !confirmando && (
+          <div className="mt-3 border-t border-v-border pt-4 text-center">
+            <button onClick={() => setSalida(estado.esEncargado ? 'centro' : 'cuenta')}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-v-danger hover:underline">
+              <UserX className="size-4" /> {L("I don't want to continue", 'No deseo continuar')}
+            </button>
+            <p className="mt-1 text-xs text-v-subtle">
+              {estado.esEncargado
+                ? L('Delete your account and all the information of the center.', 'Elimina tu cuenta y toda la información del centro.')
+                : L('Delete your account and your personal data.', 'Elimina tu cuenta y tus datos personales.')}
+            </p>
+          </div>
+        )}
       </div>
+      <AnimatePresence>
+        {salida === 'centro' && estado && <EliminarCentroDialog centro={estado.centro} onClose={() => setSalida(null)}
+          conSuscripcion={!!estado.suscripcion?.estado && ['active', 'on_trial', 'past_due'].includes(estado.suscripcion.estado)} />}
+        {salida === 'cuenta' && <EliminarCuentaDialog esFamilia={esPadre} onClose={() => setSalida(null)} />}
+      </AnimatePresence>
     </motion.div>
   )
 }

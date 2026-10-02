@@ -2,11 +2,15 @@
 //  POST { plan, ciclo } → { url } del checkout, con el precio de la región del centro.
 //  GET → { portal } enlace al portal del cliente (cambiar tarjeta, facturas, cancelar).
 //  PUT → sincroniza la suscripción con Lemon (respaldo del webhook).
+//  DELETE → cancela la suscripción (solo la persona encargada): no hay más cobros y el acceso sigue hasta fin del periodo.
+//  PATCH → reanuda una suscripción cancelada que aún no terminó.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { getApiCaller, unauthorized, forbidden } from '@/lib/api-auth'
-import { crearCheckout, lemonConfigurado, portalSuscripcion, suscripcionesPorEmail } from '@/lib/lemon'
+import { cancelarSuscripcion, crearCheckout, lemonConfigurado, portalSuscripcion, reanudarSuscripcion, suscripcionesPorEmail } from '@/lib/lemon'
+import { esEncargadoDelCentro } from '@/lib/eliminar-centro'
+import { logAuditEvent } from '@/lib/audit-log'
 import { aplicarSuscripcion, centavosPlan } from '@/lib/cobros-plataforma'
 import { detectarPais } from '@/lib/precios-server'
 import { appBaseUrl } from '@/lib/auth-emails'
@@ -111,5 +115,41 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: false })
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : 'sync_error' })
+  }
+}
+
+// DELETE → "No deseo continuar": cancela la suscripción en Lemon para que no se genere otro cobro.
+export async function DELETE(req: NextRequest) {
+  return cambiarRenovacion(req, 'cancelar')
+}
+
+// PATCH → reanuda la suscripción cancelada (mientras el periodo pagado siga vigente).
+export async function PATCH(req: NextRequest) {
+  return cambiarRenovacion(req, 'reanudar')
+}
+
+async function cambiarRenovacion(req: NextRequest, accion: 'cancelar' | 'reanudar') {
+  const caller = await getApiCaller(req)
+  if (!caller) return unauthorized()
+  if (!caller.centroId || !(await esEncargadoDelCentro(caller.id, caller.centroId))) return forbidden()
+  if (!lemonConfigurado()) return NextResponse.json({ error: 'pasarela_no_configurada' }, { status: 503 })
+  const { data: centro } = await supabaseAdmin.from('centros').select('id, name, lemon_subscription_id, lemon_estado').eq('id', caller.centroId).maybeSingle()
+  if (!centro?.lemon_subscription_id) return NextResponse.json({ error: 'sin_suscripcion' }, { status: 404 })
+  if (accion === 'cancelar' && ['cancelled', 'expired'].includes(centro.lemon_estado ?? '')) return NextResponse.json({ error: 'ya_cancelada' }, { status: 409 })
+  if (accion === 'reanudar' && centro.lemon_estado !== 'cancelled') return NextResponse.json({ error: 'no_cancelada' }, { status: 409 })
+
+  try {
+    const sub = accion === 'cancelar' ? await cancelarSuscripcion(centro.lemon_subscription_id) : await reanudarSuscripcion(centro.lemon_subscription_id)
+    await aplicarSuscripcion(centro.id, sub.id, sub.attributes, { evento: accion === 'cancelar' ? 'cancelada_por_centro' : 'reanudada_por_centro' })
+    await supabaseAdmin.from('subscription_events').insert({
+      centro_id: centro.id, event: accion === 'cancelar' ? 'suspended' : 'reactivated', reference: sub.id, actor_id: caller.id,
+      note: accion === 'cancelar' ? 'Suscripción cancelada por el centro: sin más cobros; acceso hasta fin del periodo' : 'Suscripción reanudada por el centro',
+    })
+    await logAuditEvent({ action: 'update', resource_type: 'config', userId: caller.id, userEmail: caller.email ?? undefined, userRole: caller.role,
+      description: accion === 'cancelar' ? 'Suscripción cancelada' : 'Suscripción reanudada', metadata: { centroId: centro.id, centro: centro.name }, req })
+    const termina = typeof sub.attributes.ends_at === 'string' ? sub.attributes.ends_at : null
+    return NextResponse.json({ ok: true, estado: sub.attributes.status, termina })
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'lemon_error' }, { status: 502 })
   }
 }

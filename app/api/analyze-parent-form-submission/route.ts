@@ -17,7 +17,8 @@ import { buildAIContext, parseAIJson } from '@/lib/ai-context-builder'
 
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
         AlignmentType, BorderStyle, WidthType, ShadingType, HeadingLevel,
-        PageBreak } = require('docx');
+        PageBreak, Footer } = require('docx');
+import { creditoVantyParrafo } from '@/lib/report-template'
 
 
 // i18n: responder en el idioma del usuario
@@ -176,6 +177,7 @@ Responde SOLO con JSON (sin markdown):
         aiAnalysis: null,  // null = usa el análisis embebido en reportData.ai_analysis
         formTitle,
         centro: await getCentroBranding({ childId }),
+        en: String(userLocale).toLowerCase().startsWith('en'),
       })
 
       const base64Doc = docBuffer.toString('base64')
@@ -275,7 +277,7 @@ Genera un INFORME CLÍNICO PROFESIONAL con:
 async function buildWordDocument(params: {
   reportType: string; childName: string; childAge?: number;
   reportData: any; aiAnalysis?: string | null; formTitle?: string;
-  centro: CentroBranding;
+  centro: CentroBranding; en?: boolean;
 }): Promise<typeof Buffer.prototype> {
   const { reportType, childName, childAge, reportData, aiAnalysis, formTitle, centro } = params
 
@@ -291,6 +293,7 @@ async function buildWordDocument(params: {
           margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
         }
       },
+      footers: { default: new Footer({ children: [creditoVantyParrafo(!!params.en)] }) },
       children: [...portada, new PageBreak(), ...contenido]
     }]
   })

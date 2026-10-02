@@ -14,6 +14,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { rateLimit, RATE_LIMITS, getClientIP } from './lib/rate-limit'
 import { motivoBloqueo } from './lib/estado-centro'
+import { esRutaIA, motivoSinIA, type EstadoIA } from './lib/ia-consentimiento'
 import { isInternalApiCall } from './lib/calendar-integration'
 import { COOKIE_MFA_EMAIL, cookieMfaEmailValida } from './lib/mfa-email'
 
@@ -55,6 +56,7 @@ const PUBLIC_API_PATHS = [
   '/api/cobros/lemon/webhook',   // la pasarela no tiene sesión: la ruta valida la firma HMAC
   '/api/cron/avisos',            // tarea programada sin sesión: la ruta exige CRON_SECRET
   '/api/cron/campanas',          // notificaciones programadas desde /control: exige CRON_SECRET
+  '/api/libro-reclamaciones',    // Libro de Reclamaciones: lo usa cualquier consumidor, sin cuenta (límite estricto de envíos)
 ]
 
 // Rutas por rol → si user.role === X, puede acceder a estas raíces
@@ -86,6 +88,7 @@ function isPublicApiPath(pathname: string): boolean {
 function pickRateLimit(pathname: string): typeof RATE_LIMITS[keyof typeof RATE_LIMITS] | null {
   if (pathname === '/api/auth/signin' || pathname.startsWith('/api/auth/v1/token')) return RATE_LIMITS.LOGIN
   if (pathname === '/api/invitaciones/aceptar') return RATE_LIMITS.LOGIN
+  if (pathname === '/api/libro-reclamaciones') return RATE_LIMITS.LOGIN
   if (pathname.startsWith('/api/parent-chat')) return RATE_LIMITS.AI_CHAT
   if (pathname.startsWith('/api/admin-chat')) return RATE_LIMITS.AI_CHAT
   if (pathname.startsWith('/api/vanty-agent')) return RATE_LIMITS.AI_CHAT
@@ -228,11 +231,18 @@ export async function proxy(req: NextRequest) {
     // Admission control for tenant APIs; the endpoint still does its own role checks.
     // /api/suscripcion and /api/cobros stay open: an expired center needs them to pick a plan and pay.
     if (!pathname.startsWith('/api/session/') && !pathname.startsWith('/api/suscripcion') && !pathname.startsWith('/api/cobros/')) {
-      const { data: p } = await supabase.from('profiles').select('role, centros(status, trial_ends_at, paid_until)').eq('id', user.id).maybeSingle()
-      const c = (p?.centros ?? null) as unknown as CentroStanding
-      if (p?.role !== 'programador' && motivoBloqueo(c)) {
+      const ia = esRutaIA(pathname)
+      const { data: p } = await supabase.from('profiles')
+        .select(ia ? 'role, ia_consentimiento, centros(status, trial_ends_at, paid_until, ia_estado)' : 'role, centros(status, trial_ends_at, paid_until)')
+        .eq('id', user.id).maybeSingle()
+      const perfil = p as unknown as { role?: string; ia_consentimiento?: EstadoIA; centros?: (CentroStanding & { ia_estado?: EstadoIA }) | null } | null
+      const c = (perfil?.centros ?? null) as CentroStanding
+      if (perfil?.role !== 'programador' && motivoBloqueo(c)) {
         return NextResponse.json({ error: 'centro_inactive' }, { status: 403 })
       }
+      // Funciones de IA: solo con el consentimiento del centro (y de la familia, para cuentas de padres).
+      const sinIA = ia ? motivoSinIA(perfil?.role, perfil?.centros?.ia_estado ?? null, perfil?.ia_consentimiento ?? null) : null
+      if (sinIA) return NextResponse.json({ error: 'ia_no_autorizada', motivo: sinIA, rol: perfil?.role ?? null }, { status: 403 })
     }
     return res
   }

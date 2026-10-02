@@ -213,9 +213,9 @@ export function PlanesPrecios({ planes, contexto, onElegir }: {
 
       <p className="mx-auto mt-6 max-w-2xl text-center text-[11px] text-v-subtle md:mt-8">
         {conLocal
-          ? L(`Charged in ${moneda}; ${monedaLocal} amounts are approximate, based on the day's exchange rate.`,
-              `Se cobra en ${moneda}; los montos en ${monedaLocal} son referenciales según el tipo de cambio del día.`)
-          : L(`Prices in ${moneda}. Taxes may apply.`, `Precios en ${moneda}. Pueden aplicar impuestos.`)}
+          ? L(`Applicable taxes for your country are calculated at checkout. Charged in ${moneda}; ${monedaLocal} amounts are approximate, based on the day's exchange rate.`,
+              `Los impuestos aplicables según tu país se calculan al pagar. Se cobra en ${moneda}; los montos en ${monedaLocal} son referenciales según el tipo de cambio del día.`)
+          : L(`Prices in ${moneda}. Applicable taxes for your country are calculated at checkout.`, `Precios en ${moneda}. Los impuestos aplicables según tu país se calculan al pagar.`)}
       </p>
     </div>
   )

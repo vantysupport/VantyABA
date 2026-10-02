@@ -7,7 +7,7 @@ import {
   DollarSign, Plus, Search, Download, TrendingUp, CheckCircle2,
   Clock, XCircle, Loader2, Calendar, Save, X, Package, ChevronDown,
   Repeat, Pencil, Trash2, Settings2, Check, FileText,
-  BarChart3, CreditCard, Wallet, Banknote, Smartphone, Landmark, MoreHorizontal, ChevronLeft, ChevronRight, UserPlus, Users, HandCoins, AlertCircle, PartyPopper
+  BarChart3, CreditCard, Wallet, Banknote, Smartphone, Landmark, MoreHorizontal, ChevronLeft, ChevronRight, UserPlus, Users, HandCoins, AlertCircle, PartyPopper, Mail, Send
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts'
@@ -34,13 +34,34 @@ const mesCorto = (m: number, loc: string) => _cap(new Date(2020, m, 1).toLocaleD
 const mesLargo = (m: number, loc: string) => _cap(new Date(2020, m, 1).toLocaleDateString(_bcp(loc), { month: 'long' }))
 const diaCorto = (dow: number, loc: string) => _cap(new Date(2021, 7, 1 + dow).toLocaleDateString(_bcp(loc), { weekday: 'short' }).replace('.', ''))
 
+// Fecha del cobro: la elegida al registrarlo (los cobros anteriores a fecha_cobro usan la de registro).
+// No cambia al pagarlo: cuándo se pagó queda en paid_at.
+function fechaCobroDe(p: any): string {
+  return p.fecha_cobro || p.created_at
+}
+/** true si se pagó otro día que el del cobro (para mostrar "pagado el …") */
+function pagadoOtroDia(p: any): boolean {
+  if (!p.paid_at) return false
+  return new Date(p.paid_at).toDateString() !== new Date(fechaCobroDe(p)).toDateString()
+}
+
+type CitaAgenda = { id: string; appointment_date: string; appointment_time: string | null; service_type: string | null; status: string | null }
+
+/** Estado de asistencia de la sesión vinculada a un cobro. */
+function asistenciaDe(status: string | null | undefined, fecha: string, en: boolean): { txt: string; cls: string } {
+  if (status === 'completed') return { txt: en ? 'Attended' : 'Realizada', cls: 'bg-v-success/15 text-v-success' }
+  if (status === 'cancelled') return { txt: en ? 'Cancelled' : 'Cancelada', cls: 'bg-v-danger/10 text-v-danger' }
+  if (fecha < new Date().toISOString().slice(0, 10)) return { txt: en ? 'Attendance not marked' : 'Asistencia sin marcar', cls: 'bg-v-warning/15 text-v-warning' }
+  return { txt: en ? 'Scheduled' : 'Programada', cls: 'bg-v-accent-soft text-v-accent' }
+}
+
 // ─── Group payments by patient + month ───────────────────────────────────────
 // Packages (concept with "(N/M)" pattern) are grouped by their base concept.
 // Individual payments keep separate entries so they don't mix with packages.
 function groupByPatientMonth(pays: any[], loc: string) {
   const g: Record<string, any> = {}
   pays.forEach(p => {
-    const d = new Date(p.paid_at || p.created_at)
+    const d = new Date(fechaCobroDe(p))
     const year = d.getFullYear()
     const month = d.getMonth()
 
@@ -193,11 +214,23 @@ function FormShell({ Icon, title, sub, onClose, children: body }: { Icon: any; t
   )
 }
 
-function ConfirmBar({ texto, onYes, onNo, cancelLabel, deleteLabel }: { texto: string; onYes: () => void; onNo: () => void; cancelLabel: string; deleteLabel: string }) {
+function ConfirmBar({ texto, onYes, onNo, cancelLabel, deleteLabel, opcion }: {
+  texto: string; onYes: () => void; onNo: () => void; cancelLabel: string; deleteLabel: string
+  /** Casilla opcional, p. ej. "Eliminar también las sesiones de la agenda" */
+  opcion?: { label: string; checked: boolean; onChange: (v: boolean) => void }
+}) {
   return (
     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 bg-v-danger/10 px-4 py-2.5">
-        <p className="min-w-0 flex-[1_1_200px] text-xs text-v-danger">{texto}</p>
+        <div className="min-w-0 flex-[1_1_200px]">
+          <p className="text-xs text-v-danger">{texto}</p>
+          {opcion && (
+            <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-xs font-semibold text-v-text">
+              <input type="checkbox" checked={opcion.checked} onChange={e => opcion.onChange(e.target.checked)} className="size-4 accent-[var(--v-danger)]" />
+              {opcion.label}
+            </label>
+          )}
+        </div>
         <button onClick={onNo} className="h-8 rounded-full px-3 text-xs font-semibold text-v-muted hover:bg-v-fill">{cancelLabel}</button>
         <button onClick={onYes} className="h-8 rounded-full bg-v-danger px-3.5 text-xs font-semibold text-white">{deleteLabel}</button>
       </div>
@@ -235,6 +268,13 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   const activeTab: PagosTab = pagosTabs.find(t => t.id === tab) ? tab : (pagosTabs[0]?.id ?? 'dashboard')
   const [payments, setPayments] = useState<any[]>([])
   const [children, setChildren] = useState<any[]>([])
+  const [especialistas, setEspecialistas] = useState<{ id: string; full_name: string; specialty: string | null }[]>([])
+  useEffect(() => {
+    supabase.from('profiles').select('id, full_name, specialty').in('role', ['especialista', 'terapeuta', 'admin', 'jefe'])
+      .eq('is_active', true).order('full_name').then(({ data }) => setEspecialistas((data ?? []) as typeof especialistas))
+  }, [])
+  /** Nombre del padre/madre con cuenta vinculado al paciente (si lo hay). */
+  const tutorDe = (childId: string): string => (children.find(c => c.id === childId)?.tutor?.full_name as string | undefined) ?? ''
   const [rates, setRates]       = useState<any[]>([])
   const [loading, setLoading]   = useState(true)
   const [periodo, setPeriodo]   = useState<'semana'|'mes'|'anio'>('mes')
@@ -259,7 +299,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     const porMes = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(); d.setMonth(d.getMonth() - (5 - i))
       const m = d.getMonth(); const y = d.getFullYear()
-      const mp = conCobro.filter(p => { const pd = new Date(p.paid_at || p.created_at); return pd.getMonth() === m && pd.getFullYear() === y })
+      const mp = conCobro.filter(p => { const pd = new Date(p.paid_at || p.fecha_cobro || p.created_at); return pd.getMonth() === m && pd.getFullYear() === y })
       return { mes: mesCorto(m, locale), total: cob(mp) }
     })
     const porMetodo = METHODS.map((m, i) => ({ name: t('pagos.method.' + m), value: cob(conCobro.filter(p => p.payment_method === m)), color: COLORS[i] })).filter(m => m.value > 0)
@@ -269,7 +309,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   // Deudas: todo lo pendiente o parcial, sin importar el período elegido
   const [deudas, setDeudas] = useState<any[]>([])
   const cargarDeudas = useCallback(async () => {
-    const { data } = await supabase.from('payments').select('*, children(name)').in('status', ['pending', 'partial']).order('created_at', { ascending: true }).limit(1000)
+    const { data } = await supabase.from('payments').select('*, children(name), appointments(appointment_date, appointment_time, status), especialista:especialista_id(full_name)').in('status', ['pending', 'partial']).order('created_at', { ascending: true }).limit(1000)
     setDeudas(data || [])
   }, [])
   useEffect(() => { cargarDeudas() }, [cargarDeudas])
@@ -284,8 +324,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       else desde = new Date(now.getFullYear(), 0, 1)
 
       const [{ data: pays }, { data: kids }, { data: svcRates }] = await Promise.all([
-        supabase.from('payments').select('*, children(name)').gte('created_at', desde.toISOString()).order('created_at', { ascending: false }).limit(500),
-        supabase.from('children').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('payments').select('*, children(name), appointments(appointment_date, appointment_time, status), especialista:especialista_id(full_name)').gte('created_at', desde.toISOString()).order('created_at', { ascending: false }).limit(500),
+        supabase.from('children').select('id, name, tutor:profiles!fk_children_parent(full_name)').eq('is_active', true).order('name'),
         supabase.from('service_rates').select('*').order('amount', { ascending: true }),
       ])
       const p = pays || []
@@ -315,8 +355,24 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
   // ─── Payment form ───────────────────────────────────────────────────────────
   // modo: 'registrado' (paciente del sistema) | 'externo' (nombre libre, ej. evaluación inicial)
-  const emptyForm = { child_id: '', external_name: '', modo: 'registrado' as 'registrado' | 'externo', amount: '', adelanto: '', concept: '', method: 'efectivo', status: 'paid', notes: '', date: new Date().toISOString().split('T')[0] }
+  const emptyForm = { child_id: '', external_name: '', modo: 'registrado' as 'registrado' | 'externo', amount: '', adelanto: '', concept: '', method: 'efectivo', status: 'paid', notes: '', date: new Date().toISOString().split('T')[0], responsable: '', especialista_id: '' }
   const [form, setForm] = useState(emptyForm)
+  // Opcional: vincular el cobro con una sesión de la agenda (una ya agendada o una nueva)
+  const agendaVacia = { activo: false, modo: 'existente' as 'existente' | 'nueva', citaId: '', hora: '09:00' }
+  const [agenda, setAgenda] = useState(agendaVacia)
+  const [citasPaciente, setCitasPaciente] = useState<CitaAgenda[]>([])
+  useEffect(() => {
+    if (!agenda.activo || form.modo !== 'registrado' || !form.child_id) { setCitasPaciente([]); return }
+    const desde = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10)
+    supabase.from('appointments').select('id, appointment_date, appointment_time, service_type, status')
+      .eq('child_id', form.child_id).neq('status', 'cancelled').gte('appointment_date', desde)
+      .order('appointment_date', { ascending: false }).order('appointment_time', { ascending: false }).limit(60)
+      .then(({ data }) => {
+        const citas = (data ?? []) as CitaAgenda[]
+        setCitasPaciente(citas)
+        setAgenda(a => (a.modo === 'existente' && !citas.length ? { ...a, modo: 'nueva', citaId: '' } : a))
+      })
+  }, [agenda.activo, form.modo, form.child_id])
   const [saving, setSaving] = useState(false)
   const rateNames = rates.map(r => r.name)
 
@@ -336,20 +392,46 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     }
     setSaving(true)
     try {
-      const fecha = new Date(form.date + 'T12:00:00').toISOString() // mediodía: en UTC-5 no cambia de día
+      // Sesión de la agenda (opcional): la elegida o una nueva que se agenda ahora y va a los calendarios
+      let appointmentId: string | null = null
+      let fechaSesion = form.date
+      if (agenda.activo && !esExterno) {
+        if (agenda.modo === 'existente') {
+          const cita = citasPaciente.find(c => c.id === agenda.citaId)
+          if (!cita) { toast.error(locale === 'en' ? 'Choose the session from the schedule.' : 'Elige la sesión de la agenda.'); setSaving(false); return }
+          appointmentId = cita.id
+          fechaSesion = cita.appointment_date
+        } else {
+          if (!form.date || !agenda.hora) { toast.error(locale === 'en' ? 'Enter the session date and time.' : 'Indica la fecha y la hora de la sesión.'); setSaving(false); return }
+          const r = await fetch('/api/admin/appointments?sincronizar=1', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+            body: JSON.stringify({ child_id: form.child_id, appointment_date: form.date, appointment_time: `${agenda.hora}:00`,
+              service_type: form.concept.trim(), is_group: false, status: 'confirmed', modalidad: 'presencial', created_by: profile?.id,
+              ...(form.especialista_id ? { specialist_id: form.especialista_id } : {}) }),
+          })
+          const j = await r.json().catch(() => ({}))
+          appointmentId = j?.data?.[0]?.id ?? null
+          if (!r.ok || !appointmentId) throw new Error(locale === 'en' ? 'Could not add the session to the schedule.' : 'No se pudo agendar la sesión.')
+        }
+      }
+      const fecha = new Date(fechaSesion + 'T12:00:00').toISOString() // mediodía: en UTC-5 no cambia de día
       const pagado = form.status === 'paid' ? monto : form.status === 'partial' ? adelanto : 0
       const { error } = await supabase.from('payments').insert({
+        appointment_id: appointmentId,
+        responsable: form.responsable.trim() || (esExterno ? null : tutorDe(form.child_id)) || null,
+        especialista_id: form.especialista_id || null,
         child_id: esExterno ? null : form.child_id,
         paciente_externo: esExterno ? form.external_name.trim() : null,
         amount: monto, concept: form.concept.trim(),
         payment_method: form.method, status: form.status, notes: form.notes || null,
         paid_at: form.status === 'paid' ? fecha : null,
+        fecha_cobro: fecha,
         amount_paid: pagado,
         abonos: pagado > 0 ? [{ monto: pagado, fecha, metodo: form.method } satisfies Abono] : [],
         created_by: profile?.id,
       })
       if (error) throw error
-      toast.success(t('pagos.pagoRegistrado')); setShowNew(false); setForm(emptyForm)
+      toast.success(t('pagos.pagoRegistrado')); setShowNew(false); setForm(emptyForm); setAgenda(agendaVacia)
       await Promise.all([cargar(), cargarDeudas()])   // ← refrescar tabla para que el nuevo pago aparezca de inmediato
     } catch (e: any) { toast.error(e.message) }
     finally { setSaving(false) }
@@ -358,11 +440,29 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
   // ─── Package form ───────────────────────────────────────────────────────────
   const emptyPkg = {
     child_id: '', external_name: '', modo: 'registrado' as 'registrado' | 'externo',
-    amount: '', concept: '', method: 'efectivo', status: 'paid',
+    amount: '', concept: '', method: 'efectivo', status: 'paid', responsable: '', especialista_id: '',
     calMonth: new Date().toISOString().slice(0, 7), // YYYY-MM
   }
   const [pkg, setPkg] = useState(emptyPkg)
   const [pkgDates, setPkgDates] = useState<string[]>([]) // manually selected dates
+  // Opcional: agendar cada sesión del paquete (o vincular la que ya exista ese día)
+  const [pkgAgenda, setPkgAgenda] = useState({ activo: false, hora: '09:00' })
+  const [pkgHoras, setPkgHoras] = useState<Record<string, string>>({}) // fecha → hora propia (si difiere de la general)
+  const horaDe = (fecha: string) => pkgHoras[fecha] || pkgAgenda.hora
+  const [pkgCitas, setPkgCitas] = useState<Record<string, string>>({}) // fecha → id de la sesión existente
+  useEffect(() => {
+    if (!pkgAgenda.activo || pkg.modo !== 'registrado' || !pkg.child_id) { setPkgCitas({}); return }
+    const [y, m] = pkg.calMonth.split('-').map(Number)
+    const desde = `${pkg.calMonth}-01`
+    const hasta = `${pkg.calMonth}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+    supabase.from('appointments').select('id, appointment_date').eq('child_id', pkg.child_id).neq('status', 'cancelled')
+      .gte('appointment_date', desde).lte('appointment_date', hasta)
+      .then(({ data }) => setPkgCitas(prev => {
+        const sig = { ...prev }
+        for (const c of (data ?? []) as { id: string; appointment_date: string }[]) if (!sig[c.appointment_date]) sig[c.appointment_date] = c.id
+        return sig
+      }))
+  }, [pkgAgenda.activo, pkg.modo, pkg.child_id, pkg.calMonth])
   const [savingPkg, setSavingPkg] = useState(false)
 
   const handleSavePkg = async () => {
@@ -377,20 +477,44 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     if (pkgDates.length === 0) { toast.error(t('pagos.errSelDia')); return }
     setSavingPkg(true)
     try {
+      // Sesiones de la agenda (opcional): se usa la que ya exista ese día o se agenda una nueva
+      const sesionDe: Record<string, string> = {}
+      if (pkgAgenda.activo && !esExterno) {
+        if (!pkgAgenda.hora) { toast.error(locale === 'en' ? 'Enter the time of the sessions.' : 'Indica la hora de las sesiones.'); setSavingPkg(false); return }
+        const { data: existentes } = await supabase.from('appointments').select('id, appointment_date')
+          .eq('child_id', pkg.child_id).neq('status', 'cancelled').in('appointment_date', pkgDates)
+        for (const c of (existentes ?? []) as { id: string; appointment_date: string }[]) if (!sesionDe[c.appointment_date]) sesionDe[c.appointment_date] = c.id
+        const nuevas = pkgDates.filter(d => !sesionDe[d])
+        if (nuevas.length) {
+          const r = await fetch('/api/admin/appointments?sincronizar=1', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-locale': locale },
+            body: JSON.stringify(nuevas.map(d => ({ child_id: pkg.child_id, appointment_date: d, appointment_time: `${horaDe(d)}:00`,
+              service_type: pkg.concept.trim(), is_group: false, status: 'confirmed', modalidad: 'presencial', created_by: profile?.id,
+              ...(pkg.especialista_id ? { specialist_id: pkg.especialista_id } : {}) }))),
+          })
+          const j = await r.json().catch(() => ({}))
+          if (!r.ok || !Array.isArray(j?.data)) throw new Error(locale === 'en' ? 'Could not add the sessions to the schedule.' : 'No se pudieron agendar las sesiones.')
+          for (const c of j.data as { id: string; appointment_date: string }[]) sesionDe[c.appointment_date] = c.id
+        }
+      }
       const inserts = pkgDates.map((date, i) => ({
+        appointment_id: sesionDe[date] ?? null,
+        responsable: pkg.responsable.trim() || (esExterno ? null : tutorDe(pkg.child_id)) || null,
+        especialista_id: pkg.especialista_id || null,
         child_id: esExterno ? null : pkg.child_id,
         paciente_externo: esExterno ? pkg.external_name.trim() : null,
         amount: Number(pkg.amount),
         concept: `${pkg.concept.trim()} (${i+1}/${pkgDates.length})`,
         payment_method: pkg.method, status: pkg.status,
         paid_at: pkg.status === 'paid' ? new Date(date + 'T12:00:00').toISOString() : null,
+        fecha_cobro: new Date(date + 'T12:00:00').toISOString(),
         notes: t('pagos.notaPaquete', { n: String(pkgDates.length) }),
         created_by: profile?.id,
       }))
       const { error } = await supabase.from('payments').insert(inserts)
       if (error) throw error
       toast.success(t('pagos.pagosCreados', { n: String(pkgDates.length), total: (Number(pkg.amount) * pkgDates.length).toFixed(2) }))
-      setShowPkg(false); setPkg(emptyPkg); setPkgDates([])
+      setShowPkg(false); setPkg(emptyPkg); setPkgDates([]); setPkgAgenda({ activo: false, hora: '09:00' }); setPkgHoras({})
       await cargar()   // ← refrescar tabla para que los nuevos pagos aparezcan de inmediato
     } catch (e: any) { toast.error(e.message) }
     finally { setSavingPkg(false) }
@@ -419,6 +543,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
     const { error } = await supabase.from('payments').update({
       amount_paid: completo ? Number(p.amount) : Math.round((pagadoAntes + monto) * 100) / 100,
       abonos, status: completo ? 'paid' : 'partial', paid_at: completo ? ahora : null,
+      fecha_cobro: fechaCobroDe(p), // la fecha original se conserva; paid_at dice cuándo se pagó
       payment_method: sigueParcial ? p.payment_method : metodo,
     }).eq('id', p.id)
     setSavingAbono(false)
@@ -442,6 +567,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                           abonos: p.status === 'partial' && saldoDe(p) > 0 ? [...abonosPrev, { monto: saldoDe(p), fecha: ahora, metodo: p.payment_method }] : (abonosPrev.length ? abonosPrev : [{ monto: Number(p.amount), fecha: ahora, metodo: p.payment_method }]) }
       : k === 'pending' ? { status: k, paid_at: null, amount_paid: 0, abonos: [] }
       : { status: k, paid_at: null }
+    cambios.fecha_cobro = fechaCobroDe(p) // la fecha original del cobro no cambia al pagarlo
     const prevPayments = payments
     const updated = payments.map(x => x.id === p.id ? { ...x, ...cambios } : x)
     setPayments(updated); buildStats(updated)   // cambio optimista
@@ -452,6 +578,24 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
 
   // ─── Eliminar pago ──────────────────────────────────────────────────────────
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  // Al eliminar un cobro con sesión en la agenda se puede eliminar también esa sesión
+  const [borrarSesiones, setBorrarSesiones] = useState(false)
+  const eliminarSesiones = async (ids: string[]) => {
+    const unicos = [...new Set(ids.filter(Boolean))]
+    const res = await Promise.all(unicos.map(id => fetch('/api/admin/appointments', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-locale': locale }, body: JSON.stringify({ id }),
+    }).then(r => r.ok).catch(() => false)))
+    const fallidas = res.filter(ok => !ok).length
+    if (unicos.length && !fallidas) toast.success(locale === 'en' ? `${unicos.length} session(s) removed from the schedule` : `${unicos.length} sesión(es) eliminada(s) de la agenda`)
+    if (fallidas) toast.error(locale === 'en' ? `${fallidas} session(s) could not be removed from the schedule` : `No se pudieron eliminar ${fallidas} sesión(es) de la agenda`)
+  }
+  const opcionSesiones = (n: number) => n > 0 ? {
+    label: locale === 'en'
+      ? (n === 1 ? 'Also delete the scheduled session (schedule and calendars)' : `Also delete the ${n} scheduled sessions (schedule and calendars)`)
+      : (n === 1 ? 'Eliminar también la sesión agendada (agenda y calendarios)' : `Eliminar también las ${n} sesiones agendadas (agenda y calendarios)`),
+    checked: borrarSesiones, onChange: setBorrarSesiones,
+  } : undefined
+
   const handleDeletePago = async (p: any) => {
     const monto = fmt(Number(p.amount))
     const nombre = p.children?.name || p.paciente_externo || t('pagos.pacienteGenerico')
@@ -466,6 +610,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       const { error } = await supabase.from('payments').delete().eq('id', p.id)
       if (error) throw error
       toast.success(t('pagos.pagoEliminado'))
+      if (borrarSesiones && p.appointment_id) await eliminarSesiones([p.appointment_id])
+      setBorrarSesiones(false)
     } catch (e: any) {
       // Rollback si falla
       setPayments(prev); buildStats(prev)
@@ -489,6 +635,8 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
       const { error } = await supabase.from('payments').delete().in('id', ids)
       if (error) throw error
       toast.success(t('pagos.paqueteEliminado', { n: String(cantidad) }))
+      if (borrarSesiones) await eliminarSesiones(g.pays.map((p: any) => p.appointment_id))
+      setBorrarSesiones(false)
     } catch (e: any) {
       setPayments(prev); buildStats(prev)
       toast.error(t('pagos.noSePudoEliminar') + e.message)
@@ -608,6 +756,203 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
         : <input value={ext} onChange={e => setExt(e.target.value)} placeholder={extPh} className={inputCls} />}
     </div>
   )
+
+  // Fila de un cobro en Registros (suelto o dentro de un paquete)
+  const filaPago = (p: any, enPaquete = false) => {
+                  const tone = STATUS_TONE[p.status] || STATUS_TONE.refunded
+                  const MI = METHOD_ICON[p.payment_method] || MoreHorizontal
+                  const nombre = p.children?.name || p.paciente_externo || '—'
+                  const menuOpen = statusMenu === p.id
+                  const conf = confirmar?.tipo === 'pago' && confirmar.id === p.id
+                  return (
+                    <div key={p.id}>
+                      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 py-3 pr-4 transition-colors hover:bg-v-bg sm:pr-5 ${enPaquete ? 'pl-8 sm:pl-12' : 'pl-4 sm:pl-5'}`}>
+                        <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-sm font-semibold text-v-accent">{nombre.charAt(0).toUpperCase()}</span>
+                        <div className="min-w-0 flex-[1_1_180px]">
+                          <p className="truncate text-sm font-semibold text-v-text">{nombre}{!p.child_id && p.paciente_externo && <span className="ml-1.5 rounded-full bg-v-fill px-1.5 py-0.5 text-[10px] font-medium text-v-subtle">{t('pagos.sinInscribir')}</span>}</p>
+                          <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(fechaCobroDe(p)))}{pagadoOtroDia(p) && ` · ${locale === 'en' ? 'paid' : 'pagado el'} ${fechaCorta(new Date(p.paid_at))}`}</p>
+                          {p.appointments?.appointment_date && (() => {
+                            const as = asistenciaDe(p.appointments.status, p.appointments.appointment_date, locale === 'en')
+                            return (
+                              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-v-muted">
+                                <Calendar size={11} /> {locale === 'en' ? 'Session' : 'Sesión'} {fechaCorta(new Date(p.appointments.appointment_date + 'T12:00:00'))} · {String(p.appointments.appointment_time ?? '').slice(0, 5)}
+                                <span className={`rounded-full px-1.5 py-0.5 font-semibold ${as.cls}`}>{as.txt}</span>
+                                {p.especialista?.full_name && <span>· {p.especialista.full_name}</span>}
+                              </p>
+                            )
+                          })()}
+                        </div>
+                        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                          <span className="mr-1 text-right">
+                            <span className="block text-sm font-bold tabular-nums text-v-text">{fmt(Number(p.amount))}</span>
+                            {p.status === 'partial' && <span className="block text-[11px] font-medium tabular-nums text-v-warning">{locale === 'en' ? 'owes' : 'debe'} {fmt(saldoDe(p))}</span>}
+                            <span className="flex items-center justify-end gap-1 text-[11px] text-v-subtle"><MI size={11} /> {t('pagos.method.' + p.payment_method)}</span>
+                          </span>
+                          {/* Estado: tocar para cambiar */}
+                          <div className="relative">
+                            <button onClick={() => setStatusMenu(menuOpen ? null : p.id)}
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone.pill}`}>
+                              {t('pagos.status.' + p.status)} <ChevronDown size={12} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            <AnimatePresence>
+                              {menuOpen && (
+                                <>
+                                  <div className="fixed inset-0 z-30" onClick={() => setStatusMenu(null)} />
+                                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
+                                    className="absolute right-0 top-full z-40 mt-1.5 w-40 overflow-hidden rounded-v-sm border border-v-border bg-v-elevated p-1 shadow-v-lg">
+                                    {Object.keys(STATUS_CFG).map(k => (
+                                      <button key={k} onClick={() => cambiarEstado(p, k)}
+                                        className={`flex w-full items-center gap-2 rounded-v-sm px-2.5 py-2 text-left text-xs font-semibold transition-colors ${p.status === k ? 'bg-v-fill text-v-text' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
+                                        <span className={`size-2 rounded-full ${STATUS_TONE[k]?.dot}`} /> {t('pagos.status.' + k)}
+                                        {p.status === k && <Check size={13} className="ml-auto" />}
+                                      </button>
+                                    ))}
+                                  </motion.div>
+                                </>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                          <button onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}&lang=${locale}`, '_blank')} title={t('admin.verRecibo')}
+                            className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
+                          <button onClick={() => setEnvio(envio?.id === p.id ? null : { id: p.id, email: '' })} title={locale === 'en' ? 'Email receipt' : 'Enviar recibo por correo'}
+                            className={`grid size-8 place-items-center rounded-full transition-colors ${envio?.id === p.id ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
+                          <button onClick={() => { setBorrarSesiones(false); setConfirmar(conf ? null : { tipo: 'pago', id: p.id }) }} disabled={deletingId === p.id} title={t('admin.eliminarPago')}
+                            className={`grid size-8 place-items-center rounded-full transition-colors disabled:opacity-50 ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}>
+                            {deletingId === p.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                          </button>
+                        </div>
+                      </div>
+                      <AnimatePresence>
+                        {envio?.id === p.id && envioBar(p)}
+                      </AnimatePresence>
+                      <AnimatePresence>
+                        {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => { setConfirmar(null); setBorrarSesiones(false) }} onYes={() => handleDeletePago(p)} opcion={opcionSesiones(p.appointment_id ? 1 : 0)} />}
+                        {abonoFor?.id === p.id && abonoBar(p, locale === 'en' ? 'How much was paid as a down payment?' : '¿Cuánto pagó de adelanto?')}
+                      </AnimatePresence>
+                    </div>
+                  )
+  }
+
+  // Registros: los cobros de un mismo paquete (creados juntos, "Concepto (n/m)") se muestran como una sola tarjeta
+  type ItemRegistro = { tipo: 'pago'; p: any } | { tipo: 'paquete'; key: string; pays: any[] }
+  const itemsRegistros: ItemRegistro[] = (() => {
+    const grupos = new Map<string, any[]>()
+    const orden: ItemRegistro[] = []
+    for (const p of filtered) {
+      const m = String(p.concept || '').match(/^(.*)\s\((\d+)\/(\d+)\)\s*$/)
+      if (!m || Number(m[3]) < 2) { orden.push({ tipo: 'pago', p }); continue }
+      const key = `${p.child_id || p.paciente_externo}|${p.created_at}|${m[1]}`
+      if (!grupos.has(key)) { grupos.set(key, []); orden.push({ tipo: 'paquete', key, pays: grupos.get(key)! }) }
+      grupos.get(key)!.push(p)
+    }
+    return orden.map(it => it.tipo === 'paquete' && it.pays.length === 1 ? { tipo: 'pago', p: it.pays[0] } : it)
+  })()
+  const [paqueteAbierto, setPaqueteAbierto] = useState<string | null>(null)
+  const tarjetaPaquete = (g: { key: string; pays: any[] }) => {
+    const pays = [...g.pays].sort((a, b) => String(a.appointments?.appointment_date || fechaCobroDe(a)).localeCompare(String(b.appointments?.appointment_date || fechaCobroDe(b))))
+    const p0 = pays[0]
+    const nombre = p0.children?.name || p0.paciente_externo || '—'
+    const concepto = String(p0.concept || '').replace(/\s*\(\d+\/\d+\)\s*$/, '')
+    const fechaDeP = (p: any) => new Date(p.appointments?.appointment_date ? p.appointments.appointment_date + 'T12:00:00' : fechaCobroDe(p))
+    const vigentes = pays.filter(p => p.status !== 'cancelled' && p.status !== 'refunded')
+    const total = vigentes.reduce((a, p) => a + Number(p.amount || 0), 0)
+    const pagadas = pays.filter(p => p.status === 'paid').length
+    const pendiente = pays.reduce((a, p) => a + saldoDe(p), 0)
+    const abierto = paqueteAbierto === g.key
+    const envioKey = `pkg:${g.key}`
+    const confPkg = confirmar?.tipo === 'paquete' && confirmar.id === g.key
+    return (
+      <div key={g.key}>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-v-bg sm:px-5">
+          <button onClick={() => setPaqueteAbierto(abierto ? null : g.key)} className="flex min-w-0 flex-[1_1_220px] items-center gap-3 text-left">
+            <span className="relative grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent text-white"><Package size={17} /></span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-v-text">{nombre}</span>
+              <span className="block truncate text-xs text-v-subtle">
+                {locale === 'en' ? 'Package' : 'Paquete'} · {concepto} · {pays.length} {locale === 'en' ? 'sessions' : 'sesiones'} · {fechaCorta(fechaDeP(pays[0]))} – {fechaCorta(fechaDeP(pays[pays.length - 1]))}
+              </span>
+              <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className={`rounded-full px-1.5 py-0.5 font-semibold ${pendiente <= 0.001 ? 'bg-v-success/15 text-v-success' : 'bg-v-warning/15 text-v-warning'}`}>
+                  {pagadas}/{pays.length} {locale === 'en' ? 'paid' : 'pagadas'}
+                </span>
+                {p0.especialista?.full_name && <span className="text-v-muted">{p0.especialista.full_name}</span>}
+                <span className="inline-flex items-center gap-0.5 font-semibold text-v-accent">{abierto ? (locale === 'en' ? 'Hide sessions' : 'Ocultar sesiones') : (locale === 'en' ? 'See sessions' : 'Ver sesiones')} <ChevronDown size={12} className={`transition-transform ${abierto ? 'rotate-180' : ''}`} /></span>
+              </span>
+            </span>
+          </button>
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <span className="mr-1 text-right">
+              <span className="block text-sm font-bold tabular-nums text-v-text">{fmt(total)}</span>
+              {pendiente > 0.001 && <span className="block text-[11px] font-medium tabular-nums text-v-warning">{locale === 'en' ? 'owes' : 'debe'} {fmt(pendiente)}</span>}
+            </span>
+            <button onClick={() => window.open(`/api/pagos/recibo-paquete?ids=${pays.map(x => x.id).join(',')}&lang=${locale}`, '_blank')} title={t('admin.reciboPaquete')}
+              className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
+            <button onClick={() => setEnvio(envio?.id === envioKey ? null : { id: envioKey, email: '' })} title={locale === 'en' ? 'Email package receipt' : 'Enviar recibo del paquete por correo'}
+              className={`grid size-8 place-items-center rounded-full transition-colors ${envio?.id === envioKey ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
+            <button onClick={() => { setBorrarSesiones(false); setConfirmar(confPkg ? null : { tipo: 'paquete', id: g.key }) }} title={locale === 'en' ? 'Delete package' : 'Eliminar paquete'}
+              className={`grid size-8 place-items-center rounded-full transition-colors ${confPkg ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}><Trash2 size={15} /></button>
+          </div>
+        </div>
+        <AnimatePresence>
+          {confPkg && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'}
+            texto={t('pagos.confirmEliminarPaquete', { child: nombre, cantidad: String(pays.length), total: fmt(total) })}
+            onNo={() => { setConfirmar(null); setBorrarSesiones(false) }} onYes={() => handleDeletePaquete({ pays, total })}
+            opcion={opcionSesiones(new Set(pays.map(x => x.appointment_id).filter(Boolean)).size)} />}
+        </AnimatePresence>
+        <AnimatePresence>
+          {envio?.id === envioKey && envioBar({ id: envioKey, concept: `${locale === 'en' ? 'Package' : 'Paquete'} · ${concepto}`, ids: pays.map(x => x.id) })}
+        </AnimatePresence>
+        <AnimatePresence initial={false}>
+          {abierto && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-v-border bg-v-bg/60">
+              <div className="divide-y divide-v-border">{pays.map(p => filaPago(p, true))}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    )
+  }
+
+  // Enviar el recibo por correo: vacío = correo de la familia registrada
+  const [envio, setEnvio] = useState<{ id: string; email: string } | null>(null)
+  const [enviando, setEnviando] = useState(false)
+  const enviarRecibo = async (p: { id: string; ids?: string[] }, email: string) => {
+    setEnviando(true)
+    try {
+      const r = await fetch('/api/pagos/recibo-pdf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...(p.ids ? { ids: p.ids } : { id: p.id }), email: email.trim() || undefined, lang: locale }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok) { toast.success(locale === 'en' ? `Receipt sent to ${j.email}` : `Recibo enviado a ${j.email}`); setEnvio(null); return }
+      toast.error(j.error === 'sin_correo'
+        ? (locale === 'en' ? 'This patient has no family email. Type an email to send it.' : 'Este paciente no tiene correo de familia. Escribe un correo para enviarlo.')
+        : (locale === 'en' ? 'Could not send the receipt. Try again.' : 'No se pudo enviar el recibo. Inténtalo de nuevo.'))
+    } catch {
+      toast.error(locale === 'en' ? 'Could not send the receipt. Try again.' : 'No se pudo enviar el recibo. Inténtalo de nuevo.')
+    } finally { setEnviando(false) }
+  }
+  const envioBar = (p: { id: string; concept: string; ids?: string[] }) => {
+    const e = envio!
+    return (
+      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+        <div className="space-y-2.5 border-t border-v-border bg-v-accent-soft/50 px-4 py-3.5 sm:px-5">
+          <p className="text-sm font-semibold text-v-text">{locale === 'en' ? `Send receipt · ${p.concept}` : `Enviar recibo · ${p.concept}`}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input autoFocus type="email" value={e.email} onChange={ev => setEnvio({ ...e, email: ev.target.value })}
+              onKeyDown={ev => { if (ev.key === 'Enter') enviarRecibo(p, e.email) }}
+              placeholder={locale === 'en' ? "Family's email (leave empty to use the registered one)" : 'Correo (vacío = el de la familia registrada)'}
+              className={`${inputCls} h-10 min-w-0 flex-1 bg-v-elevated`} />
+            <button onClick={() => setEnvio(null)} className="h-10 rounded-full px-4 text-sm font-semibold text-v-muted hover:bg-v-fill">{t('common.cancelar')}</button>
+            <button onClick={() => enviarRecibo(p, e.email)} disabled={enviando}
+              className="v-brand inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold disabled:opacity-50">
+              {enviando ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} {locale === 'en' ? 'Send' : 'Enviar'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
 
   const abonoBar = (p: any, titulo: string) => {
     const saldo = p.status === 'partial' ? saldoDe(p) : Number(p.amount)
@@ -850,9 +1195,72 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                     <input type="number" inputMode="decimal" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" className={`${inputCls} pl-10 font-semibold tabular-nums`} />
                   </div>
                 </Field>
-                <Field label={t('pagos.fechaPago')}>
-                  <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls} />
+                <Field label={locale === 'en' ? 'Specialist in charge' : 'Especialista a cargo'}>
+                  <select value={form.especialista_id} onChange={e => setForm(f => ({ ...f, especialista_id: e.target.value }))} className={inputCls}>
+                    <option value="">{locale === 'en' ? 'No specialist' : 'Sin especialista'}</option>
+                    {especialistas.map(e => <option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
+                  </select>
                 </Field>
+                <Field label={locale === 'en' ? 'Guardian' : 'Responsable / tutor'}>
+                  <input value={form.responsable} onChange={e => setForm(f => ({ ...f, responsable: e.target.value }))}
+                    placeholder={(form.modo === 'registrado' && tutorDe(form.child_id)) || (locale === 'en' ? 'Name of the parent or guardian' : 'Nombre del padre, madre o tutor')} className={inputCls} />
+                </Field>
+                <Field label={agenda.activo && form.modo === 'registrado' && agenda.modo === 'nueva' ? (locale === 'en' ? 'Session date' : 'Fecha de la sesión') : t('pagos.fechaPago')}>
+                  <input type="date" value={agenda.activo && form.modo === 'registrado' && agenda.modo === 'existente' ? (citasPaciente.find(c => c.id === agenda.citaId)?.appointment_date ?? form.date) : form.date}
+                    disabled={agenda.activo && form.modo === 'registrado' && agenda.modo === 'existente'}
+                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={`${inputCls} disabled:opacity-60`} />
+                </Field>
+                {form.modo === 'registrado' && (
+                  <div className="md:col-span-2 rounded-v-sm border border-v-border bg-v-bg p-3.5">
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <Calendar size={16} className="shrink-0 text-v-accent" />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-v-text">{locale === 'en' ? 'Link to the schedule' : 'Vincular con la agenda'}</span>
+                          <span className="block text-xs text-v-muted">{locale === 'en' ? 'Optional: attach this charge to a session and see its attendance.' : 'Opcional: une este cobro a una sesión y verás su asistencia.'}</span>
+                        </span>
+                      </span>
+                      <input type="checkbox" checked={agenda.activo} onChange={e => setAgenda(a => ({ ...a, activo: e.target.checked }))} className="size-5 shrink-0 accent-[var(--v-accent)]" />
+                    </label>
+                    <AnimatePresence initial={false}>
+                      {agenda.activo && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="mt-3 space-y-3 border-t border-v-border pt-3">
+                            {!form.child_id ? (
+                              <p className="text-sm text-v-muted">{locale === 'en' ? 'Choose the patient first.' : 'Primero elige el paciente.'}</p>
+                            ) : (<>
+                              <ChipGroup options={[
+                                { v: 'existente', label: locale === 'en' ? 'Scheduled session' : 'Sesión ya agendada' },
+                                { v: 'nueva', label: locale === 'en' ? 'Schedule new session' : 'Agendar sesión nueva' },
+                              ]} value={agenda.modo} onChange={v => setAgenda(a => ({ ...a, modo: v as 'existente' | 'nueva' }))} />
+                              {agenda.modo === 'existente' ? (
+                                citasPaciente.length ? (
+                                  <select value={agenda.citaId} onChange={e => setAgenda(a => ({ ...a, citaId: e.target.value }))} className={inputCls}>
+                                    <option value="">{locale === 'en' ? 'Choose the session…' : 'Elige la sesión…'}</option>
+                                    {citasPaciente.map(c => (
+                                      <option key={c.id} value={c.id}>
+                                        {fechaCorta(new Date(c.appointment_date + 'T12:00:00'))} · {String(c.appointment_time ?? '').slice(0, 5)} · {c.service_type || '—'} · {asistenciaDe(c.status, c.appointment_date, locale === 'en').txt}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : <p className="text-sm text-v-muted">{locale === 'en' ? 'This patient has no sessions in the schedule. Schedule a new one.' : 'Este paciente no tiene sesiones en la agenda. Agenda una nueva.'}</p>
+                              ) : (
+                                <div className="grid gap-3 sm:grid-cols-[160px_1fr] sm:items-end">
+                                  <Field label={locale === 'en' ? 'Time' : 'Hora'}>
+                                    <input type="time" value={agenda.hora} onChange={e => setAgenda(a => ({ ...a, hora: e.target.value }))} className={inputCls} />
+                                  </Field>
+                                  <p className="pb-2 text-xs text-v-muted">{locale === 'en'
+                                    ? 'It will be added to the schedule with the date above and the concept as the service, and synced to the connected calendars.'
+                                    : 'Se agregará a la agenda con la fecha de arriba y el concepto como servicio, y se sincronizará con los calendarios conectados.'}</p>
+                                </div>
+                              )}
+                            </>)}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
                 <div className="md:col-span-2"><Field label={t('pagos.metodoPago')}><ChipGroup options={metodoOpts} value={form.method} onChange={v => setForm(f => ({ ...f, method: v }))} /></Field></div>
                 <div className="md:col-span-2"><Field label={t('pagos.estado')}><ChipGroup options={estadoOpts} value={form.status} onChange={v => setForm(f => ({ ...f, status: v }))} /></Field></div>
                 <AnimatePresence initial={false}>
@@ -909,8 +1317,46 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                   </div>
                 </Field>
                 <div className="hidden md:block" />
+                <Field label={locale === 'en' ? 'Specialist in charge' : 'Especialista a cargo'}>
+                  <select value={pkg.especialista_id} onChange={e => setPkg(f => ({ ...f, especialista_id: e.target.value }))} className={inputCls}>
+                    <option value="">{locale === 'en' ? 'No specialist' : 'Sin especialista'}</option>
+                    {especialistas.map(e => <option key={e.id} value={e.id}>{e.full_name}{e.specialty ? ` · ${e.specialty}` : ''}</option>)}
+                  </select>
+                </Field>
+                <Field label={locale === 'en' ? 'Guardian' : 'Responsable / tutor'}>
+                  <input value={pkg.responsable} onChange={e => setPkg(f => ({ ...f, responsable: e.target.value }))}
+                    placeholder={(pkg.modo === 'registrado' && tutorDe(pkg.child_id)) || (locale === 'en' ? 'Name of the parent or guardian' : 'Nombre del padre, madre o tutor')} className={inputCls} />
+                </Field>
                 <div className="md:col-span-2"><Field label={t('pagos.metodoPago')}><ChipGroup options={metodoOpts} value={pkg.method} onChange={v => setPkg(pp => ({ ...pp, method: v }))} /></Field></div>
                 <div className="md:col-span-2"><Field label={t('pagos.estadoPagos')}><ChipGroup options={estadoOptsPkg} value={pkg.status} onChange={v => setPkg(pp => ({ ...pp, status: v }))} /></Field></div>
+                {pkg.modo === 'registrado' && (
+                  <div className="md:col-span-2 rounded-v-sm border border-v-border bg-v-bg p-3.5">
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <Calendar size={16} className="shrink-0 text-v-accent" />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-v-text">{locale === 'en' ? 'Schedule each session' : 'Agendar cada sesión'}</span>
+                          <span className="block text-xs text-v-muted">{locale === 'en' ? 'Optional: each chosen day is added to the schedule and linked to its charge.' : 'Opcional: cada día elegido se agrega a la agenda y queda unido a su cobro.'}</span>
+                        </span>
+                      </span>
+                      <input type="checkbox" checked={pkgAgenda.activo} onChange={e => setPkgAgenda(a => ({ ...a, activo: e.target.checked }))} className="size-5 shrink-0 accent-[var(--v-accent)]" />
+                    </label>
+                    <AnimatePresence initial={false}>
+                      {pkgAgenda.activo && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="mt-3 grid gap-3 border-t border-v-border pt-3 sm:grid-cols-[160px_1fr] sm:items-end">
+                            <Field label={locale === 'en' ? 'Time (all sessions)' : 'Hora (todas las sesiones)'}>
+                              <input type="time" value={pkgAgenda.hora} onChange={e => { setPkgAgenda(a => ({ ...a, hora: e.target.value })); setPkgHoras({}) }} className={inputCls} />
+                            </Field>
+                            <p className="pb-2 text-xs text-v-muted">{locale === 'en'
+                              ? 'You can change the time of each day in the list of chosen dates. Days that already have a session (marked with a dot) are linked to it. New sessions sync with the connected calendars.'
+                              : 'Puedes cambiar la hora de cada día en la lista de fechas elegidas. Los días que ya tienen sesión (marcados con un punto) se vinculan a ella. Las nuevas se sincronizan con los calendarios conectados.'}</p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
 
               {/* Calendario para elegir las fechas de las sesiones */}
@@ -947,8 +1393,10 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                             return (
                               <button key={di} type="button"
                                 onClick={() => setPkgDates(prev => prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr].sort())}
-                                className={`grid h-9 place-items-center rounded-full text-sm font-semibold tabular-nums transition-all active:scale-95 ${on ? 'bg-v-accent text-white shadow-v' : isToday ? 'text-v-accent ring-1 ring-v-accent' : 'text-v-text hover:bg-v-fill'}`}>
+                                title={pkgCitas[dateStr] ? (locale === 'en' ? 'Already has a session' : 'Ya tiene una sesión') : undefined}
+                                className={`relative grid h-9 place-items-center rounded-full text-sm font-semibold tabular-nums transition-all active:scale-95 ${on ? 'bg-v-accent text-white shadow-v' : isToday ? 'text-v-accent ring-1 ring-v-accent' : 'text-v-text hover:bg-v-fill'}`}>
                                 {day}
+                                {pkgCitas[dateStr] && <span aria-hidden className={`absolute bottom-1 size-1 rounded-full ${on ? 'bg-white' : 'bg-v-success'}`} />}
                               </button>
                             )
                           })}
@@ -980,6 +1428,11 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                             <div key={date} className="flex items-center gap-3 px-4 py-2">
                               <span className="w-10 shrink-0 rounded-full bg-v-accent-soft py-0.5 text-center text-[11px] font-semibold text-v-accent">{diaCorto(d.getDay(), locale)}</span>
                               <span className="min-w-0 flex-1 truncate text-sm text-v-text">{fechaCorta(d)}</span>
+                              {pkgAgenda.activo && pkg.modo === 'registrado' && (pkgCitas[date]
+                                ? <span className="shrink-0 rounded-full bg-v-success/15 px-2 py-0.5 text-[11px] font-semibold text-v-success">{locale === 'en' ? 'Existing session' : 'Sesión existente'}</span>
+                                : <input type="time" value={horaDe(date)} aria-label={locale === 'en' ? 'Session time' : 'Hora de la sesión'}
+                                    onChange={e => setPkgHoras(h => ({ ...h, [date]: e.target.value }))}
+                                    className="h-8 w-[92px] shrink-0 rounded-full border border-v-border bg-v-elevated px-2 text-xs tabular-nums outline-none focus:border-v-accent" />)}
                               <span className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(Number(pkg.amount || 0))}</span>
                               <button onClick={() => setPkgDates(prev => prev.filter(x => x !== date))} className="grid size-7 shrink-0 place-items-center rounded-full text-v-subtle hover:bg-v-danger/10 hover:text-v-danger"><X size={13} /></button>
                             </div>
@@ -1015,65 +1468,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
           ) : (
             <div className="rounded-v border border-v-border bg-v-elevated shadow-v">
               <div className="divide-y divide-v-border">
-                {filtered.map(p => {
-                  const tone = STATUS_TONE[p.status] || STATUS_TONE.refunded
-                  const MI = METHOD_ICON[p.payment_method] || MoreHorizontal
-                  const nombre = p.children?.name || p.paciente_externo || '—'
-                  const menuOpen = statusMenu === p.id
-                  const conf = confirmar?.tipo === 'pago' && confirmar.id === p.id
-                  return (
-                    <div key={p.id}>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-v-bg sm:px-5">
-                        <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-sm font-semibold text-v-accent">{nombre.charAt(0).toUpperCase()}</span>
-                        <div className="min-w-0 flex-[1_1_180px]">
-                          <p className="truncate text-sm font-semibold text-v-text">{nombre}{!p.child_id && p.paciente_externo && <span className="ml-1.5 rounded-full bg-v-fill px-1.5 py-0.5 text-[10px] font-medium text-v-subtle">{t('pagos.sinInscribir')}</span>}</p>
-                          <p className="truncate text-xs text-v-subtle">{p.concept} · {fechaCorta(new Date(p.paid_at || p.created_at))}</p>
-                        </div>
-                        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                          <span className="mr-1 text-right">
-                            <span className="block text-sm font-bold tabular-nums text-v-text">{fmt(Number(p.amount))}</span>
-                            {p.status === 'partial' && <span className="block text-[11px] font-medium tabular-nums text-v-warning">{locale === 'en' ? 'owes' : 'debe'} {fmt(saldoDe(p))}</span>}
-                            <span className="flex items-center justify-end gap-1 text-[11px] text-v-subtle"><MI size={11} /> {t('pagos.method.' + p.payment_method)}</span>
-                          </span>
-                          {/* Estado: tocar para cambiar */}
-                          <div className="relative">
-                            <button onClick={() => setStatusMenu(menuOpen ? null : p.id)}
-                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone.pill}`}>
-                              {t('pagos.status.' + p.status)} <ChevronDown size={12} className={`transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                            <AnimatePresence>
-                              {menuOpen && (
-                                <>
-                                  <div className="fixed inset-0 z-30" onClick={() => setStatusMenu(null)} />
-                                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}
-                                    className="absolute right-0 top-full z-40 mt-1.5 w-40 overflow-hidden rounded-v-sm border border-v-border bg-v-elevated p-1 shadow-v-lg">
-                                    {Object.keys(STATUS_CFG).map(k => (
-                                      <button key={k} onClick={() => cambiarEstado(p, k)}
-                                        className={`flex w-full items-center gap-2 rounded-v-sm px-2.5 py-2 text-left text-xs font-semibold transition-colors ${p.status === k ? 'bg-v-fill text-v-text' : 'text-v-muted hover:bg-v-fill hover:text-v-text'}`}>
-                                        <span className={`size-2 rounded-full ${STATUS_TONE[k]?.dot}`} /> {t('pagos.status.' + k)}
-                                        {p.status === k && <Check size={13} className="ml-auto" />}
-                                      </button>
-                                    ))}
-                                  </motion.div>
-                                </>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                          <button onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}&lang=${locale}`, '_blank')} title={t('admin.verRecibo')}
-                            className="grid size-8 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
-                          <button onClick={() => setConfirmar(conf ? null : { tipo: 'pago', id: p.id })} disabled={deletingId === p.id} title={t('admin.eliminarPago')}
-                            className={`grid size-8 place-items-center rounded-full transition-colors disabled:opacity-50 ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}>
-                            {deletingId === p.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                          </button>
-                        </div>
-                      </div>
-                      <AnimatePresence>
-                        {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => setConfirmar(null)} onYes={() => handleDeletePago(p)} />}
-                        {abonoFor?.id === p.id && abonoBar(p, locale === 'en' ? 'How much was paid as a down payment?' : '¿Cuánto pagó de adelanto?')}
-                      </AnimatePresence>
-                    </div>
-                  )
-                })}
+                {itemsRegistros.map(it => it.tipo === 'pago' ? filaPago(it.p) : tarjetaPaquete(it))}
               </div>
               <div className="flex items-center justify-between rounded-b-v border-t border-v-border bg-v-bg px-5 py-3">
                 <p className="text-xs text-v-subtle">{t('pagos.registros', { n: String(filtered.length) })}</p>
@@ -1141,7 +1536,7 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
                           <div className="min-w-0 flex-[1_1_220px]">
                             <p className="truncate text-sm font-medium text-v-text">{p.concept}</p>
-                            <p className="text-xs text-v-subtle">{fechaCorta(new Date(p.created_at))}{abonos.length > 0 && ` · ${abonos.length} ${abonos.length === 1 ? (locale === 'en' ? 'payment' : 'abono') : (locale === 'en' ? 'payments' : 'abonos')}`}</p>
+                            <p className="text-xs text-v-subtle">{fechaCorta(new Date(fechaCobroDe(p)))}{abonos.length > 0 && ` · ${abonos.length} ${abonos.length === 1 ? (locale === 'en' ? 'payment' : 'abono') : (locale === 'en' ? 'payments' : 'abonos')}`}</p>
                             <div className="mt-2 flex items-center gap-2">
                               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-v-fill">
                                 <motion.div className="h-full rounded-full bg-v-success" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7 }} />
@@ -1160,10 +1555,13 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                             </button>
                             <button onClick={() => window.open(`/api/pagos/recibo-pdf?id=${p.id}&lang=${locale}`, '_blank')} title={t('admin.verRecibo')}
                               className="grid size-9 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
+                            <button onClick={() => setEnvio(envio?.id === p.id ? null : { id: p.id, email: '' })} title={locale === 'en' ? 'Email receipt' : 'Enviar recibo por correo'}
+                              className={`grid size-9 place-items-center rounded-full transition-colors ${envio?.id === p.id ? 'bg-v-accent-soft text-v-accent' : 'text-v-muted hover:bg-v-accent-soft hover:text-v-accent'}`}><Mail size={15} /></button>
                           </div>
                         </div>
                         <AnimatePresence>
                           {abonoFor?.id === p.id && abonoBar(p, locale === 'en' ? `New payment · ${p.concept}` : `Nuevo abono · ${p.concept}`)}
+                          {envio?.id === p.id && envioBar(p)}
                         </AnimatePresence>
                       </div>
                     )
@@ -1204,13 +1602,13 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                   <span className="hidden shrink-0 text-lg font-bold tabular-nums text-v-text sm:block">{fmt(g.total)}</span>
                   <button onClick={() => window.open(`/api/pagos/recibo-paquete?ids=${g.pays.map((x: any) => x.id).join(',')}&lang=${locale}`, '_blank')} title={t('admin.reciboPaquete')}
                     className="grid size-8 shrink-0 place-items-center rounded-full text-v-muted transition-colors hover:bg-v-accent-soft hover:text-v-accent"><FileText size={15} /></button>
-                  <button onClick={() => setConfirmar(conf ? null : { tipo: 'paquete', id: g.key })} title={t('admin.eliminarPaquete')}
+                  <button onClick={() => { setBorrarSesiones(false); setConfirmar(conf ? null : { tipo: 'paquete', id: g.key }) }} title={t('admin.eliminarPaquete')}
                     className={`grid size-8 shrink-0 place-items-center rounded-full transition-colors ${conf ? 'bg-v-danger/10 text-v-danger' : 'text-v-muted hover:bg-v-danger/10 hover:text-v-danger'}`}><Trash2 size={15} /></button>
                   <button onClick={() => setExpanded(st => { const n = new Set(st); if (n.has(g.key)) n.delete(g.key); else n.add(g.key); return n })}
                     className={`grid size-8 shrink-0 place-items-center rounded-full transition-all ${isOpen ? 'rotate-180 bg-v-accent-soft text-v-accent' : 'text-v-subtle hover:bg-v-fill'}`}><ChevronDown size={16} /></button>
                 </div>
                 <AnimatePresence>
-                  {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPaquete', { child: g.child, cantidad: String(g.pays.length), total: fmt(g.total) })} onNo={() => setConfirmar(null)} onYes={() => handleDeletePaquete(g)} />}
+                  {conf && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPaquete', { child: g.child, cantidad: String(g.pays.length), total: fmt(g.total) })} onNo={() => { setConfirmar(null); setBorrarSesiones(false) }} onYes={() => handleDeletePaquete(g)} opcion={opcionSesiones(new Set(g.pays.map((x: any) => x.appointment_id).filter(Boolean)).size)} />}
                 </AnimatePresence>
                 <AnimatePresence initial={false}>
                   {isOpen && (
@@ -1218,16 +1616,22 @@ export default function SecretariaPagos({ profile, enabledTabs }: { profile: any
                       <div className="divide-y divide-v-border border-t border-v-border bg-v-bg">
                         {g.pays.map((p: any) => {
                           const tone = STATUS_TONE[p.status] || STATUS_TONE.refunded
+                          const confP = confirmar?.tipo === 'pago' && confirmar.id === p.id
                           return (
-                            <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
-                              <span className="w-24 shrink-0 text-xs tabular-nums text-v-subtle">{fechaCorta(new Date(p.paid_at || p.created_at))}</span>
+                            <div key={p.id}>
+                            <div className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+                              <span className="w-24 shrink-0 text-xs tabular-nums text-v-subtle" title={pagadoOtroDia(p) ? `${locale === 'en' ? 'Paid' : 'Pagado el'} ${fechaCorta(new Date(p.paid_at))}` : undefined}>{fechaCorta(new Date(fechaCobroDe(p)))}</span>
                               <span className="min-w-0 flex-1 truncate text-sm text-v-muted">{p.concept}</span>
                               <span className="shrink-0 text-sm font-semibold tabular-nums text-v-text">{fmt(Number(p.amount))}</span>
                               <span className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold sm:inline ${tone.pill}`}>{t('pagos.status.' + p.status)}</span>
-                              <button onClick={() => handleDeletePago(p)} disabled={deletingId === p.id} title={t('admin.eliminarEstePago')}
-                                className="grid size-7 shrink-0 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-danger/10 hover:text-v-danger disabled:opacity-50">
+                              <button onClick={() => { setBorrarSesiones(false); setConfirmar(confP ? null : { tipo: 'pago', id: p.id }) }} disabled={deletingId === p.id} title={t('admin.eliminarEstePago')}
+                                className={`grid size-7 shrink-0 place-items-center rounded-full transition-colors disabled:opacity-50 ${confP ? 'bg-v-danger/10 text-v-danger' : 'text-v-subtle hover:bg-v-danger/10 hover:text-v-danger'}`}>
                                 {deletingId === p.id ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
                               </button>
+                            </div>
+                            <AnimatePresence>
+                              {confP && <ConfirmBar cancelLabel={t('common.cancelar')} deleteLabel={locale === 'en' ? 'Delete' : 'Eliminar'} texto={t('pagos.confirmEliminarPago', { nombre: g.child, concepto: p.concept, monto: fmt(Number(p.amount)) })} onNo={() => { setConfirmar(null); setBorrarSesiones(false) }} onYes={() => handleDeletePago(p)} opcion={opcionSesiones(p.appointment_id ? 1 : 0)} />}
+                            </AnimatePresence>
                             </div>
                           )
                         })}

@@ -8,6 +8,7 @@ import { getApiCaller, unauthorized, forbidden } from '@/lib/api-auth'
 import { fasePago, motivoBloqueo } from '@/lib/estado-centro'
 import { contextoPrecios } from '@/lib/precios-server'
 import { REGIONES, equivalenteLocal, precioMensual, type PrecioRegion } from '@/lib/precios'
+import { esEncargadoDelCentro } from '@/lib/eliminar-centro'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
   if (!caller.centroId) return forbidden()
 
   const [{ data: centro }, { data: planes }] = await Promise.all([
-    supabaseAdmin.from('centros').select('name, status, trial_ends_at, paid_until, plan_id, pais, ciclo_facturacion').eq('id', caller.centroId).maybeSingle(),
+    supabaseAdmin.from('centros').select('name, status, trial_ends_at, paid_until, plan_id, pais, ciclo_facturacion, lemon_subscription_id, lemon_estado').eq('id', caller.centroId).maybeSingle(),
     supabaseAdmin.from('plans')
       .select('id, code, name_es, name_en, precio_region, max_patients, max_professionals, max_parents, max_ai_reports, has_team_chat, has_catalog, has_financial_reports')
       .eq('is_active', true).order('sort_order'),
@@ -42,6 +43,9 @@ export async function GET(req: NextRequest) {
     planId: centro.plan_id,
     rol: caller.role,
     esDueno: DUENOS.includes(caller.role),
+    // Persona encargada (quien creó el centro): la única que puede cancelar la suscripción o eliminar el centro
+    esEncargado: await esEncargadoDelCentro(caller.id, caller.centroId),
+    suscripcion: centro.lemon_subscription_id ? { estado: centro.lemon_estado ?? null } : null,
     bloqueo: motivoBloqueo(centro),
     pago,
     planes: conPrecio,

@@ -1,9 +1,10 @@
 // lib/groq-client.ts
-// Cliente Groq — con fallback automático entre modelos cuando se agota el límite diario
+// Cliente de IA: Groq con fallback automático entre modelos cuando se agota el límite, y DeepInfra como
+// respaldo si Groq se queda sin cupo, falla o no está configurado (lib/proveedores-ia.ts).
 
 import { logServerError } from '@/lib/log-server-error'
-
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
+import { iaDesactivadaAhora, notaSinIA } from '@/lib/ia-contexto'
+import { modeloDeepInfra, proveedoresIA, type ProveedorIA } from '@/lib/proveedores-ia'
 
 // Cadena de fallback: si el modelo principal falla por rate limit,
 // se prueba automáticamente el siguiente en la lista.
@@ -64,17 +65,17 @@ function parseRateLimitInfo(model: string, rawMessage: string, retryAfterHeader:
 // Intentar un modelo específico — retorna { text } si funcionó, o RateLimitInfo si hubo 429/413
 // (para registrar y probar el siguiente modelo). Lanza solo en errores NO recuperables.
 async function tryModel(
-  apiKey: string,
+  proveedor: ProveedorIA,
   model: string,
   messages: GroqMessage[],
   temperature: number,
   maxTokens: number,
 ): Promise<{ text: string } | RateLimitInfo> {
   try {
-    const res = await fetch(GROQ_API_URL, {
+    const res = await fetch(proveedor.url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${proveedor.key}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: false }),
@@ -84,7 +85,7 @@ async function tryModel(
       const err = await res.json().catch(() => ({}))
       const rawMsg: string = err?.error?.message || ''
       const info = parseRateLimitInfo(model, rawMsg, res.headers.get('retry-after'))
-      console.warn(`[Groq] Rate limit en ${model}: ${rawMsg || '429'}`)
+      console.warn(`[IA:${proveedor.id}] Rate limit en ${model}: ${rawMsg || '429'}`)
       return info
     }
 
@@ -93,7 +94,7 @@ async function tryModel(
     if (res.status === 413) {
       const err = await res.json().catch(() => ({}))
       const rawMsg: string = err?.error?.message || '413'
-      console.warn(`[Groq] Payload too large en ${model}: ${rawMsg}`)
+      console.warn(`[IA:${proveedor.id}] Payload too large en ${model}: ${rawMsg}`)
       return { rateLimited: true, model, rawMessage: rawMsg, isPerMinute: false, retryAfterSeconds: null }
     }
 
@@ -103,13 +104,13 @@ async function tryModel(
     if (res.status === 404) {
       const err = await res.json().catch(() => ({}))
       const rawMsg: string = err?.error?.message || '404'
-      console.warn(`[Groq] Modelo no disponible/decommissioned: ${model}: ${rawMsg}`)
+      console.warn(`[IA:${proveedor.id}] Modelo no disponible/decommissioned: ${model}: ${rawMsg}`)
       return { rateLimited: true, model, rawMessage: rawMsg, isPerMinute: false, retryAfterSeconds: null }
     }
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: { message: res.statusText } }))
-      throw new Error(`Groq error ${res.status} (${model}): ${err?.error?.message || res.statusText}`)
+      throw new Error(`${proveedor.id} error ${res.status} (${model}): ${err?.error?.message || res.statusText}`)
     }
 
     const data = await res.json()
@@ -147,40 +148,48 @@ export async function callGroq(
     maxRetries?: number
   } = {}
 ): Promise<string> {
+  // IA no autorizada por el centro: no se envía nada al proveedor (ver lib/ia-contexto.ts)
+  if (iaDesactivadaAhora()) return notaSinIA()
   const {
     model = GROQ_MODELS.SMART,
     temperature = 0.5,
     maxTokens = 2500,
   } = options
 
-  const apiKey = process.env.GROQ_API_KEY
-  if (!apiKey) {
-    await logServerError('GROQ_API_KEY no configurada', 'Falta la variable de entorno GROQ_API_KEY', 'groq')
+  const proveedores = proveedoresIA()
+  if (proveedores.length === 0) {
+    await logServerError('IA sin configurar', 'Faltan GROQ_API_KEY y DEEPINFRA_API_KEY', 'groq')
     throw new Error('GROQ_API_KEY no configurada')
   }
 
-  // Construir cadena de fallback: modelo preferido primero, luego los alternativos
-  const modelsToTry = [model, ...FALLBACK_CHAIN.filter(m => m !== model)]
-
   const rateLimitHits: RateLimitInfo[] = []
 
-  for (const currentModel of modelsToTry) {
-    let result: { text: string } | RateLimitInfo
-    try {
-      result = await tryModel(apiKey, currentModel, messages, temperature, maxTokens)
-    } catch (err) {
-      // Error NO recuperable (no es rate limit) → lo registramos para el programador y propagamos.
-      await logServerError(`Groq error (${currentModel})`, (err as Error)?.stack || (err as Error)?.message || String(err), 'groq')
-      throw err
-    }
-    if ('text' in result) {
-      if (currentModel !== model) {
-        console.info(`[Groq] Usando fallback: ${currentModel} (preferido: ${model})`)
+  for (const [n, proveedor] of proveedores.entries()) {
+    const ultimo = n === proveedores.length - 1
+    // Groq: modelo preferido y luego la cadena de fallback. DeepInfra: los equivalentes.
+    const modelsToTry = proveedor.id === 'groq'
+      ? [model, ...FALLBACK_CHAIN.filter(m => m !== model)]
+      : [...new Set([model, ...FALLBACK_CHAIN].map(modeloDeepInfra))]
+
+    for (const currentModel of modelsToTry) {
+      let result: { text: string } | RateLimitInfo
+      try {
+        result = await tryModel(proveedor, currentModel, messages, temperature, maxTokens)
+      } catch (err) {
+        // Error NO recuperable (no es rate limit): se registra y se pasa al proveedor de respaldo, si hay.
+        await logServerError(`IA error ${proveedor.id} (${currentModel})`, (err as Error)?.stack || (err as Error)?.message || String(err), 'groq')
+        if (ultimo) throw err
+        break
       }
-      return result.text
+      if ('text' in result) {
+        if (currentModel !== model || n > 0) {
+          console.info(`[IA] Usando respaldo: ${proveedor.id} · ${currentModel} (preferido: groq · ${model})`)
+        }
+        return result.text
+      }
+      // Era rate limit / payload too large / modelo no disponible → registrar y probar el siguiente modelo
+      rateLimitHits.push({ ...result, model: `${proveedor.id} · ${result.model}` })
     }
-    // Era rate limit / payload too large / modelo no disponible → registrar y probar el siguiente modelo
-    rateLimitHits.push(result)
   }
 
   // Todos los modelos fallaron. Determinar si es por-minuto (se resuelve solo)

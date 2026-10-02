@@ -106,3 +106,40 @@ export async function suscripcionesPorEmail(email: string): Promise<{ id: string
   const res = await lemon<{ data: { id: string; attributes: Record<string, unknown> }[] }>(q)
   return (res.data ?? []).sort((x, y) => String(y.attributes.created_at ?? '').localeCompare(String(x.attributes.created_at ?? '')))
 }
+
+type SubRespuesta = { data: { id: string; attributes: Record<string, unknown> } }
+
+/**
+ * Cancela la suscripción: Lemon no vuelve a cobrar y el acceso sigue hasta el final del periodo pagado
+ * (status 'cancelled', ends_at = fin del periodo). Se puede reanudar antes de esa fecha.
+ */
+export async function cancelarSuscripcion(subscriptionId: string) {
+  const res = await lemon<SubRespuesta>(`/subscriptions/${subscriptionId}`, { method: 'DELETE' })
+  return res.data
+}
+
+/** Reanuda una suscripción cancelada que aún no terminó (vuelve a renovarse con normalidad). */
+export async function reanudarSuscripcion(subscriptionId: string) {
+  const res = await lemon<SubRespuesta>(`/subscriptions/${subscriptionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ data: { type: 'subscriptions', id: String(subscriptionId), attributes: { cancelled: false } } }),
+  })
+  return res.data
+}
+
+export type VarianteLemon = { id: string; nombre: string; estado: string; producto: string; precio: number; intervalo: string | null }
+
+/** Productos y variantes de la tienda (para asociar los IDs desde /control sin copiarlos a mano). */
+export async function variantesDeLaTienda(): Promise<VarianteLemon[]> {
+  const productos = await lemon<{ data: { id: string; attributes: { name: string } }[] }>(
+    `/products?filter[store_id]=${process.env.LEMONSQUEEZY_STORE_ID}&page[size]=100`)
+  const lista: VarianteLemon[] = []
+  for (const p of productos.data ?? []) {
+    const vs = await lemon<{ data: { id: string; attributes: { name: string; status: string; price: number; interval: string | null } }[] }>(
+      `/variants?filter[product_id]=${p.id}&page[size]=100`)
+    for (const v of vs.data ?? []) {
+      lista.push({ id: String(v.id), nombre: v.attributes.name, estado: v.attributes.status, producto: p.attributes.name, precio: v.attributes.price, intervalo: v.attributes.interval })
+    }
+  }
+  return lista
+}

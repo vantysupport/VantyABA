@@ -14,6 +14,7 @@ import { getLangInstruction, getDocLabels } from '@/lib/lang'
 import { buildAIContext } from '@/lib/ai-context-builder'
 import { getApiCaller, hasRole, canAccessChild, ROLES, unauthorized, forbidden, notFound } from '@/lib/api-auth'
 import { sinTokens, descontarToken } from '@/lib/tokens-ia'
+import { conIAOpcional } from '@/lib/ia-contexto'
 
 // ── Helper: parseo robusto de nivel_logro → número 0-100 ─────────────────────
 function parseNivelLogroReport(val: any): number | null {
@@ -816,7 +817,12 @@ async function generarDocx(
 // HANDLER PRINCIPAL
 // ============================================================================
 
+// Se genera también sin IA: si el centro no la activó, las secciones redactadas llevan una nota (lib/ia-contexto.ts)
 export async function POST(request: NextRequest) {
+  return conIAOpcional(request, () => generarInforme(request))
+}
+
+async function generarInforme(request: NextRequest) {
   const caller = await getApiCaller(request)
   if (!caller) return unauthorized()
   if (!hasRole(caller, ROLES.staff)) return forbidden()

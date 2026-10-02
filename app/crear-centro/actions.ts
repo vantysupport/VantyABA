@@ -3,7 +3,9 @@
 import { createClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { appBaseUrl, authMailConfigured, createUserWithConfirmationEmail } from '@/lib/auth-emails'
+import { liberarCorreoHuerfano } from '@/lib/cuenta-huerfana'
 import { detectarPais } from '@/lib/precios-server'
+import { aceptacionTerminos } from '@/lib/terminos'
 
 const DEFAULT_TRIAL_DAYS = 14
 const LOGO_MAX_BYTES = 2 * 1024 * 1024
@@ -44,6 +46,7 @@ export async function createCentro(_prev: CreateCentroState, formData: FormData)
   if (!EMAIL_RE.test(email) || !EMAIL_RE.test(centroEmail)) return { error: 'vanty.createCenter.errors.email' }
   if (ruc && !/^[0-9A-Za-z-]{6,20}$/.test(ruc)) return { error: 'vanty.createCenter.errors.ruc' }
   if (password.length < 8) return { error: 'vanty.createCenter.errors.password' }
+  if (formData.get('terminos') !== '1') return { error: 'vanty.createCenter.errors.terms' }
   const logoFile = logo instanceof File && logo.size > 0 ? logo : null
   if (logoFile && (!LOGO_TYPES[logoFile.type] || logoFile.size > LOGO_MAX_BYTES)) return { error: 'vanty.createCenter.errors.logo' }
 
@@ -56,6 +59,9 @@ export async function createCentro(_prev: CreateCentroState, formData: FormData)
   // With Gmail SMTP configured the app sends its own branded confirmation email; otherwise Supabase's mailer does.
   const siteUrl = appBaseUrl()
   if (!siteUrl) return { error: 'vanty.createCenter.errors.generic' }
+  // Si el correo quedó ocupado por una cuenta que se creó sola al entrar con Google/Microsoft y no
+  // pertenece a nada, se libera. La cuenta nueva igual exige confirmar el correo.
+  await liberarCorreoHuerfano(email)
   let userId: string
   if (authMailConfigured()) {
     const created = await createUserWithConfirmationEmail({ email, password, fullName, siteUrl, locale })
@@ -109,7 +115,7 @@ export async function createCentro(_prev: CreateCentroState, formData: FormData)
 
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .update({ role: 'jefe', centro_id: centro.id, full_name: fullName })
+    .update({ role: 'jefe', centro_id: centro.id, full_name: fullName, nombre_confirmado: true, ...aceptacionTerminos() })
     .eq('id', user.id)
   if (profileError) {
     await rollback(centro.id)

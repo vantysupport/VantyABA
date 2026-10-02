@@ -8,9 +8,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import {
-  ArrowRight, CalendarCheck, ClipboardCheck, Sparkles, Users, CreditCard, TrendingUp, MessageCircle, Building2, Menu, X, ChevronDown, Mail, LayoutDashboard,
+  ArrowRight, CalendarCheck, ClipboardCheck, Sparkles, Users, CreditCard, TrendingUp, MessageCircle, Building2, Menu, X, ChevronDown, Mail, LayoutDashboard, BookOpen,
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
+import { useToast } from '@/components/Toast'
+import { lineaLegal } from '@/lib/empresa'
 import { supabase } from '@/lib/supabase'
 import { VantyLogo } from '@/components/ui/vanty-logo'
 import LocaleSelector from '@/app/components/LocaleSelector'
@@ -64,6 +66,15 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
   const router = useRouter()
   const [menu, setMenu] = useState(false)
   const [panel, setPanel] = useState<string | null>(null)
+  const toast = useToast()
+  // Vuelta tras eliminar la cuenta o el centro
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('cuenta') !== 'eliminada') return
+    toast.success(en ? 'Your account was deleted. Thank you for using Vanty ABA.' : 'Tu cuenta fue eliminada. Gracias por usar Vanty ABA.')
+    q.delete('cuenta')
+    window.history.replaceState(null, '', window.location.pathname + (q.toString() ? `?${q}` : ''))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [scrolled, setScrolled] = useState(false)
   const [faq, setFaq] = useState<number | null>(0)
   const href = (p: string) => `/${locale}${p}`
@@ -90,32 +101,32 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
   ]
 
   const funciones = [
-    { img: '/landing/agenda.webp', Icon: CalendarCheck, corto: L('Schedule', 'Agenda'),
+    { img: '/landing/agenda-3.webp', pos: '50% 58%', Icon: CalendarCheck, corto: L('Schedule', 'Agenda'),
       t: L('A schedule that organizes itself', 'Una agenda que se organiza sola'),
       d: L('Individual or group sessions, in person or online with an automatic video link, recurring appointments and an online booking link for families. Syncs with Google Calendar and Outlook.',
            'Sesiones individuales o grupales, presenciales o virtuales con link de videollamada automático, citas recurrentes y un enlace de reservas online para las familias. Se sincroniza con Google Calendar y Outlook.'),
       puntos: [L('Online bookings 24/7', 'Reservas online 24/7'), L('Automatic reminders', 'Recordatorios automáticos'), L('Built-in video calls', 'Videollamadas integradas')] },
-    { img: '/landing/evaluaciones.webp', Icon: ClipboardCheck, corto: L('ABA programs', 'Programas ABA'),
+    { img: '/landing/evaluaciones-3.webp', pos: '50% 64%', Icon: ClipboardCheck, corto: L('ABA programs', 'Programas ABA'),
       t: L('ABA programs and evaluations in one place', 'Programas ABA y evaluaciones en un solo lugar'),
       d: L('Record session data, track goals and mastery criteria, and run evaluations with ready-made templates. The initial evaluation is shared: whoever fills it first, family or team, leaves it on record for everyone.',
            'Registra datos de cada sesión, sigue objetivos y criterios de dominio, y aplica evaluaciones con plantillas listas. La evaluación inicial es compartida: quien la llene primero, familia o equipo, la deja como constancia para todos.'),
       puntos: [L('Session data and goals', 'Datos de sesión y objetivos'), L('ICD-11 diagnosis search', 'Buscador de diagnósticos CIE-11'), L('Signed clinical documents', 'Documentos clínicos firmados')] },
-    { img: '/landing/aria.webp', Icon: Sparkles, corto: 'ARIA',
+    { img: '/landing/aria-3.webp', pos: '50% 62%', Icon: Sparkles, corto: 'ARIA',
       t: L('ARIA, the clinical AI of your center', 'ARIA, la IA clínica de tu centro'),
       d: L('ARIA writes reports, suggests goals, answers the team with the clinical knowledge base and guides families with activities to practice at home, always in plain language.',
            'ARIA redacta informes, sugiere objetivos, responde al equipo con la base de conocimiento clínico y guía a las familias con actividades para practicar en casa, siempre en lenguaje claro.'),
       puntos: [L('AI reports in minutes', 'Informes con IA en minutos'), L('Predictive analysis', 'Análisis predictivo'), L('Home practice plans', 'Planes de práctica en casa')] },
-    { img: '/landing/pagos.webp', Icon: CreditCard, corto: L('Management', 'Gestión'),
+    { img: '/landing/pagos-3.webp', pos: '50% 58%', Icon: CreditCard, corto: L('Management', 'Gestión'),
       t: L('Payments, team and resources under control', 'Pagos, equipo y recursos bajo control'),
       d: L('Record payments, see financial reports, manage roles for directors, specialists and front desk, and share resources and products with families from a store.',
            'Registra pagos, revisa reportes financieros, gestiona roles para dirección, especialistas y secretaría, y comparte recursos y productos con las familias desde una tienda.'),
       puntos: [L('Roles and permissions', 'Roles y permisos'), L('Financial reports', 'Reportes financieros'), L('Resources and store', 'Recursos y tienda')] },
-    { img: '/landing/portal.webp', Icon: Users, corto: L('Families', 'Familias'),
+    { img: '/landing/portal-3.webp', pos: '50% 55%', Icon: Users, corto: L('Families', 'Familias'),
       t: L('A portal for every family', 'Un portal para cada familia'),
       d: L('Families follow sessions and goals, chat with the team, book appointments and practice at home with ARIA, all from their phone.',
            'Las familias siguen sesiones y objetivos, conversan con el equipo, reservan citas y practican en casa con ARIA, todo desde el celular.'),
       puntos: [L('Progress in real time', 'Progreso en tiempo real'), L('Chat with therapists', 'Chat con terapeutas'), L('Installable app', 'App instalable')] },
-    { img: '/landing/analitica-2.webp', Icon: TrendingUp, corto: L('Analytics', 'Análisis'),
+    { img: '/landing/analitica-3.webp', pos: '50% 58%', Icon: TrendingUp, corto: L('Analytics', 'Análisis'),
       t: L('Analytics and predictions', 'Análisis y predicciones'),
       d: L('Progress charts per program, patterns and AI predictions to anticipate each child\'s evolution and make decisions with data.',
            'Gráficas de progreso por programa, patrones y predicciones con IA para anticipar la evolución de cada niño y decidir con datos.'),
@@ -358,10 +369,14 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
               <li><a href={`mailto:${EMAIL}`} className="hover:text-v-text">{EMAIL}</a></li>
               <li><Link href={href('/privacidad')} className="hover:text-v-text">{L('Privacy', 'Privacidad')}</Link></li>
               <li><Link href={href('/terminos')} className="hover:text-v-text">{L('Terms', 'Términos')}</Link></li>
+              <li><Link href={href('/libro-de-reclamaciones')} className="inline-flex items-center gap-1.5 hover:text-v-text"><BookOpen className="size-3.5" /> {L('Complaints Book', 'Libro de Reclamaciones')}</Link></li>
             </ul>
           </nav>
         </div>
-        <p className="mx-auto mt-10 max-w-6xl border-t border-v-border pt-6 text-xs text-v-subtle">© {new Date().getFullYear()} Vanty ABA · {L('All rights reserved.', 'Todos los derechos reservados.')}</p>
+        <div className="mx-auto mt-10 max-w-6xl space-y-1 border-t border-v-border pt-6 text-xs text-v-subtle">
+          <p>© {new Date().getFullYear()} Vanty ABA · {L('All rights reserved.', 'Todos los derechos reservados.')}</p>
+          <p>{lineaLegal(en)}</p>
+        </div>
       </footer>
     </div>
   )

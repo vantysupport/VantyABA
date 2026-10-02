@@ -41,7 +41,7 @@ export default function AuthCallbackPage() {
           const r = await fetch('/api/invitaciones/aceptar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-            body: JSON.stringify({ token: invite }),
+            body: JSON.stringify({ token: invite, terminos: new URLSearchParams(window.location.search).get('terminos') === '1' }),
           })
           if (!r.ok) {
             const j = await r.json().catch(() => ({}))
@@ -66,6 +66,18 @@ export default function AuthCallbackPage() {
 
         const { data: profile } = await supabase
           .from('profiles').select('role, full_name').eq('id', user.id).single()
+
+        // Entró con Google/Microsoft sin cuenta ni invitación: la cuenta se creó sola y no pertenece a
+        // ningún centro. Se borra (el correo queda libre) y se le explica cómo crear su centro.
+        if (!profile || profile.role === 'padre') {
+          const r = await fetch('/api/auth/cuenta-huerfana', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}` } })
+          const j = await r.json().catch(() => ({}))
+          if (j.borrada) {
+            await supabase.auth.signOut().catch(() => {})
+            router.replace('/login?error=no_account')
+            return
+          }
+        }
 
         if (!profile) {
           await supabase.from('profiles').insert({

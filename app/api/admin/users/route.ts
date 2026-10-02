@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { profileLimitCheck } from '@/lib/profile-limits'
 import { getApiCaller, hasRole, ROLES, rowInCentro, notFound } from '@/lib/api-auth'
 import { borrarArchivosDeUsuario } from '@/lib/borrar-archivos'
+import { esEncargadoDelCentro } from '@/lib/eliminar-centro'
 import { sendEmail, buildEmailReset } from '@/lib/email'
 import { appBaseUrl } from '@/lib/auth-emails'
 import { getCentroBranding } from '@/lib/centro-branding'
@@ -17,6 +18,9 @@ async function requireAdmin(req: NextRequest): Promise<{ ok: true; reason: strin
 }
 
 const VALID_ROLES = ['jefe', 'especialista', 'padre', 'admin', 'secretaria']
+const ROLES_ADMIN = ['jefe', 'admin']
+// Acciones que afectan el acceso de una cuenta: sobre un administrador, solo las hace el administrador principal.
+const ACCIONES_SENSIBLES = ['update_role', 'toggle_active', 'delete_user', 'change_password']
 
 // GET: List all users with their profiles
 export async function GET(request: NextRequest) {
@@ -44,6 +48,11 @@ export async function GET(request: NextRequest) {
     const telFicha = new Map<string, string>()
     for (const f of (fichas || []) as { user_id: string; telefono: string | null }[]) if (f.telefono && !telFicha.has(f.user_id)) telFicha.set(f.user_id, f.telefono)
 
+    // Administrador principal: el dueño del centro (o, si no tiene, sus cuentas de dirección).
+    const { data: centroRow } = await supabaseAdmin.from('centros').select('owner_id').eq('id', auth.centroId).maybeSingle()
+    const esPrincipal = (id: string, role?: string | null) => centroRow?.owner_id ? centroRow.owner_id === id : role === 'jefe'
+    const soyPrincipal = esPrincipal(auth.id, profiles?.find(p => p.id === auth.id)?.role)
+
     const usersWithProfiles = centroUsers.map(user => {
       const profile = profiles?.find(p => p.id === user.id)
       const proveedores = (user.identities || []).map(i => i.provider)
@@ -56,10 +65,11 @@ export async function GET(request: NextRequest) {
         providers: proveedores.length ? [...new Set(proveedores)] : [user.app_metadata?.provider || 'email'],
         phone_alt: telFicha.get(user.id) || null,
         profile: profile || null,
+        principal: esPrincipal(user.id, profile?.role),
       }
     })
 
-    return NextResponse.json({ data: usersWithProfiles })
+    return NextResponse.json({ data: usersWithProfiles, soyPrincipal })
   } catch (error: any) {
     return NextResponse.json({ error: process.env.NODE_ENV === "production" ? "Ocurrió un error. Intentá de nuevo." : error.message }, { status: 500 })
   }
@@ -77,6 +87,28 @@ export async function POST(request: NextRequest) {
     if (action !== 'create_user' && action !== 'send_reset_email') {
       if (!(await rowInCentro('profiles', userId, auth.centroId))) return notFound()
     }
+    // Administrador principal (quien creó el centro): nadie más gestiona su cuenta, y solo él puede
+    // dar, quitar o desactivar el rol de administrador de otra persona.
+    const principal = await esEncargadoDelCentro(auth.id, auth.centroId)
+    const soloPrincipal = (msg: string) => NextResponse.json({ error: msg, code: 'solo_admin_principal' }, { status: 403 })
+    if (userId && action !== 'create_user' && action !== 'send_reset_email') {
+      const { data: objetivo } = await supabaseAdmin.from('profiles').select('role').eq('id', userId).maybeSingle()
+      const objetivoPrincipal = await esEncargadoDelCentro(userId, auth.centroId)
+      const tocaAcceso = ACCIONES_SENSIBLES.includes(action) || (action === 'update_profile' && is_active !== undefined)
+      if (objetivoPrincipal && userId !== auth.id && action !== 'update_tokens') {
+        return soloPrincipal('Es el administrador principal del centro: solo esa persona puede gestionar su cuenta.')
+      }
+      if (objetivoPrincipal && userId === auth.id && (action === 'update_role' || action === 'delete_user')) {
+        return soloPrincipal('El administrador principal no puede quitarse el rol ni eliminarse desde aquí. Para cerrar el centro usa Configuración → Centro.')
+      }
+      if (!principal && userId !== auth.id && tocaAcceso && ROLES_ADMIN.includes(objetivo?.role ?? '')) {
+        return soloPrincipal('Solo el administrador principal puede cambiar el rol, desactivar o eliminar a otro administrador.')
+      }
+    }
+    if ((action === 'update_role' || action === 'create_user') && ROLES_ADMIN.includes(role) && !principal) {
+      return soloPrincipal('Solo el administrador principal puede dar el rol de administrador.')
+    }
+
     if (action === 'send_reset_email') {
       const { data: target } = await supabaseAdmin.from('profiles').select('id').eq('email', email || '').eq('centro_id', auth.centroId).maybeSingle()
       if (!email || !target) return notFound()
@@ -225,6 +257,7 @@ export async function POST(request: NextRequest) {
           id: newUser.user.id,
           email,
           full_name: full_name || email.split('@')[0],
+          nombre_confirmado: !!full_name,
           role,
           tokens: 0,
           is_active: true,

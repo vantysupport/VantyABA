@@ -6,6 +6,7 @@ import { emailLayout } from '@/lib/email-layout'
 import { randomBytes } from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { profileLimitCheck } from '@/lib/profile-limits'
+import { aceptacionTerminos } from '@/lib/terminos'
 import { avisarEquipo } from '@/lib/avisos'
 
 export const ROLES_INVITABLES = ['especialista', 'secretaria', 'padre'] as const
@@ -116,7 +117,7 @@ export async function validarInvitacion(inv: Invitacion | null, email?: string):
 export async function aplicarInvitacion(
   inv: Invitacion,
   userId: string,
-  datos: { fullName: string; email: string; phone?: string; specialty?: string },
+  datos: { fullName: string; email: string; phone?: string; specialty?: string; nombreConfirmado?: boolean; terminosAceptados?: boolean },
 ): Promise<ErrorInvitacion | null> {
   const { data: usada } = await supabaseAdmin.rpc('consume_invitacion', { p_token: inv.token, p_user: userId, p_email: datos.email })
   if (!(usada as Invitacion | null)?.id) return 'used'
@@ -127,6 +128,8 @@ export async function aplicarInvitacion(
       role: inv.role,
       centro_id: inv.centro_id,
       full_name: datos.fullName,
+      nombre_confirmado: !!datos.nombreConfirmado,
+      ...(datos.terminosAceptados ? aceptacionTerminos() : {}),
       is_active: true,
       ...(datos.phone ? { phone: datos.phone } : {}),
       ...(inv.role !== 'padre' ? { specialty: datos.specialty || inv.specialty || null } : {}),
