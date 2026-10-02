@@ -47,3 +47,6 @@ messages.zip
 .claude-flow/
 .agents/
 CLAUDE.md
+
+# Android Studio / IntelliJ
+.idea/
