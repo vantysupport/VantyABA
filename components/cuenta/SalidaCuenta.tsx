@@ -227,7 +227,7 @@ export function SalidaCentro() {
       </div>
       <div className="divide-y divide-v-border">
         {(activa || cancelada) && (
-          <div className="flex flex-wrap items-center gap-3 px-5 py-4">
+          <div data-compra className="flex flex-wrap items-center gap-3 px-5 py-4">
             <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-fill text-v-muted"><CalendarX size={18} /></span>
             <span className="min-w-0 flex-[1_1_220px]">
               <span className="block text-sm font-semibold text-v-text">{cancelada ? L('Subscription cancelled', 'Suscripción cancelada') : L('Monthly subscription', 'Suscripción')}</span>

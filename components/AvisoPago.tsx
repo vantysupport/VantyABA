@@ -52,7 +52,7 @@ export default function AvisoPago() {
   return (
     <AnimatePresence>
       {!oculto && (
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}
+        <motion.div data-compra initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}
           className={`v-scope mb-3 flex items-start gap-3 rounded-v border p-3.5 shadow-v md:mb-4 ${gracia ? 'border-v-danger/30 bg-v-danger/10' : 'border-v-warning/30 bg-v-warning/10'}`}>
           <span className={`grid size-9 shrink-0 place-items-center rounded-[30%] ${gracia ? 'bg-v-danger text-white' : 'bg-v-warning/20 text-v-warning'}`}>
             {gracia ? <AlertTriangle size={17} /> : <CalendarClock size={17} />}

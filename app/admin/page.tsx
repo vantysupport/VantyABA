@@ -213,7 +213,7 @@ function SidebarPlanCard() {
         </p>
       )}
       {(plan.status === 'trial' || plan.status === 'pending_payment') && (
-        <a href={`/${locale}/suscripcion?motivo=elegir`}
+        <a data-compra href={`/${locale}/suscripcion?motivo=elegir`}
           className="v-brand relative mt-3 flex h-8 items-center justify-center rounded-full text-xs font-semibold" style={{ boxShadow: 'none' }}>
           {locale === 'en' ? 'Choose plan' : 'Elegir plan'}
         </a>

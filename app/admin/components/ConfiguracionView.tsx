@@ -206,7 +206,7 @@ function TabPerfil({ perfil, setPerfil }: { perfil: Perfil; setPerfil: (p: Perfi
         <div className="xl:col-span-2">
           <Seccion icon={Crown} title={L('Plan usage', 'Uso de tu plan')} sub={L('Only active accounts use a seat', 'Solo las cuentas activas ocupan cupo')}
             action={(perfil.role === 'jefe' || perfil.role === 'admin') && (
-              <a href={`https://wa.me/51924685557?text=${encodeURIComponent(L('Hi, I would like to upgrade my plan', 'Hola, deseo mejorar mi plan'))}`} target="_blank" rel="noopener noreferrer"
+              <a data-compra href={`https://wa.me/51924685557?text=${encodeURIComponent(L('Hi, I would like to upgrade my plan', 'Hola, deseo mejorar mi plan'))}`} target="_blank" rel="noopener noreferrer"
                 className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-v-accent-soft px-3 text-xs font-semibold text-v-accent transition-colors hover:bg-v-accent hover:text-white">
                 <ArrowUpRight size={13} /> {L('Upgrade plan', 'Mejorar plan')}
               </a>
@@ -454,10 +454,10 @@ function TabCentro() {
       <Seccion icon={HardDrive} title={L('Storage', 'Almacenamiento')} sub={L('Files and data of your center', 'Archivos y datos de tu centro')}
         action={<button onClick={cargarUso} disabled={cargando} title={L('Refresh', 'Actualizar')} className="grid size-9 shrink-0 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-accent disabled:opacity-50"><RefreshCw size={15} className={cargando ? 'animate-spin' : ''} /></button>}
         footer={<>
-          <a href={wa(L('Hi, I would like to increase my storage space', 'Hola, deseo aumentar mi espacio de almacenamiento'))} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-4 text-sm font-semibold text-v-text transition-colors hover:border-v-accent/40 hover:text-v-accent">
+          <a data-compra href={wa(L('Hi, I would like to increase my storage space', 'Hola, deseo aumentar mi espacio de almacenamiento'))} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-v-border bg-v-elevated px-4 text-sm font-semibold text-v-text transition-colors hover:border-v-accent/40 hover:text-v-accent">
             <ArrowUpRight size={14} /> {L('More space', 'Más espacio')}
           </a>
-          <a href={wa(L('Hi, I would like to upgrade my plan', 'Hola, deseo mejorar mi plan'))} target="_blank" rel="noopener noreferrer" className="v-brand inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
+          <a data-compra href={wa(L('Hi, I would like to upgrade my plan', 'Hola, deseo mejorar mi plan'))} target="_blank" rel="noopener noreferrer" className="v-brand inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
             <Crown size={14} /> {L('Upgrade plan', 'Mejorar plan')}
           </a>
         </>}>

@@ -127,7 +127,7 @@ export default async function RootLayout({
         {/* Modo app: la app móvil abre los paneles con ?embebido=1 y la web oculta su menú, cabecera y avisos
             (la app pone su propia barra). Queda guardado en esta pestaña (sessionStorage). */}
         <script dangerouslySetInnerHTML={{ __html: `try{if(new URLSearchParams(location.search).get('embebido')==='1')sessionStorage.setItem('vanty_embebido','1');if(sessionStorage.getItem('vanty_embebido')==='1')document.documentElement.setAttribute('data-embebido','1')}catch(e){}` }} />
-        <style dangerouslySetInnerHTML={{ __html: `html[data-embebido="1"] [data-app-chrome]{display:none!important}html{background:#f3f8fe}html.dark{background:#0d1117}` }} />
+        <style dangerouslySetInnerHTML={{ __html: `html[data-embebido="1"] [data-app-chrome],html[data-embebido="1"] [data-compra]{display:none!important}html{background:#f3f8fe}html.dark{background:#0d1117}` }} />
         <style dangerouslySetInnerHTML={{ __html: `body{opacity:0;transition:opacity .25s ease}` }} />
         <noscript><style dangerouslySetInnerHTML={{ __html: `body{opacity:1!important}` }} /></noscript>
         <script dangerouslySetInnerHTML={{

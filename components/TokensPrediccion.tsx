@@ -92,7 +92,7 @@ export function TokensPrediccion({ agotado = false, className = '' }: { agotado?
           </p>
         </div>
         {packs.length > 0 && (
-          <button onClick={() => setAbierto(a => !a)} className="v-brand inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
+          <button data-compra onClick={() => setAbierto(a => !a)} className="v-brand inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-semibold">
             {abierto ? <X size={14} /> : <ShoppingCart size={14} />} {abierto ? L('Close', 'Cerrar') : L('Buy tokens', 'Comprar tokens')}
           </button>
         )}
@@ -100,7 +100,7 @@ export function TokensPrediccion({ agotado = false, className = '' }: { agotado?
 
       <AnimatePresence initial={false}>
         {abierto && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+          <motion.div data-compra initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="border-t border-v-border px-4 py-4">
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))]">
                 {packs.map((p, i) => {
