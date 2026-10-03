@@ -6,6 +6,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { callControl, type PlatformSettings } from '../api'
 import { Button, Card, Field, SectionTitle, Switch, useDate } from '../ui'
 import { confirmar } from '@/components/ui/confirmar'
+import { supabase } from '@/lib/supabase'
 
 export const MODULES = ['agenda', 'ninos', 'inteligencia', 'cerebro', 'pagos', 'reportes_financieros', 'recursos_adicionales', 'chat_especialistas'] as const
 
@@ -14,6 +15,7 @@ export function PlataformaSection({ onError }: { onError: (e: unknown) => void }
   const [s, setS] = useState<PlatformSettings | null>(null)
   const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [sync, setSync] = useState<{ cargando: boolean; texto?: string; error?: boolean }>({ cargando: false })
+  const [subida, setSubida] = useState<{ cargando: boolean; texto?: string; error?: boolean }>({ cargando: false })
 
   // Trae de Lemon Squeezy los IDs de variante de los planes (por región y ciclo) y de los créditos de IA.
   async function sincronizarLemon() {
@@ -35,6 +37,25 @@ export function PlataformaSection({ onError }: { onError: (e: unknown) => void }
   }, [onError])
 
   if (!s) return null
+  const app = s.app_android ?? {}
+  const en = locale === 'en'
+
+  // Sube el APK directo a Storage (bucket público "app") y deja su enlace en la versión
+  async function subirApk(f: File | undefined) {
+    if (!f || !s) return
+    if (!f.name.toLowerCase().endsWith('.apk')) { setSubida({ cargando: false, error: true, texto: en ? 'Choose an .apk file' : 'Elige un archivo .apk' }); return }
+    setSubida({ cargando: true, texto: en ? 'Uploading…' : 'Subiendo…' })
+    try {
+      const r = await callControl<{ path: string; token: string; url: string }>('app_apk_subida', { version_code: app.version_code || 1 })
+      const { error } = await supabase.storage.from('app').uploadToSignedUrl(r.path, r.token, f, { contentType: 'application/vnd.android.package-archive' })
+      if (error) throw error
+      setS(x => (x ? { ...x, app_android: { ...(x.app_android ?? {}), url_apk: r.url } } : x))
+      setState('idle')
+      setSubida({ cargando: false, texto: en ? 'Uploaded. Remember to save.' : 'Subido. No olvides guardar.' })
+    } catch (e) {
+      setSubida({ cargando: false, error: true, texto: (en ? 'Could not upload: ' : 'No se pudo subir: ') + (e instanceof Error ? e.message : '') })
+    }
+  }
 
   const update = (patch: Partial<PlatformSettings>) => {
     setS({ ...s, ...patch })
@@ -107,6 +128,37 @@ export function PlataformaSection({ onError }: { onError: (e: unknown) => void }
               <Button variant="secondary" onClick={() => update({ token_packs: [...(s.token_packs ?? []), { tokens: 10, usd: 2 }] })}>{locale === 'en' ? 'Add pack' : 'Agregar paquete'}</Button>
             )}
           </div>
+        </Card>
+        <Card className="md:col-span-2">
+          <h3 className="font-semibold">{en ? 'Android app' : 'App de Android'}</h3>
+          <p className="mt-1 text-xs text-v-muted">{en
+            ? 'Latest published version. Anyone with an older one sees a notice with these notes and a button to update (the Google Play store if they installed it from there, otherwise the APK below). After updating, the notes are shown once as "What\'s new".'
+            : 'Última versión publicada. Quien tenga una más antigua verá un aviso con estas notas y un botón para actualizar (Google Play si la instaló desde ahí; si no, el APK de abajo). Después de actualizar, las notas se muestran una vez como "Novedades".'}</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Field type="number" min={1} label={en ? 'Version code (versionCode)' : 'Número de versión (versionCode)'} value={app.version_code ?? ''}
+              onChange={e => update({ app_android: { ...app, version_code: Number(e.target.value) } })} />
+            <Field placeholder="1.0.1" label={en ? 'Version name (versionName)' : 'Nombre de versión (versionName)'} value={app.version_name ?? ''}
+              onChange={e => update({ app_android: { ...app, version_name: e.target.value } })} />
+          </div>
+          <label className="mt-3 block">
+            <span className="text-xs font-semibold text-v-muted">{en ? 'Release notes (one per line)' : 'Notas de la versión (una por línea)'}</span>
+            <textarea rows={4} maxLength={1500} value={app.notas ?? ''} onChange={e => update({ app_android: { ...app, notas: e.target.value } })}
+              placeholder={en ? 'New agenda widget\nFaster loading' : 'Nuevo widget de agenda\nCarga más rápida'}
+              className="mt-1 w-full rounded-v-sm border border-v-border bg-v-bg px-3 py-2 text-sm text-v-text outline-none focus:border-v-accent" />
+          </label>
+          <div className="mt-3">
+            <Field placeholder="https://…/vanty-aba.apk" label={en ? 'APK link' : 'Enlace del APK'} value={app.url_apk ?? ''}
+              onChange={e => update({ app_android: { ...app, url_apk: e.target.value } })} />
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <label className={`inline-flex cursor-pointer items-center rounded-full border border-v-border px-4 py-2 text-sm font-semibold text-v-text hover:bg-v-fill ${subida.cargando ? 'pointer-events-none opacity-60' : ''}`}>
+                {en ? 'Upload APK…' : 'Subir APK…'}
+                <input type="file" accept=".apk,application/vnd.android.package-archive" className="hidden" onChange={e => { subirApk(e.target.files?.[0]); e.target.value = '' }} />
+              </label>
+              {subida.texto && <span className={`text-xs ${subida.error ? 'text-v-danger' : 'text-v-success'}`}>{subida.texto}</span>}
+            </div>
+          </div>
+          <Switch checked={!!app.obligatoria} onChange={v => update({ app_android: { ...app, obligatoria: v } })}
+            label={en ? 'Required update (no "Later" button)' : 'Actualización obligatoria (sin botón "Más tarde")'} />
         </Card>
         <Card className="md:col-span-2">
           <h3 className="font-semibold">{t('vanty.control.platform.modules')}</h3>

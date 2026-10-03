@@ -506,11 +506,32 @@ export async function POST(req: NextRequest) {
         const id = String(s.lemon_variant_tokens ?? '').trim()
         patch.lemon_variant_tokens = /^\d{1,12}$/.test(id) ? id : null
       }
+      if ('app_android' in s && s.app_android && typeof s.app_android === 'object') {
+        const a = s.app_android as Record<string, unknown>
+        const url = str(a.url_apk, 500)
+        patch.app_android = {
+          version_code: int(a.version_code, 0, 1_000_000),
+          version_name: str(a.version_name, 30),
+          notas: str(a.notas, 1500),
+          url_apk: /^https:\/\//.test(url) ? url : '',
+          obligatoria: !!a.obligatoria,
+        }
+      }
       if (Object.keys(patch).length === 0) return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
       const { error } = await supabaseAdmin.from('platform_settings').update({ ...patch, updated_at: new Date().toISOString(), updated_by: auth.userId }).eq('id', 1)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       await audit('Configuración de plataforma', { patch })
       return NextResponse.json({ ok: true })
+    }
+
+    case 'app_apk_subida': {
+      // URL firmada para subir el APK directo a Storage desde el navegador (sin pasar por el límite de tamaño de la API)
+      const version = int(body.version_code, 1, 1_000_000)
+      const path = `vanty-aba-${version}-${Date.now().toString(36)}.apk`
+      const { data, error } = await supabaseAdmin.storage.from('app').createSignedUploadUrl(path)
+      if (error || !data) return NextResponse.json({ error: error?.message ?? 'storage' }, { status: 500 })
+      const publica = supabaseAdmin.storage.from('app').getPublicUrl(path).data.publicUrl
+      return NextResponse.json({ path, token: data.token, url: publica })
     }
 
     case 'lemon_sync_variantes': {

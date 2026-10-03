@@ -111,4 +111,14 @@ export type PlatformSettings = {
   features: Record<string, boolean>
   token_packs: { tokens: number; usd: number }[]
   lemon_variant_tokens: string | null
+  app_android: AppAndroid
+}
+
+/** Última versión de la app de Android: la app avisa a quien tenga una más antigua y muestra las notas. */
+export type AppAndroid = {
+  version_code?: number
+  version_name?: string
+  notas?: string
+  url_apk?: string
+  obligatoria?: boolean
 }
