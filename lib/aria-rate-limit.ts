@@ -3,6 +3,7 @@
 // por usuario y por día; si no hay ninguno, ARIA_TOPE_POR_DEFECTO. A prueba de fallos: si algo falla, NO bloquea (fail open).
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { avisarTokensAgotados } from '@/lib/correo-tokens'
 
 export type AriaRateResult = { allowed: boolean; message?: string; retryAfterMinutes?: number; extra?: boolean }
 
@@ -91,6 +92,7 @@ export async function checkAriaRateLimit(
       if (kind === 'padres') {
         const { data: ok } = await supabaseAdmin.rpc('mover_tokens_padre', { p_user: key, p_centro: centro, p_tipo: 'aria', p_delta: -1 })
         if (ok === true) return { allowed: true, extra: true }
+        avisarTokensAgotados('aria', { userId: key, centroId: centro })
       }
       const retryMs = windowMs - (now - windowStart)
       const retryAfterMinutes = Math.max(1, Math.ceil(retryMs / 60000))

@@ -6,6 +6,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { iaDesactivadaAhora } from '@/lib/ia-contexto'
+import { avisarTokensAgotados } from '@/lib/correo-tokens'
 
 /** Devuelve la respuesta 402 si el centro no tiene tokens; null si puede generar. */
 export async function sinTokens(centroId: string | null, en: boolean): Promise<NextResponse | null> {
@@ -14,6 +15,7 @@ export async function sinTokens(centroId: string | null, en: boolean): Promise<N
   const { data } = await supabaseAdmin.rpc('ai_quota_estado', { p_centro: centroId, p_kind: 'predictive' })
   const disp = (data as { disponible: number | null } | null)?.disponible
   if (disp == null || disp > 0) return null
+  avisarTokensAgotados('analisis', { centroId })
   return NextResponse.json({
     error: en
       ? 'Your center has no analysis tokens left this month. Buy more to continue.'

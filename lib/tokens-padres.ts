@@ -9,6 +9,7 @@ import 'server-only'
 
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ARIA_TOPE_POR_DEFECTO } from '@/lib/aria-rate-limit'
+import { avisarTokensAgotados } from '@/lib/correo-tokens'
 
 /** Planes de práctica por mes si el centro y su plan no fijan uno. */
 const PRACTICA_TOPE_POR_DEFECTO = 5
@@ -66,6 +67,7 @@ export async function puedeGenerarPractica(userId: string, centroId: string | nu
   try {
     const { practica } = await estadoTokensPadre(userId, centroId)
     const ok = practica.max == null || practica.usados < practica.max || practica.extra > 0
+    if (!ok) avisarTokensAgotados('practica', { userId, centroId })
     return { ok, usados: practica.usados, max: practica.max, extra: practica.extra }
   } catch { return { ok: true, usados: 0, max: null, extra: 0 } }
 }
