@@ -1,15 +1,26 @@
 'use client'
 
 import { useI18n } from '@/lib/i18n-context'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
   const { t } = useI18n()
+  // Vuelta del inicio de sesión de la app de Android: botón por si el navegador no abre la app solo
+  const [volverApp, setVolverApp] = useState<string | null>(null)
 
   useEffect(() => {
+    // Inicio de sesión de la app de Android: el código ya se le pasó a la app (script del layout); la web no lo canjea
+    const qs = new URLSearchParams(window.location.search)
+    if (qs.get('app') === '1') {
+      qs.delete('app')
+      const s = qs.toString()
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- solo se calcula en el navegador
+      setVolverApp(`intent://login${s ? `?${s}` : ''}#Intent;scheme=vantyaba;package=xyz.vanty.app;end`)
+      return
+    }
     const handleCallback = async () => {
       try {
         // Sin espera fija: la sesión suele estar lista al instante; si no, se canjea el código y se reintenta
@@ -128,6 +139,9 @@ export default function AuthCallbackPage() {
         <p className="v-headline text-xl text-v-text">{t('auto.page.iniciandoSesion')}</p>
         <p className="text-sm text-v-muted">Vanty ABA</p>
       </div>
+      {volverApp && (
+        <a href={volverApp} className="v-brand relative inline-flex h-11 items-center rounded-full px-6 text-sm font-semibold">Volver a Vanty ABA</a>
+      )}
       <div className="relative h-1 w-40 overflow-hidden rounded-full bg-v-fill">
         <span className="v-brand absolute inset-y-0 left-0 w-1/3 rounded-full" style={{ animation: 'vanty-cargando 1.1s ease-in-out infinite' }} />
       </div>
