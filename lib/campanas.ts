@@ -40,7 +40,8 @@ export async function enviarCampana(id: string) {
   const personas = await destinatarios(c.audiencia, c.centro_id)
   const staff = personas.filter(p => p.role !== 'padre')
   const padres = personas.filter(p => p.role === 'padre')
-  const meta = { campana_id: c.id }
+  // La pose va en metadata para que la app de Android muestre el aviso con el mismo personaje de ARIA
+  const meta = { campana_id: c.id, pose: POSES.includes(c.pose) ? c.pose : 'saludo' }
 
   // Campana (aviso dentro de la app), en lotes
   for (let i = 0; i < staff.length; i += 500) {
