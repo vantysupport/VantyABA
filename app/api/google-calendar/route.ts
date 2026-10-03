@@ -5,7 +5,7 @@ import { getCentroBranding } from '@/lib/centro-branding'
 import { logServerError } from '@/lib/log-server-error'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { especialistasInvitados } from '@/lib/cita-invitados'
-import { authorizeCalendarGet, authorizeCalendarPost, internalApiHeaders, signOAuthState } from '@/lib/calendar-integration'
+import { authorizeCalendarGet, authorizeCalendarPost, internalApiHeaders, signOAuthState, esDesdeApp } from '@/lib/calendar-integration'
 
 const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CALENDAR_CLIENT_ID     || ''
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CALENDAR_CLIENT_SECRET || ''
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       prompt:        'consent',
       // Pantalla de permisos de Google en el mismo idioma que la persona usa en Vanty
       hl:            req.cookies.get('vanty_locale')?.value === 'en' ? 'en' : 'es',
-      state:         signOAuthState(userId, role), // pass userId + role through OAuth flow
+      state:         signOAuthState(userId, esDesdeApp(req) ? `${role}_app` : role), // pass userId + role through OAuth flow
     })
 
     const url = `https://accounts.google.com/o/oauth2/v2/auth?${params}`

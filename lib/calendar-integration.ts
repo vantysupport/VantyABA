@@ -225,3 +225,39 @@ export async function addCalendarReminder(params: {
     await addMicrosoftCalendarEvent({ accessToken: params.accessToken, title, description: desc, startDateTime: start, endDateTime: end })
   }
 }
+
+// ── Vincular calendarios desde la app de Android ─────────────────────────────
+// La app abre la web dentro de un WebView (user agent "… VantyApp/Android"). Google y Microsoft no permiten
+// iniciar sesión dentro de un WebView, así que el permiso se abre en el navegador; al volver, el navegador no
+// tiene la sesión de la app. Por eso el "state" firmado marca el rol con "_app" y la vuelta regresa a la app
+// (vantyaba://calendario?...) en lugar de a un panel de la web.
+
+export function esDesdeApp(req: Request): boolean {
+  return /VantyApp\//.test(req.headers.get('user-agent') || '')
+}
+
+export function rolDeEstado(role: string | null): { app: boolean; role: string | null } {
+  if (!role) return { app: false, role: null }
+  return { app: role.endsWith('_app'), role: role.replace(/_app$/, '') }
+}
+
+/** Redirige al panel (web) o, si el permiso empezó en la app, muestra una página que vuelve a la app. */
+export function respuestaCalendario(app: boolean, url: string): NextResponse {
+  if (!app) return NextResponse.redirect(url)
+  const qs = new URL(url).search.replace(/^\?/, '')
+  const ok = /cal=connected/.test(qs)
+  const intent = `intent://calendario?${qs}#Intent;scheme=vantyaba;package=xyz.vanty.app;end`
+  const esquema = `vantyaba://calendario?${qs}`
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vanty ABA</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f3f8fe;font-family:system-ui,sans-serif;color:#0b1b33;text-align:center}
+.c{padding:28px 22px;max-width:340px}h1{font-size:20px;margin:14px 0 6px}p{color:#5b6b82;font-size:14px;margin:0 0 20px}
+a{display:inline-block;background:linear-gradient(135deg,#2f86f2,#0b57c9);color:#fff;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:999px}
+img{width:120px;height:120px;object-fit:contain}</style></head><body><div class="c">
+<img src="/aria/poses/${ok ? 'festeja' : 'preocupada'}.webp" alt="">
+<h1>${ok ? 'Calendario conectado' : 'No se pudo conectar el calendario'}</h1>
+<p>${ok ? 'Ya puedes volver a Vanty ABA.' : 'Vuelve a la app e inténtalo otra vez.'}</p>
+<a id="v" href="${intent}">Volver a Vanty ABA</a></div>
+<script>setTimeout(function(){location.href=${JSON.stringify(intent)}},400);document.getElementById('v').addEventListener('click',function(e){if(!/Android/i.test(navigator.userAgent)){e.preventDefault();location.href=${JSON.stringify(esquema)}}})</script>
+</body></html>`
+  return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } })
+}

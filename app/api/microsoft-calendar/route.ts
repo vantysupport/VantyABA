@@ -5,7 +5,7 @@ import { getCentroBranding } from '@/lib/centro-branding'
 import { logServerError } from '@/lib/log-server-error'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { especialistasInvitados } from '@/lib/cita-invitados'
-import { authorizeCalendarGet, authorizeCalendarPost, internalApiHeaders, signOAuthState } from '@/lib/calendar-integration'
+import { authorizeCalendarGet, authorizeCalendarPost, internalApiHeaders, signOAuthState, esDesdeApp } from '@/lib/calendar-integration'
 
 const MS_CLIENT_ID     = process.env.MICROSOFT_CALENDAR_CLIENT_ID     || ''
 const MS_CLIENT_SECRET = process.env.MICROSOFT_CALENDAR_CLIENT_SECRET || ''
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       redirect_uri:  REDIRECT_URI,
       scope:         scopes,
       response_mode: 'query',
-      state:         signOAuthState(userId, role),
+      state:         signOAuthState(userId, esDesdeApp(req) ? `${role}_app` : role),
     })
 
     const url = `https://login.microsoftonline.com/${MS_TENANT}/oauth2/v2.0/authorize?${params}`

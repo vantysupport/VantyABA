@@ -59,7 +59,9 @@ const PUBLIC_API_PATHS = [
   '/api/cron/avisos',            // tarea programada sin sesión: la ruta exige CRON_SECRET
   '/api/cron/campanas',          // notificaciones programadas desde /control: exige CRON_SECRET
   '/api/libro-reclamaciones',
-  '/api/app/version',            // la app de Android consulta si hay una versión nueva (datos públicos)    // Libro de Reclamaciones: lo usa cualquier consumidor, sin cuenta (límite estricto de envíos)
+  '/api/app/version',
+  '/api/google-calendar/callback',    // vuelta de Google: el "state" firmado identifica a la persona (puede volver en el navegador sin sesión)
+  '/api/microsoft-calendar/callback', // ídem Microsoft            // la app de Android consulta si hay una versión nueva (datos públicos)    // Libro de Reclamaciones: lo usa cualquier consumidor, sin cuenta (límite estricto de envíos)
 ]
 
 // Rutas por rol → si user.role === X, puede acceder a estas raíces

@@ -1,8 +1,8 @@
 // app/api/google-calendar/callback/route.ts
 // Handles Google OAuth callback, saves tokens to Supabase
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { verifyOAuthState } from '@/lib/calendar-integration'
+import { respuestaCalendario, rolDeEstado, verifyOAuthState } from '@/lib/calendar-integration'
 
 const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CALENDAR_CLIENT_ID     || ''
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CALENDAR_CLIENT_SECRET || ''
@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
   // so nobody can attach their own calendar account to another user's profile.
   const verified = verifyOAuthState(stateRaw)
   const userId = verified?.userId ?? null
-  const stateRole = verified?.role ?? null
+  // "_app": el permiso empezó en la app de Android → al terminar se vuelve a la app
+  const { app: enApp, role: stateRole } = rolDeEstado(verified?.role ?? null)
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const errorDest = panelDe(stateRole)
 
   if (error || !code || !userId) {
-    return NextResponse.redirect(`${appUrl}${errorDest}?gcal=error`)
+    return respuestaCalendario(enApp, `${appUrl}${errorDest}?gcal=error`)
   }
 
   try {
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokenRes.ok) {
       console.error('Token exchange failed:', await tokenRes.text())
-      return NextResponse.redirect(`${appUrl}${errorDest}?gcal=error`)
+      return respuestaCalendario(enApp, `${appUrl}${errorDest}?gcal=error`)
     }
 
     const tokens = await tokenRes.json()
@@ -75,15 +76,15 @@ export async function GET(req: NextRequest) {
 
     if (updateError) {
       console.error('Supabase update error:', updateError)
-      return NextResponse.redirect(`${appUrl}${errorDest}?gcal=error`)
+      return respuestaCalendario(enApp, `${appUrl}${errorDest}?gcal=error`)
     }
 
     // Redirect to correct panel based on role (state tiene prioridad sobre DB)
     const role = stateRole || updatedProfile?.role || 'admin'
     const destination = panelDe(role)
-    return NextResponse.redirect(`${appUrl}${destination}?gcal=connected&email=${encodeURIComponent(googleEmail || '')}`)
+    return respuestaCalendario(enApp, `${appUrl}${destination}?gcal=connected&email=${encodeURIComponent(googleEmail || '')}`)
   } catch (e: any) {
     console.error('Google Calendar callback error:', e)
-    return NextResponse.redirect(`${appUrl}${errorDest}?gcal=error`)
+    return respuestaCalendario(enApp, `${appUrl}${errorDest}?gcal=error`)
   }
 }

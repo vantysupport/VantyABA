@@ -1,7 +1,7 @@
 // app/api/microsoft-calendar/callback/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { verifyOAuthState } from '@/lib/calendar-integration'
+import { respuestaCalendario, rolDeEstado, verifyOAuthState } from '@/lib/calendar-integration'
 
 const MS_CLIENT_ID     = process.env.MICROSOFT_CALENDAR_CLIENT_ID     || ''
 const MS_CLIENT_SECRET = process.env.MICROSOFT_CALENDAR_CLIENT_SECRET || ''
@@ -20,14 +20,15 @@ export async function GET(req: NextRequest) {
   // so nobody can attach their own calendar account to another user's profile.
   const verified = verifyOAuthState(stateRaw)
   const userId = verified?.userId ?? null
-  const stateRole = verified?.role ?? null
+  // "_app": el permiso empezó en la app de Android → al terminar se vuelve a la app
+  const { app: enApp, role: stateRole } = rolDeEstado(verified?.role ?? null)
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
   const panelDe = (r: string | null | undefined) => r === 'padre' ? '/padre' : r === 'especialista' ? '/especialista' : r === 'secretaria' ? '/secretaria' : '/admin'
   const errorDest = panelDe(stateRole)
 
   if (error || !code || !userId) {
-    return NextResponse.redirect(`${appUrl}${errorDest}?mscal=error`)
+    return respuestaCalendario(enApp, `${appUrl}${errorDest}?mscal=error`)
   }
 
   try {
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokenRes.ok) {
       console.error('MS token exchange failed:', await tokenRes.text())
-      return NextResponse.redirect(`${appUrl}${errorDest}?mscal=error`)
+      return respuestaCalendario(enApp, `${appUrl}${errorDest}?mscal=error`)
     }
 
     const tokens = await tokenRes.json()
@@ -77,11 +78,11 @@ export async function GET(req: NextRequest) {
 
     const role = stateRole || updatedProfile?.role || 'admin'
     const destination = panelDe(role)
-    return NextResponse.redirect(
+    return respuestaCalendario(enApp, 
       `${appUrl}${destination}?mscal=connected&email=${encodeURIComponent(msEmail || '')}`
     )
   } catch (e: any) {
     console.error('Microsoft Calendar callback error:', e)
-    return NextResponse.redirect(`${appUrl}${errorDest}?mscal=error`)
+    return respuestaCalendario(enApp, `${appUrl}${errorDest}?mscal=error`)
   }
 }
