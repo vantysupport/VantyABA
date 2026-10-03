@@ -3,6 +3,7 @@
 // Compra de tokens extra para una familia (planes de práctica o mensajes de ARIA).
 // El pedido queda "pendiente" y se suma al confirmarse el pago en /control. Los tokens comprados no vencen.
 
+import { useModoApp } from '@/lib/modo-app'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { X, Coins, Loader2, Check, Sparkles, Heart, Clock, ShieldCheck } from 'lucide-react'
@@ -13,6 +14,8 @@ type Pack = { tokens: number; usd: number }
 type Compra = { id: string; kind: string; tokens: number; precio_usd: number; estado: string; created_at: string }
 
 export default function ComprarTokensPadre({ abierto, tipoInicial = 'aria', onClose, onComprado }: { abierto: boolean; tipoInicial?: Tipo; onClose: () => void; onComprado?: () => void }) {
+  // En la app de Android no se vende nada (política de pagos de Google Play)
+  const app = useModoApp()
   const { locale } = useI18n()
   const en = locale === 'en'
   const L = (e: string, s: string) => (en ? e : s)
@@ -70,7 +73,7 @@ export default function ComprarTokensPadre({ abierto, tipoInicial = 'aria', onCl
 
   return (
     <AnimatePresence>
-      {abierto && (
+      {abierto && !app && (
         <motion.div className="v-scope fixed inset-0 z-[160] flex items-end justify-center bg-[#081426]/50 backdrop-blur-sm sm:items-center sm:p-4"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
           <motion.div onClick={e => e.stopPropagation()} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }} transition={{ type: 'spring', stiffness: 320, damping: 30 }}

@@ -530,7 +530,7 @@ export default function EngagementView({ childId, childName }: { childId: string
                   <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-v-muted">
                     <Coins size={13} className={sinTokens ? 'text-v-danger' : 'text-v-warning'} />
                     {sinTokens
-                      ? <>{L('No practice plans left this month. New ones arrive on the 1st, or ', 'No te quedan planes este mes. Tendrás nuevos el día 1, o ')}<button onClick={() => setComprarAbierto(true)} className="font-semibold text-v-accent hover:underline">{L('get more tokens', 'consigue más tokens')}</button>.</>
+                      ? <>{L('No practice plans left this month. New ones arrive on the 1st', 'No te quedan planes este mes. Tendrás nuevos el día 1')}<span data-compra>{L(', or ', ', o ')}<button onClick={() => setComprarAbierto(true)} className="font-semibold text-v-accent hover:underline">{L('get more tokens', 'consigue más tokens')}</button></span>.</>
                       : L(`Uses 1 token · ${restantes + extra} available`, `Usa 1 token · tienes ${restantes + extra} disponibles`)}
                   </p>
                 )}

@@ -18,6 +18,7 @@ import DocumentosView from '@/app/admin/components/DocumentosView'
 import { useTheme } from '@/components/ThemeContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { useModoApp } from '@/lib/modo-app'
 
 const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
 const qInput = 'w-full rounded-v-sm border border-v-border bg-v-bg px-4 py-3 text-sm text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft'
@@ -225,6 +226,7 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
   const bcp = toBCP47(locale)
   const { isDark } = useTheme()
   const toast = useToast()
+  const app = useModoApp()
   const [activeTab, setActiveTab] = useState<'forms' | 'resources' | 'store' | 'documentos'>(initialTab || 'forms')
   const [pendingForms, setPendingForms] = useState<any[]>([])
   const [expiredForms, setExpiredForms] = useState<any[]>([])
@@ -286,12 +288,13 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
     ...pendingForms.map(f => f.message_to_parent), ...resources.flatMap(r => [r.title, r.description]),
   ])
 
+  // En la app de Android no hay tienda (política de pagos de Google Play)
   const tabs = [
     { id: 'forms' as const, label: L('Forms', 'Formularios'), Icon: ClipboardCheck, badge: pendingForms.length, alerta: true },
     { id: 'resources' as const, label: L('Materials', 'Materiales'), Icon: BookOpen, badge: resources.length, alerta: false },
     { id: 'store' as const, label: L('Store', 'Tienda'), Icon: ShoppingBag, badge: 0, alerta: false },
     { id: 'documentos' as const, label: L('Documents', 'Documentos'), Icon: FolderOpen, badge: 0, alerta: false },
-  ]
+  ].filter(t => !(app && t.id === 'store'))
   const fecha = (d?: string) => d ? new Date(d).toLocaleDateString(bcp, { day: 'numeric', month: 'short', year: 'numeric' }) : null
   const Titulo = ({ Icon, tone, texto }: { Icon: any; tone: string; texto: string }) => (
     <p className="mb-2.5 flex items-center gap-2 text-sm font-semibold text-v-text"><span className={`grid size-6 place-items-center rounded-full ${tone}`}><Icon size={12} /></span>{texto}</p>
@@ -416,7 +419,7 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">{resources.map((r, i) => <ResourceCard key={r.id} resource={r} index={i} tr={tr} />)}</div>
         )
-      ) : activeTab === 'store' ? (
+      ) : activeTab === 'store' && !app ? (
         <StoreView profile={profile} />
       ) : selectedChild ? (
         <DocumentosView childId={selectedChild.id} childName={selectedChild.name} currentRole="padre" isDark={isDark} />

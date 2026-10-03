@@ -289,7 +289,7 @@ function MessageBubble({ m, onNavigateToStore, onWellbeingAnswer }: { m: any; on
           {renderMarkdown(m.text)}
         </div>
         {m.producto && (
-          <div className="overflow-hidden rounded-v-sm border border-v-border bg-v-elevated shadow-v">
+          <div data-compra className="overflow-hidden rounded-v-sm border border-v-border bg-v-elevated shadow-v">
             <div className="flex items-center gap-3 p-3">
               <span className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-v-sm bg-v-fill text-v-muted">
                 {m.producto.imagen_url ? <img src={m.producto.imagen_url} alt="" className="absolute inset-0 size-full object-cover" style={{ height: '100%' }} /> : <ShoppingBag size={20} />}
@@ -691,7 +691,7 @@ function AvisoTokensAria({ restantes, max, reinicia, en, onComprar }: { restante
               : `Usaste tus ${max} mensajes de hoy, así que por ahora no puedo responder más preguntas.${hora ? ` Tus tokens vuelven a las ${hora}.` : ''} Si es urgente, comunícate directamente con el centro.`}</p>
           : <p>{en ? 'You have 1 message left today. Make it count!' : 'Te queda 1 mensaje hoy. ¡Aprovéchalo!'}</p>}
         {agotado && onComprar && (
-          <button onClick={onComprar} className="v-brand mt-3 inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold">
+          <button data-compra onClick={onComprar} className="v-brand mt-3 inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-xs font-semibold">
             <Coins size={13} /> {en ? 'Get more tokens' : 'Conseguir más tokens'}
           </button>
         )}
