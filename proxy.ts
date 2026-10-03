@@ -42,6 +42,7 @@ const PUBLIC_PATHS = [
   '/landing',
   '/precios',
   '/crear-centro',
+  '/descargar',                 // enlace corto al APK de la app de Android
   '/mfa-required',               // página de enrollment 2FA (requiere sesión pero salta los role checks)
 ]
 

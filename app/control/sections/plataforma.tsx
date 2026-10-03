@@ -156,6 +156,7 @@ export function PlataformaSection({ onError }: { onError: (e: unknown) => void }
               </label>
               {subida.texto && <span className={`text-xs ${subida.error ? 'text-v-danger' : 'text-v-success'}`}>{subida.texto}</span>}
             </div>
+            <p className="mt-2 text-xs text-v-muted">{en ? 'Link to share: ' : 'Enlace para compartir: '}<a href="/descargar" target="_blank" rel="noreferrer" className="font-semibold text-v-accent hover:underline">vanty.xyz/descargar</a>{en ? ' (always the latest APK)' : ' (siempre el último APK)'}</p>
           </div>
           <Switch checked={!!app.obligatoria} onChange={v => update({ app_android: { ...app, obligatoria: v } })}
             label={en ? 'Required update (no "Later" button)' : 'Actualización obligatoria (sin botón "Más tarde")'} />
