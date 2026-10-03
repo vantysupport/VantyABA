@@ -3,7 +3,7 @@
 // Compra de tokens extra para una familia (planes de práctica o mensajes de ARIA).
 // El pedido queda "pendiente" y se suma al confirmarse el pago en /control. Los tokens comprados no vencen.
 
-import { useModoApp } from '@/lib/modo-app'
+import { useSinPagos } from '@/lib/modo-app'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { X, Coins, Loader2, Check, Sparkles, Heart, Clock, ShieldCheck } from 'lucide-react'
@@ -14,8 +14,8 @@ type Pack = { tokens: number; usd: number }
 type Compra = { id: string; kind: string; tokens: number; precio_usd: number; estado: string; created_at: string }
 
 export default function ComprarTokensPadre({ abierto, tipoInicial = 'aria', onClose, onComprado }: { abierto: boolean; tipoInicial?: Tipo; onClose: () => void; onComprado?: () => void }) {
-  // En la app de Android no se vende nada (política de pagos de Google Play)
-  const app = useModoApp()
+  // En la app instalada desde Google Play no se vende nada (su política de pagos)
+  const app = useSinPagos()
   const { locale } = useI18n()
   const en = locale === 'en'
   const L = (e: string, s: string) => (en ? e : s)

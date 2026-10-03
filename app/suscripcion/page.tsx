@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase'
 import { AuthShell } from '@/components/ui/auth-shell'
 import { formatoMoneda, precioCiclo, type Ciclo } from '@/lib/precios'
 import { EliminarCentroDialog, EliminarCuentaDialog } from '@/components/cuenta/SalidaCuenta'
-import { useModoApp } from '@/lib/modo-app'
+import { useSinPagos } from '@/lib/modo-app'
 
 // 'elegir': el dueño entra por su cuenta (p. ej. durante la prueba) para pagar un plan
 const REASONS = { elegir: Sparkles, trial_expired: Clock, pending_payment: Hourglass, past_due: Clock, suspended: PauseCircle, no_centro: Building2 } as const
@@ -42,8 +42,8 @@ function SubscriptionStatus() {
   const [error, setError] = useState('')
   const [salida, setSalida] = useState<'centro' | 'cuenta' | null>(null)
   const contact = process.env.NEXT_PUBLIC_SUPPORT_EMAIL
-  // Dentro de la app móvil no se contratan ni renuevan planes (política de pagos de Google Play)
-  const enApp = useModoApp()
+  // En la app instalada desde Google Play no se contratan ni renuevan planes (su política de pagos)
+  const enApp = useSinPagos()
 
   useEffect(() => {
     fetch('/api/suscripcion', { cache: 'no-store' })

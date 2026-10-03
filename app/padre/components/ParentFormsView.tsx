@@ -18,7 +18,7 @@ import DocumentosView from '@/app/admin/components/DocumentosView'
 import { useTheme } from '@/components/ThemeContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
-import { useModoApp } from '@/lib/modo-app'
+import { useSinPagos } from '@/lib/modo-app'
 
 const cardClass = 'rounded-v border border-v-border bg-v-elevated shadow-v'
 const qInput = 'w-full rounded-v-sm border border-v-border bg-v-bg px-4 py-3 text-sm text-v-text outline-none transition-shadow placeholder:text-v-subtle focus:border-v-accent/50 focus:ring-4 focus:ring-v-accent-soft'
@@ -226,7 +226,7 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
   const bcp = toBCP47(locale)
   const { isDark } = useTheme()
   const toast = useToast()
-  const app = useModoApp()
+  const app = useSinPagos()
   const [activeTab, setActiveTab] = useState<'forms' | 'resources' | 'store' | 'documentos'>(initialTab || 'forms')
   const [pendingForms, setPendingForms] = useState<any[]>([])
   const [expiredForms, setExpiredForms] = useState<any[]>([])
@@ -288,7 +288,7 @@ function ParentFormsResourcesView({ profile, selectedChild, onFormsLoaded, initi
     ...pendingForms.map(f => f.message_to_parent), ...resources.flatMap(r => [r.title, r.description]),
   ])
 
-  // En la app de Android no hay tienda (política de pagos de Google Play)
+  // En la app instalada desde Google Play no hay tienda (su política de pagos)
   const tabs = [
     { id: 'forms' as const, label: L('Forms', 'Formularios'), Icon: ClipboardCheck, badge: pendingForms.length, alerta: true },
     { id: 'resources' as const, label: L('Materials', 'Materiales'), Icon: BookOpen, badge: resources.length, alerta: false },
