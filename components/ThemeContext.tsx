@@ -47,6 +47,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // se aplica en el efecto de hidratación.
   const [theme, setThemeState] = useState<ThemeMode>('system')
   const [resolved, setResolved] = useState<'light' | 'dark'>('light')
+  // Hasta leer el tema guardado no se toca la clase: el script del <head> ya pintó el tema correcto.
+  // (Antes se aplicaba 'system' un instante y en modo oscuro se veía un destello claro.)
+  const [hidratado, setHidratado] = useState(false)
 
   // ── Hidratar el theme desde localStorage al montar ──
   useEffect(() => {
@@ -56,11 +59,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setThemeState(stored)
       }
     } catch { /* localStorage puede no estar disponible */ }
+    setHidratado(true)
   }, [])
 
   // ── Calcular el modo resuelto y aplicar la clase, reaccionando a cambios del OS ──
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || !hidratado) return
 
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
 
@@ -85,7 +89,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         return () => (mq as any).removeListener(handler)
       }
     }
-  }, [theme])
+  }, [theme, hidratado])
 
   // ── Reaplicar al navegar entre rutas (login vs no-login) ──
   useEffect(() => {

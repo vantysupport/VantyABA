@@ -215,7 +215,7 @@ export default function EspecialistaDashboard() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-sky-50/20 flex items-center justify-center">
+    <div className="v-scope min-h-screen bg-v-bg flex items-center justify-center">
       <div className="flex flex-col items-center gap-5">
         <div className="relative">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-600 to-sky-700 flex items-center justify-center shadow-2xl shadow-sky-300/50">
