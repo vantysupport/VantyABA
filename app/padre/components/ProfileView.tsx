@@ -2,6 +2,7 @@
 // app/padre/components/ProfileView.tsx
 // Perfil de la familia: datos, cuenta, seguridad, y calendarios vinculados.
 
+import DescargarApp from '@/components/DescargarApp'
 import { useCentroBranding } from '@/components/CentroBrandingContext'
 import { TwoFactorCard } from '@/components/ui/two-factor-card'
 import { useI18n } from '@/lib/i18n-context'
@@ -213,6 +214,7 @@ function ProfileView({ profile, onLogout, onChangePass, onEditProfile, onPrivacy
         <Seccion titulo={L('Artificial intelligence', 'Inteligencia artificial')} delay={0.16}>
           <TarjetaIA ambito="propio" className="px-5 py-3.5" />
         </Seccion>
+        <DescargarApp />
       </div>
     </div>
   )

@@ -2,6 +2,7 @@
 // app/especialista/components/MiPerfil.tsx
 // Perfil del especialista: identidad (foto, datos), calendarios, seguridad, preferencias y cierre de sesión.
 
+import DescargarApp from '@/components/DescargarApp'
 import { useState, useEffect, useRef } from 'react'
 import { TwoFactorCard } from '@/components/ui/two-factor-card'
 import { BotonEliminarCuenta } from '@/components/cuenta/SalidaCuenta'
@@ -412,6 +413,8 @@ export default function MiPerfil({ onUpdate, onAvatarUpdate, onLogout, rol = 'es
             ))}
           </div>
         </div>
+
+        <DescargarApp />
 
         <button onClick={cerrarSesion} className={`${cardClass} flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:border-v-danger/40 hover:bg-v-danger/5`}>
           <span className="grid size-9 place-items-center rounded-[30%] bg-v-danger/10 text-v-danger"><LogOut size={16} /></span>

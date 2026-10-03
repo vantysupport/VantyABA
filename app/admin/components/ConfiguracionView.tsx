@@ -2,6 +2,7 @@
 // Mi Perfil: identidad, seguridad, preferencias y (para el director) datos del centro.
 // Pestañas para no apilar todo en un scroll largo; guardar solo se activa con cambios.
 
+import DescargarApp from '@/components/DescargarApp'
 import React, { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
@@ -710,7 +711,7 @@ export default function ConfiguracionView({ onAvatarUpdate }: { onAvatarUpdate?:
       {/* Contenido */}
       <AnimatePresence mode="wait">
         <motion.div key={tab} className="mt-4 lg:mt-0" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
-          {tab === 'perfil' && <TabPerfil perfil={perfil} setPerfil={setPerfil} />}
+          {tab === 'perfil' && <><TabPerfil perfil={perfil} setPerfil={setPerfil} /><DescargarApp className="mt-4" /></>}
           {tab === 'seguridad' && <TabSeguridad />}
           {tab === 'preferencias' && <TabPreferencias />}
           {tab === 'centro' && esDirector && <TabCentro />}
