@@ -4,6 +4,7 @@
 import 'server-only'
 import webpush from 'web-push'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { enviarApp } from '@/lib/fcm'
 
 export type PoseAria = 'saludo' | 'celebra' | 'pensando' | 'feliz' | 'guino' | 'laptop' | 'corre'
 
@@ -35,7 +36,14 @@ function configurar() {
 /** Envía a todos los dispositivos de esas personas. Devuelve cuántos envíos salieron. */
 export async function enviarPush(userIds: (string | null | undefined)[], p: Push): Promise<number> {
   const ids = [...new Set(userIds.filter(Boolean) as string[])]
-  if (ids.length === 0 || !configurar()) return 0
+  if (ids.length === 0) return 0
+  // Celulares con la app de Android (Firebase) + navegadores (web-push)
+  const [app, web] = await Promise.all([enviarApp(ids, p), enviarWeb(ids, p)])
+  return app + web
+}
+
+async function enviarWeb(ids: string[], p: Push): Promise<number> {
+  if (!configurar()) return 0
   try {
     const { data: subs } = await supabaseAdmin.from('push_subscriptions').select('user_id, endpoint, subscription').in('user_id', ids)
     if (!subs?.length) return 0

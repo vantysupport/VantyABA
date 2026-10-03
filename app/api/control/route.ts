@@ -157,9 +157,15 @@ export async function POST(req: NextRequest) {
       const audiencia = Array.isArray(body.audiencia) ? (body.audiencia as unknown[]).filter((a): a is string => typeof a === 'string') : []
       const centroId = typeof body.centro_id === 'string' && body.centro_id ? body.centro_id : null
       const personas = await destinatarios(audiencia, centroId)
-      const conPush = personas.length
-        ? (await supabaseAdmin.from('push_subscriptions').select('user_id').in('user_id', personas.slice(0, 5000).map(p => p.id))).data?.length ?? 0
-        : 0
+      // Personas con al menos un navegador suscrito o un celular con la app (Firebase)
+      const ids = personas.slice(0, 5000).map(p => p.id)
+      const [{ data: web }, { data: app }] = ids.length
+        ? await Promise.all([
+          supabaseAdmin.from('push_subscriptions').select('user_id').in('user_id', ids),
+          supabaseAdmin.from('app_dispositivos').select('user_id').in('user_id', ids),
+        ])
+        : [{ data: [] }, { data: [] }]
+      const conPush = new Set([...(web ?? []), ...(app ?? [])].map(r => r.user_id as string)).size
       return NextResponse.json({ total: personas.length, conPush })
     }
     case 'campana_crear': {

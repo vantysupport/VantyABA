@@ -16,7 +16,7 @@ export async function eliminarCuentaPersonal(userId: string): Promise<{ ok: true
   // Datos personales sin FK hacia profiles (las tablas con FK se limpian solas al borrar el perfil).
   const tablas: [string, string][] = [
     ['parent_accounts', 'user_id'], ['chat_familias', 'sender_id'], ['agente_conversaciones', 'user_id'],
-    ['notificaciones', 'user_id'], ['notifications', 'user_id'], ['push_subscriptions', 'user_id'],
+    ['notificaciones', 'user_id'], ['notifications', 'user_id'], ['push_subscriptions', 'user_id'], ['app_dispositivos', 'user_id'], ['app_avisos', 'user_id'],
   ]
   for (const [tabla, col] of tablas) {
     const { error } = await supabaseAdmin.from(tabla).delete().eq(col, userId)
