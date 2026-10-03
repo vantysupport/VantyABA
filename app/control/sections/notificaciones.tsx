@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bell, Send, CalendarClock, Users, Stethoscope, Headset, Heart, Crown, Loader2, X, CheckCircle2, Clock, Ban } from 'lucide-react'
+import { Bell, Send, CalendarClock, Users, Stethoscope, Headset, Heart, Crown, Loader2, X, CheckCircle2, Clock, Ban, Trash2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { confirmar } from '@/components/ui/confirmar'
 import { callControl } from '../api'
@@ -92,6 +92,16 @@ export function NotificacionesSection({ onError }: { onError: (e: unknown) => vo
   async function cancelar(c: Campana) {
     if (!await confirmar(L('Cancel this scheduled notification?', '¿Cancelar esta notificación programada?'))) return
     await callControl('campana_cancelar', { id: c.id }).catch(onError)
+    cargar()
+  }
+
+  async function eliminar(c: Campana | null) {
+    const ok = await confirmar(c
+      ? L('Delete this notification? It will also disappear from the bell of each person (what already reached their phones stays there).', '¿Eliminar esta notificación? También desaparece de la campana de cada persona (lo que ya llegó a su celular se queda ahí).')
+      : L('Delete ALL the history? Notifications also disappear from everyone\'s bell.', '¿Eliminar TODO el historial? Las notificaciones también desaparecen de la campana de todos.'),
+      { confirmar: L('Delete', 'Eliminar') })
+    if (!ok) return
+    await callControl('campana_eliminar', c ? { id: c.id } : { todas: true }).catch(onError)
     cargar()
   }
 
@@ -219,7 +229,14 @@ export function NotificacionesSection({ onError }: { onError: (e: unknown) => vo
 
       {/* Historial */}
       <div className="rounded-v border border-v-border bg-v-elevated shadow-v">
-        <p className="border-b border-v-border px-5 py-3 text-sm font-semibold text-v-text">{L('History', 'Historial')}</p>
+        <div className="flex items-center justify-between gap-3 border-b border-v-border px-5 py-3">
+          <p className="text-sm font-semibold text-v-text">{L('History', 'Historial')}</p>
+          {campanas.length > 0 && (
+            <button onClick={() => eliminar(null)} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-v-muted transition-colors hover:bg-v-danger/10 hover:text-v-danger">
+              <Trash2 size={13} /> {L('Clear all', 'Vaciar historial')}
+            </button>
+          )}
+        </div>
         {campanas.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-v-muted">{L('No notifications sent yet.', 'Aún no enviaste notificaciones.')}</p>
         ) : (
@@ -246,6 +263,9 @@ export function NotificacionesSection({ onError }: { onError: (e: unknown) => vo
                   <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${est.tone}`}><est.Icon size={11} /> {est.t}</span>
                   {c.estado === 'programada' && (
                     <button onClick={() => cancelar(c)} title={L('Cancel', 'Cancelar')} className="grid size-7 shrink-0 place-items-center rounded-full text-v-muted hover:bg-v-danger/10 hover:text-v-danger"><X size={14} /></button>
+                  )}
+                  {c.estado !== 'enviando' && (
+                    <button onClick={() => eliminar(c)} title={L('Delete', 'Eliminar')} aria-label={L('Delete', 'Eliminar')} className="grid size-7 shrink-0 place-items-center rounded-full text-v-muted hover:bg-v-danger/10 hover:text-v-danger"><Trash2 size={14} /></button>
                   )}
                 </li>
               )

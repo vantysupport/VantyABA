@@ -190,6 +190,25 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from('campanas_notificacion').update({ estado: 'cancelada' }).eq('id', id).eq('estado', 'programada')
       return NextResponse.json({ ok: true })
     }
+    case 'campana_eliminar': {
+      // Borra la notificación del historial y también de la campana de cada persona (web y app).
+      // Lo que ya llegó al celular como notificación no se puede retirar.
+      const ids = body.todas === true
+        ? ((await supabaseAdmin.from('campanas_notificacion').select('id').neq('estado', 'enviando')).data ?? []).map(c => c.id as string)
+        : typeof body.id === 'string' && body.id ? [body.id] : []
+      if (ids.length === 0) return NextResponse.json({ ok: true, borradas: 0 })
+      for (const id of ids) {
+        await Promise.all([
+          supabaseAdmin.from('notificaciones').delete().eq('metadata->>campana_id', id),
+          supabaseAdmin.from('notifications').delete().eq('metadata->>campana_id', id),
+          supabaseAdmin.from('app_avisos').delete().eq('tag', `campana:${id}`),
+        ])
+      }
+      const { error } = await supabaseAdmin.from('campanas_notificacion').delete().in('id', ids)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      await audit('Notificaciones eliminadas', { cantidad: ids.length })
+      return NextResponse.json({ ok: true, borradas: ids.length })
+    }
     case 'overview': {
       const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0)
       const [{ data: centros }, { count: patients }, { count: users }, { count: openAlerts }, { count: comprasPendientes }, { data: extrasMes }] = await Promise.all([
