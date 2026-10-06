@@ -43,6 +43,7 @@ const PUBLIC_PATHS = [
   '/precios',
   '/crear-centro',
   '/descargar',                 // enlace corto al APK de la app de Android
+  '/blog',                       // blog público (los artículos van en /blog/<slug>)
   '/mfa-required',               // página de enrollment 2FA (requiere sesión pero salta los role checks)
 ]
 
@@ -78,6 +79,7 @@ function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true
   if (pathname.startsWith('/verificar/')) return true   // verificación con código
   if (pathname.startsWith('/invitar/')) return true
+  if (pathname.startsWith('/blog/')) return true        // artículos del blog
   if (pathname.startsWith('/auth/')) return true
   // Archivos estáticos / assets
   if (pathname.startsWith('/_next/')) return true

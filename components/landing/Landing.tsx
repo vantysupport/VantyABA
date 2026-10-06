@@ -147,6 +147,7 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
             {links.map(l => (
               <button key={l.id} onClick={() => irA(l.id)} className="rounded-full px-3.5 py-2 text-sm font-medium text-v-muted transition-colors hover:bg-v-fill hover:text-v-text">{l.label}</button>
             ))}
+            <Link href={href('/blog')} className="rounded-full px-3.5 py-2 text-sm font-medium text-v-muted transition-colors hover:bg-v-fill hover:text-v-text">Blog</Link>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden sm:block"><LocaleSelector /></div>
@@ -174,6 +175,7 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
                 {links.map(l => (
                   <button key={l.id} onClick={() => irA(l.id)} className="block w-full rounded-v-sm px-3 py-3 text-left text-base font-medium text-v-text hover:bg-v-fill">{l.label}</button>
                 ))}
+                <Link href={href('/blog')} className="block w-full rounded-v-sm px-3 py-3 text-left text-base font-medium text-v-text hover:bg-v-fill">Blog</Link>
                 <div className="flex items-center justify-between px-3 pt-2"><LocaleSelector /></div>
                 <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-2 pt-3">
                   {panel ? (
@@ -358,6 +360,7 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
             <ul className="mt-3 space-y-2 text-sm text-v-muted">
               <li><button onClick={() => irA('funciones')} className="hover:text-v-text">{L('Features', 'Funciones')}</button></li>
               <li><button onClick={() => irA('precios')} className="hover:text-v-text">{L('Pricing', 'Precios')}</button></li>
+              <li><Link href={href('/blog')} className="hover:text-v-text">Blog</Link></li>
               <li><Link href={href('/crear-centro')} className="hover:text-v-text">{L('Create my center', 'Crear mi centro')}</Link></li>
               <li><Link href={href('/login')} className="hover:text-v-text">{L('Sign in', 'Ingresar')}</Link></li>
             </ul>

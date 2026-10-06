@@ -122,3 +122,17 @@ export type AppAndroid = {
   url_apk?: string
   obligatoria?: boolean
 }
+
+/** Editor del blog público (app/api/control/blog). */
+export async function callBlog<T>(action: string, params: Record<string, unknown> = {}): Promise<T> {
+  const token = await accessToken()
+  if (!token) throw new ControlError('no_session', 401)
+  const res = await fetch('/api/control/blog', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action, ...params }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new ControlError(json.error ?? 'error', res.status)
+  return json as T
+}
