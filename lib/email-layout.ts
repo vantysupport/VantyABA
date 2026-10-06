@@ -3,6 +3,8 @@
 
 const ASSETS = 'https://ylcnfqkhivqwjeifuhbl.supabase.co/storage/v1/object/public/public-images/brand'
 const BRAND = 'Vanty ABA'
+// ARIA nueva (las 27 poses): PNG transparentes servidos desde la web (public/aria/email)
+const ARIA_ASSETS = 'https://vanty.xyz/aria/email'
 
 // Poses de ARIA (PNG con transparencia, 320 px de alto) para cada tipo de correo
 export type PoseAria = 'saludo' | 'celebra' | 'laptop' | 'cita' | 'pensando'
@@ -104,7 +106,7 @@ ${o.eyebrow ? `<p style="margin:0 0 10px;font-size:12px;font-weight:600;letter-s
 </td>
 <td class="aria-col" width="190" style="width:190px;padding:18px 24px 0 8px;vertical-align:bottom;" align="right">
 <div class="globo">${globo}</div>
-<img class="aria-img" src="${ASSETS}/aria/${pose}.png" width="150" alt="ARIA" style="display:block;border:0;width:150px;height:auto;margin:6px 0 0 auto;">
+<img class="aria-img" src="${ARIA_ASSETS}/${pose}.png" width="150" alt="ARIA" style="display:block;border:0;width:150px;height:auto;margin:6px 0 0 auto;">
 </td>
 </tr></table>
 </td></tr>
