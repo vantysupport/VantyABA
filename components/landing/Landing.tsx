@@ -25,6 +25,7 @@ import { FuncionesShowcase } from '@/components/landing/FuncionesShowcase'
 import { ExtrasBento } from '@/components/landing/ExtrasBento'
 import { PasosInicio } from '@/components/landing/PasosInicio'
 import type { ContextoPrecios } from '@/lib/precios'
+import { TarjetaArticulo, type ArticuloLista } from '@/components/blog/Tarjetas'
 
 const WHATSAPP = 'https://wa.me/51994196916'
 const EMAIL = 'vantysupport@gmail.com'
@@ -59,7 +60,7 @@ function Aparece({ children, delay = 0, className = '' }: { children: React.Reac
   )
 }
 
-export default function Landing({ planes, contexto }: { planes: PlanPublico[]; contexto: ContextoPrecios }) {
+export default function Landing({ planes, contexto, blog = [] }: { planes: PlanPublico[]; contexto: ContextoPrecios; blog?: ArticuloLista[] }) {
   const { locale } = useI18n()
   const en = locale === 'en'
   const L: T = (e, s) => (en ? e : s)
@@ -322,6 +323,30 @@ export default function Landing({ planes, contexto }: { planes: PlanPublico[]; c
             </div>
           </div>
         </section>
+
+        {/* ── Del blog: los últimos artículos (solo si hay publicados) ── */}
+        {blog.length > 0 && (
+          <section id="blog" className="scroll-mt-20 px-4 pb-20 sm:px-6">
+            <div className="mx-auto max-w-6xl">
+              <Aparece className="flex flex-wrap items-end justify-between gap-4">
+                <div className="max-w-2xl">
+                  <h2 className="v-headline text-4xl sm:text-5xl">{L('From the ', 'Lo último del ')}<span className="v-brand-text">blog</span></h2>
+                  <p className="mt-3 text-lg text-v-muted">{L('News, product updates and guides for centers and families.', 'Noticias, novedades de Vanty y guías para centros y familias.')}</p>
+                </div>
+                <Link href={href('/blog')} className="inline-flex h-11 items-center gap-2 rounded-full border border-v-border bg-v-elevated px-5 text-sm font-semibold text-v-text shadow-v transition-colors hover:border-v-accent/40 hover:text-v-accent">
+                  {L('Go to the blog', 'Ir al blog')} <ArrowRight size={16} />
+                </Link>
+              </Aparece>
+              <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {blog.map((a, i) => (
+                  <Aparece key={a.id} delay={i * 0.08} className="flex">
+                    <TarjetaArticulo a={a} en={en} href={href(`/blog/${a.slug}`)} />
+                  </Aparece>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ── Llamado final ── */}
         <section className="px-4 pb-20 sm:px-6">

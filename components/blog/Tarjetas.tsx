@@ -64,7 +64,7 @@ export function TarjetaDestacada({ a, en, href }: { a: ArticuloLista; en: boolea
 
 export function TarjetaArticulo({ a, en, href }: { a: ArticuloLista; en: boolean; href: string }) {
   return (
-    <Link href={href} className="group flex flex-col overflow-hidden rounded-v-lg border border-v-border bg-v-elevated shadow-v transition-all duration-300 hover:-translate-y-1 hover:shadow-v-lg">
+    <Link href={href} className="group flex w-full flex-col overflow-hidden rounded-v-lg border border-v-border bg-v-elevated shadow-v transition-all duration-300 hover:-translate-y-1 hover:shadow-v-lg">
       <div className="relative aspect-[16/10] overflow-hidden">
         <Portada a={a} />
         <div className="absolute left-3.5 top-3.5"><Categoria id={a.categoria} en={en} sobreFoto /></div>

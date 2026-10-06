@@ -1,11 +1,11 @@
 // Blog de Vanty ABA: noticias, novedades del producto y recursos para centros y familias.
 
 import Link from 'next/link'
-import { Newspaper, Rss } from 'lucide-react'
+import { Newspaper } from 'lucide-react'
 import { localeServidor, metadatosPagina, SITIO, NOMBRE } from '@/lib/seo'
 import { CATEGORIAS } from '@/lib/blog'
 import { articulosPublicados } from '@/lib/blog-server'
-import { BlogMarco, LlamadoVanty } from '@/components/blog/BlogMarco'
+import { BlogMarco, LlamadoVanty, Siguenos } from '@/components/blog/BlogMarco'
 import { TarjetaArticulo, TarjetaDestacada } from '@/components/blog/Tarjetas'
 
 export async function generateMetadata() {
@@ -64,9 +64,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                 'Lo nuevo de Vanty ABA, guías prácticas para tu equipo y recursos para compartir con las familias.')}
             </p>
           </div>
-          <a href="/blog/rss.xml" className="inline-flex h-10 w-fit items-center gap-2 rounded-full border border-v-border bg-v-elevated px-4 text-sm font-medium text-v-muted shadow-v transition-colors hover:text-v-text">
-            <Rss size={15} className="text-v-accent" /> {L('Subscribe via RSS', 'Suscribirse por RSS')}
-          </a>
+          <Siguenos en={en} />
         </div>
       </section>
 

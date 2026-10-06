@@ -6,6 +6,7 @@ import type { PlanPublico } from '@/components/ui/planes-precios'
 import Landing from '@/components/landing/Landing'
 import { preguntasFaq } from '@/components/landing/preguntas'
 import { SITIO, NOMBRE, localeServidor, metadatosPagina } from '@/lib/seo'
+import { articulosPublicados } from '@/lib/blog-server'
 
 export async function generateMetadata(): Promise<Metadata> {
   const en = (await localeServidor()) === 'en'
@@ -21,19 +22,20 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home({ searchParams }: { searchParams: Promise<{ pais?: string }> }) {
   const { pais } = await searchParams
   const supabase = await createClient()
-  const [{ data }, contexto] = await Promise.all([
+  const [{ data }, contexto, blog] = await Promise.all([
     supabase
       .from('plans')
       .select('id, code, name_es, name_en, precio_region, max_professionals, max_parents, max_patients, max_ai_reports, max_aria_msgs_staff_day, max_aria_msgs_parent_day, has_team_chat, has_catalog, has_financial_reports, max_predictive_tokens')
       .eq('is_active', true)
       .order('sort_order'),
     contextoPrecios(pais),
+    articulosPublicados(3).catch(() => []),
   ])
   const en = (await localeServidor()) === 'en'
   return (
     <>
       <DatosEstructurados en={en} planes={(data ?? []) as PlanPublico[]} />
-      <Landing planes={(data ?? []) as PlanPublico[]} contexto={contexto} />
+      <Landing planes={(data ?? []) as PlanPublico[]} contexto={contexto} blog={blog} />
     </>
   )
 }
