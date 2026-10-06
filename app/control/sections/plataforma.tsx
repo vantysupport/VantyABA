@@ -7,6 +7,7 @@ import { callControl, type PlatformSettings } from '../api'
 import { Button, Card, Field, SectionTitle, Switch, useDate } from '../ui'
 import { confirmar } from '@/components/ui/confirmar'
 import { supabase } from '@/lib/supabase'
+import { MigracionSanti } from './migracion-santi'
 
 export const MODULES = ['agenda', 'ninos', 'inteligencia', 'cerebro', 'pagos', 'reportes_financieros', 'recursos_adicionales', 'chat_especialistas'] as const
 
@@ -82,6 +83,7 @@ export function PlataformaSection({ onError }: { onError: (e: unknown) => void }
         action={<Button onClick={save} disabled={state === 'saving'}>{state === 'saved' ? t('vanty.control.saved') : t('vanty.control.save')}</Button>}
       />
       <div className="grid gap-4 md:grid-cols-2">
+        <MigracionSanti />
         <Card>
           <h3 className="font-semibold">{t('vanty.control.platform.maintenance')}</h3>
           <Switch checked={s.maintenance} onChange={v => update({ maintenance: v })} label={t('vanty.control.platform.maintenanceOn')} />

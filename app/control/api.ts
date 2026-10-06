@@ -122,3 +122,17 @@ export type AppAndroid = {
   url_apk?: string
   obligatoria?: boolean
 }
+
+/** TEMPORAL: migración de SANTI desde su proyecto antiguo (app/api/control/migrar-santi). */
+export async function callMigracionSanti<T>(paso: 'estado' | 'archivos' | 'datos', params: Record<string, unknown> = {}): Promise<T> {
+  const token = await accessToken()
+  if (!token) throw new ControlError('no_session', 401)
+  const res = await fetch('/api/control/migrar-santi', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ paso, ...params }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new ControlError(json.error ?? `error ${res.status}`, res.status)
+  return json as T
+}
