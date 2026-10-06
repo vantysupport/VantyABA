@@ -131,6 +131,12 @@ const FASE_COLORS: Record<string, string> = {
 }
 
 
+/** "2026-07-02" → "02/07/2026" (día/mes/año) */
+function fechaDMY(iso?: string | null): string {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || '')
+}
+
 export default function ProgramasABAView({ childId, childName }: { childId: string; childName: string }) {
   const toast = useToast()
   const { t, locale } = useI18n()
@@ -840,7 +846,7 @@ function DetailChart({ chartData, chartHeight, minSlots, programa, segments, mer
             if (!d) return `Sesión ${label}`
             const segIdx = segments.findIndex((s: any) => (label - 1) >= s.startIdx && (label - 1) <= s.endIdx)
             const segName = segIdx >= 0 ? segments[segIdx].label : ''
-            return `Sesión ${label} · ${d.fecha}${segName ? ` · ${segName}` : ''}`
+            return `Sesión ${label} · ${fechaDMY(d.fecha)}${segName ? ` · ${segName}` : ''}`
           }}
           contentStyle={{ borderRadius: '10px', fontSize: '11px', border: '1px solid var(--card-border)', background: 'var(--card)' }}
         />
@@ -1536,7 +1542,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                               <YAxis domain={[0, 100]} ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]} tick={{ fontSize: 10, fill: 'var(--v-text-tertiary)' }} tickFormatter={(v: any) => `${v}%`} width={40} />
                               <Tooltip
                                 formatter={(value: any) => [`${value}%`, 'Éxito']}
-                                labelFormatter={(label) => { const d = chartData[label - 1]; return d ? `Sesión ${label} · ${d.fecha}${d.set ? ` · ${d.set}` : ''}` : `Sesión ${label}` }}
+                                labelFormatter={(label) => { const d = chartData[label - 1]; return d ? `Sesión ${label} · ${fechaDMY(d.fecha)}${d.set ? ` · ${d.set}` : ''}` : `Sesión ${label}` }}
                                 contentStyle={{ borderRadius: '10px', fontSize: '11px', border: '1px solid var(--v-border)', background: 'var(--v-bg-elevated)' }}
                               />
                               {dividers.map((x, i) => <ReferenceLine key={`bd-${i}`} x={x} stroke="#64748b" strokeWidth={2} strokeDasharray="6 4" />)}
@@ -1960,7 +1966,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
                                   {lastPct}%
                                 </span>
                               )}
-                              <span className="ml-auto text-[11px] text-v-subtle">{last?.fecha}</span>
+                              <span className="ml-auto text-[11px] text-v-subtle">{fechaDMY(last?.fecha)}</span>
                               <ChevronDown size={15} className={`text-v-subtle transition-transform ${abierto ? 'rotate-180' : ''}`} />
                             </button>
                             {abierto && (
@@ -2313,7 +2319,7 @@ function SesionRow({ s, programa, onDelete, onDateChange, onPctChange, onSetChan
           className="w-20 shrink-0 text-left text-v-subtle hover:text-v-accent hover:underline transition-colors"
           title={t("programas.editarFecha")}
         >
-          {s.fecha}
+          {fechaDMY(s.fecha)}
         </button>
       )}
       {/* Fase badge — click to change */}

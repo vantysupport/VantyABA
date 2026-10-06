@@ -281,11 +281,12 @@ export async function POST(req: NextRequest) {
       // Obtener el set para saber a qué programa pertenece
       const { data: setRow, error: setErr } = await supabaseAdmin
         .from('objetivos_cp')
-        .select('programa_id')
+        .select('programa_id, numero_set')
         .eq('id', objetivo_id)
         .maybeSingle()
       if (setErr) throw setErr
       const programa_id = (setRow as any)?.programa_id
+      const numeroBorrado = Number((setRow as any)?.numero_set) || null
 
       // Eliminar sesiones registradas para este set (evita registros huérfanos)
       await supabaseAdmin.from('sesiones_datos_aba').delete().eq('objetivo_cp_id', objetivo_id)
@@ -296,6 +297,30 @@ export async function POST(req: NextRequest) {
 
       const { error } = await supabaseAdmin.from('objetivos_cp').delete().eq('id', objetivo_id)
       if (error) throw error
+
+      // Renumerar los sets para que no queden huecos (1,2,4,5 → 1,2,3,4). Las sesiones guardan la etiqueta
+      // "Set N", así que se actualiza igual para que sigan unidas a su set (de menor a mayor: sin choques).
+      if (programa_id) {
+        // Sesiones sueltas del set borrado (sin objetivo_cp_id): se van con él, si no se mezclarían con el renumerado
+        if (numeroBorrado) {
+          await supabaseAdmin.from('sesiones_datos_aba').delete()
+            .eq('programa_id', programa_id).is('objetivo_cp_id', null).eq('set', `Set ${numeroBorrado}`)
+        }
+        const { data: restantes } = await supabaseAdmin
+          .from('objetivos_cp').select('id, numero_set')
+          .eq('programa_id', programa_id).order('numero_set', { ascending: true })
+        let n = 0
+        for (const o of (restantes || []) as { id: string; numero_set: number | null }[]) {
+          n++
+          if (o.numero_set === n) continue
+          await supabaseAdmin.from('objetivos_cp').update({ numero_set: n }).eq('id', o.id)
+          await supabaseAdmin.from('sesiones_datos_aba').update({ set: `Set ${n}` }).eq('programa_id', programa_id).eq('objetivo_cp_id', o.id)
+          if (o.numero_set != null) {
+            await supabaseAdmin.from('sesiones_datos_aba').update({ set: `Set ${n}` })
+              .eq('programa_id', programa_id).is('objetivo_cp_id', null).eq('set', `Set ${o.numero_set}`)
+          }
+        }
+      }
 
       // FIX clínico: recalcular estado del programa tras borrar un set,
       // usando la misma regla que actualizar_objetivo (todos dominados → dominado).
