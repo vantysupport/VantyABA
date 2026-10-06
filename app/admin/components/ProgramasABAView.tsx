@@ -171,21 +171,30 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
     catch { return new Set() }
   })
 
-  const descartarAlerta = (key: string) => {
-    setAlertasDescartadas(prev => {
-      const next = new Set(prev); next.add(key)
-      localStorage.setItem(`aba_alertas_desc_${childId}`, JSON.stringify([...next]))
-      return next
-    })
-  }
-  const descartarTodas = () => {
-    const keys = (aiAnalysis?.alertas || []).map((_: any, i: number) => `alerta_${i}`)
+  // Clave estable de cada alerta (antes era la posición en la lista: al cambiar la lista volvían a salir)
+  const claveAlerta = (a: any) => String(a?.id || a?.tipo || '')
+  // Descartar = resolverla en la base marcada como descartada: no vuelve mientras la situación siga igual
+  const descartarAlertas = (lista: any[]) => {
+    const keys = lista.map(claveAlerta).filter(Boolean)
     setAlertasDescartadas(prev => {
       const next = new Set([...prev, ...keys])
-      localStorage.setItem(`aba_alertas_desc_${childId}`, JSON.stringify([...next]))
+      try { localStorage.setItem(`aba_alertas_desc_${childId}`, JSON.stringify([...next])) } catch { /* sin storage */ }
       return next
     })
+    const ids = lista.map(a => a?.id).filter(Boolean)
+    if (ids.length) supabase.from('agente_alertas').update({ resuelta: true, metadata: { descartada: true } }).in('id', ids).then(() => {})
   }
+  const descartarAlerta = (a: any) => descartarAlertas([a])
+  const descartarTodas = () => descartarAlertas(aiAnalysis?.alertas || [])
+
+  // Llevar al programa de la alerta (desde aquí o desde el dashboard): scroll y resaltado
+  const irAPrograma = useCallback((programaId?: string | null) => {
+    if (!programaId) return
+    const el = document.getElementById(`programa-${programaId}`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    el.animate([{ boxShadow: '0 0 0 3px var(--v-accent)' }, { boxShadow: '0 0 0 0 transparent' }], { duration: 2200, easing: 'ease-out' })
+  }, [])
   const [filtroArea, setFiltroArea] = useState<string>('todos')
   const [busqueda, setBusqueda] = useState<string>('')
   const [customAreaLabels, setCustomAreaLabels] = useState<Record<string, string>>(() => {
@@ -239,6 +248,14 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
   }, [childId])
 
   useEffect(() => { loadProgramas() }, [loadProgramas])
+
+  // Viene de una alerta del dashboard: abrir directo en ese programa cuando ya cargaron
+  useEffect(() => {
+    if (loading || programas.length === 0) return
+    let id: string | null = null
+    try { id = sessionStorage.getItem('vanty_ir_programa'); sessionStorage.removeItem('vanty_ir_programa') } catch { /* sin storage */ }
+    if (id) setTimeout(() => irAPrograma(id), 150)
+  }, [loading, programas.length, irAPrograma])
 
   // Descargar reporte de programas en Word (explicativo para la familia)
   const descargarProgramasWord = async () => {
@@ -407,7 +424,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
         </div>
       )}
       {aiAnalysis && aiAnalysis.alertas?.length > 0 && (() => {
-        const alertasVisibles = aiAnalysis.alertas.filter((_: any, i: number) => !alertasDescartadas.has(`alerta_${i}`))
+        const alertasVisibles = aiAnalysis.alertas.filter((a: any) => !alertasDescartadas.has(claveAlerta(a)))
         if (alertasVisibles.length === 0) return null
         return (
           <div className="space-y-2 mb-5">
@@ -425,11 +442,10 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
                 <p className="text-sm leading-relaxed text-v-muted">{aiAnalysis.resumen}</p>
               </div>
             )}
-            {aiAnalysis.alertas.map((alerta: any, i: number) => {
-              const key = `alerta_${i}`
-              if (alertasDescartadas.has(key)) return null
-              return <AlertaCard key={i} alerta={alerta} onDescartar={() => descartarAlerta(key)} />
-            })}
+            {alertasVisibles.map((alerta: any) => (
+              <AlertaCard key={claveAlerta(alerta)} alerta={alerta} onDescartar={() => descartarAlerta(alerta)}
+                onAbrir={alerta.programa_id ? () => irAPrograma(alerta.programa_id) : undefined} />
+            ))}
           </div>
         )
       })()}
@@ -540,8 +556,8 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
           {programasEnCurso.length > 0 && (
             <div className="space-y-4">
               {programasEnCurso.map((prog: any) => (
+            <div key={prog.id} id={`programa-${prog.id}`} className="scroll-mt-24 rounded-v">
             <ProgramaCard
-              key={prog.id}
               programa={prog}
               loadingModal={loadingModal}
               onRegistrarSesion={async () => {
@@ -568,6 +584,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
               tipoGrafico={tiposGrafico[prog.id] || 'lineas'}
               onChangeTipoGrafico={(tipo: TipoGrafico) => setTipoGrafico(prog.id, tipo)}
             />
+            </div>
           ))}
             </div>
           )}
@@ -587,8 +604,8 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
               </p>
               <div className="space-y-4 opacity-80">
                 {programasCriterioAuto.map((prog: any) => (
+            <div key={prog.id} id={`programa-${prog.id}`} className="scroll-mt-24 rounded-v">
             <ProgramaCard
-              key={prog.id}
               programa={prog}
               loadingModal={loadingModal}
               onRegistrarSesion={async () => {
@@ -615,6 +632,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
               tipoGrafico={tiposGrafico[prog.id] || 'lineas'}
               onChangeTipoGrafico={(tipo: TipoGrafico) => setTipoGrafico(prog.id, tipo)}
             />
+            </div>
           ))}
               </div>
             </div>
@@ -646,7 +664,7 @@ export default function ProgramasABAView({ childId, childName }: { childId: stri
 }
 
 // ── Tarjeta de alerta IA ─────────────────────────────────────────────────────
-function AlertaCard({ alerta, onDescartar }: { alerta: any; key?: any; onDescartar?: () => void }) {
+function AlertaCard({ alerta, onDescartar, onAbrir }: { alerta: any; key?: any; onDescartar?: () => void; onAbrir?: () => void }) {
   const { t } = useI18n()
   const cfg: Record<string, { tone: string; Icon: any }> = {
     alta:  { tone: 'bg-v-danger/10 text-v-danger',   Icon: AlertTriangle },
@@ -656,12 +674,13 @@ function AlertaCard({ alerta, onDescartar }: { alerta: any; key?: any; onDescart
   const c = cfg[alerta.prioridad] || cfg.media
   return (
     <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-      className="rounded-v border border-v-border bg-v-elevated p-4 shadow-v">
+      onClick={onAbrir} role={onAbrir ? 'button' : undefined}
+      className={`rounded-v border border-v-border bg-v-elevated p-4 shadow-v ${onAbrir ? 'cursor-pointer transition-colors hover:border-v-accent/40' : ''}`}>
       <div className="mb-1 flex items-start gap-2.5">
         <span className={`grid size-7 shrink-0 place-items-center rounded-full ${c.tone}`}><c.Icon size={13} /></span>
         <p className="flex-1 pt-1 text-sm font-semibold text-v-text">{alerta.titulo}</p>
         {onDescartar && (
-          <button onClick={onDescartar}
+          <button onClick={e => { e.stopPropagation(); onDescartar() }}
             className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center hover:opacity-70 transition-opacity"
             style={{ color: 'var(--text-muted)', background: 'transparent' }}
             title={t("dashboard.descartarAlerta")}>
@@ -2613,14 +2632,14 @@ function RegistrarSesionModal({ programa, childId, onClose, onSaved }: any) {
               </span>
             </div>
             <div className="grid flex-1 grid-cols-2 items-end gap-2.5">
-              <MField label={t('ui.total_opportunities')}>
-                <input type="number" min="0" value={form.oportunidades_totales} placeholder="10"
-                  onChange={e => setForm(f => ({ ...f, oportunidades_totales: e.target.value }))}
-                  className={`${mInput} text-center text-lg font-semibold tabular-nums`} />
-              </MField>
               <MField label={t('ui.correct_responses')}>
                 <input type="number" min="0" value={form.respuestas_correctas} placeholder="8"
                   onChange={e => setForm(f => ({ ...f, respuestas_correctas: e.target.value }))}
+                  className={`${mInput} text-center text-lg font-semibold tabular-nums`} />
+              </MField>
+              <MField label={t('ui.total_opportunities')}>
+                <input type="number" min="0" value={form.oportunidades_totales} placeholder="10"
+                  onChange={e => setForm(f => ({ ...f, oportunidades_totales: e.target.value }))}
                   className={`${mInput} text-center text-lg font-semibold tabular-nums`} />
               </MField>
             </div>

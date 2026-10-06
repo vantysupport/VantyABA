@@ -7,6 +7,7 @@ import { buildKnowledgeContext, searchKnowledge, buscarItemsPorCodigo } from '@/
 import { getChildHistory } from '@/lib/child-history'
 import { callGroq, callGroqSimple, GROQ_MODELS } from '@/lib/groq-client'
 import { reglaIdiomaRespuesta } from '@/lib/idioma-ia'
+import { sincronizarAlertasNino } from '@/lib/alertas-programas'
 
 
 
@@ -684,32 +685,14 @@ export class VantyAgent {
         }
       }
 
-      // Limpiar alertas viejas de programas YA LOGRADOS (inactividad, "falta 1
-      // sesión", logros repetidos, etc.) para que no sigan apareciendo ni
-      // inflando el conteo una vez que el programa pasó a "logrados".
-      if (dominadoIds.length > 0) {
-        await supabaseAdmin
-          .from('agente_alertas')
-          .update({ resuelta: true })
-          .eq('child_id', childId)
-          .eq('resuelta', false)
-          .in('programa_id', dominadoIds)
-      }
-
-      if (alertas.length > 0) {
-        await supabaseAdmin.from('agente_alertas').upsert(
-          alertas.map(a => ({
-            child_id: childId,
-            tipo: a.tipo,
-            titulo: a.titulo,
-            mensaje: a.mensaje,
-            programa_id: a.programa_id,
-            prioridad: a.prioridad,
-            resuelta: false,
-            centro_id: centroId,
-          }))
-        )
-      }
+      // Las alertas salen del motor único (lib/alertas-programas), el mismo del dashboard: así no se
+      // duplican, los días "sin sesión" se actualizan y lo descartado no vuelve. Las calculadas arriba
+      // solo se usaban para esto, se reemplazan.
+      void dominadoIds
+      const vigentes = await sincronizarAlertasNino(childId, centroId)
+      alertas.splice(0, alertas.length, ...vigentes.map(a => ({
+        id: a.id, tipo: a.tipo, titulo: a.titulo, mensaje: a.mensaje, prioridad: a.prioridad, programa_id: a.programa_id ?? undefined,
+      })))
 
       const childHistory = await getChildHistory(childId, undefined, undefined, { centroId })
       const resumenPrompt = `Eres ARIA, analista de conducta. Resume el estado clínico actual de ${childHistory.nombre} en 2-3 oraciones basándote en estos datos:
@@ -823,6 +806,8 @@ export interface AgentResponse {
 }
 
 export interface Alerta {
+  /** id en agente_alertas (para descartarla desde la ficha) */
+  id?: string
   tipo: string
   titulo: string
   mensaje: string

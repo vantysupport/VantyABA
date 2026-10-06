@@ -453,10 +453,12 @@ export default function DashboardHome({ navigateTo, navigateToPatient, nombre = 
           const rank: Record<string, number> = { alta: 1, media: 2, baja: 3 }
           return (rank[px] || 2) - (rank[py] || 2)
         })[0]
+        // Varios programas sin practicar del mismo paciente: una sola fila que los nombra
+        const nombres = grupo.map(g => String(g.titulo || '').match(/"([^"]+)"/)?.[1]).filter(Boolean) as string[]
         const mensaje = grupo.length > 1
-          ? `${grupo.length} ${t('dashboard.programasSinSesiones')}. ${rep.descripcion || rep.mensaje || ''}`
-          : (rep.descripcion || rep.mensaje || '')
-        return { ...rep, descripcion: mensaje, mensaje, _grupo: grupo.length }
+          ? `${grupo.length} ${t('dashboard.programasSinSesiones')}${nombres.length ? `: ${nombres.slice(0, 3).join(', ')}${nombres.length > 3 ? '…' : ''}` : ''}.`
+          : (rep.titulo && rep.tipo !== 'sin_sesion_paciente' ? `${rep.titulo}. ` : '') + (rep.descripcion || rep.mensaje || '')
+        return { ...rep, descripcion: mensaje, mensaje, _grupo: grupo.length, _ids: grupo.map(g => g.id).filter(Boolean) }
       })
 
       const alertasApi = [...otrasAlertas, ...sinSesionConsolidadas].map((a: any) => ({
@@ -466,6 +468,8 @@ export default function DashboardHome({ navigateTo, navigateToPatient, nombre = 
         paciente: a.children?.name || 'Paciente',
         mensaje: a.descripcion || a.mensaje || '',
         prioridad: a.prioridad || 2,
+        programa_id: a.programa_id || null,
+        _ids: a._ids || (a.id ? [a.id] : []),
       }))
 
       // Alertas sin_sesion — evitar duplicar pacientes ya en alertasApi
@@ -552,8 +556,10 @@ export default function DashboardHome({ navigateTo, navigateToPatient, nombre = 
     const alerta = alertasClinicas[index]
     setAlertasClinicas(prev => prev.filter((_, i) => i !== index))
     if (alerta?.id) {
-      // Alerta de agente_alertas: marcar como resuelta en BD (persiste)
-      await supabase.from('agente_alertas').update({ resuelta: true }).eq('id', alerta.id)
+      // Alerta de agente_alertas: resolverla como "descartada" (con todas las que agrupa) para que no
+      // vuelva a aparecer mientras la situación siga igual
+      const ids: string[] = alerta._ids?.length ? alerta._ids : [alerta.id]
+      await supabase.from('agente_alertas').update({ resuelta: true, metadata: { descartada: true } }).in('id', ids)
     } else if (alerta?.tipo && alerta?.child_id) {
       // Alerta sin ID (sin_sesion, etc.): guardar clave en localStorage
       const key = alerta.tipo + ':' + alerta.child_id
@@ -720,8 +726,11 @@ export default function DashboardHome({ navigateTo, navigateToPatient, nombre = 
                   <AlertaRow key={a.id ?? `${a.tipo}:${a.child_id}`} {...a}
                     onClick={() => {
                       if (a.child_id && navigateToPatient) {
-                        const tab = (a.tipo === 'regresion' || a.tipo?.startsWith('regresion')) ? 'programas' : undefined
-                        navigateToPatient(a.child_id, tab)
+                        // Alertas de programas ABA: abrir la pestaña Programas directo en el programa mencionado
+                        const tipo = String(a.tipo || '')
+                        const dePrograma = /^(logro_|regresion|estancamiento|sin_sesion_|criterio_alcanzado)/.test(tipo)
+                        if (a.programa_id) { try { sessionStorage.setItem('vanty_ir_programa', a.programa_id) } catch { /* sin storage */ } }
+                        navigateToPatient(a.child_id, dePrograma ? 'programas' : undefined)
                       } else navigateTo('ninos')
                     }}
                     onDismiss={() => dismissAlerta(i)}
