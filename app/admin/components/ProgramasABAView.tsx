@@ -2,6 +2,7 @@
 
 import { useI18n } from '@/lib/i18n-context'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 import GraficoProgramaABA from '@/components/graficos/GraficoProgramaABA'
 import {
@@ -13,7 +14,7 @@ import {
   Target, BarChart3, BarChart2, Edit3, CheckCircle2, AlertTriangle, Clock,
   Loader2, X, Save, Activity, Zap, Brain, BookOpen, ArrowRight, Trash2, Search,
   MessageCircle, Users, Sparkles, Hand, ClipboardList, Trophy, Bell, FileDown,
-  ChartLine, ChartColumnBig, ChartBarStacked, ChartPie, ListChecks, Layers, Pin, StickyNote, House
+  ChartLine, ChartColumnBig, ChartBarStacked, ChartPie, ListChecks, Layers, Pin, StickyNote, House, Maximize2
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useToast } from '@/components/Toast'
@@ -1065,6 +1066,18 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
     return last.length === critSesiones - 1 && last.every((s: any) => (s.porcentaje_exito ?? 0) >= crit)
   })()
 
+  // Con la ventana abierta, si el programa se recarga (p. ej. tras registrar una sesión) se refresca el detalle
+  const programaPrevio = useRef(programa)
+  useEffect(() => {
+    if (programaPrevio.current === programa) return
+    programaPrevio.current = programa
+    if (!expanded) return
+    let vivo = true
+    fetch(`/api/programas-aba?id=${programa.id}&t=${Date.now()}`, { cache: 'no-store' })
+      .then(r => r.json()).then(j => { if (vivo && j.data) setDetalle(j.data) }).catch(() => {})
+    return () => { vivo = false }
+  }, [programa, expanded])
+
   const fetchDetalle = async () => {
     setLoadingDetalle(true)
     try {
@@ -1078,9 +1091,8 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
   }
 
   const loadDetalle = async () => {
-    if (detalle) { setExpanded(!expanded); return }
     setExpanded(true)
-    await fetchDetalle()
+    if (!detalle) await fetchDetalle()
   }
 
   // Preparar datos para la gráfica — agrupar por set para que sesiones del mismo set queden contiguas
@@ -1134,7 +1146,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
       transition={{ type: 'spring', stiffness: 220, damping: 26 }}
       className={`v-scope overflow-hidden rounded-v border bg-v-elevated shadow-v transition-shadow hover:shadow-v-lg ${expanded ? 'border-v-accent/30' : 'border-v-border'}`}>
       {/* Header */}
-      <div className="cursor-pointer p-4 sm:p-5" onClick={loadDetalle}>
+      <div className="group/card cursor-pointer p-4 sm:p-5" onClick={loadDetalle}>
         <div className="flex flex-wrap items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-[30%] bg-v-accent-soft text-v-accent">
             {(() => { const AI = area.Icon; return <AI size={18} /> })()}
@@ -1326,8 +1338,8 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
             >
               <Trash2 size={14} />
             </button>
-            <span className={`grid size-8 place-items-center rounded-full transition-all ${expanded ? 'rotate-180 bg-v-accent-soft text-v-accent' : 'text-v-subtle'}`}>
-              <ChevronDown size={16} />
+            <span title={locale === 'en' ? 'Open details' : 'Ver detalle'} className={`grid size-8 place-items-center rounded-full transition-all ${expanded ? 'bg-v-accent-soft text-v-accent' : 'text-v-subtle group-hover/card:bg-v-accent-soft group-hover/card:text-v-accent'}`}>
+              <Maximize2 size={15} />
             </span>
           </div>
         </div>
@@ -1338,9 +1350,14 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
         )}
       </div>
 
-      {/* Detalle expandido */}
-      {expanded && (
-        <div className="space-y-5 border-t border-v-border bg-v-bg p-5">
+      {/* Detalle del programa: ventana emergente sobre la página (fuera de la tarjeta, que tiene transform) */}
+      {expanded && typeof document !== 'undefined' && createPortal(
+        <DetalleProgramaModal
+          titulo={localTitulo} objetivo={localObjetivo} Icon={area.Icon}
+          onClose={() => setExpanded(false)}
+          onRegistrar={onRegistrarSesion} cargando={loadingModal}
+          textoSesion={t('programas.agregarSesion')}>
+        <div className="space-y-5 p-5 sm:p-6">
           {loadingDetalle ? (
             <div className="flex justify-center py-8">
               <Loader2 className="animate-spin text-v-accent" size={24} />
@@ -2133,12 +2150,51 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
             </>
           ) : null}
         </div>
+        </DetalleProgramaModal>,
+        document.body,
       )}
     </motion.div>
   )
 }
 
 // ── Panel de práctica en casa registrada por el padre ──────────────────────────
+/** Ventana emergente con el detalle completo de un programa (gráfica, sets, sesiones y práctica en casa). */
+function DetalleProgramaModal({ titulo, objetivo, Icon, onClose, onRegistrar, cargando, textoSesion, children }: {
+  titulo: string; objetivo?: string; Icon: React.ComponentType<{ size?: number }>; onClose: () => void; onRegistrar: () => void; cargando?: boolean; textoSesion: string; children: React.ReactNode
+}) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('[data-modal-sesion]')) onClose() }
+    const previo = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', esc)
+    return () => { window.removeEventListener('keydown', esc); document.body.style.overflow = previo }
+  }, [onClose])
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}
+      className="v-scope fixed inset-0 z-50 flex items-end justify-center bg-[#081426]/55 backdrop-blur-sm sm:items-center sm:p-4"
+      onClick={onClose} role="dialog" aria-modal="true" aria-label={titulo}>
+      {/* Sin transform en el panel: así las ventanas internas (p. ej. "Nuevo set") siguen centradas en pantalla */}
+      <div onClick={e => e.stopPropagation()}
+        className="flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-v-lg border border-v-border bg-v-bg shadow-v-lg sm:rounded-v-lg">
+        <div className="flex items-start gap-3 border-b border-v-border bg-v-elevated px-5 py-4 sm:px-6">
+          <span className="v-brand grid size-11 shrink-0 place-items-center rounded-[30%]" style={{ boxShadow: 'none' }}><Icon size={20} /></span>
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-lg font-semibold leading-tight tracking-tight text-v-text sm:text-xl">{titulo}</h3>
+            {objetivo && <p className="mt-0.5 line-clamp-2 text-sm text-v-subtle">{objetivo}</p>}
+          </div>
+          <button onClick={onRegistrar} disabled={cargando}
+            className="v-brand inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-transform active:scale-95 disabled:opacity-60" style={{ boxShadow: 'none' }}>
+            {cargando ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+            <span className="hidden sm:inline">{textoSesion}</span>
+          </button>
+          <button onClick={onClose} aria-label="Cerrar" className="grid size-9 shrink-0 place-items-center rounded-full text-v-subtle transition-colors hover:bg-v-fill hover:text-v-text"><X size={18} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>{children}</div>
+      </div>
+    </motion.div>
+  )
+}
+
 function PracticaCasaPanel({ programaId, programaNombre, objetivos = [] }: { programaId: string; programaNombre: string; objetivos?: any[] }) {
   const { t } = useI18n()
   const [registros, setRegistros] = useState<any[]>([])
@@ -2449,8 +2505,10 @@ const mInput = 'w-full rounded-v-sm border border-v-border bg-v-bg px-3.5 py-2.5
 function ModalShell({ icon: Icon, title, subtitle, onClose, maxW = 'max-w-lg', children, footer }: {
   icon: any; title: string; subtitle?: React.ReactNode; onClose: () => void; maxW?: string; children: React.ReactNode; footer: React.ReactNode
 }) {
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+  // Se dibuja directo en <body> para quedar encima de la ventana de detalle del programa
+  if (typeof document === 'undefined') return null
+  return createPortal(
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} data-modal-sesion
       className="v-scope fixed inset-0 z-50 flex items-end justify-center bg-[#081426]/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -2468,7 +2526,8 @@ function ModalShell({ icon: Icon, title, subtitle, onClose, maxW = 'max-w-lg', c
         <div className="flex-1 overflow-y-auto px-6 pb-2" style={{ scrollbarWidth: 'thin' }}>{children}</div>
         <div className="flex gap-3 border-t border-v-border bg-v-elevated px-6 py-4">{footer}</div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   )
 }
 
