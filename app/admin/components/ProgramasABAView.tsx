@@ -1317,8 +1317,8 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
               disabled={loadingModal}
               className="v-brand inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-transform active:scale-95 disabled:opacity-60" style={{ boxShadow: 'none' }}>
               {loadingModal ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-              <span className="hidden sm:inline">{t('programas.agregarSesion')}</span>
-              <span className="sm:hidden">+ {t('programas.sesiones') || 'Sesión'}</span>
+              {/* El ícono ya es el "+": la etiqueta va sin él */}
+              <span>{t('programas.agregarSesion').replace(/^\+\s*/, '')}</span>
             </button>
             <button
               onClick={async (e) => {
@@ -1356,7 +1356,7 @@ function ProgramaCard({ programa, onRegistrarSesion, onReload, onDeleteSesion, t
           titulo={localTitulo} objetivo={localObjetivo} Icon={area.Icon}
           onClose={() => setExpanded(false)}
           onRegistrar={onRegistrarSesion} cargando={loadingModal}
-          textoSesion={t('programas.agregarSesion')}>
+          textoSesion={t('programas.agregarSesion').replace(/^\+\s*/, '')}>
         <div className="space-y-5 p-5 sm:p-6">
           {loadingDetalle ? (
             <div className="flex justify-center py-8">
