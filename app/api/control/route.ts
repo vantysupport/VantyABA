@@ -8,6 +8,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { createClient } from '@/lib/supabase-server'
 import { requireProgramador } from '@/lib/require-programador'
 import { logAuditEvent } from '@/lib/audit-log'
+import { PLANES_SUPABASE, planSupabase, R2_GRATIS } from '@/lib/infra'
+import { r2Configurado, r2Listar } from '@/lib/r2'
 import { eliminarCentro } from '@/lib/eliminar-centro'
 import { lemonConfigurado, variantesDeLaTienda, type VarianteLemon } from '@/lib/lemon'
 
@@ -256,6 +258,44 @@ export async function POST(req: NextRequest) {
         byStatus, mrr, trialsEndingSoon, patients: patients ?? 0, users: users ?? 0, openAlerts: openAlerts ?? 0,
         total: centros?.length ?? 0, pagando, atencion, recientes, comprasPendientes: comprasPendientes ?? 0,
         extras, extrasCompras: extrasMes?.length ?? 0,
+      })
+    }
+
+    case 'uso_infra': {
+      // Espacio usado por toda la plataforma frente a lo contratado (base, archivos en Supabase y en Cloudflare R2)
+      const { data: uso, error } = await supabaseAdmin.rpc('uso_infraestructura')
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      const u = uso as { db_bytes: number; buckets: { bucket: string; objetos: number; bytes: number }[]; tablas: { tabla: string; bytes: number }[] }
+      // R2: se suman los objetos por carpeta principal (patient-documents, knowledge, chat…)
+      let r2: { bytes: number; objetos: number; carpetas: { carpeta: string; objetos: number; bytes: number }[] } | null = null
+      if (r2Configurado()) {
+        try {
+          const objs = await r2Listar('')
+          const porCarpeta = new Map<string, { objetos: number; bytes: number }>()
+          for (const o of objs) {
+            const c = o.key.split('/')[0] || '(raíz)'
+            const x = porCarpeta.get(c) ?? { objetos: 0, bytes: 0 }
+            x.objetos++; x.bytes += o.size
+            porCarpeta.set(c, x)
+          }
+          r2 = {
+            bytes: objs.reduce((a, o) => a + o.size, 0), objetos: objs.length,
+            carpetas: [...porCarpeta].map(([carpeta, x]) => ({ carpeta, ...x })).sort((a, b) => b.bytes - a.bytes),
+          }
+        } catch { r2 = null }
+      }
+      const [{ count: centros }, { count: usuarios }] = await Promise.all([
+        supabaseAdmin.from('centros').select('id', { count: 'exact', head: true }),
+        supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }),
+      ])
+      const plan = planSupabase()
+      return NextResponse.json({
+        plan, planNombre: PLANES_SUPABASE[plan].nombre,
+        db: { usado: u.db_bytes, limite: PLANES_SUPABASE[plan].db, tablas: u.tablas },
+        storage: { usado: u.buckets.reduce((a, b) => a + Number(b.bytes || 0), 0), limite: PLANES_SUPABASE[plan].storage, buckets: u.buckets },
+        r2: r2 && { usado: r2.bytes, gratis: R2_GRATIS, objetos: r2.objetos, carpetas: r2.carpetas },
+        centros: centros ?? 0, usuarios: usuarios ?? 0,
+        proLimites: { db: PLANES_SUPABASE.pro.db, storage: PLANES_SUPABASE.pro.storage },
       })
     }
 

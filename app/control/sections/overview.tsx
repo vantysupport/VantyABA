@@ -11,6 +11,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { callControl } from '../api'
 import { SectionTitle, useDate } from '../ui'
 import { LogoCentro } from '../logo-centro'
+import { AlmacenamientoPlataforma } from './almacenamiento'
 
 type Item = { id: string; name: string; logo: string | null; plan: string | null; fecha: string | null }
 type Overview = {
@@ -193,6 +194,9 @@ export function OverviewSection({ onOpenSecurity, onOpenCentros, onError }: { on
           </section>
         </div>
       </div>
+
+      {/* ── Almacenamiento de toda la plataforma ── */}
+      <AlmacenamientoPlataforma onError={onError} />
     </div>
   )
 }

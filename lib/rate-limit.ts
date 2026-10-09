@@ -110,18 +110,20 @@ export async function rateLimit(
   return memoryRateLimit(key, config.limit, config.windowMs)
 }
 
-// Presets comunes para reutilizar
+// Presets comunes para reutilizar. Se cuentan por IP: en un taller, una universidad o una clínica muchas
+// personas salen por la MISMA IP (Wi-Fi compartido), así que los topes contemplan un grupo, no una sola
+// persona. El gasto real lo siguen acotando los topes diarios por usuario y por centro (ARIA, informes, tokens).
 export const RATE_LIMITS = {
-  // Login: 10 intentos cada 15 min (anti brute force)
-  LOGIN:          { name: 'login',          limit: 10,   windowMs: 15 * 60 * 1000 },
-  // Chat con ARIA / VADI: 60 mensajes por hora
-  AI_CHAT:        { name: 'ai-chat',        limit: 60,   windowMs: 60 * 60 * 1000 },
-  // Generación de reportes Word: 20 por hora (costoso)
-  REPORT_GENERATION: { name: 'report-gen',  limit: 20,   windowMs: 60 * 60 * 1000 },
-  // OCR de documentos: 30 por hora
-  OCR:            { name: 'ocr',            limit: 30,   windowMs: 60 * 60 * 1000 },
-  // API genérica: 300 por minuto
-  API_GENERIC:    { name: 'api-generic',    limit: 300,  windowMs: 60 * 1000 },
+  // Invitaciones y Libro de Reclamaciones: 30 cada 15 min (anti fuerza bruta; los tokens son aleatorios)
+  LOGIN:          { name: 'login',          limit: 30,   windowMs: 15 * 60 * 1000 },
+  // Chat con ARIA / VADI: 400 mensajes por hora por red (cada persona tiene además su tope diario)
+  AI_CHAT:        { name: 'ai-chat',        limit: 400,  windowMs: 60 * 60 * 1000 },
+  // Generación de reportes Word: 120 por hora por red (costoso; cada centro tiene su cupo mensual)
+  REPORT_GENERATION: { name: 'report-gen',  limit: 120,  windowMs: 60 * 60 * 1000 },
+  // OCR de documentos: 120 por hora por red
+  OCR:            { name: 'ocr',            limit: 120,  windowMs: 60 * 60 * 1000 },
+  // API genérica: 1500 por minuto por red (un panel abierto hace varias llamadas por pantalla)
+  API_GENERIC:    { name: 'api-generic',    limit: 1500, windowMs: 60 * 1000 },
   // Verificación pública de QR: 100 por hora por IP (anti-scraping)
   PUBLIC_VERIFY:  { name: 'public-verify',  limit: 100,  windowMs: 60 * 60 * 1000 },
 } as const satisfies Record<string, RateLimitConfig>
