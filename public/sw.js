@@ -1,5 +1,5 @@
 // Vanty Service Worker v3 — optimizado para iOS Safari PWA
-const CACHE_NAME = 'vanty-v4'
+const CACHE_NAME = 'vanty-v5'
 
 const STATIC_ASSETS = [
   '/',
